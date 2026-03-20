@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { useNavigate, useSearchParams } from "react-router-dom"
+import { useNavigate, useSearchParams, useLocation } from "react-router-dom"
 import { toast } from "sonner"
 import { registerUser, loginUser } from "@/api/auth"
 import { useAuth } from "@/hooks/useAuth"
@@ -33,7 +33,10 @@ interface FieldErrors {
 export default function AuthPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const navigate = useNavigate()
+  const location = useLocation()
   const { login } = useAuth()
+
+  const from = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname ?? "/home"
 
   const activeTab: Tab = searchParams.get("tab") === "register" ? "register" : "login"
 
@@ -81,7 +84,7 @@ export default function AuthPage() {
         password: registerData.password,
       })
       login(response.token, response.user)
-      navigate("/home")
+      navigate(from, { replace: true })
     } catch (err: unknown) {
       const message = extractErrorMessage(err) ?? "Registration failed"
       toast.error(message)
@@ -96,7 +99,7 @@ export default function AuthPage() {
     try {
       const response = await loginUser(loginData)
       login(response.token, response.user)
-      navigate("/home")
+      navigate(from, { replace: true })
     } catch (err: unknown) {
       const message = extractErrorMessage(err) ?? "Login failed"
       toast.error(message)

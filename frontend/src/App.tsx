@@ -1,16 +1,22 @@
 import { lazy, Suspense } from 'react'
 import { Routes, Route } from 'react-router-dom'
+import PrivateRoute from './components/PrivateRoute'
 
 const AuthPage = lazy(() => import('./pages/AuthPage'))
 const HomePage = lazy(() => import('./pages/HomePage'))
 
+const fallback = <div className="flex items-center justify-center min-h-screen">Loading...</div>
+
 function App() {
   return (
-    <Suspense fallback={<div className="flex items-center justify-center min-h-screen">Loading...</div>}>
+    <Suspense fallback={fallback}>
       <Routes>
-        <Route path="/" element={<div className="p-8 text-center"><h1 className="text-2xl font-bold">FutSpring</h1></div>} />
+        <Route path="/" element={<div className="flex items-center justify-center min-h-screen"><h1 className="text-2xl font-bold">FutSpring — Welcome</h1></div>} />
         <Route path="/auth" element={<AuthPage />} />
-        <Route path="/home" element={<HomePage />} />
+        <Route path="/home" element={<PrivateRoute><HomePage /></PrivateRoute>} />
+        <Route path="/pelada/:id" element={<PrivateRoute><div className="flex items-center justify-center min-h-screen"><h1 className="text-2xl font-bold">Pelada — coming soon</h1></div></PrivateRoute>} />
+        <Route path="/daily/:id" element={<PrivateRoute><div className="flex items-center justify-center min-h-screen"><h1 className="text-2xl font-bold">Daily — coming soon</h1></div></PrivateRoute>} />
+        <Route path="/profile/:id" element={<PrivateRoute><div className="flex items-center justify-center min-h-screen"><h1 className="text-2xl font-bold">Profile — coming soon</h1></div></PrivateRoute>} />
       </Routes>
     </Suspense>
   )
