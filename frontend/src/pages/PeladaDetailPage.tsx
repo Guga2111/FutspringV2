@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import NavBar from '../components/NavBar'
-import { getPelada, addPlayer, removePlayer, setAdmin, searchUsers } from '../api/peladas'
+import { getPelada, addPlayer, removePlayer, setAdmin, searchUsers, deletePelada } from '../api/peladas'
 import type { PeladaDetail, PeladaMember } from '../types/pelada'
 import type { UserResponseDTO } from '../types/auth'
 import { useAuth } from '../hooks/useAuth'
+import EditPeladaModal from '../components/EditPeladaModal'
 
 function SkeletonBlock({ className }: { className: string }) {
   return <div className={`bg-muted rounded animate-pulse ${className}`} />
@@ -215,11 +216,15 @@ function ConfirmRemoveDialog({
 
 export default function PeladaDetailPage() {
   const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
   const { user: currentUser } = useAuth()
   const [pelada, setPelada] = useState<PeladaDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [accessDenied, setAccessDenied] = useState(false)
   const [showAddPlayer, setShowAddPlayer] = useState(false)
+  const [showEdit, setShowEdit] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const [confirmRemoveMember, setConfirmRemoveMember] = useState<PeladaMember | null>(null)
   const [removing, setRemoving] = useState(false)
   const [togglingAdmin, setTogglingAdmin] = useState<number | null>(null)
@@ -243,6 +248,22 @@ export default function PeladaDetailPage() {
 
   const isCurrentUserAdmin = pelada?.members.find((m) => m.id === currentUser?.id)?.isAdmin ?? false
   const creatorId = pelada?.creatorId ?? null
+  const isCurrentUserCreator = currentUser != null && creatorId === currentUser.id
+
+  const handleDelete = async () => {
+    if (!pelada) return
+    setDeleting(true)
+    try {
+      await deletePelada(pelada.id)
+      toast.success('Pelada deleted')
+      navigate('/home')
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string } } }
+      toast.error(e?.response?.data?.message ?? 'Failed to delete pelada')
+      setDeleting(false)
+      setShowDeleteConfirm(false)
+    }
+  }
 
   const handleRemoveConfirm = async () => {
     if (!confirmRemoveMember || !pelada) return
@@ -303,7 +324,27 @@ export default function PeladaDetailPage() {
 
           <div className="container max-w-4xl mx-auto px-4 py-6">
             {/* Pelada info */}
-            <h1 className="text-2xl font-bold mb-1">{pelada.name}</h1>
+            <div className="flex items-start justify-between gap-4 mb-1">
+              <h1 className="text-2xl font-bold">{pelada.name}</h1>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                {isCurrentUserAdmin && (
+                  <button
+                    className="text-sm border border-border px-3 py-1.5 rounded hover:bg-muted"
+                    onClick={() => setShowEdit(true)}
+                  >
+                    Edit
+                  </button>
+                )}
+                {isCurrentUserCreator && (
+                  <button
+                    className="text-sm border border-destructive text-destructive px-3 py-1.5 rounded hover:bg-destructive hover:text-destructive-foreground"
+                    onClick={() => setShowDeleteConfirm(true)}
+                  >
+                    Delete Pelada
+                  </button>
+                )}
+              </div>
+            </div>
             <p className="text-muted-foreground mb-1">
               {pelada.dayOfWeek} · {pelada.timeOfDay}
             </p>
@@ -406,6 +447,47 @@ export default function PeladaDetailPage() {
           onClose={() => setConfirmRemoveMember(null)}
           loading={removing}
         />
+      )}
+
+      {showEdit && pelada && (
+        <EditPeladaModal
+          pelada={pelada}
+          onClose={() => setShowEdit(false)}
+          onUpdated={fetchPelada}
+        />
+      )}
+
+      {showDeleteConfirm && pelada && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => !deleting && setShowDeleteConfirm(false)}>
+          <div
+            className="bg-background rounded-lg shadow-lg w-full max-w-sm p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-lg font-semibold mb-2">Delete Pelada</h3>
+            <p className="text-sm text-muted-foreground mb-2">
+              Are you sure you want to delete <strong>{pelada.name}</strong>?
+            </p>
+            <p className="text-sm text-destructive mb-6">
+              This action cannot be undone. All members and data will be removed.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                className="text-sm text-muted-foreground hover:underline"
+                onClick={() => setShowDeleteConfirm(false)}
+                disabled={deleting}
+              >
+                Cancel
+              </button>
+              <button
+                className="text-sm bg-destructive text-destructive-foreground px-4 py-2 rounded disabled:opacity-50"
+                onClick={handleDelete}
+                disabled={deleting}
+              >
+                {deleting ? 'Deleting...' : 'Delete Pelada'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )
