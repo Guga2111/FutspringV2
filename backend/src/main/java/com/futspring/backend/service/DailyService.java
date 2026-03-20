@@ -67,6 +67,55 @@ public class DailyService {
                 .collect(Collectors.toList());
     }
 
+    private static final java.util.Set<String> LOCKED_STATUSES = java.util.Set.of("IN_COURSE", "FINISHED", "CANCELED");
+
+    @Transactional
+    public DailyListItemDTO confirmAttendance(Long id, String currentUserEmail) {
+        User caller = userRepository.findByEmail(currentUserEmail)
+                .orElseThrow(() -> new AppException(HttpStatus.UNAUTHORIZED, "User not found"));
+
+        Daily daily = dailyRepository.findById(id)
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Daily not found"));
+
+        Pelada pelada = daily.getPelada();
+        if (!pelada.getMembers().contains(caller)) {
+            throw new AppException(HttpStatus.FORBIDDEN, "Access denied: you are not a member of this pelada");
+        }
+
+        if (LOCKED_STATUSES.contains(daily.getStatus())) {
+            throw new AppException(HttpStatus.BAD_REQUEST, "Cannot confirm attendance for a daily with status " + daily.getStatus());
+        }
+
+        if (daily.getConfirmedPlayers().contains(caller)) {
+            throw new AppException(HttpStatus.CONFLICT, "You are already confirmed for this daily");
+        }
+
+        daily.getConfirmedPlayers().add(caller);
+        dailyRepository.save(daily);
+        return DailyListItemDTO.from(daily);
+    }
+
+    @Transactional
+    public DailyListItemDTO disconfirmAttendance(Long id, String currentUserEmail) {
+        User caller = userRepository.findByEmail(currentUserEmail)
+                .orElseThrow(() -> new AppException(HttpStatus.UNAUTHORIZED, "User not found"));
+
+        Daily daily = dailyRepository.findById(id)
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Daily not found"));
+
+        if (LOCKED_STATUSES.contains(daily.getStatus())) {
+            throw new AppException(HttpStatus.BAD_REQUEST, "Cannot disconfirm attendance for a daily with status " + daily.getStatus());
+        }
+
+        if (!daily.getConfirmedPlayers().contains(caller)) {
+            throw new AppException(HttpStatus.BAD_REQUEST, "You are not confirmed for this daily");
+        }
+
+        daily.getConfirmedPlayers().remove(caller);
+        dailyRepository.save(daily);
+        return DailyListItemDTO.from(daily);
+    }
+
     @Transactional(readOnly = true)
     public DailyDetailDTO getDailyDetail(Long id, String currentUserEmail) {
         User caller = userRepository.findByEmail(currentUserEmail)

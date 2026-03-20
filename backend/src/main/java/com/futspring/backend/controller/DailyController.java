@@ -47,4 +47,22 @@ public class DailyController {
         String email = (String) authentication.getPrincipal();
         return ResponseEntity.ok(dailyService.getDailyDetail(id, email));
     }
+
+    @PostMapping("/dailies/{id}/confirm")
+    public ResponseEntity<DailyListItemDTO> confirmAttendance(
+            @PathVariable Long id,
+            Authentication authentication
+    ) {
+        String email = (String) authentication.getPrincipal();
+        return ResponseEntity.ok(dailyService.confirmAttendance(id, email));
+    }
+
+    @DeleteMapping("/dailies/{id}/confirm")
+    public ResponseEntity<DailyListItemDTO> disconfirmAttendance(
+            @PathVariable Long id,
+            Authentication authentication
+    ) {
+        String email = (String) authentication.getPrincipal();
+        return ResponseEntity.ok(dailyService.disconfirmAttendance(id, email));
+    }
 }
