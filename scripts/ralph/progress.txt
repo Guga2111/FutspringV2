@@ -220,3 +220,20 @@ Started: Fri Mar 20 09:49:36 PDT 2026
   - Creator check: compare `member.id === pelada.creatorId`; need backend to expose creatorId
   - No browser testing tools available; manual browser verification needed
 ---
+
+## 2026-03-20 - US-012
+- Added @EnableScheduling to FutSpringApplication
+- Added findByAutoCreateDailyEnabledTrue() derived query to PeladaRepository
+- Created DailySchedulerService with hourly @Scheduled(cron = "0 0 * * * *") job
+- Job finds all peladas with autoCreateDailyEnabled=true, calculates next dayOfWeek occurrence, creates Daily if within 24h and not already existing
+- Files changed:
+  - backend/src/main/java/com/futspring/backend/FutSpringApplication.java
+  - backend/src/main/java/com/futspring/backend/repository/PeladaRepository.java
+  - backend/src/main/java/com/futspring/backend/service/DailySchedulerService.java (new)
+- **Learnings for future iterations:**
+  - @EnableScheduling must be on a @SpringBootApplication or @Configuration class; added to FutSpringApplication
+  - @Scheduled cron format for Spring is 6 fields: seconds minutes hours day month weekday (not 5 like Unix cron)
+  - getNextOccurrence iterates from today until the target DayOfWeek is found (max 7 days)
+  - DayOfWeek.valueOf() expects uppercase English day names (MONDAY, TUESDAY, etc.) — matches the dayOfWeek field format
+  - Duration.between(now, nextOccurrenceDateTime).toHours() returns hours; check 0–24 for "within next 24 hours"
+---
