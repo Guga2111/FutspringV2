@@ -14,6 +14,9 @@ Started: Fri Mar 20 09:49:36 PDT 2026
 - Services use `@Transactional` (write) and `@Transactional(readOnly = true)` for read operations
 - Lazy-loaded collections (@ManyToMany with FetchType.LAZY) are safe to access within @Transactional service methods
 - PeladaRepository uses Spring Data derived query `findByMembersContaining(User user)` for membership queries
+- Pelada entity has a `creator` field (ManyToOne User) to track creator for permission checks
+- UserRepository has `searchByUsernameOrEmail` JPQL query for case-insensitive search by username or email
+- Conflict responses use AppException(HttpStatus.CONFLICT, message)
 
 ## 2026-03-20 - US-001
 - Created Pelada JPA entity with all required fields and many-to-many relationships
@@ -49,4 +52,27 @@ Started: Fri Mar 20 09:49:36 PDT 2026
   - @Transactional is required on service methods that access lazy-loaded ManyToMany collections
   - Builder with @Builder.Default sets initialize properly so you can add to them before first save()
   - 403 is thrown as AppException(HttpStatus.FORBIDDEN, message) — caught by GlobalExceptionHandler
+---
+
+## 2026-03-20 - US-003
+- Added `creator` field (@ManyToOne) to Pelada entity to track who created the pelada
+- Updated `createPelada` in PeladaService to set creator on new peladas
+- Added `addPlayer`, `removePlayer`, `setAdmin`, `searchUsers` methods to PeladaService
+- Added `searchByUsernameOrEmail` JPQL query to UserRepository (case-insensitive, username OR email)
+- Created AddPlayerRequestDTO and SetAdminRequestDTO request DTOs
+- Created UserController at /api/v1/users with GET /search?q= endpoint
+- Added POST /{id}/players, DELETE /{id}/players/{userId}, PUT /{id}/players/{userId}/admin to PeladaController
+- Files changed:
+  - backend/src/main/java/com/futspring/backend/entity/Pelada.java
+  - backend/src/main/java/com/futspring/backend/repository/UserRepository.java
+  - backend/src/main/java/com/futspring/backend/service/PeladaService.java
+  - backend/src/main/java/com/futspring/backend/controller/PeladaController.java
+  - backend/src/main/java/com/futspring/backend/controller/UserController.java
+  - backend/src/main/java/com/futspring/backend/dto/AddPlayerRequestDTO.java
+  - backend/src/main/java/com/futspring/backend/dto/SetAdminRequestDTO.java
+- **Learnings for future iterations:**
+  - Pelada entity has a `creator` field (ManyToOne User) - always check this when implementing creator-restricted operations
+  - UserController is at /api/v1/users and uses PeladaService for searchUsers
+  - UserRepository has `searchByUsernameOrEmail(@Param("q") String q)` JPQL query for case-insensitive search
+  - 409 Conflict is HttpStatus.CONFLICT in AppException
 ---
