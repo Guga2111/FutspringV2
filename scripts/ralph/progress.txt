@@ -3,6 +3,10 @@ Started: Fri Mar 20 09:49:36 PDT 2026
 ---
 
 ## Codebase Patterns
+- To expose creatorId to the frontend, add it to PeladaDetailResponseDTO and PeladaDetail type; check `member.id === creatorId` to hide creator-restricted actions
+- Admin check pattern: `pelada.members.find(m => m.id === currentUser?.id)?.isAdmin ?? false`
+- Debounced search: store timer in `useRef<ReturnType<typeof setTimeout>>`, clear on each keystroke, fire after 300ms
+- Error message extraction from axios errors: `(err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'fallback'`
 - Modal pattern: use fixed inset-0 z-50 bg-black/50 overlay with bg-background inner div; click backdrop to close
 - `sonner` toast is set up globally in main.tsx — just `import { toast } from "sonner"` and call toast.success/error
 - extractErrorMessage helper (in AuthPage.tsx) can be copy-pasted for API error handling in other components
@@ -149,5 +153,42 @@ Started: Fri Mar 20 09:49:36 PDT 2026
   - `<select>` needs manual Tailwind classes to match Input component styling
   - `uploadPeladaImage` is called after `createPelada` using the returned pelada.id
   - `onCreated` callback pattern allows parent to refetch data after modal success
+  - No browser testing tools available; manual browser verification needed
+---
+
+## 2026-03-20 - US-008
+- Created PeladaDetailPage at /pelada/:id
+- Header: image banner (or ⚽ placeholder), name, dayOfWeek+timeOfDay, duration, address, reference
+- Members section: avatar (initials fallback), username, position badge, star rating (★/☆), Admin badge
+- 403 from API detected via err.response.status → shows Access Denied message (no crash)
+- Skeleton loading state with pulse animation
+- NavBar present at top
+- Updated App.tsx to use PeladaDetailPage (lazy loaded) replacing the placeholder
+- Files changed:
+  - frontend/src/pages/PeladaDetailPage.tsx (new)
+  - frontend/src/App.tsx
+- **Learnings for future iterations:**
+  - Error status check pattern: `err?.response?.status === 403` in catch block
+  - initials avatar: `username.slice(0, 2).toUpperCase()` with `bg-muted` circle
+  - Star rating: map array of length 5, show ★ for i < stars else ☆
+  - Lazy-load new pages in App.tsx using `const X = lazy(() => import('./pages/X'))`
+  - No browser testing tools available; manual browser verification needed
+---
+
+## 2026-03-20 - US-009
+- Added admin player management UI to PeladaDetailPage
+- 'Add Player' button (admin only): opens AddPlayerDialog with debounced searchUsers() (300ms), shows results with 'Add' button, marks existing members; calls addPlayer() on select
+- Each member row shows 'Make Admin'/'Remove Admin' and 'Remove' buttons (admin only, hidden for non-admins); creator rows hide both actions
+- Confirmation dialog (ConfirmRemoveDialog) before removePlayer(); success/error toasts for all actions
+- Backend PeladaDetailResponseDTO updated to include creatorId field
+- Frontend PeladaDetail type updated with `creatorId: number | null`
+- Files changed:
+  - frontend/src/pages/PeladaDetailPage.tsx
+  - frontend/src/types/pelada.ts
+  - backend/src/main/java/com/futspring/backend/dto/PeladaDetailResponseDTO.java
+- **Learnings for future iterations:**
+  - `useCallback` on fetchPelada allows passing it as a dependency and calling it from event handlers
+  - `useRef<ReturnType<typeof setTimeout>>` is correct type for debounce timers in TypeScript
+  - Creator check: compare `member.id === pelada.creatorId`; need backend to expose creatorId
   - No browser testing tools available; manual browser verification needed
 ---
