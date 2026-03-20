@@ -116,6 +116,151 @@ public class DailyService {
         return DailyListItemDTO.from(daily);
     }
 
+    @Transactional
+    public List<DailyDetailDTO.TeamDTO> sortTeams(Long id, String currentUserEmail) {
+        User caller = userRepository.findByEmail(currentUserEmail)
+                .orElseThrow(() -> new AppException(HttpStatus.UNAUTHORIZED, "User not found"));
+
+        Daily daily = dailyRepository.findById(id)
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Daily not found"));
+
+        Pelada pelada = daily.getPelada();
+        if (!pelada.getAdmins().contains(caller)) {
+            throw new AppException(HttpStatus.FORBIDDEN, "Only admins can sort teams");
+        }
+
+        if (LOCKED_STATUSES.contains(daily.getStatus())) {
+            throw new AppException(HttpStatus.BAD_REQUEST, "Cannot sort teams for a daily with status " + daily.getStatus());
+        }
+
+        java.util.List<User> players = daily.getConfirmedPlayers().stream()
+                .sorted(java.util.Comparator.comparingInt(User::getStars).reversed())
+                .collect(Collectors.toList());
+
+        if (players.size() < 2) {
+            throw new AppException(HttpStatus.BAD_REQUEST, "At least 2 confirmed players are required to sort teams");
+        }
+
+        // Delete existing teams
+        java.util.List<Team> existingTeams = teamRepository.findByDaily(daily);
+        for (Team t : existingTeams) {
+            t.getPlayers().clear();
+            teamRepository.save(t);
+        }
+        teamRepository.deleteAll(existingTeams);
+
+        // Create 2 teams (MVP default)
+        Team team1 = teamRepository.save(Team.builder().daily(daily).name("Team 1").build());
+        Team team2 = teamRepository.save(Team.builder().daily(daily).name("Team 2").build());
+        java.util.List<Team> teams = java.util.List.of(team1, team2);
+
+        // Greedy snake-draft: sort by stars desc, assign to team with lowest totalStars
+        java.util.Map<Long, Integer> teamStars = new java.util.HashMap<>();
+        teamStars.put(team1.getId(), 0);
+        teamStars.put(team2.getId(), 0);
+
+        for (User player : players) {
+            Team minTeam = teams.stream()
+                    .min(java.util.Comparator.comparingInt(t -> teamStars.get(t.getId())))
+                    .orElseThrow();
+            minTeam.getPlayers().add(player);
+            teamStars.put(minTeam.getId(), teamStars.get(minTeam.getId()) + player.getStars());
+        }
+
+        teamRepository.saveAll(teams);
+
+        return teams.stream()
+                .map(team -> {
+                    java.util.List<DailyDetailDTO.PlayerDTO> playerDTOs = team.getPlayers().stream()
+                            .map(u -> DailyDetailDTO.PlayerDTO.builder()
+                                    .id(u.getId())
+                                    .username(u.getUsername())
+                                    .image(u.getImage())
+                                    .stars(u.getStars())
+                                    .position(u.getPosition())
+                                    .build())
+                            .collect(Collectors.toList());
+                    int totalStars = playerDTOs.stream().mapToInt(DailyDetailDTO.PlayerDTO::getStars).sum();
+                    return DailyDetailDTO.TeamDTO.builder()
+                            .id(team.getId())
+                            .name(team.getName())
+                            .totalStars(totalStars)
+                            .players(playerDTOs)
+                            .build();
+                })
+                .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public List<DailyDetailDTO.TeamDTO> swapPlayers(Long id, Long player1Id, Long player2Id, String currentUserEmail) {
+        User caller = userRepository.findByEmail(currentUserEmail)
+                .orElseThrow(() -> new AppException(HttpStatus.UNAUTHORIZED, "User not found"));
+
+        Daily daily = dailyRepository.findById(id)
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Daily not found"));
+
+        Pelada pelada = daily.getPelada();
+        if (!pelada.getAdmins().contains(caller)) {
+            throw new AppException(HttpStatus.FORBIDDEN, "Only admins can swap players");
+        }
+
+        java.util.List<Team> teams = teamRepository.findByDaily(daily);
+
+        Team team1 = null;
+        Team team2 = null;
+        User player1 = null;
+        User player2 = null;
+
+        for (Team team : teams) {
+            for (User p : team.getPlayers()) {
+                if (p.getId().equals(player1Id)) {
+                    team1 = team;
+                    player1 = p;
+                }
+                if (p.getId().equals(player2Id)) {
+                    team2 = team;
+                    player2 = p;
+                }
+            }
+        }
+
+        if (team1 == null || player1 == null) {
+            throw new AppException(HttpStatus.BAD_REQUEST, "Player 1 is not on any team in this daily");
+        }
+        if (team2 == null || player2 == null) {
+            throw new AppException(HttpStatus.BAD_REQUEST, "Player 2 is not on any team in this daily");
+        }
+
+        team1.getPlayers().remove(player1);
+        team2.getPlayers().remove(player2);
+        team1.getPlayers().add(player2);
+        team2.getPlayers().add(player1);
+
+        teamRepository.save(team1);
+        teamRepository.save(team2);
+
+        return teams.stream()
+                .map(team -> {
+                    java.util.List<DailyDetailDTO.PlayerDTO> playerDTOs = team.getPlayers().stream()
+                            .map(u -> DailyDetailDTO.PlayerDTO.builder()
+                                    .id(u.getId())
+                                    .username(u.getUsername())
+                                    .image(u.getImage())
+                                    .stars(u.getStars())
+                                    .position(u.getPosition())
+                                    .build())
+                            .collect(Collectors.toList());
+                    int totalStars = playerDTOs.stream().mapToInt(DailyDetailDTO.PlayerDTO::getStars).sum();
+                    return DailyDetailDTO.TeamDTO.builder()
+                            .id(team.getId())
+                            .name(team.getName())
+                            .totalStars(totalStars)
+                            .players(playerDTOs)
+                            .build();
+                })
+                .collect(Collectors.toList());
+    }
+
     @Transactional(readOnly = true)
     public DailyDetailDTO getDailyDetail(Long id, String currentUserEmail) {
         User caller = userRepository.findByEmail(currentUserEmail)

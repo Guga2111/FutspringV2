@@ -3,6 +3,7 @@ package com.futspring.backend.controller;
 import com.futspring.backend.dto.CreateDailyRequestDTO;
 import com.futspring.backend.dto.DailyDetailDTO;
 import com.futspring.backend.dto.DailyListItemDTO;
+import com.futspring.backend.dto.SwapPlayersRequestDTO;
 import com.futspring.backend.service.DailyService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -64,5 +65,24 @@ public class DailyController {
     ) {
         String email = (String) authentication.getPrincipal();
         return ResponseEntity.ok(dailyService.disconfirmAttendance(id, email));
+    }
+
+    @PostMapping("/dailies/{id}/sort-teams")
+    public ResponseEntity<java.util.List<DailyDetailDTO.TeamDTO>> sortTeams(
+            @PathVariable Long id,
+            Authentication authentication
+    ) {
+        String email = (String) authentication.getPrincipal();
+        return ResponseEntity.ok(dailyService.sortTeams(id, email));
+    }
+
+    @PutMapping("/dailies/{id}/teams/swap")
+    public ResponseEntity<java.util.List<DailyDetailDTO.TeamDTO>> swapPlayers(
+            @PathVariable Long id,
+            @RequestBody SwapPlayersRequestDTO request,
+            Authentication authentication
+    ) {
+        String email = (String) authentication.getPrincipal();
+        return ResponseEntity.ok(dailyService.swapPlayers(id, request.getPlayer1Id(), request.getPlayer2Id(), email));
     }
 }
