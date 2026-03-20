@@ -1,3 +1,26 @@
+## 2026-03-20 - US-005
+- Created Vite + React 18 + TypeScript frontend under `frontend/`
+- Installed Tailwind CSS v3 (not v4 — shadcn CLI requires v3 config file)
+- Created `tailwind.config.js` with shadcn CSS variable color tokens
+- shadcn/ui CLI not available (no network) — manually installed deps and created components
+- Components created: Button, Input, Label, Tabs, Card in `src/components/ui/`
+- Created `src/lib/utils.ts` with `cn()` helper (clsx + tailwind-merge)
+- Installed: sonner (toast), react-router-dom, axios
+- Set up React Router v6 with lazy-loaded routes and Suspense fallback in App.tsx
+- Configured Axios base client in `src/api/client.ts` with VITE_API_URL env var
+- Created placeholder pages: AuthPage.tsx, HomePage.tsx
+- Added `@/*` path alias in tsconfig.app.json and vite.config.ts
+- `components.json` created for shadcn config reference
+- Typecheck and build pass
+- **Learnings for future iterations:**
+  - shadcn@2.3.0 CLI requires Tailwind v3 config file (tailwind.config.js) — v4 not supported
+  - shadcn CLI needs network access to fetch components; offline → install deps manually and write components from source
+  - Tailwind v3 with PostCSS is the stable setup for shadcn in this project
+  - Path alias `@/*` needs to be in BOTH tsconfig.app.json (paths) AND vite.config.ts (resolve.alias)
+  - `components.json` is optional for CLI but good to have for documentation
+  - `noUnusedLocals` / `noUnusedParameters` strict checks in tsconfig — avoid unused imports
+---
+
 ## 2026-03-20 - US-004
 - Added JWT parsing methods to `service/JwtService.java`: `extractAllClaims`, `isTokenValid`, `extractEmail`, `extractUserId` using JJWT 0.11.5 `parserBuilder()`
 - Created `filter/JwtAuthFilter.java` (OncePerRequestFilter): reads Bearer token, validates, sets SecurityContext; writes 401 JSON directly for invalid tokens
@@ -12,6 +35,11 @@
 ## Codebase Patterns
 - Java/Maven not available in devcontainer (Node.js-based); typecheck is verified by code review
 - Spring Boot 3.2.3 used; package root is `com.futspring.backend`
+- Frontend: Vite + React 18 + TypeScript + Tailwind v3 + shadcn/ui (manual, no CLI) under `frontend/`
+- Frontend path alias: `@/*` → `./src/*` (set in tsconfig.app.json and vite.config.ts)
+- shadcn CLI requires network; offline → install radix-ui/react-* + cva + clsx + tailwind-merge manually
+- Tailwind v3 is used (not v4) for shadcn compatibility; PostCSS config present
+- Axios base client in `src/api/client.ts`; interceptors to be added in US-006
 - Config via env vars with defaults in application.yml using `${ENV_VAR:default}` syntax
 - GlobalExceptionHandler returns `{ status, message, timestamp }` shape via ErrorResponse
 - SecurityConfig: CSRF disabled, STATELESS session — standard for all protected routes
