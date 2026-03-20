@@ -5,7 +5,21 @@
 - GlobalExceptionHandler returns `{ status, message, timestamp }` shape via ErrorResponse
 - SecurityConfig: CSRF disabled, STATELESS session — standard for all protected routes
 - JJWT 0.11.5 for JWT; Bucket4j 8.7.0 for rate limiting
+- DTOs in `dto/` package; entities in `entity/`; repos in `repository/`
+- UserResponseDTO.from(User) static factory pattern for entity→DTO mapping
+- Hibernate ddl-auto: update — no Flyway needed, table created automatically
 
+---
+
+## 2026-03-20 - US-002
+- Created User JPA entity (`entity/User.java`) with id, email, username, password, image, backgroundImage, stars (default 0), position
+- Created UserRepository (`repository/UserRepository.java`) extending JpaRepository with findByEmail
+- Created UserResponseDTO (`dto/UserResponseDTO.java`) with static `from(User)` factory; no direct entity serialization
+- Hibernate `ddl-auto: update` in application.yml handles table creation automatically
+- **Learnings for future iterations:**
+  - Use `@Builder.Default` on Lombok @Builder fields with primitive defaults (e.g., `stars = 0`)
+  - `UserResponseDTO.from(user)` is the canonical conversion pattern to reuse in auth service
+  - `@Table(name = "users")` needed since "user" is a reserved word in PostgreSQL
 ---
 
 ## 2026-03-20 - US-001
