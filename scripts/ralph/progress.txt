@@ -20,6 +20,21 @@ Started: Fri Mar 20 10:34:34 PDT 2026
 - TeamRepository: findByDaily(Daily daily)
 - No browser testing tools available; manual browser verification needed
 
+## 2026-03-20 - US-010
+- Implemented `finalizeDaily` endpoint: POST /api/v1/dailies/:id/finalize
+- Validates admin access, IN_COURSE status, at least one match result, and award winners are confirmed players
+- Computes UserDailyStats per confirmed player (goals, assists, matchesPlayed, wins) by aggregating PlayerMatchStat records
+- Computes LeagueTableEntry per team (W/D/L/GF/GA/points) from match results; sorted by points desc then GD desc with position set
+- Creates or updates DailyAward with puskasWinner and wiltballWinner
+- Sets daily.status = FINISHED and daily.isFinished = true
+- Returns full DailyDetailDTO via getDailyDetail
+- Files changed: controller/DailyController.java, service/DailyService.java, dto/FinalizeDailyRequestDTO.java
+- **Learnings for future iterations:**
+  - `DailyAwardRepository.findByDaily` returns Optional — use `.orElse(DailyAward.builder().daily(daily).build())` for upsert
+  - Win check for a player: `match.getWinner().getPlayers().contains(stat.getUser())` — works within @Transactional since players collection is LAZY but loaded in same session
+  - League table sort: chain `.reversed()` calls on Comparator — `.comparingInt(...).reversed().thenComparingInt(...).reversed()` correctly applies descending on both fields
+---
+
 ## 2026-03-20 - US-001
 - Extended Daily entity with confirmedPlayers (ManyToMany), isFinished (boolean, default false), championImage (String nullable)
 - Created Team entity with id, daily, name, players (ManyToMany<User>)
