@@ -1,6 +1,7 @@
 package com.futspring.backend.controller;
 
 import com.futspring.backend.dto.CreateDailyRequestDTO;
+import com.futspring.backend.dto.DailyDetailDTO;
 import com.futspring.backend.dto.DailyListItemDTO;
 import com.futspring.backend.service.DailyService;
 import jakarta.validation.Valid;
@@ -36,5 +37,14 @@ public class DailyController {
     ) {
         String email = (String) authentication.getPrincipal();
         return ResponseEntity.ok(dailyService.getDailiesForPelada(peladaId, email));
+    }
+
+    @GetMapping("/dailies/{id}")
+    public ResponseEntity<DailyDetailDTO> getDailyDetail(
+            @PathVariable Long id,
+            Authentication authentication
+    ) {
+        String email = (String) authentication.getPrincipal();
+        return ResponseEntity.ok(dailyService.getDailyDetail(id, email));
     }
 }
