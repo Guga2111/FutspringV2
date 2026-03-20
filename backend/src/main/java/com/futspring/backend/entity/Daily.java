@@ -6,6 +6,8 @@ import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Set;
 
 @Entity
 @Table(name = "dailies")
@@ -32,6 +34,21 @@ public class Daily {
     @Column(nullable = false)
     @Builder.Default
     private String status = "SCHEDULED";
+
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+            name = "daily_confirmed_players",
+            joinColumns = @JoinColumn(name = "daily_id"),
+            inverseJoinColumns = @JoinColumn(name = "user_id")
+    )
+    @Builder.Default
+    private Set<User> confirmedPlayers = new HashSet<>();
+
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean isFinished = false;
+
+    private String championImage;
 
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
