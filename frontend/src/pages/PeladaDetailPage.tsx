@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, Link } from 'react-router-dom'
 import { toast } from 'sonner'
 import NavBar from '../components/NavBar'
 import { getPelada, addPlayer, removePlayer, setAdmin, searchUsers, deletePelada } from '../api/peladas'
+import { getDailiesForPelada, createDaily } from '../api/dailies'
 import type { PeladaDetail, PeladaMember } from '../types/pelada'
 import type { UserResponseDTO } from '../types/auth'
+import type { DailyListItem } from '../types/daily'
 import { useAuth } from '../hooks/useAuth'
 import EditPeladaModal from '../components/EditPeladaModal'
 
@@ -214,6 +216,106 @@ function ConfirmRemoveDialog({
   )
 }
 
+const STATUS_COLORS: Record<string, string> = {
+  SCHEDULED: 'bg-blue-100 text-blue-800',
+  CONFIRMED: 'bg-yellow-100 text-yellow-800',
+  IN_COURSE: 'bg-green-100 text-green-800',
+  FINISHED: 'bg-gray-100 text-gray-800',
+  CANCELED: 'bg-red-100 text-red-800',
+}
+
+function StatusBadge({ status }: { status: string }) {
+  const cls = STATUS_COLORS[status] ?? 'bg-muted text-muted-foreground'
+  return (
+    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${cls}`}>
+      {status.replace('_', ' ')}
+    </span>
+  )
+}
+
+function CreateSessionDialog({
+  peladaId,
+  onClose,
+  onCreated,
+}: {
+  peladaId: number
+  onClose: () => void
+  onCreated: () => void
+}) {
+  const [dailyDate, setDailyDate] = useState('')
+  const [dailyTime, setDailyTime] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!dailyDate || !dailyTime) return
+    setSubmitting(true)
+    try {
+      await createDaily(peladaId, { dailyDate, dailyTime })
+      toast.success('Session created!')
+      onCreated()
+      onClose()
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string } } }
+      toast.error(e?.response?.data?.message ?? 'Failed to create session')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={onClose}>
+      <div
+        className="bg-background rounded-lg shadow-lg w-full max-w-sm p-6"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h3 className="text-lg font-semibold mb-4">Create Session</h3>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-1" htmlFor="session-date">Date</label>
+            <input
+              id="session-date"
+              type="date"
+              required
+              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+              value={dailyDate}
+              onChange={(e) => setDailyDate(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1" htmlFor="session-time">Time</label>
+            <input
+              id="session-time"
+              type="time"
+              required
+              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+              value={dailyTime}
+              onChange={(e) => setDailyTime(e.target.value)}
+            />
+          </div>
+          <div className="flex gap-3 justify-end pt-2">
+            <button
+              type="button"
+              className="text-sm text-muted-foreground hover:underline"
+              onClick={onClose}
+              disabled={submitting}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="text-sm bg-primary text-primary-foreground px-4 py-2 rounded disabled:opacity-50"
+              disabled={submitting || !dailyDate || !dailyTime}
+            >
+              {submitting ? 'Creating...' : 'Create'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
 export default function PeladaDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
@@ -228,6 +330,9 @@ export default function PeladaDetailPage() {
   const [confirmRemoveMember, setConfirmRemoveMember] = useState<PeladaMember | null>(null)
   const [removing, setRemoving] = useState(false)
   const [togglingAdmin, setTogglingAdmin] = useState<number | null>(null)
+  const [dailies, setDailies] = useState<DailyListItem[]>([])
+  const [dailiesLoading, setDailiesLoading] = useState(true)
+  const [showCreateSession, setShowCreateSession] = useState(false)
 
   const fetchPelada = useCallback(() => {
     if (!id) return
@@ -241,10 +346,25 @@ export default function PeladaDetailPage() {
       .finally(() => setLoading(false))
   }, [id])
 
+  const fetchDailies = useCallback(() => {
+    if (!id) return
+    setDailiesLoading(true)
+    getDailiesForPelada(Number(id))
+      .then(setDailies)
+      .catch(() => {
+        // ignore errors silently; pelada fetch handles 403
+      })
+      .finally(() => setDailiesLoading(false))
+  }, [id])
+
   useEffect(() => {
     setLoading(true)
     fetchPelada()
   }, [fetchPelada])
+
+  useEffect(() => {
+    fetchDailies()
+  }, [fetchDailies])
 
   const isCurrentUserAdmin = pelada?.members.find((m) => m.id === currentUser?.id)?.isAdmin ?? false
   const creatorId = pelada?.creatorId ?? null
@@ -423,6 +543,58 @@ export default function PeladaDetailPage() {
                 )
               })}
             </div>
+
+            {/* Sessions section */}
+            <div className="mt-8">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-lg font-semibold">Sessions</h2>
+                {isCurrentUserAdmin && (
+                  <button
+                    className="text-sm bg-primary text-primary-foreground px-4 py-2 rounded"
+                    onClick={() => setShowCreateSession(true)}
+                  >
+                    + Create Session
+                  </button>
+                )}
+              </div>
+              {dailiesLoading ? (
+                <div className="space-y-3">
+                  {[0, 1, 2].map((i) => (
+                    <div key={i} className="flex items-center gap-3">
+                      <SkeletonBlock className="h-4 w-24" />
+                      <SkeletonBlock className="h-4 w-16" />
+                      <SkeletonBlock className="h-5 w-20 rounded-full" />
+                      <SkeletonBlock className="h-4 w-12" />
+                    </div>
+                  ))}
+                </div>
+              ) : dailies.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No sessions yet.</p>
+              ) : (
+                <div className="space-y-2">
+                  {dailies.map((daily) => (
+                    <Link
+                      key={daily.id}
+                      to={`/daily/${daily.id}`}
+                      className="flex items-center gap-3 p-3 rounded-lg border border-border hover:bg-muted transition-colors"
+                    >
+                      <span className="text-sm font-medium">
+                        {new Date(daily.dailyDate + 'T12:00:00').toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric',
+                        })}
+                      </span>
+                      <span className="text-sm text-muted-foreground">{daily.dailyTime}</span>
+                      <StatusBadge status={daily.status} />
+                      <span className="text-sm text-muted-foreground ml-auto">
+                        {daily.confirmedPlayerCount} players
+                      </span>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </main>
       ) : (
@@ -454,6 +626,14 @@ export default function PeladaDetailPage() {
           pelada={pelada}
           onClose={() => setShowEdit(false)}
           onUpdated={fetchPelada}
+        />
+      )}
+
+      {showCreateSession && pelada && (
+        <CreateSessionDialog
+          peladaId={pelada.id}
+          onClose={() => setShowCreateSession(false)}
+          onCreated={fetchDailies}
         />
       )}
 
