@@ -1,3 +1,14 @@
+## 2026-03-20 - US-004
+- Added JWT parsing methods to `service/JwtService.java`: `extractAllClaims`, `isTokenValid`, `extractEmail`, `extractUserId` using JJWT 0.11.5 `parserBuilder()`
+- Created `filter/JwtAuthFilter.java` (OncePerRequestFilter): reads Bearer token, validates, sets SecurityContext; writes 401 JSON directly for invalid tokens
+- Updated `config/SecurityConfig.java`: injected `JwtAuthFilter` and `ObjectMapper` as `filterChain` params, added `exceptionHandling` with custom `authenticationEntryPoint` for missing token 401, registered filter before `UsernamePasswordAuthenticationFilter`
+- **Learnings for future iterations:**
+  - `ObjectMapper` is auto-provided by Spring Boot autoconfigure — inject it as a method param in `@Bean` methods without declaring a `@Bean` for it
+  - For the AuthenticationEntryPoint lambda, `HttpServletResponse.SC_UNAUTHORIZED` needs `jakarta.servlet.http.HttpServletResponse` import (Jakarta EE, not javax)
+  - Filter registered via `.addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)` — not `@Order` annotation
+  - Invalid token → filter writes 401 and returns early; missing token → filter passes through → Spring Security calls AuthenticationEntryPoint
+---
+
 ## Codebase Patterns
 - Java/Maven not available in devcontainer (Node.js-based); typecheck is verified by code review
 - Spring Boot 3.2.3 used; package root is `com.futspring.backend`
@@ -11,6 +22,8 @@
 - Bucket4j rate limiting: `Bucket.builder().addLimit(Bandwidth.classic(N, Refill.intervally(N, Duration.ofMinutes(1))))` with ConcurrentHashMap<String, Bucket> keyed by IP
 - JwtService.generateToken(userId, email): uses Jwts.builder() with setSubject(email), claims userId+email, signed with Keys.hmacShaKeyFor
 - AppException(HttpStatus, message) pattern for all business errors; GlobalExceptionHandler handles it generically
+- JwtAuthFilter: invalid token → write 401 in filter; missing token → passthrough → AuthenticationEntryPoint in SecurityConfig handles 401
+- ObjectMapper injected as `filterChain(@Bean)` method param (Spring Boot auto-provides it)
 
 ---
 
