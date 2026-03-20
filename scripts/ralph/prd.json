@@ -63,7 +63,7 @@
         "Typecheck passes"
       ],
       "priority": 4,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
@@ -77,7 +77,7 @@
         "Typecheck passes"
       ],
       "priority": 5,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
@@ -164,6 +164,37 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 10,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-011",
+      "title": "Backend minimal Daily entity stub for auto-creation",
+      "description": "As a developer, I need a minimal Daily entity so the auto-create scheduler can persist new daily sessions.",
+      "acceptanceCriteria": [
+        "Daily JPA entity with fields: id (Long, auto), pelada (ManyToOne to Pelada, required), dailyDate (LocalDate, required), dailyTime (String, required), status (String, default 'SCHEDULED'), createdAt",
+        "DailyRepository extends JpaRepository with method: existsByPeladaAndDailyDate(Pelada pelada, LocalDate date)",
+        "Hibernate DDL auto creates the dailies table",
+        "Note: this is a stub — the Daily PRD will extend this entity with more fields (teams, matches, etc.)",
+        "Typecheck passes"
+      ],
+      "priority": 11,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-012",
+      "title": "Backend auto-create Daily scheduled job",
+      "description": "As the system, I should auto-create a Daily 24 hours before each scheduled session when autoCreateDailyEnabled is true.",
+      "acceptanceCriteria": [
+        "Spring @Scheduled job runs hourly (cron: '0 0 * * * *') to reliably catch the 24h window",
+        "Job queries all Peladas where autoCreateDailyEnabled = true",
+        "For each such Pelada, calculates the next occurrence of its dayOfWeek from now",
+        "If the next occurrence is within 24 hours AND no Daily already exists for that Pelada + date (use existsByPeladaAndDailyDate), creates a new Daily with status SCHEDULED and the pelada's timeOfDay",
+        "@EnableScheduling added to the main application class or a config class",
+        "Typecheck passes"
+      ],
+      "priority": 12,
       "passes": false,
       "notes": ""
     }

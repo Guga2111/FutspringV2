@@ -17,6 +17,9 @@ Started: Fri Mar 20 09:49:36 PDT 2026
 - Pelada entity has a `creator` field (ManyToOne User) to track creator for permission checks
 - UserRepository has `searchByUsernameOrEmail` JPQL query for case-insensitive search by username or email
 - Conflict responses use AppException(HttpStatus.CONFLICT, message)
+- File uploads: `@RequestParam("file") MultipartFile file`; store under `@Value("${app.uploads.dir:uploads}")` dir with UUID prefix
+- File serving: use `UrlResource` + `permitAll()` in SecurityConfig for /api/v1/files/**
+- Delete entity with ManyToMany: clear collections before delete to avoid FK constraint violations
 
 ## 2026-03-20 - US-001
 - Created Pelada JPA entity with all required fields and many-to-many relationships
@@ -75,4 +78,38 @@ Started: Fri Mar 20 09:49:36 PDT 2026
   - UserController is at /api/v1/users and uses PeladaService for searchUsers
   - UserRepository has `searchByUsernameOrEmail(@Param("q") String q)` JPQL query for case-insensitive search
   - 409 Conflict is HttpStatus.CONFLICT in AppException
+---
+
+## 2026-03-20 - US-004
+- Created UpdatePeladaRequestDTO (all fields optional for partial update)
+- Added `updatePelada`, `deletePelada`, `uploadPeladaImage` methods to PeladaService
+- Added PUT /{id}, DELETE /{id}, POST /{id}/image endpoints to PeladaController
+- Created FileController at /api/v1/files/{filename} serving files from uploads/ dir
+- Updated SecurityConfig to permit public access to /api/v1/files/**
+- Files changed:
+  - backend/src/main/java/com/futspring/backend/dto/UpdatePeladaRequestDTO.java (new)
+  - backend/src/main/java/com/futspring/backend/service/PeladaService.java
+  - backend/src/main/java/com/futspring/backend/controller/PeladaController.java
+  - backend/src/main/java/com/futspring/backend/controller/FileController.java (new)
+  - backend/src/main/java/com/futspring/backend/config/SecurityConfig.java
+- **Learnings for future iterations:**
+  - File uploads use `@RequestParam("file") MultipartFile file` in controller (not @RequestBody)
+  - `@Value("${app.uploads.dir:uploads}")` sets configurable uploads directory with default
+  - File serving uses `UrlResource` from `org.springframework.core.io` - resolves from uploads dir
+  - Delete endpoint should clear ManyToMany collections (members, admins) before deleting entity to avoid FK constraint violations
+  - File serving endpoint should be permitAll() in SecurityConfig so images are publicly accessible
+  - UpdatePeladaRequestDTO uses all nullable (boxed) types so null fields are ignored (partial update pattern)
+---
+
+## 2026-03-20 - US-005
+- Created src/types/pelada.ts with PeladaMember, PeladaResponse, PeladaDetail interfaces
+- Created src/api/peladas.ts with all pelada API functions using existing Axios client
+- Files changed:
+  - frontend/src/types/pelada.ts (new)
+  - frontend/src/api/peladas.ts (new)
+- **Learnings for future iterations:**
+  - apiClient in client.ts automatically attaches Bearer token via interceptor in AuthContext.tsx
+  - auth.ts pattern: functions return typed response.data directly; no manual error handling needed
+  - uploadPeladaImage uses FormData with explicit Content-Type header for multipart
+  - searchUsers uses axios params option: `{ params: { q } }` for query strings
 ---
