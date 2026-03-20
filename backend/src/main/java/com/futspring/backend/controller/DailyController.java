@@ -4,6 +4,7 @@ import com.futspring.backend.dto.CreateDailyRequestDTO;
 import com.futspring.backend.dto.DailyDetailDTO;
 import com.futspring.backend.dto.DailyListItemDTO;
 import com.futspring.backend.dto.SwapPlayersRequestDTO;
+import com.futspring.backend.dto.UpdateDailyStatusRequestDTO;
 import com.futspring.backend.service.DailyService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -84,5 +85,15 @@ public class DailyController {
     ) {
         String email = (String) authentication.getPrincipal();
         return ResponseEntity.ok(dailyService.swapPlayers(id, request.getPlayer1Id(), request.getPlayer2Id(), email));
+    }
+
+    @PutMapping("/dailies/{id}/status")
+    public ResponseEntity<DailyListItemDTO> updateStatus(
+            @PathVariable Long id,
+            @RequestBody UpdateDailyStatusRequestDTO request,
+            Authentication authentication
+    ) {
+        String email = (String) authentication.getPrincipal();
+        return ResponseEntity.ok(dailyService.updateStatus(id, request.getStatus(), email));
     }
 }

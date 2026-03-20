@@ -116,6 +116,35 @@ public class DailyService {
         return DailyListItemDTO.from(daily);
     }
 
+    private static final java.util.Map<String, java.util.Set<String>> VALID_TRANSITIONS = java.util.Map.of(
+            "SCHEDULED", java.util.Set.of("CONFIRMED", "CANCELED"),
+            "CONFIRMED", java.util.Set.of("IN_COURSE", "CANCELED")
+    );
+
+    @Transactional
+    public DailyListItemDTO updateStatus(Long id, String newStatus, String currentUserEmail) {
+        User caller = userRepository.findByEmail(currentUserEmail)
+                .orElseThrow(() -> new AppException(HttpStatus.UNAUTHORIZED, "User not found"));
+
+        Daily daily = dailyRepository.findById(id)
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Daily not found"));
+
+        Pelada pelada = daily.getPelada();
+        if (!pelada.getAdmins().contains(caller)) {
+            throw new AppException(HttpStatus.FORBIDDEN, "Only admins can update daily status");
+        }
+
+        java.util.Set<String> allowed = VALID_TRANSITIONS.getOrDefault(daily.getStatus(), java.util.Set.of());
+        if (!allowed.contains(newStatus)) {
+            throw new AppException(HttpStatus.BAD_REQUEST,
+                    "Invalid status transition from " + daily.getStatus() + " to " + newStatus);
+        }
+
+        daily.setStatus(newStatus);
+        dailyRepository.save(daily);
+        return DailyListItemDTO.from(daily);
+    }
+
     @Transactional
     public List<DailyDetailDTO.TeamDTO> sortTeams(Long id, String currentUserEmail) {
         User caller = userRepository.findByEmail(currentUserEmail)
