@@ -5,6 +5,7 @@ import com.futspring.backend.dto.CreatePeladaRequestDTO;
 import com.futspring.backend.dto.PeladaDetailResponseDTO;
 import com.futspring.backend.dto.PeladaResponseDTO;
 import com.futspring.backend.dto.SetAdminRequestDTO;
+import com.futspring.backend.dto.UpdatePeladaRequestDTO;
 import com.futspring.backend.service.PeladaService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -12,6 +13,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -78,5 +80,35 @@ public class PeladaController {
         String email = (String) authentication.getPrincipal();
         peladaService.setAdmin(id, userId, request.getIsAdmin(), email);
         return ResponseEntity.ok().build();
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<PeladaResponseDTO> updatePelada(
+            @PathVariable Long id,
+            @RequestBody UpdatePeladaRequestDTO request,
+            Authentication authentication
+    ) {
+        String email = (String) authentication.getPrincipal();
+        return ResponseEntity.ok(peladaService.updatePelada(id, request, email));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deletePelada(
+            @PathVariable Long id,
+            Authentication authentication
+    ) {
+        String email = (String) authentication.getPrincipal();
+        peladaService.deletePelada(id, email);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{id}/image")
+    public ResponseEntity<PeladaResponseDTO> uploadImage(
+            @PathVariable Long id,
+            @RequestParam("file") MultipartFile file,
+            Authentication authentication
+    ) {
+        String email = (String) authentication.getPrincipal();
+        return ResponseEntity.ok(peladaService.uploadPeladaImage(id, file, email));
     }
 }
