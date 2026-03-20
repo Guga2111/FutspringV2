@@ -14,6 +14,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -117,5 +118,15 @@ public class DailyController {
     ) {
         String email = (String) authentication.getPrincipal();
         return ResponseEntity.ok(dailyService.finalizeDaily(id, request.getPuskasWinnerId(), request.getWiltballWinnerId(), email));
+    }
+
+    @PutMapping("/dailies/{id}/champion-image")
+    public ResponseEntity<DailyListItemDTO> uploadChampionImage(
+            @PathVariable Long id,
+            @RequestParam("file") MultipartFile file,
+            Authentication authentication
+    ) {
+        String email = (String) authentication.getPrincipal();
+        return ResponseEntity.ok(dailyService.uploadChampionImage(id, file, email));
     }
 }
