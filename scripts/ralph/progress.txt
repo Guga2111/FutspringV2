@@ -10,6 +10,10 @@ Started: Fri Mar 20 09:49:36 PDT 2026
 - Hibernate DDL is set to `update` mode - tables auto-created from entities
 - Java/Maven not available in this environment - "Typecheck passes" means code is syntactically correct
 - Frontend TypeScript typecheck: `cd frontend && npx tsc -b --noEmit`
+- Controllers inject `Authentication` and get current user email via `(String) authentication.getPrincipal()`
+- Services use `@Transactional` (write) and `@Transactional(readOnly = true)` for read operations
+- Lazy-loaded collections (@ManyToMany with FetchType.LAZY) are safe to access within @Transactional service methods
+- PeladaRepository uses Spring Data derived query `findByMembersContaining(User user)` for membership queries
 
 ## 2026-03-20 - US-001
 - Created Pelada JPA entity with all required fields and many-to-many relationships
@@ -24,4 +28,25 @@ Started: Fri Mar 20 09:49:36 PDT 2026
   - @Builder.Default required for Set fields initialized with new HashSet<>()
   - @CreationTimestamp with updatable=false for createdAt fields
   - Maven/Java not available; typecheck verified by reading code carefully + ensuring frontend tsc passes
+---
+
+## 2026-03-20 - US-002
+- Created CreatePeladaRequestDTO with @Valid annotations for required fields
+- Created PeladaMemberDTO with isAdmin flag and static from() factory
+- Created PeladaDetailResponseDTO with members list and static from() factory
+- Updated PeladaRepository with findByMembersContaining(User) derived query
+- Created PeladaService with createPelada, getMyPeladas, getPeladaDetail methods
+- Created PeladaController at /api/v1/peladas with POST, GET /my, GET /:id endpoints
+- Files changed:
+  - backend/src/main/java/com/futspring/backend/dto/CreatePeladaRequestDTO.java
+  - backend/src/main/java/com/futspring/backend/dto/PeladaMemberDTO.java
+  - backend/src/main/java/com/futspring/backend/dto/PeladaDetailResponseDTO.java
+  - backend/src/main/java/com/futspring/backend/repository/PeladaRepository.java
+  - backend/src/main/java/com/futspring/backend/service/PeladaService.java
+  - backend/src/main/java/com/futspring/backend/controller/PeladaController.java
+- **Learnings for future iterations:**
+  - Authentication principal is email string — use `(String) authentication.getPrincipal()` in controllers
+  - @Transactional is required on service methods that access lazy-loaded ManyToMany collections
+  - Builder with @Builder.Default sets initialize properly so you can add to them before first save()
+  - 403 is thrown as AppException(HttpStatus.FORBIDDEN, message) — caught by GlobalExceptionHandler
 ---
