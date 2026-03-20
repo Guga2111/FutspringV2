@@ -1,19 +1,11 @@
-import { createContext, useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import type { ReactNode } from "react"
 import type { UserResponseDTO } from "../types/auth"
 import apiClient from "../api/client"
+import { AuthContext } from "./auth-context-value"
 
 const TOKEN_KEY = "futspring_token"
 const USER_KEY = "futspring_user"
-
-interface AuthContextValue {
-  user: UserResponseDTO | null
-  token: string | null
-  login: (token: string, user: UserResponseDTO) => void
-  logout: () => void
-}
-
-export const AuthContext = createContext<AuthContextValue | null>(null)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(() => localStorage.getItem(TOKEN_KEY))
