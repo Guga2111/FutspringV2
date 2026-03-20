@@ -1,0 +1,18 @@
+## Codebase Patterns
+- Java/Maven not available in devcontainer (Node.js-based); typecheck is verified by code review
+- Spring Boot 3.2.3 used; package root is `com.futspring.backend`
+- Config via env vars with defaults in application.yml using `${ENV_VAR:default}` syntax
+- GlobalExceptionHandler returns `{ status, message, timestamp }` shape via ErrorResponse
+- SecurityConfig: CSRF disabled, STATELESS session — standard for all protected routes
+- JJWT 0.11.5 for JWT; Bucket4j 8.7.0 for rate limiting
+
+---
+
+## 2026-03-20 - US-001
+- Verified existing backend scaffold meets all acceptance criteria
+- Files: backend/pom.xml, application.yml, FutSpringApplication.java, JwtConfig.java, SecurityConfig.java, AppException.java, ErrorResponse.java, GlobalExceptionHandler.java
+- **Learnings for future iterations:**
+  - Backend files were pre-created; just needed verification and commit
+  - Maven/Java not in devcontainer — cannot run `mvn compile`; code review substitutes
+  - JwtConfig uses @Value with `app.jwt.secret` and `app.jwt.expiration-ms` property paths
+---
