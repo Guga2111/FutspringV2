@@ -20,6 +20,31 @@ Started: Fri Mar 20 10:34:34 PDT 2026
 - TeamRepository: findByDaily(Daily daily)
 - No browser testing tools available; manual browser verification needed
 
+## 2026-03-20 - US-013
+- Added Sessions section to PeladaDetailPage below members list
+- Sessions section: fetches getDailiesForPelada on load; 3-row skeleton; empty state; colored status badges; each row links to /daily/:id
+- Admin-only 'Create Session' button opens CreateSessionDialog modal (dailyDate + dailyTime inputs, loading state, toast on success/error)
+- Created DailyDetailPage placeholder (NavBar + "coming soon" message)
+- Updated App.tsx: replaced inline /daily/:id placeholder with lazy-loaded DailyDetailPage
+- Files changed: frontend/src/pages/PeladaDetailPage.tsx, frontend/src/pages/DailyDetailPage.tsx (new), frontend/src/App.tsx
+- **Learnings for future iterations:**
+  - Status badge colors: SCHEDULED=blue-100/800, CONFIRMED=yellow-100/800, IN_COURSE=green-100/800, FINISHED=gray-100/800, CANCELED=red-100/800
+  - Date formatting for ISO date strings: append 'T12:00:00' before parsing to avoid timezone off-by-one (e.g., `new Date(daily.dailyDate + 'T12:00:00')`)
+  - react-router-dom Link component used for row navigation (imported from 'react-router-dom')
+  - fetchDailies is a separate useCallback/useEffect from fetchPelada — both run independently on mount
+---
+
+## 2026-03-20 - US-012
+- Created `src/types/daily.ts` with all TypeScript interfaces: PlayerDTO, TeamDTO, MatchDTO, UserDailyStatsDTO, LeagueTableEntryDTO, AwardDTO, DailyListItem, DailyDetail
+- Created `src/api/dailies.ts` with all API functions: getDailiesForPelada, getDailyDetail, createDaily, confirmAttendance, disconfirmAttendance, sortTeams, swapPlayers, updateDailyStatus, submitResults, finalizeDaily, uploadChampionImage
+- All functions use existing Axios client (src/api/client.ts)
+- Files changed: frontend/src/types/daily.ts (new), frontend/src/api/dailies.ts (new)
+- **Learnings for future iterations:**
+  - `disconfirmAttendance` uses `apiClient.delete` with generic return type — axios delete supports typed responses
+  - `uploadChampionImage` uses PUT (not POST) with multipart/form-data, same pattern as pelada image upload but PUT method
+  - `swapPlayers` returns DailyDetail (full detail with updated teams); `sortTeams` also returns DailyDetail
+---
+
 ## 2026-03-20 - US-011
 - Implemented `uploadChampionImage` endpoint: PUT /api/v1/dailies/:id/champion-image (multipart/form-data)
 - Admin-only; validates daily is FINISHED (400 otherwise); max 5MB; JPEG/PNG/WebP only
