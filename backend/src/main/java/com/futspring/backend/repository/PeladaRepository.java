@@ -9,4 +9,6 @@ import java.util.List;
 public interface PeladaRepository extends JpaRepository<Pelada, Long> {
 
     List<Pelada> findByMembersContaining(User user);
+
+    List<Pelada> findByAutoCreateDailyEnabledTrue();
 }
