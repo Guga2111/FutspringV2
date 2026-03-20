@@ -2,6 +2,18 @@
 Started: Fri Mar 20 10:34:34 PDT 2026
 ---
 
+## 2026-03-20 - US-016
+- Added admin-only status action bar to DailyDetailPage
+- SCHEDULED → "Confirm Daily" + "Cancel Daily" buttons; CONFIRMED → "Start Session" + "Cancel Daily" buttons; IN_COURSE/later → bar hidden
+- Each button opens an inline confirmation dialog with descriptive text; on confirm calls updateDailyStatus and updates daily state immediately
+- Status badge updates without page reload; dialog closes on success; action bar disappears after cancel (status = CANCELED)
+- Files changed: frontend/src/pages/DailyDetailPage.tsx
+- **Learnings for future iterations:**
+  - `setDaily((prev) => prev ? { ...prev, status: updated.status, isFinished: updated.isFinished } : prev)` — partial update avoids refetch while keeping teams/players in sync
+  - Confirmation dialog is a fixed overlay (z-50 bg-black/50) — no external library needed; `statusDialog` state holds `{ targetStatus, description }`
+  - Status action bar conditioned on `daily.isAdmin && (status === 'SCHEDULED' || status === 'CONFIRMED')` — IN_COURSE and beyond show no buttons
+---
+
 ## 2026-03-20 - US-015
 - Added admin team management to DailyDetailPage (sort teams + swap players)
 - Added `isAdmin` field to DailyDetailDTO (backend) and populated it in getDailyDetail by checking pelada.getAdmins().contains(caller)
