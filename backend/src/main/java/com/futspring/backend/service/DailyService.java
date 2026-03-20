@@ -4,6 +4,7 @@ import com.futspring.backend.dto.CreateDailyRequestDTO;
 import com.futspring.backend.dto.DailyDetailDTO;
 import com.futspring.backend.dto.DailyDetailDTO.*;
 import com.futspring.backend.dto.DailyListItemDTO;
+import com.futspring.backend.dto.MatchResultDTO;
 import com.futspring.backend.entity.*;
 import com.futspring.backend.exception.AppException;
 import com.futspring.backend.repository.*;
@@ -24,6 +25,7 @@ public class DailyService {
     private final UserRepository userRepository;
     private final TeamRepository teamRepository;
     private final MatchRepository matchRepository;
+    private final PlayerMatchStatRepository playerMatchStatRepository;
     private final UserDailyStatsRepository userDailyStatsRepository;
     private final LeagueTableEntryRepository leagueTableEntryRepository;
     private final DailyAwardRepository dailyAwardRepository;
@@ -287,6 +289,101 @@ public class DailyService {
                             .players(playerDTOs)
                             .build();
                 })
+                .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public List<MatchDTO> submitResults(Long id, List<MatchResultDTO> results, String currentUserEmail) {
+        User caller = userRepository.findByEmail(currentUserEmail)
+                .orElseThrow(() -> new AppException(HttpStatus.UNAUTHORIZED, "User not found"));
+
+        Daily daily = dailyRepository.findById(id)
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Daily not found"));
+
+        Pelada pelada = daily.getPelada();
+        if (!pelada.getAdmins().contains(caller)) {
+            throw new AppException(HttpStatus.FORBIDDEN, "Only admins can submit results");
+        }
+
+        if (!"IN_COURSE".equals(daily.getStatus())) {
+            throw new AppException(HttpStatus.BAD_REQUEST, "Results can only be submitted for dailies with status IN_COURSE");
+        }
+
+        java.util.Map<Long, Team> teamMap = teamRepository.findByDaily(daily).stream()
+                .collect(java.util.stream.Collectors.toMap(Team::getId, t -> t));
+
+        java.util.List<Match> savedMatches = new java.util.ArrayList<>();
+
+        for (MatchResultDTO result : results) {
+            Team t1 = teamMap.get(result.getTeam1Id());
+            Team t2 = teamMap.get(result.getTeam2Id());
+            if (t1 == null || t2 == null) {
+                throw new AppException(HttpStatus.BAD_REQUEST, "Invalid team IDs in results");
+            }
+
+            Match match;
+            if (result.getMatchId() != null) {
+                match = matchRepository.findById(result.getMatchId()).orElse(null);
+            } else {
+                match = null;
+            }
+
+            if (match == null) {
+                match = Match.builder().daily(daily).team1(t1).team2(t2).build();
+            }
+
+            match.setTeam1(t1);
+            match.setTeam2(t2);
+            match.setTeam1Score(result.getTeam1Score());
+            match.setTeam2Score(result.getTeam2Score());
+
+            Team winner = null;
+            if (result.getTeam1Score() > result.getTeam2Score()) {
+                winner = t1;
+            } else if (result.getTeam2Score() > result.getTeam1Score()) {
+                winner = t2;
+            }
+            match.setWinner(winner);
+
+            Match savedMatch = matchRepository.save(match);
+            savedMatches.add(savedMatch);
+
+            // Save/overwrite player stats
+            java.util.Map<Long, MatchResultDTO.PlayerStatInputDTO> statsByUserId = new java.util.HashMap<>();
+            if (result.getPlayerStats() != null) {
+                for (MatchResultDTO.PlayerStatInputDTO stat : result.getPlayerStats()) {
+                    statsByUserId.put(stat.getUserId(), stat);
+                }
+            }
+
+            // Delete existing stats for this match
+            playerMatchStatRepository.deleteAll(playerMatchStatRepository.findByMatch(savedMatch));
+
+            // Save stats for all confirmed players
+            for (User player : daily.getConfirmedPlayers()) {
+                MatchResultDTO.PlayerStatInputDTO input = statsByUserId.get(player.getId());
+                int goals = input != null ? input.getGoals() : 0;
+                int assists = input != null ? input.getAssists() : 0;
+                playerMatchStatRepository.save(PlayerMatchStat.builder()
+                        .match(savedMatch)
+                        .user(player)
+                        .goals(goals)
+                        .assists(assists)
+                        .build());
+            }
+        }
+
+        return savedMatches.stream()
+                .map(m -> MatchDTO.builder()
+                        .id(m.getId())
+                        .team1Id(m.getTeam1().getId())
+                        .team1Name(m.getTeam1().getName())
+                        .team2Id(m.getTeam2().getId())
+                        .team2Name(m.getTeam2().getName())
+                        .team1Score(m.getTeam1Score())
+                        .team2Score(m.getTeam2Score())
+                        .winnerId(m.getWinner() != null ? m.getWinner().getId() : null)
+                        .build())
                 .collect(Collectors.toList());
     }
 

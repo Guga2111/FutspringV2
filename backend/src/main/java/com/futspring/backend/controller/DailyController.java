@@ -3,6 +3,7 @@ package com.futspring.backend.controller;
 import com.futspring.backend.dto.CreateDailyRequestDTO;
 import com.futspring.backend.dto.DailyDetailDTO;
 import com.futspring.backend.dto.DailyListItemDTO;
+import com.futspring.backend.dto.MatchResultDTO;
 import com.futspring.backend.dto.SwapPlayersRequestDTO;
 import com.futspring.backend.dto.UpdateDailyStatusRequestDTO;
 import com.futspring.backend.service.DailyService;
@@ -95,5 +96,15 @@ public class DailyController {
     ) {
         String email = (String) authentication.getPrincipal();
         return ResponseEntity.ok(dailyService.updateStatus(id, request.getStatus(), email));
+    }
+
+    @PostMapping("/dailies/{id}/results")
+    public ResponseEntity<java.util.List<DailyDetailDTO.MatchDTO>> submitResults(
+            @PathVariable Long id,
+            @RequestBody java.util.List<MatchResultDTO> results,
+            Authentication authentication
+    ) {
+        String email = (String) authentication.getPrincipal();
+        return ResponseEntity.ok(dailyService.submitResults(id, results, email));
     }
 }
