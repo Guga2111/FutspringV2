@@ -387,6 +387,139 @@ public class DailyService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional
+    public DailyDetailDTO finalizeDaily(Long id, Long puskasWinnerId, Long wiltballWinnerId, String currentUserEmail) {
+        User caller = userRepository.findByEmail(currentUserEmail)
+                .orElseThrow(() -> new AppException(HttpStatus.UNAUTHORIZED, "User not found"));
+
+        Daily daily = dailyRepository.findById(id)
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Daily not found"));
+
+        Pelada pelada = daily.getPelada();
+        if (!pelada.getAdmins().contains(caller)) {
+            throw new AppException(HttpStatus.FORBIDDEN, "Only admins can finalize dailies");
+        }
+
+        if (!"IN_COURSE".equals(daily.getStatus())) {
+            throw new AppException(HttpStatus.BAD_REQUEST, "Daily must be IN_COURSE to finalize");
+        }
+
+        java.util.List<Match> matches = matchRepository.findByDaily(daily);
+        if (matches.isEmpty()) {
+            throw new AppException(HttpStatus.BAD_REQUEST, "Daily must have at least one match result to finalize");
+        }
+
+        // Validate award winners are confirmed players
+        java.util.Set<User> confirmedPlayers = daily.getConfirmedPlayers();
+        User puskasWinner = confirmedPlayers.stream()
+                .filter(u -> u.getId().equals(puskasWinnerId))
+                .findFirst()
+                .orElseThrow(() -> new AppException(HttpStatus.BAD_REQUEST, "Puskas winner must be a confirmed player"));
+
+        User wiltballWinner = confirmedPlayers.stream()
+                .filter(u -> u.getId().equals(wiltballWinnerId))
+                .findFirst()
+                .orElseThrow(() -> new AppException(HttpStatus.BAD_REQUEST, "Wiltball winner must be a confirmed player"));
+
+        // Compute UserDailyStats per confirmed player
+        userDailyStatsRepository.deleteAll(userDailyStatsRepository.findByDaily(daily));
+
+        java.util.Map<Long, UserDailyStats> statsMap = new java.util.HashMap<>();
+        for (User player : confirmedPlayers) {
+            statsMap.put(player.getId(), UserDailyStats.builder()
+                    .daily(daily)
+                    .user(player)
+                    .build());
+        }
+
+        for (Match match : matches) {
+            java.util.List<PlayerMatchStat> matchStats = playerMatchStatRepository.findByMatch(match);
+            for (PlayerMatchStat stat : matchStats) {
+                UserDailyStats userStats = statsMap.get(stat.getUser().getId());
+                if (userStats != null) {
+                    userStats.setGoals(userStats.getGoals() + stat.getGoals());
+                    userStats.setAssists(userStats.getAssists() + stat.getAssists());
+                    userStats.setMatchesPlayed(userStats.getMatchesPlayed() + 1);
+                    if (match.getWinner() != null) {
+                        // Check if this player's team is the winner
+                        boolean isOnWinnerTeam = match.getWinner().getPlayers().contains(stat.getUser());
+                        if (isOnWinnerTeam) {
+                            userStats.setWins(userStats.getWins() + 1);
+                        }
+                    }
+                }
+            }
+        }
+        userDailyStatsRepository.saveAll(statsMap.values());
+
+        // Compute LeagueTableEntry per team
+        leagueTableEntryRepository.deleteAll(leagueTableEntryRepository.findByDailyOrderByPositionAsc(daily));
+
+        java.util.List<Team> teams = teamRepository.findByDaily(daily);
+        java.util.Map<Long, LeagueTableEntry> leagueMap = new java.util.HashMap<>();
+        for (Team team : teams) {
+            leagueMap.put(team.getId(), LeagueTableEntry.builder()
+                    .daily(daily)
+                    .team(team)
+                    .build());
+        }
+
+        for (Match match : matches) {
+            Long t1Id = match.getTeam1().getId();
+            Long t2Id = match.getTeam2().getId();
+            int s1 = match.getTeam1Score() != null ? match.getTeam1Score() : 0;
+            int s2 = match.getTeam2Score() != null ? match.getTeam2Score() : 0;
+
+            LeagueTableEntry e1 = leagueMap.get(t1Id);
+            LeagueTableEntry e2 = leagueMap.get(t2Id);
+
+            if (e1 != null) {
+                e1.setGoalsFor(e1.getGoalsFor() + s1);
+                e1.setGoalsAgainst(e1.getGoalsAgainst() + s2);
+            }
+            if (e2 != null) {
+                e2.setGoalsFor(e2.getGoalsFor() + s2);
+                e2.setGoalsAgainst(e2.getGoalsAgainst() + s1);
+            }
+
+            if (s1 > s2) {
+                if (e1 != null) { e1.setWins(e1.getWins() + 1); e1.setPoints(e1.getPoints() + 3); }
+                if (e2 != null) { e2.setLosses(e2.getLosses() + 1); }
+            } else if (s2 > s1) {
+                if (e2 != null) { e2.setWins(e2.getWins() + 1); e2.setPoints(e2.getPoints() + 3); }
+                if (e1 != null) { e1.setLosses(e1.getLosses() + 1); }
+            } else {
+                if (e1 != null) { e1.setDraws(e1.getDraws() + 1); e1.setPoints(e1.getPoints() + 1); }
+                if (e2 != null) { e2.setDraws(e2.getDraws() + 1); e2.setPoints(e2.getPoints() + 1); }
+            }
+        }
+
+        // Sort by points desc then GD desc and set positions
+        java.util.List<LeagueTableEntry> sortedEntries = leagueMap.values().stream()
+                .sorted(java.util.Comparator
+                        .comparingInt(LeagueTableEntry::getPoints).reversed()
+                        .thenComparingInt((LeagueTableEntry e) -> e.getGoalsFor() - e.getGoalsAgainst()).reversed())
+                .collect(Collectors.toList());
+
+        for (int i = 0; i < sortedEntries.size(); i++) {
+            sortedEntries.get(i).setPosition(i + 1);
+        }
+        leagueTableEntryRepository.saveAll(sortedEntries);
+
+        // Create or update DailyAward
+        DailyAward award = dailyAwardRepository.findByDaily(daily).orElse(DailyAward.builder().daily(daily).build());
+        award.setPuskasWinner(puskasWinner);
+        award.setWiltballWinner(wiltballWinner);
+        dailyAwardRepository.save(award);
+
+        // Mark daily as FINISHED
+        daily.setStatus("FINISHED");
+        daily.setFinished(true);
+        dailyRepository.save(daily);
+
+        return getDailyDetail(id, currentUserEmail);
+    }
+
     @Transactional(readOnly = true)
     public DailyDetailDTO getDailyDetail(Long id, String currentUserEmail) {
         User caller = userRepository.findByEmail(currentUserEmail)

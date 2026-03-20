@@ -3,6 +3,7 @@ package com.futspring.backend.controller;
 import com.futspring.backend.dto.CreateDailyRequestDTO;
 import com.futspring.backend.dto.DailyDetailDTO;
 import com.futspring.backend.dto.DailyListItemDTO;
+import com.futspring.backend.dto.FinalizeDailyRequestDTO;
 import com.futspring.backend.dto.MatchResultDTO;
 import com.futspring.backend.dto.SwapPlayersRequestDTO;
 import com.futspring.backend.dto.UpdateDailyStatusRequestDTO;
@@ -106,5 +107,15 @@ public class DailyController {
     ) {
         String email = (String) authentication.getPrincipal();
         return ResponseEntity.ok(dailyService.submitResults(id, results, email));
+    }
+
+    @PostMapping("/dailies/{id}/finalize")
+    public ResponseEntity<DailyDetailDTO> finalizeDaily(
+            @PathVariable Long id,
+            @RequestBody FinalizeDailyRequestDTO request,
+            Authentication authentication
+    ) {
+        String email = (String) authentication.getPrincipal();
+        return ResponseEntity.ok(dailyService.finalizeDaily(id, request.getPuskasWinnerId(), request.getWiltballWinnerId(), email));
     }
 }
