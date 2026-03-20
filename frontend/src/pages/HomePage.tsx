@@ -2,8 +2,10 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import NavBar from '../components/NavBar'
 import { Card, CardContent } from '../components/ui/card'
+import { Button } from '../components/ui/button'
 import { getMyPeladas } from '../api/peladas'
 import type { PeladaResponse } from '../types/pelada'
+import CreatePeladaModal from '../components/CreatePeladaModal'
 
 function PeladaCardSkeleton() {
   return (
@@ -46,18 +48,33 @@ function PeladaCard({ pelada }: { pelada: PeladaResponse }) {
 export default function HomePage() {
   const [peladas, setPeladas] = useState<PeladaResponse[]>([])
   const [loading, setLoading] = useState(true)
+  const [showCreateModal, setShowCreateModal] = useState(false)
 
-  useEffect(() => {
+  function fetchPeladas() {
+    setLoading(true)
     getMyPeladas()
       .then(setPeladas)
       .finally(() => setLoading(false))
+  }
+
+  useEffect(() => {
+    fetchPeladas()
   }, [])
 
   return (
     <div className="min-h-screen flex flex-col">
       <NavBar />
+      {showCreateModal && (
+        <CreatePeladaModal
+          onClose={() => setShowCreateModal(false)}
+          onCreated={() => { setShowCreateModal(false); fetchPeladas() }}
+        />
+      )}
       <main className="flex-1 container max-w-5xl mx-auto px-4 py-8">
-        <h1 className="text-2xl font-bold mb-6">My Peladas</h1>
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-2xl font-bold">My Peladas</h1>
+          <Button onClick={() => setShowCreateModal(true)}>Create Pelada</Button>
+        </div>
         {loading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
             <PeladaCardSkeleton />
