@@ -3,6 +3,11 @@ Started: Fri Mar 20 09:49:36 PDT 2026
 ---
 
 ## Codebase Patterns
+- Modal pattern: use fixed inset-0 z-50 bg-black/50 overlay with bg-background inner div; click backdrop to close
+- `sonner` toast is set up globally in main.tsx — just `import { toast } from "sonner"` and call toast.success/error
+- extractErrorMessage helper (in AuthPage.tsx) can be copy-pasted for API error handling in other components
+- select element styling: use `flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm` to match Input component
+
 - Backend uses Lombok @Data, @Builder, @NoArgsConstructor, @AllArgsConstructor on all entities and DTOs
 - DTOs have a static `from(Entity entity)` factory method for entity-to-DTO conversion
 - JPA entities use @CreationTimestamp from org.hibernate.annotations for createdAt fields
@@ -127,5 +132,22 @@ Started: Fri Mar 20 09:49:36 PDT 2026
   - Image path for uploaded files: `/api/v1/files/${pelada.image}` (not full URL)
   - `container max-w-5xl mx-auto px-4 py-8` is a good main content wrapper pattern
   - Use `Link` from react-router-dom for navigation cards (not `<a>` tags)
+  - No browser testing tools available; manual browser verification needed
+---
+
+## 2026-03-20 - US-007
+- Created CreatePeladaModal component with full form (name, dayOfWeek, timeOfDay, duration, address, reference, autoCreateDailyEnabled toggle, optional image upload)
+- Added "Create Pelada" button to HomePage header that opens the modal
+- On success: closes modal, refetches peladas list, shows success toast, navigates to /pelada/:id
+- On error: shows error toast, keeps modal open
+- Image file validated client-side (5MB limit, JPEG/PNG/WebP only) before upload
+- Files changed:
+  - frontend/src/components/CreatePeladaModal.tsx (new)
+  - frontend/src/pages/HomePage.tsx
+- **Learnings for future iterations:**
+  - No @radix-ui/react-dialog installed — use fixed overlay pattern for modals (see CreatePeladaModal.tsx)
+  - `<select>` needs manual Tailwind classes to match Input component styling
+  - `uploadPeladaImage` is called after `createPelada` using the returned pelada.id
+  - `onCreated` callback pattern allows parent to refetch data after modal success
   - No browser testing tools available; manual browser verification needed
 ---
