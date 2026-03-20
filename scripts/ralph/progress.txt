@@ -113,3 +113,19 @@ Started: Fri Mar 20 09:49:36 PDT 2026
   - uploadPeladaImage uses FormData with explicit Content-Type header for multipart
   - searchUsers uses axios params option: `{ params: { q } }` for query strings
 ---
+
+## 2026-03-20 - US-006
+- Replaced placeholder HomePage with real page fetching and displaying peladas grid
+- Skeleton loading state (4 skeleton cards) shown while fetching
+- Empty state message shown when no peladas
+- Each pelada card shows image (or ⚽ placeholder), name, dayOfWeek, timeOfDay
+- Cards link to /pelada/:id using React Router Link
+- Files changed:
+  - frontend/src/pages/HomePage.tsx
+- **Learnings for future iterations:**
+  - Skeleton cards use `animate-pulse` Tailwind class and `bg-muted` for placeholder blocks
+  - Image path for uploaded files: `/api/v1/files/${pelada.image}` (not full URL)
+  - `container max-w-5xl mx-auto px-4 py-8` is a good main content wrapper pattern
+  - Use `Link` from react-router-dom for navigation cards (not `<a>` tags)
+  - No browser testing tools available; manual browser verification needed
+---
