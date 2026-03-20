@@ -175,6 +175,34 @@ Started: Fri Mar 20 09:49:36 PDT 2026
   - No browser testing tools available; manual browser verification needed
 ---
 
+## 2026-03-20 - US-010
+- Created EditPeladaModal component (mirrors CreatePeladaModal, pre-filled with current pelada values)
+- Added Edit button (admin-only) and Delete Pelada button (creator-only) to PeladaDetailPage header area
+- EditPeladaModal: calls updatePelada(), optionally uploadPeladaImage() if new image selected; toast on success/error; loading state on submit
+- Delete confirmation dialog inline in PeladaDetailPage: warning text, loading state, navigates to /home on confirm
+- Files changed:
+  - frontend/src/components/EditPeladaModal.tsx (new)
+  - frontend/src/pages/PeladaDetailPage.tsx
+- **Learnings for future iterations:**
+  - Edit modal pattern: initialize form state from pelada prop using `useState<UpdatePeladaData>({ ...pelada fields })`
+  - Creator check uses `currentUser != null && creatorId === currentUser.id` (both must be non-null)
+  - Delete dialog: set `setDeleting(false)` on error so user can retry; only navigate to /home on success
+  - No browser testing tools available; manual browser verification needed
+---
+
+## 2026-03-20 - US-011
+- Created Daily JPA entity with fields: id, pelada (ManyToOne), dailyDate (LocalDate), dailyTime (String), status (String, default SCHEDULED), createdAt
+- Created DailyRepository extending JpaRepository with existsByPeladaAndDailyDate derived query
+- Hibernate DDL auto creates the dailies table from the entity
+- Files changed:
+  - backend/src/main/java/com/futspring/backend/entity/Daily.java (new)
+  - backend/src/main/java/com/futspring/backend/repository/DailyRepository.java (new)
+- **Learnings for future iterations:**
+  - Daily entity uses LocalDate (not LocalDateTime) for dailyDate field
+  - DailyRepository derived query `existsByPeladaAndDailyDate` works because Spring Data JPA supports boolean return types for exists queries
+  - @Builder.Default on `status` field ensures default value is set when using the builder pattern
+---
+
 ## 2026-03-20 - US-009
 - Added admin player management UI to PeladaDetailPage
 - 'Add Player' button (admin only): opens AddPlayerDialog with debounced searchUsers() (300ms), shows results with 'Add' button, marks existing members; calls addPlayer() on select
