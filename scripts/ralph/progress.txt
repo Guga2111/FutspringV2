@@ -5,10 +5,27 @@
 - GlobalExceptionHandler returns `{ status, message, timestamp }` shape via ErrorResponse
 - SecurityConfig: CSRF disabled, STATELESS session — standard for all protected routes
 - JJWT 0.11.5 for JWT; Bucket4j 8.7.0 for rate limiting
-- DTOs in `dto/` package; entities in `entity/`; repos in `repository/`
+- DTOs in `dto/` package; entities in `entity/`; repos in `repository/`; services in `service/`; controllers in `controller/`
 - UserResponseDTO.from(User) static factory pattern for entity→DTO mapping
 - Hibernate ddl-auto: update — no Flyway needed, table created automatically
+- Bucket4j rate limiting: `Bucket.builder().addLimit(Bandwidth.classic(N, Refill.intervally(N, Duration.ofMinutes(1))))` with ConcurrentHashMap<String, Bucket> keyed by IP
+- JwtService.generateToken(userId, email): uses Jwts.builder() with setSubject(email), claims userId+email, signed with Keys.hmacShaKeyFor
+- AppException(HttpStatus, message) pattern for all business errors; GlobalExceptionHandler handles it generically
 
+---
+
+## 2026-03-20 - US-003
+- Created `dto/RegisterRequestDTO.java` with @Valid constraints (username, email, password ≥8 chars)
+- Created `dto/LoginRequestDTO.java` with @Valid constraints (email, password)
+- Created `dto/AuthResponseDTO.java` with token + UserResponseDTO
+- Created `service/JwtService.java` using JJWT 0.11.5 — generates token with userId+email claims
+- Created `service/AuthService.java` — register (409 on duplicate email, BCrypt hash) + login (401 on bad creds)
+- Created `controller/AuthController.java` — POST /api/v1/auth/register + POST /api/v1/auth/login with Bucket4j rate limit (10/min per IP)
+- **Learnings for future iterations:**
+  - Bucket4j `Bandwidth.classic` + `Refill.intervally` API confirmed working for 8.7.0
+  - `HttpServletRequest` injected as method param to get remote IP for rate limiting
+  - AppException with HttpStatus.TOO_MANY_REQUESTS (429) handled by GlobalExceptionHandler
+  - SecurityConfig already permits `/api/v1/auth/**` — no changes needed there for US-003
 ---
 
 ## 2026-03-20 - US-002
