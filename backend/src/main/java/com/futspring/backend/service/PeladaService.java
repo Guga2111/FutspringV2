@@ -3,6 +3,7 @@ package com.futspring.backend.service;
 import com.futspring.backend.dto.CreatePeladaRequestDTO;
 import com.futspring.backend.dto.PeladaDetailResponseDTO;
 import com.futspring.backend.dto.PeladaResponseDTO;
+import com.futspring.backend.dto.UserResponseDTO;
 import com.futspring.backend.entity.Pelada;
 import com.futspring.backend.entity.User;
 import com.futspring.backend.exception.AppException;
@@ -36,6 +37,7 @@ public class PeladaService {
                 .address(request.getAddress())
                 .reference(request.getReference())
                 .autoCreateDailyEnabled(request.isAutoCreateDailyEnabled())
+                .creator(user)
                 .build();
 
         pelada.getMembers().add(user);
@@ -68,5 +70,87 @@ public class PeladaService {
         }
 
         return PeladaDetailResponseDTO.from(pelada);
+    }
+
+    @Transactional
+    public void addPlayer(Long peladaId, Long targetUserId, String currentUserEmail) {
+        User caller = userRepository.findByEmail(currentUserEmail)
+                .orElseThrow(() -> new AppException(HttpStatus.UNAUTHORIZED, "User not found"));
+
+        Pelada pelada = peladaRepository.findById(peladaId)
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Pelada not found"));
+
+        if (!pelada.getAdmins().contains(caller)) {
+            throw new AppException(HttpStatus.FORBIDDEN, "Only admins can add players");
+        }
+
+        User target = userRepository.findById(targetUserId)
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "User not found"));
+
+        if (pelada.getMembers().contains(target)) {
+            throw new AppException(HttpStatus.CONFLICT, "User is already a member of this pelada");
+        }
+
+        pelada.getMembers().add(target);
+        peladaRepository.save(pelada);
+    }
+
+    @Transactional
+    public void removePlayer(Long peladaId, Long targetUserId, String currentUserEmail) {
+        User caller = userRepository.findByEmail(currentUserEmail)
+                .orElseThrow(() -> new AppException(HttpStatus.UNAUTHORIZED, "User not found"));
+
+        Pelada pelada = peladaRepository.findById(peladaId)
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Pelada not found"));
+
+        if (!pelada.getAdmins().contains(caller)) {
+            throw new AppException(HttpStatus.FORBIDDEN, "Only admins can remove players");
+        }
+
+        User target = userRepository.findById(targetUserId)
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "User not found"));
+
+        if (pelada.getCreator() != null && pelada.getCreator().getId().equals(targetUserId)) {
+            throw new AppException(HttpStatus.FORBIDDEN, "Cannot remove the creator of the pelada");
+        }
+
+        pelada.getMembers().remove(target);
+        pelada.getAdmins().remove(target);
+        peladaRepository.save(pelada);
+    }
+
+    @Transactional
+    public void setAdmin(Long peladaId, Long targetUserId, boolean isAdmin, String currentUserEmail) {
+        User caller = userRepository.findByEmail(currentUserEmail)
+                .orElseThrow(() -> new AppException(HttpStatus.UNAUTHORIZED, "User not found"));
+
+        Pelada pelada = peladaRepository.findById(peladaId)
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Pelada not found"));
+
+        if (!pelada.getAdmins().contains(caller)) {
+            throw new AppException(HttpStatus.FORBIDDEN, "Only admins can change admin status");
+        }
+
+        User target = userRepository.findById(targetUserId)
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "User not found"));
+
+        if (pelada.getCreator() != null && pelada.getCreator().getId().equals(targetUserId)) {
+            throw new AppException(HttpStatus.FORBIDDEN, "Cannot change admin status of the creator");
+        }
+
+        if (isAdmin) {
+            pelada.getAdmins().add(target);
+        } else {
+            pelada.getAdmins().remove(target);
+        }
+        peladaRepository.save(pelada);
+    }
+
+    @Transactional(readOnly = true)
+    public List<UserResponseDTO> searchUsers(String query) {
+        return userRepository.searchByUsernameOrEmail(query).stream()
+                .limit(10)
+                .map(UserResponseDTO::from)
+                .collect(Collectors.toList());
     }
 }

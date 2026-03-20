@@ -1,8 +1,10 @@
 package com.futspring.backend.controller;
 
+import com.futspring.backend.dto.AddPlayerRequestDTO;
 import com.futspring.backend.dto.CreatePeladaRequestDTO;
 import com.futspring.backend.dto.PeladaDetailResponseDTO;
 import com.futspring.backend.dto.PeladaResponseDTO;
+import com.futspring.backend.dto.SetAdminRequestDTO;
 import com.futspring.backend.service.PeladaService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -42,5 +44,39 @@ public class PeladaController {
     ) {
         String email = (String) authentication.getPrincipal();
         return ResponseEntity.ok(peladaService.getPeladaDetail(id, email));
+    }
+
+    @PostMapping("/{id}/players")
+    public ResponseEntity<Void> addPlayer(
+            @PathVariable Long id,
+            @Valid @RequestBody AddPlayerRequestDTO request,
+            Authentication authentication
+    ) {
+        String email = (String) authentication.getPrincipal();
+        peladaService.addPlayer(id, request.getUserId(), email);
+        return ResponseEntity.ok().build();
+    }
+
+    @DeleteMapping("/{id}/players/{userId}")
+    public ResponseEntity<Void> removePlayer(
+            @PathVariable Long id,
+            @PathVariable Long userId,
+            Authentication authentication
+    ) {
+        String email = (String) authentication.getPrincipal();
+        peladaService.removePlayer(id, userId, email);
+        return ResponseEntity.ok().build();
+    }
+
+    @PutMapping("/{id}/players/{userId}/admin")
+    public ResponseEntity<Void> setAdmin(
+            @PathVariable Long id,
+            @PathVariable Long userId,
+            @Valid @RequestBody SetAdminRequestDTO request,
+            Authentication authentication
+    ) {
+        String email = (String) authentication.getPrincipal();
+        peladaService.setAdmin(id, userId, request.getIsAdmin(), email);
+        return ResponseEntity.ok().build();
     }
 }

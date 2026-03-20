@@ -46,6 +46,10 @@ public class Pelada {
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "creator_id")
+    private User creator;
+
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
             name = "pelada_members",
