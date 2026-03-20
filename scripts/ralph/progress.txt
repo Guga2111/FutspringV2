@@ -20,6 +20,17 @@ Started: Fri Mar 20 10:34:34 PDT 2026
 - TeamRepository: findByDaily(Daily daily)
 - No browser testing tools available; manual browser verification needed
 
+## 2026-03-20 - US-011
+- Implemented `uploadChampionImage` endpoint: PUT /api/v1/dailies/:id/champion-image (multipart/form-data)
+- Admin-only; validates daily is FINISHED (400 otherwise); max 5MB; JPEG/PNG/WebP only
+- Stores file under uploads/ with UUID prefix (same pattern as pelada image upload)
+- Updates daily.championImage and returns DailyListItemDTO
+- Files changed: service/DailyService.java, controller/DailyController.java
+- **Learnings for future iterations:**
+  - File upload pattern in DailyService is identical to PeladaService.uploadPeladaImage — copy the @Value, imports (MultipartFile, IOException, Files, Path, Paths, UUID), and storage logic
+  - DailyListItemDTO.from() does not include championImage field — it only has id, dailyDate, dailyTime, status, confirmedPlayerCount, isFinished
+---
+
 ## 2026-03-20 - US-010
 - Implemented `finalizeDaily` endpoint: POST /api/v1/dailies/:id/finalize
 - Validates admin access, IN_COURSE status, at least one match result, and award winners are confirmed players
