@@ -2,7 +2,8 @@ import { useCallback, useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { toast } from 'sonner'
 import NavBar from '../components/NavBar'
-import { getDailyDetail, confirmAttendance, disconfirmAttendance, sortTeams, swapPlayers, updateDailyStatus } from '../api/dailies'
+import { getDailyDetail, confirmAttendance, disconfirmAttendance, sortTeams, swapPlayers, updateDailyStatus, submitResults } from '../api/dailies'
+import type { MatchResultInput } from '../api/dailies'
 import type { DailyDetail, PlayerDTO, TeamDTO } from '../types/daily'
 import { useAuth } from '../hooks/useAuth'
 
@@ -160,6 +161,309 @@ function TeamsSection({
   )
 }
 
+// ── Results Modal ────────────────────────────────────────────────────────────
+
+interface MatchFormRow {
+  matchId: number | null
+  team1Id: number
+  team2Id: number
+  team1Score: string
+  team2Score: string
+  statsExpanded: boolean
+  playerStats: { userId: number; username: string; goals: string; assists: string }[]
+}
+
+function buildDefaultPlayerStats(daily: DailyDetail) {
+  return daily.confirmedPlayers.map((p) => ({
+    userId: p.id,
+    username: p.username,
+    goals: '0',
+    assists: '0',
+  }))
+}
+
+function initMatchRows(daily: DailyDetail): MatchFormRow[] {
+  const defaultStats = buildDefaultPlayerStats(daily)
+  if (daily.matches.length > 0) {
+    return daily.matches.map((m) => ({
+      matchId: m.id,
+      team1Id: m.team1Id,
+      team2Id: m.team2Id,
+      team1Score: String(m.team1Score ?? 0),
+      team2Score: String(m.team2Score ?? 0),
+      statsExpanded: false,
+      playerStats: defaultStats,
+    }))
+  }
+  if (daily.teams.length >= 2) {
+    return [
+      {
+        matchId: null,
+        team1Id: daily.teams[0].id,
+        team2Id: daily.teams[1].id,
+        team1Score: '0',
+        team2Score: '0',
+        statsExpanded: false,
+        playerStats: defaultStats,
+      },
+    ]
+  }
+  return []
+}
+
+interface ResultsModalProps {
+  daily: DailyDetail
+  onClose: () => void
+  onSuccess: (updated: DailyDetail) => void
+}
+
+function ResultsModal({ daily, onClose, onSuccess }: ResultsModalProps) {
+  const [rows, setRows] = useState<MatchFormRow[]>(() => initMatchRows(daily))
+  const [loading, setLoading] = useState(false)
+
+  function updateRow(index: number, patch: Partial<MatchFormRow>) {
+    setRows((prev) => prev.map((r, i) => (i === index ? { ...r, ...patch } : r)))
+  }
+
+  function updatePlayerStat(
+    matchIndex: number,
+    playerIndex: number,
+    field: 'goals' | 'assists',
+    value: string,
+  ) {
+    setRows((prev) =>
+      prev.map((r, i) => {
+        if (i !== matchIndex) return r
+        const updatedStats = r.playerStats.map((ps, pi) =>
+          pi === playerIndex ? { ...ps, [field]: value } : ps,
+        )
+        return { ...r, playerStats: updatedStats }
+      }),
+    )
+  }
+
+  function addMatch() {
+    setRows((prev) => [
+      ...prev,
+      {
+        matchId: null,
+        team1Id: daily.teams[0]?.id ?? 0,
+        team2Id: daily.teams[1]?.id ?? 0,
+        team1Score: '0',
+        team2Score: '0',
+        statsExpanded: false,
+        playerStats: buildDefaultPlayerStats(daily),
+      },
+    ])
+  }
+
+  function removeMatch(index: number) {
+    setRows((prev) => prev.filter((_, i) => i !== index))
+  }
+
+  async function handleSubmit() {
+    setLoading(true)
+    try {
+      const payload: MatchResultInput[] = rows.map((r) => ({
+        matchId: r.matchId ?? null,
+        team1Id: r.team1Id,
+        team2Id: r.team2Id,
+        team1Score: Math.max(0, parseInt(r.team1Score) || 0),
+        team2Score: Math.max(0, parseInt(r.team2Score) || 0),
+        playerStats: r.playerStats.map((ps) => ({
+          userId: ps.userId,
+          goals: Math.max(0, parseInt(ps.goals) || 0),
+          assists: Math.max(0, parseInt(ps.assists) || 0),
+        })),
+      }))
+      await submitResults(daily.id, payload)
+      // Re-fetch fresh detail to get updated matches
+      const { getDailyDetail } = await import('../api/dailies')
+      const updated = await getDailyDetail(daily.id)
+      toast.success('Results saved!')
+      onSuccess(updated)
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string } } }
+      toast.error(e?.response?.data?.message ?? 'Failed to save results')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 overflow-y-auto py-8 px-4">
+      <div className="bg-background rounded-lg shadow-lg w-full max-w-2xl">
+        <div className="flex items-center justify-between p-4 border-b">
+          <h2 className="text-lg font-semibold">Enter Match Results</h2>
+          <button
+            className="text-muted-foreground hover:text-foreground text-xl leading-none"
+            onClick={onClose}
+          >
+            ×
+          </button>
+        </div>
+        <div className="p-4 space-y-6">
+          {rows.length === 0 && (
+            <p className="text-sm text-muted-foreground">
+              No teams available. Sort teams before entering results.
+            </p>
+          )}
+          {rows.map((row, mi) => {
+            const team1Name =
+              daily.teams.find((t) => t.id === row.team1Id)?.name ?? `Team ${row.team1Id}`
+            const team2Name =
+              daily.teams.find((t) => t.id === row.team2Id)?.name ?? `Team ${row.team2Id}`
+            return (
+              <div key={mi} className="border rounded-lg p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-medium text-sm">Match {mi + 1}</h3>
+                  {rows.length > 1 && (
+                    <button
+                      className="text-xs text-destructive hover:underline"
+                      onClick={() => removeMatch(mi)}
+                    >
+                      Remove
+                    </button>
+                  )}
+                </div>
+
+                {/* Team selects */}
+                <div className="grid grid-cols-2 gap-3 mb-1">
+                  <div>
+                    <label className="text-xs text-muted-foreground mb-1 block">Team 1</label>
+                    <select
+                      className="w-full text-sm border rounded px-2 py-1.5 bg-background"
+                      value={row.team1Id}
+                      onChange={(e) => updateRow(mi, { team1Id: Number(e.target.value) })}
+                    >
+                      {daily.teams.map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground mb-1 block">Team 2</label>
+                    <select
+                      className="w-full text-sm border rounded px-2 py-1.5 bg-background"
+                      value={row.team2Id}
+                      onChange={(e) => updateRow(mi, { team2Id: Number(e.target.value) })}
+                    >
+                      {daily.teams.map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Score inputs */}
+                <div className="grid grid-cols-2 gap-3 mb-3">
+                  <div>
+                    <label className="text-xs text-muted-foreground mb-1 block">
+                      {team1Name} score
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      className="w-full text-sm border rounded px-2 py-1.5 bg-background"
+                      value={row.team1Score}
+                      onChange={(e) => updateRow(mi, { team1Score: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground mb-1 block">
+                      {team2Name} score
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      className="w-full text-sm border rounded px-2 py-1.5 bg-background"
+                      value={row.team2Score}
+                      onChange={(e) => updateRow(mi, { team2Score: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                {/* Player stats toggle */}
+                <button
+                  className="text-xs text-muted-foreground hover:text-foreground mb-2"
+                  onClick={() => updateRow(mi, { statsExpanded: !row.statsExpanded })}
+                >
+                  {row.statsExpanded ? '▾ Hide' : '▸ Show'} player stats (
+                  {row.playerStats.length} players)
+                </button>
+
+                {row.statsExpanded && (
+                  <div className="space-y-1">
+                    <div className="grid grid-cols-[1fr_5rem_5rem] gap-2 text-xs text-muted-foreground px-1 mb-1">
+                      <span>Player</span>
+                      <span className="text-center">Goals</span>
+                      <span className="text-center">Assists</span>
+                    </div>
+                    {row.playerStats.map((ps, pi) => (
+                      <div
+                        key={ps.userId}
+                        className="grid grid-cols-[1fr_5rem_5rem] gap-2 items-center"
+                      >
+                        <span className="text-sm truncate">{ps.username}</span>
+                        <input
+                          type="number"
+                          min="0"
+                          className="text-sm border rounded px-2 py-1 bg-background text-center w-full"
+                          value={ps.goals}
+                          onChange={(e) => updatePlayerStat(mi, pi, 'goals', e.target.value)}
+                        />
+                        <input
+                          type="number"
+                          min="0"
+                          className="text-sm border rounded px-2 py-1 bg-background text-center w-full"
+                          value={ps.assists}
+                          onChange={(e) => updatePlayerStat(mi, pi, 'assists', e.target.value)}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )
+          })}
+
+          {daily.teams.length >= 2 && (
+            <button
+              className="text-sm text-muted-foreground border border-dashed rounded px-3 py-2 w-full hover:bg-muted"
+              onClick={addMatch}
+            >
+              + Add Match
+            </button>
+          )}
+        </div>
+
+        <div className="flex justify-end gap-3 p-4 border-t">
+          <button
+            className="text-sm px-4 py-2 rounded border hover:bg-muted disabled:opacity-50"
+            disabled={loading}
+            onClick={onClose}
+          >
+            Cancel
+          </button>
+          <button
+            className="text-sm bg-primary text-primary-foreground px-4 py-2 rounded disabled:opacity-50"
+            disabled={loading || rows.length === 0}
+            onClick={handleSubmit}
+          >
+            {loading ? 'Saving...' : 'Save Results'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Main Page ─────────────────────────────────────────────────────────────────
+
 export default function DailyDetailPage() {
   const { id } = useParams<{ id: string }>()
   const dailyId = Number(id)
@@ -174,6 +478,7 @@ export default function DailyDetailPage() {
   const [swapLoading, setSwapLoading] = useState(false)
   const [statusDialog, setStatusDialog] = useState<{ targetStatus: string; description: string } | null>(null)
   const [statusLoading, setStatusLoading] = useState(false)
+  const [resultsOpen, setResultsOpen] = useState(false)
 
   const fetchDaily = useCallback(async () => {
     try {
@@ -398,6 +703,30 @@ export default function DailyDetailPage() {
                 Cancel Daily
               </button>
             </div>
+          )}
+
+          {/* Enter Results button — admin, IN_COURSE */}
+          {daily.isAdmin && daily.status === 'IN_COURSE' && (
+            <div className="mb-6">
+              <button
+                className="text-sm bg-primary text-primary-foreground px-4 py-2 rounded"
+                onClick={() => setResultsOpen(true)}
+              >
+                Enter Results
+              </button>
+            </div>
+          )}
+
+          {/* Results modal */}
+          {resultsOpen && daily && (
+            <ResultsModal
+              daily={daily}
+              onClose={() => setResultsOpen(false)}
+              onSuccess={(updated) => {
+                setDaily(updated)
+                setResultsOpen(false)
+              }}
+            />
           )}
 
           {/* Confirmation dialog */}
