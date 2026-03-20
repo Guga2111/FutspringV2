@@ -1,3 +1,19 @@
+## 2026-03-20 - US-006
+- Created `src/types/auth.ts` with TypeScript interfaces: UserResponseDTO, AuthResponse, RegisterRequest, LoginRequest
+- Created `src/api/auth.ts` with registerUser() and loginUser() calling backend endpoints
+- Created `src/context/AuthContext.tsx`: AuthProvider with user/token state, login/logout, localStorage persistence on mount
+- Created `src/hooks/useAuth.ts`: useAuth() hook that throws if used outside AuthProvider
+- Axios interceptors set up inside AuthProvider useEffect: request interceptor attaches Bearer token; response interceptor calls logout() + redirects to /auth on 401
+- Updated `src/main.tsx` to wrap app with AuthProvider
+- Typecheck passes
+- **Learnings for future iterations:**
+  - Axios interceptors set up inside AuthProvider (not in client.ts) so they have closure access to logout()
+  - Interceptors read token from localStorage directly (not from state) to avoid stale closure issues
+  - Cleanup ejects interceptors on unmount (apiClient.interceptors.request.eject / response.eject)
+  - useMemo on context value prevents unnecessary re-renders
+  - window.location.href used for 401 redirect (not useNavigate) since interceptor is outside router context
+---
+
 ## 2026-03-20 - US-005
 - Created Vite + React 18 + TypeScript frontend under `frontend/`
 - Installed Tailwind CSS v3 (not v4 — shadcn CLI requires v3 config file)
