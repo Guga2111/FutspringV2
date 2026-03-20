@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { toast } from 'sonner'
 import NavBar from '../components/NavBar'
-import { getDailyDetail, confirmAttendance, disconfirmAttendance, sortTeams, swapPlayers } from '../api/dailies'
+import { getDailyDetail, confirmAttendance, disconfirmAttendance, sortTeams, swapPlayers, updateDailyStatus } from '../api/dailies'
 import type { DailyDetail, PlayerDTO, TeamDTO } from '../types/daily'
 import { useAuth } from '../hooks/useAuth'
 
@@ -172,6 +172,8 @@ export default function DailyDetailPage() {
   const [sortLoading, setSortLoading] = useState(false)
   const [selectedPlayer, setSelectedPlayer] = useState<{ id: number; teamId: number } | null>(null)
   const [swapLoading, setSwapLoading] = useState(false)
+  const [statusDialog, setStatusDialog] = useState<{ targetStatus: string; description: string } | null>(null)
+  const [statusLoading, setStatusLoading] = useState(false)
 
   const fetchDaily = useCallback(async () => {
     try {
@@ -268,6 +270,22 @@ export default function DailyDetailPage() {
     }
   }
 
+  const handleStatusConfirm = async () => {
+    if (!daily || !statusDialog) return
+    setStatusLoading(true)
+    try {
+      const updated = await updateDailyStatus(daily.id, statusDialog.targetStatus)
+      setDaily((prev) => prev ? { ...prev, status: updated.status, isFinished: updated.isFinished } : prev)
+      toast.success('Status updated!')
+      setStatusDialog(null)
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string } } }
+      toast.error(e?.response?.data?.message ?? 'Failed to update status')
+    } finally {
+      setStatusLoading(false)
+    }
+  }
+
   const isCurrentUserConfirmed =
     user != null && daily != null && daily.confirmedPlayers.some((p) => p.id === user.id)
 
@@ -336,6 +354,75 @@ export default function DailyDetailPage() {
                   {confirmLoading ? 'Updating...' : 'Confirm Attendance'}
                 </button>
               )}
+            </div>
+          )}
+
+          {/* Status action bar — admin only */}
+          {daily.isAdmin && (daily.status === 'SCHEDULED' || daily.status === 'CONFIRMED') && (
+            <div className="mb-6 flex flex-wrap gap-2">
+              {daily.status === 'SCHEDULED' && (
+                <button
+                  className="text-sm bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600 disabled:opacity-50"
+                  onClick={() =>
+                    setStatusDialog({
+                      targetStatus: 'CONFIRMED',
+                      description: 'This will mark the daily as Confirmed, signalling that attendance is locked in.',
+                    })
+                  }
+                >
+                  Confirm Daily
+                </button>
+              )}
+              {daily.status === 'CONFIRMED' && (
+                <button
+                  className="text-sm bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 disabled:opacity-50"
+                  onClick={() =>
+                    setStatusDialog({
+                      targetStatus: 'IN_COURSE',
+                      description: 'This will mark the session as In Course. The session is now live.',
+                    })
+                  }
+                >
+                  Start Session
+                </button>
+              )}
+              <button
+                className="text-sm bg-destructive text-destructive-foreground px-4 py-2 rounded hover:opacity-90 disabled:opacity-50"
+                onClick={() =>
+                  setStatusDialog({
+                    targetStatus: 'CANCELED',
+                    description: 'This will cancel the daily session. This action cannot be undone.',
+                  })
+                }
+              >
+                Cancel Daily
+              </button>
+            </div>
+          )}
+
+          {/* Confirmation dialog */}
+          {statusDialog && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+              <div className="bg-background rounded-lg shadow-lg p-6 max-w-sm w-full mx-4">
+                <h3 className="text-lg font-semibold mb-2">Confirm Action</h3>
+                <p className="text-sm text-muted-foreground mb-6">{statusDialog.description}</p>
+                <div className="flex gap-3 justify-end">
+                  <button
+                    className="text-sm px-4 py-2 rounded border hover:bg-muted disabled:opacity-50"
+                    disabled={statusLoading}
+                    onClick={() => setStatusDialog(null)}
+                  >
+                    Back
+                  </button>
+                  <button
+                    className="text-sm bg-primary text-primary-foreground px-4 py-2 rounded disabled:opacity-50"
+                    disabled={statusLoading}
+                    onClick={handleStatusConfirm}
+                  >
+                    {statusLoading ? 'Updating...' : 'Confirm'}
+                  </button>
+                </div>
+              </div>
             </div>
           )}
 
