@@ -2,8 +2,8 @@ import { useCallback, useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { toast } from 'sonner'
 import NavBar from '../components/NavBar'
-import { getDailyDetail, confirmAttendance, disconfirmAttendance } from '../api/dailies'
-import type { DailyDetail, PlayerDTO } from '../types/daily'
+import { getDailyDetail, confirmAttendance, disconfirmAttendance, sortTeams, swapPlayers } from '../api/dailies'
+import type { DailyDetail, PlayerDTO, TeamDTO } from '../types/daily'
 import { useAuth } from '../hooks/useAuth'
 
 function SkeletonBlock({ className }: { className: string }) {
@@ -61,6 +61,105 @@ function DetailSkeleton() {
   )
 }
 
+function StarRating({ stars }: { stars: number }) {
+  return (
+    <span className="text-yellow-400 text-xs">
+      {Array.from({ length: 5 }, (_, i) => (
+        <span key={i}>{i < stars ? '★' : '☆'}</span>
+      ))}
+    </span>
+  )
+}
+
+interface TeamsSectionProps {
+  daily: DailyDetail
+  sortLoading: boolean
+  swapLoading: boolean
+  selectedPlayer: { id: number; teamId: number } | null
+  onSortTeams: () => void
+  onPlayerClick: (playerId: number, teamId: number) => void
+}
+
+function TeamsSection({
+  daily,
+  sortLoading,
+  swapLoading,
+  selectedPlayer,
+  onSortTeams,
+  onPlayerClick,
+}: TeamsSectionProps) {
+  const canSort =
+    daily.isAdmin &&
+    (daily.status === 'SCHEDULED' || daily.status === 'CONFIRMED') &&
+    daily.confirmedPlayers.length >= 2
+
+  const hasTeams = daily.teams.length > 0
+
+  if (!canSort && !hasTeams) return null
+
+  return (
+    <section className="mb-8">
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-lg font-semibold">Teams</h2>
+        {canSort && (
+          <button
+            className="text-sm bg-primary text-primary-foreground px-3 py-1.5 rounded disabled:opacity-50"
+            disabled={sortLoading || swapLoading}
+            onClick={onSortTeams}
+          >
+            {sortLoading ? 'Sorting...' : hasTeams ? 'Re-sort Teams' : 'Sort Teams'}
+          </button>
+        )}
+      </div>
+      {selectedPlayer !== null && (
+        <p className="text-sm text-muted-foreground mb-3">
+          Player selected — click a player in a different team to swap, or click the same player to cancel.
+        </p>
+      )}
+      {hasTeams ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {daily.teams.map((team: TeamDTO) => (
+            <div key={team.id} className="border rounded-lg p-4">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-semibold">{team.name}</h3>
+                <StarRating stars={team.totalStars} />
+              </div>
+              <div className="space-y-1">
+                {team.players.map((player: PlayerDTO) => {
+                  const isSelected = selectedPlayer?.id === player.id
+                  return (
+                    <div
+                      key={player.id}
+                      className={`flex items-center gap-2 p-1.5 rounded ${isSelected ? 'bg-primary/10 ring-1 ring-primary' : 'hover:bg-muted'}`}
+                    >
+                      <PlayerAvatar player={player} />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{player.username}</p>
+                      </div>
+                      <StarRating stars={player.stars} />
+                      {daily.isAdmin && (
+                        <button
+                          className={`text-xs px-2 py-0.5 rounded border ${isSelected ? 'bg-primary text-primary-foreground border-primary' : 'border-muted-foreground text-muted-foreground hover:bg-muted'} disabled:opacity-50`}
+                          disabled={swapLoading}
+                          onClick={() => onPlayerClick(player.id, team.id)}
+                        >
+                          {isSelected ? 'Cancel' : 'Move'}
+                        </button>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="text-sm text-muted-foreground">No teams yet. Use "Sort Teams" to auto-balance.</p>
+      )}
+    </section>
+  )
+}
+
 export default function DailyDetailPage() {
   const { id } = useParams<{ id: string }>()
   const dailyId = Number(id)
@@ -70,6 +169,9 @@ export default function DailyDetailPage() {
   const [loading, setLoading] = useState(true)
   const [accessDenied, setAccessDenied] = useState(false)
   const [confirmLoading, setConfirmLoading] = useState(false)
+  const [sortLoading, setSortLoading] = useState(false)
+  const [selectedPlayer, setSelectedPlayer] = useState<{ id: number; teamId: number } | null>(null)
+  const [swapLoading, setSwapLoading] = useState(false)
 
   const fetchDaily = useCallback(async () => {
     try {
@@ -103,6 +205,51 @@ export default function DailyDetailPage() {
       toast.error(e?.response?.data?.message ?? 'Failed to confirm attendance')
     } finally {
       setConfirmLoading(false)
+    }
+  }
+
+  const handleSortTeams = async () => {
+    if (!daily) return
+    setSortLoading(true)
+    try {
+      const updated = await sortTeams(daily.id)
+      setDaily(updated)
+      toast.success('Teams sorted!')
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string } } }
+      toast.error(e?.response?.data?.message ?? 'Failed to sort teams')
+    } finally {
+      setSortLoading(false)
+    }
+  }
+
+  const handlePlayerClick = async (playerId: number, teamId: number) => {
+    if (!daily) return
+    if (selectedPlayer === null) {
+      setSelectedPlayer({ id: playerId, teamId })
+      return
+    }
+    // Cancel selection if same player clicked
+    if (selectedPlayer.id === playerId) {
+      setSelectedPlayer(null)
+      return
+    }
+    // Must be a different team to swap
+    if (selectedPlayer.teamId === teamId) {
+      toast.error('Select a player from a different team to swap')
+      return
+    }
+    setSwapLoading(true)
+    try {
+      const updated = await swapPlayers(daily.id, selectedPlayer.id, playerId)
+      setDaily(updated)
+      setSelectedPlayer(null)
+      toast.success('Players swapped!')
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string } } }
+      toast.error(e?.response?.data?.message ?? 'Failed to swap players')
+    } finally {
+      setSwapLoading(false)
     }
   }
 
@@ -193,7 +340,7 @@ export default function DailyDetailPage() {
           )}
 
           {/* Confirmed Players */}
-          <section>
+          <section className="mb-8">
             <h2 className="text-lg font-semibold mb-3">
               Confirmed Players ({daily.confirmedPlayers.length})
             </h2>
@@ -220,6 +367,16 @@ export default function DailyDetailPage() {
               </div>
             )}
           </section>
+
+          {/* Teams */}
+          <TeamsSection
+            daily={daily}
+            sortLoading={sortLoading}
+            swapLoading={swapLoading}
+            selectedPlayer={selectedPlayer}
+            onSortTeams={handleSortTeams}
+            onPlayerClick={handlePlayerClick}
+          />
         </main>
       )}
     </div>

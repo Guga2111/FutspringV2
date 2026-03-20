@@ -77,4 +77,5 @@ export interface DailyDetail {
   award: AwardDTO | null
   peladaId: number
   peladaName: string
+  isAdmin: boolean
 }

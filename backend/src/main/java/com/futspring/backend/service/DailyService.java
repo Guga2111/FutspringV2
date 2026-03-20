@@ -688,6 +688,7 @@ public class DailyService {
                 .award(award)
                 .peladaId(pelada.getId())
                 .peladaName(pelada.getName())
+                .isAdmin(pelada.getAdmins().contains(caller))
                 .build();
     }
 }

@@ -28,6 +28,7 @@ public class DailyDetailDTO {
     private AwardDTO award;
     private Long peladaId;
     private String peladaName;
+    private boolean isAdmin;
 
     @Data
     @NoArgsConstructor
