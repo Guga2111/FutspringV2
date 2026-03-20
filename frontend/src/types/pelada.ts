@@ -21,5 +21,6 @@ export interface PeladaResponse {
 }
 
 export interface PeladaDetail extends PeladaResponse {
+  creatorId: number | null
   members: PeladaMember[]
 }

@@ -16,6 +16,7 @@ import java.util.stream.Collectors;
 public class PeladaDetailResponseDTO {
 
     private Long id;
+    private Long creatorId;
     private String name;
     private String dayOfWeek;
     private String timeOfDay;
@@ -34,6 +35,7 @@ public class PeladaDetailResponseDTO {
 
         return PeladaDetailResponseDTO.builder()
                 .id(pelada.getId())
+                .creatorId(pelada.getCreator() != null ? pelada.getCreator().getId() : null)
                 .name(pelada.getName())
                 .dayOfWeek(pelada.getDayOfWeek())
                 .timeOfDay(pelada.getTimeOfDay())
