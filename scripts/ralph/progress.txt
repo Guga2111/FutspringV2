@@ -2,6 +2,20 @@
 Started: Fri Mar 20 10:34:34 PDT 2026
 ---
 
+## 2026-03-20 - US-015
+- Added admin team management to DailyDetailPage (sort teams + swap players)
+- Added `isAdmin` field to DailyDetailDTO (backend) and populated it in getDailyDetail by checking pelada.getAdmins().contains(caller)
+- TeamsSection component shows team cards with player avatars, names, stars, and Move buttons
+- Sort Teams button visible when admin + status SCHEDULED/CONFIRMED + confirmedPlayerCount >= 2; Re-sort Teams label when teams exist
+- Player selection state: click Move → select player; click Move on same player → cancel; click Move on player in different team → swap
+- swapPlayers returns DailyDetail (full detail); setDaily(updated) refreshes without full page reload
+- Files changed: backend/DailyDetailDTO.java, backend/DailyService.java, frontend/src/types/daily.ts, frontend/src/pages/DailyDetailPage.tsx
+- **Learnings for future iterations:**
+  - `isAdmin` must come from backend (DailyDetailDTO) since DailyDetailPage doesn't have access to pelada members list; added to getDailyDetail service method
+  - Teams section is hidden entirely when no teams exist and user is not admin (nothing to show)
+  - Two-step swap UX: first click selects player (stored in state), second click in different team triggers swapPlayers API
+---
+
 ## Codebase Patterns
 - Backend uses Lombok @Data, @Builder, @NoArgsConstructor, @AllArgsConstructor on all entities and DTOs
 - DTOs have a static `from(Entity entity)` factory method for entity-to-DTO conversion
@@ -19,6 +33,24 @@ Started: Fri Mar 20 10:34:34 PDT 2026
 - Team entity: id, daily (ManyToOne), name, players (ManyToMany<User>, join table team_players)
 - TeamRepository: findByDaily(Daily daily)
 - No browser testing tools available; manual browser verification needed
+- DailyDetailDTO includes `isAdmin` boolean (populated in getDailyDetail by checking pelada.getAdmins().contains(caller)) — use this for all admin-only UI on DailyDetailPage
+
+## 2026-03-20 - US-014
+- Replaced DailyDetailPage placeholder with full implementation
+- Header: pelada name (link to /pelada/:id), formatted date, time, status badge
+- Confirmed Players section: player avatars/names/stars/position, count in heading, empty state
+- Skeleton loading (3 rows) while fetching
+- 403 response → 'Access Denied' screen (no crash)
+- 'Confirm Attendance' button shown when status is SCHEDULED/CONFIRMED and user not in confirmedPlayers
+- 'Disconfirm Attendance' button shown when status is SCHEDULED/CONFIRMED and user is in confirmedPlayers
+- Both buttons hidden when status is IN_COURSE, FINISHED, or CANCELED
+- refetch after confirm/disconfirm; toast on success and error
+- Files changed: frontend/src/pages/DailyDetailPage.tsx
+- **Learnings for future iterations:**
+  - useAuth().user has id; match against confirmedPlayers[].id to check if current user confirmed
+  - fetchDaily is a useCallback with [dailyId] dep; both confirm/disconfirm call fetchDaily() after API success
+  - confirmLoading single bool covers both confirm and disconfirm buttons
+---
 
 ## 2026-03-20 - US-013
 - Added Sessions section to PeladaDetailPage below members list
