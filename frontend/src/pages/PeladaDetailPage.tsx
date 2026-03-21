@@ -733,7 +733,7 @@ export default function PeladaDetailPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="page-enter min-h-screen flex flex-col">
       <NavBar />
       {loading ? (
         <DetailSkeleton />

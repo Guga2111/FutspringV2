@@ -62,7 +62,7 @@ export default function HomePage() {
   }, [])
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="page-enter min-h-screen flex flex-col">
       <NavBar />
       {showCreateModal && (
         <CreatePeladaModal

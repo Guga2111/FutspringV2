@@ -312,7 +312,7 @@ export default function ProfilePage() {
     .slice(0, 2)
 
   return (
-    <>
+    <div className="page-enter">
       <NavBar />
 
       {/* Background banner */}
@@ -422,6 +422,6 @@ export default function ProfilePage() {
           onProfileUpdated={(updated) => setProfile(updated)}
         />
       )}
-    </>
+    </div>
   )
 }
