@@ -14,7 +14,13 @@ import type { MessageDTO } from '../types/chat'
 import { useAuth } from '../hooks/useAuth'
 import EditPeladaModal from '../components/EditPeladaModal'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/tabs'
-import { Pencil, Trash2, MessageCircle } from 'lucide-react'
+import { Pencil, Trash2, MessageCircle, MoreVertical } from 'lucide-react'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '../components/ui/dropdown-menu'
 
 function SkeletonBlock({ className }: { className: string }) {
   return <div className={`bg-muted rounded animate-pulse ${className}`} />
@@ -835,7 +841,7 @@ export default function PeladaDetailPage() {
                         <MemberAvatar username={member.username} image={member.image} />
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-medium truncate">{member.username}</span>
+                            <Link to={`/profile/${member.id}`} className="font-medium truncate hover:underline">{member.username}</Link>
                             {member.isAdmin && (
                               <span className="text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded-full">
                                 Admin
@@ -850,25 +856,31 @@ export default function PeladaDetailPage() {
                           <StarRating stars={member.stars} />
                         </div>
                         {isCurrentUserAdmin && !isCreator && (
-                          <div className="flex items-center gap-2 flex-shrink-0">
-                            <button
-                              className="text-xs border border-border px-2 py-1 rounded hover:bg-muted disabled:opacity-50"
-                              disabled={togglingAdmin === member.id}
-                              onClick={() => handleToggleAdmin(member)}
-                            >
-                              {togglingAdmin === member.id
-                                ? '...'
-                                : member.isAdmin
-                                ? 'Remove Admin'
-                                : 'Make Admin'}
-                            </button>
-                            <button
-                              className="text-xs text-destructive border border-destructive px-2 py-1 rounded hover:bg-destructive hover:text-destructive-foreground disabled:opacity-50"
-                              onClick={() => setConfirmRemoveMember(member)}
-                            >
-                              Remove
-                            </button>
-                          </div>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <button
+                                aria-label="Member options"
+                                className="p-1.5 rounded hover:bg-muted flex-shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                disabled={togglingAdmin === member.id}
+                              >
+                                <MoreVertical className="h-4 w-4" />
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem
+                                onClick={() => handleToggleAdmin(member)}
+                                disabled={togglingAdmin === member.id}
+                              >
+                                {member.isAdmin ? 'Remove Admin' : 'Make Admin'}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => setConfirmRemoveMember(member)}
+                                className="text-destructive focus:text-destructive"
+                              >
+                                Remove from Pelada
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         )}
                       </div>
                     )
