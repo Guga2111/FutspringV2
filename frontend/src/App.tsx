@@ -6,6 +6,7 @@ const AuthPage = lazy(() => import('./pages/AuthPage'))
 const HomePage = lazy(() => import('./pages/HomePage'))
 const PeladaDetailPage = lazy(() => import('./pages/PeladaDetailPage'))
 const DailyDetailPage = lazy(() => import('./pages/DailyDetailPage'))
+const ProfilePage = lazy(() => import('./pages/ProfilePage'))
 
 const fallback = <div className="flex items-center justify-center min-h-screen">Loading...</div>
 
@@ -18,7 +19,7 @@ function App() {
         <Route path="/home" element={<PrivateRoute><HomePage /></PrivateRoute>} />
         <Route path="/pelada/:id" element={<PrivateRoute><PeladaDetailPage /></PrivateRoute>} />
         <Route path="/daily/:id" element={<PrivateRoute><DailyDetailPage /></PrivateRoute>} />
-        <Route path="/profile/:id" element={<PrivateRoute><div className="flex items-center justify-center min-h-screen"><h1 className="text-2xl font-bold">Profile — coming soon</h1></div></PrivateRoute>} />
+        <Route path="/profile/:id" element={<PrivateRoute><ProfilePage /></PrivateRoute>} />
       </Routes>
     </Suspense>
   )
