@@ -1,21 +1,18 @@
 {
   "project": "FutSpring",
-  "branchName": "ralph/futspring-chat",
-  "description": "FutSpring Chat — real-time group chat per pelada using WebSocket (STOMP over SockJS), persistent message history, and JWT auth on WebSocket handshake",
+  "branchName": "ralph/futspring-profile",
+  "description": "FutSpring Profile — view and edit user profile (avatar, background image, username, position, stars), display global stats and Puskas award history, image uploads",
   "userStories": [
     {
       "id": "US-001",
-      "title": "Backend Message entity, WebSocket config, JWT auth, and REST history endpoint",
-      "description": "As a developer, I need the backend WebSocket infrastructure and message persistence so the frontend can send/receive chat messages.",
+      "title": "Backend profile endpoints — get, update, and file serving",
+      "description": "As a developer, I need endpoints to retrieve and update user profile info and serve uploaded files.",
       "acceptanceCriteria": [
-        "Create Message JPA entity with fields: id (Long, auto), pelada (ManyToOne Pelada, required), sender (ManyToOne User, required), content (String, not blank, max 500), sentAt (LocalDateTime, @CreationTimestamp)",
-        "Create MessageRepository extending JpaRepository<Message, Long> with: findByPeladaOrderBySentAtDesc(Pelada pelada, Pageable pageable)",
-        "Configure WebSocket: @EnableWebSocketMessageBroker; WebSocketMessageBrokerConfigurer implementation; registerStompEndpoints at '/ws' with SockJS fallback and setAllowedOriginPatterns('*'); configureMessageBroker with in-memory broker on '/topic' and application destination prefix '/app'",
-        "JWT auth on WebSocket: implement ChannelInterceptor (not HandshakeInterceptor); in preSend() for CONNECT frames, extract JWT from nativeHeaders 'Authorization' header (strip 'Bearer '), validate via JwtTokenProvider, set Authentication in SecurityContextHolder and in the accessor; register the interceptor in configureClientInboundChannel()",
-        "Create MessageDTO with fields: id, content, sentAt (String ISO), sender (nested SenderDTO: id, username, image); static MessageDTO.from(Message m) factory",
-        "Create ChatController: @MessageMapping('/pelada/{peladaId}/send') handler — validates sender is a pelada member (403 otherwise), validates content is not blank and <= 500 chars (400 otherwise), persists Message, broadcasts MessageDTO to '/topic/pelada/{peladaId}' via SimpMessagingTemplate; method signature: public void sendMessage(@DestinationVariable Long peladaId, @Payload SendMessageRequest request, Principal principal)",
-        "Create SendMessageRequest DTO with: content (String)",
-        "GET /api/v1/peladas/:id/messages?page=0&size=50 — members only (403); returns List<MessageDTO> for the pelada sorted by sentAt ascending (reverse the desc query result); uses Pageable with page/size params; add to PeladaController or new MessageController",
+        "Ensure User entity has fields: image (String, nullable), backgroundImage (String, nullable), stars (int, default 3), position (String, nullable — store as String for simplicity, not enum, valid values: GOALKEEPER, DEFENDER, MIDFIELDER, FORWARD); add backgroundImage if missing",
+        "Create ProfileDTO with fields: id, username, email, image, backgroundImage, stars, position; static ProfileDTO.from(User u) factory",
+        "GET /api/v1/users/:id — any authenticated user; returns ProfileDTO; 404 if not found; add to UserController",
+        "PUT /api/v1/users/:id — authenticated user can only update own profile (403 if mismatch); body: UpdateProfileRequest { username (optional, min 3 max 30), position (optional, must be one of the 4 allowed values or null), stars (optional, 1–5) }; return 409 if username taken by another user; return updated ProfileDTO",
+        "Serve uploaded files: configure Spring MVC to serve files from uploads/ directory under /api/v1/files/**; use ResourceHttpRequestHandler or WebMvcConfigurer.addResourceHandlers(); files stored via existing upload endpoints (pelada images, champion images, user images) are all in the same uploads/ dir",
         "Typecheck passes"
       ],
       "priority": 1,
@@ -24,58 +21,69 @@
     },
     {
       "id": "US-002",
-      "title": "Frontend chat sidebar with message history",
-      "description": "As a member, I want to see past messages when I open the pelada page so I can catch up on the conversation.",
+      "title": "Backend avatar and background image upload endpoints",
+      "description": "As a developer, I need endpoints to upload and replace a user's avatar and background image.",
       "acceptanceCriteria": [
-        "Create src/types/chat.ts with interfaces: SenderDTO { id, username, image }, MessageDTO { id, content, sentAt, sender: SenderDTO }",
-        "Create src/api/chat.ts with getChatHistory(peladaId, page?, size?) using existing Axios client",
-        "Add a Chat sidebar to PeladaDetailPage on the right side; on desktop it is visible alongside the main content; on mobile it is accessible but can be collapsed",
-        "Chat sidebar fetches getChatHistory(peladaId) on mount; shows last 50 messages sorted oldest-to-newest (ascending sentAt)",
-        "Each message shows: sender avatar (PlayerAvatar or initials fallback), sender username, message content, timestamp (relative: '2 min ago' or absolute on hover using date-fns or inline calculation)",
-        "My own messages (match useAuth().user.id to sender.id) appear right-aligned with a distinct background (e.g. blue); others appear left-aligned",
-        "Chat scrolled to bottom on initial load",
-        "Skeleton loading state (5 skeleton message rows) while fetching",
-        "Empty state: 'No messages yet. Say hi!'",
+        "POST /api/v1/users/:id/image — multipart/form-data; authenticated user can only upload own image (403 if mismatch); accept JPEG/PNG/WebP only (check content type); max 5MB; store under uploads/ with UUID prefix; update user.image; delete old file from disk if it was previously set; return updated ProfileDTO",
+        "POST /api/v1/users/:id/background-image — same constraints as avatar upload; update user.backgroundImage; delete old background file if previously set; return updated ProfileDTO",
+        "Both endpoints return 400 for invalid file type or size",
+        "Add both endpoints to UserController; add uploadUserImage(id, file, email) and uploadBackgroundImage(id, file, email) methods to UserService (or a new ImageService)",
         "Typecheck passes"
       ],
       "priority": 2,
-      "passes": true,
+      "passes": false,
       "notes": ""
     },
     {
       "id": "US-003",
-      "title": "Frontend STOMP client — send message and receive in real-time",
-      "description": "As a member, I want to send messages and see new messages from others in real-time without refreshing.",
+      "title": "Frontend Profile page — full display with avatar, background, position, stars",
+      "description": "As a user, I want to view my profile (and other users' profiles) with all identity info, stats, and awards displayed.",
       "acceptanceCriteria": [
-        "Install @stomp/stompjs and sockjs-client packages (npm install @stomp/stompjs sockjs-client) and their types (@types/sockjs-client)",
-        "On PeladaDetailPage mount, create a STOMP client connecting to '/ws' with SockJS; pass JWT in connectHeaders: { Authorization: 'Bearer <token>' }; get token from useAuth() or localStorage",
-        "Subscribe to '/topic/pelada/{peladaId}' on connect; on message received: parse MessageDTO from frame body and append to messages list",
-        "Text input at the bottom of the chat sidebar; Send button (or Enter key) publishes to '/app/pelada/{peladaId}/send' with body { content }",
-        "Input cleared after sending; message content trimmed before send; empty/whitespace-only input not sent",
-        "New messages trigger auto-scroll to bottom if the user is already within 100px of the bottom (check scrollTop + clientHeight vs scrollHeight)",
-        "On component unmount, deactivate the STOMP client",
-        "Toast shown on publish error",
+        "Add ProfileDTO interface to src/types/user.ts (or src/types/profile.ts): { id, username, email, image, backgroundImage, stars, position }",
+        "Add getUser(userId) API function to src/api/users.ts using existing Axios client",
+        "Update ProfilePage to fetch both getUser(userId) and getUserStats(userId) in parallel (Promise.all or separate useEffects)",
+        "Profile page layout: background image spanning full width as a header banner (200px tall); if no backgroundImage, show a gradient fallback; avatar image overlapping the bottom of the banner (circular, 96px, border); below: username in large text, position as a colored badge (GOALKEEPER=green, DEFENDER=blue, MIDFIELDER=yellow, FORWARD=red — use text or short label), stars as filled/empty star icons (★/☆) 1–5",
+        "Image URLs: if image/backgroundImage is set, load from /api/v1/files/{filename}; if null, show initials avatar / gradient fallback",
+        "Stats section (already built): goals, assists, matches, wins cards — keep existing implementation",
+        "Puskas award history section (already built): keep existing implementation",
+        "Stats chart (already built): keep existing BarChart",
+        "'Edit Profile' button visible only when profileId === currentUser.id (use useAuth().user.id)",
+        "Skeleton loading while either getUser or getUserStats is loading",
         "Typecheck passes"
       ],
       "priority": 3,
-      "passes": true,
+      "passes": false,
       "notes": ""
     },
     {
       "id": "US-004",
-      "title": "Frontend WebSocket reconnection with backoff and indicator",
-      "description": "As a user, I want the chat to reconnect automatically after a brief disconnect so I don't miss messages.",
+      "title": "Frontend Edit Profile modal — update info and upload images",
+      "description": "As a user, I want to edit my username, position, stars, avatar, and background image from my profile page.",
       "acceptanceCriteria": [
-        "Configure STOMP client reconnectDelay; use exponential backoff: attempt 1 = 1s, attempt 2 = 2s, attempt 3 = 4s; max 3 retries then stop",
-        "Track connection state (connected | reconnecting | failed) in component state",
-        "Show a subtle banner/badge 'Reconnecting...' inside the chat sidebar when state is 'reconnecting'",
-        "Show 'Connection failed. Refresh to retry.' when state is 'failed' (max retries exhausted)",
-        "On successful reconnect, re-subscribe to the topic and clear the indicator",
+        "Clicking 'Edit Profile' opens an edit modal",
+        "Modal fields: username (text input, pre-filled), position (select with options: GOALKEEPER, DEFENDER, MIDFIELDER, FORWARD, and a blank option for 'No position'), stars (number input or star-picker, 1–5)",
+        "Avatar upload: clicking the avatar in the modal opens file picker; on file select calls POST /users/:id/image immediately and updates preview on success",
+        "Background image upload: clicking the background area in the modal opens file picker; on file select calls POST /users/:id/background-image immediately and updates preview on success",
+        "Save button calls PUT /users/:id with username/position/stars values; on success: close modal, update displayed profile in place (setUser(updatedProfile)), show success toast",
+        "If PUT returns 409 (username taken): show inline error below username input; modal stays open",
+        "Image upload errors shown as error toast; modal stays open on upload error",
         "Typecheck passes"
       ],
       "priority": 4,
-      "passes": true,
+      "passes": false,
       "notes": ""
+    },
+    {
+      "id": "US-005",
+      "title": "Stats chart and Puskas history already implemented",
+      "description": "The Recharts BarChart (goals vs assists) and Puskas award history section were implemented in the Stats & Rankings cycle. Marking complete.",
+      "acceptanceCriteria": [
+        "Already implemented: Recharts BarChart with goals and assists bars on ProfilePage",
+        "Already implemented: Puskas award history section with dates sorted most-recent-first and empty state"
+      ],
+      "priority": 5,
+      "passes": true,
+      "notes": "Implemented in stats-rankings cycle"
     }
   ]
 }
