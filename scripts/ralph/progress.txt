@@ -32,6 +32,23 @@ Started: Sat Mar 21 00:00:00 PDT 2026
 - Win determination for Ranking/Stats: check if winningTeam.getPlayers().contains(player); winningTeam is null if tied at top of league table
 - DailyService already uses import com.futspring.backend.entity.*; and import com.futspring.backend.repository.*; — new entities/repos are auto-imported
 
+## 2026-03-21 - US-004
+- Created StatsDTO.java with fromStats() and fromUser() factory methods; puskasDates is List<LocalDate>
+- Created StatsService.java: getStats(userId, callerEmail) - returns zeros if no Stats record
+- Extended UserController.java: added GET /api/v1/users/{id}/stats endpoint (injected StatsService via @RequiredArgsConstructor)
+- Created frontend src/types/stats.ts with StatsDTO interface (puskasDates as string[])
+- Created frontend src/api/users.ts with getUserStats(userId) using existing Axios client
+- Installed recharts package (npm install recharts) - required for BarChart
+- Created ProfilePage.tsx: stats summary cards (Goals/Assists/Matches/Wins), Recharts BarChart, skeleton loading, empty/zero state
+- Updated App.tsx: replaced coming-soon placeholder with lazy-loaded ProfilePage at /profile/:id
+- Files changed: StatsDTO.java, StatsService.java, UserController.java, stats.ts, users.ts, ProfilePage.tsx, App.tsx, package.json, package-lock.json
+- **Learnings for future iterations:**
+  - recharts was not pre-installed; needed `npm install recharts` before using BarChart/BarChart components
+  - When stats are zero, show a text fallback rather than rendering empty chart (better UX)
+  - StatsDTO.puskasDates is List<LocalDate> in Java — serializes to string[] in JSON (ISO date strings like "2026-03-21")
+  - Manual browser verification needed (no browser tools available)
+---
+
 ## 2026-03-21 - US-002
 - Created RankingDTO with fromRanking() and fromUser() factory methods
 - Created RankingService with getRanking(peladaId, callerEmail): checks membership, merges ranking rows with full member list (zeros for no-ranking members), sorts by goals desc
