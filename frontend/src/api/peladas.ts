@@ -1,6 +1,7 @@
 import apiClient from "./client"
 import type { PeladaResponse, PeladaDetail } from "../types/pelada"
 import type { UserResponseDTO } from "../types/auth"
+import type { RankingDTO } from "../types/daily"
 
 export interface CreatePeladaData {
   name: string
@@ -69,5 +70,10 @@ export async function uploadPeladaImage(peladaId: number, file: File): Promise<P
 
 export async function searchUsers(q: string): Promise<UserResponseDTO[]> {
   const response = await apiClient.get<UserResponseDTO[]>("/api/v1/users/search", { params: { q } })
+  return response.data
+}
+
+export async function getRanking(peladaId: number): Promise<RankingDTO[]> {
+  const response = await apiClient.get<RankingDTO[]>(`/api/v1/peladas/${peladaId}/ranking`)
   return response.data
 }

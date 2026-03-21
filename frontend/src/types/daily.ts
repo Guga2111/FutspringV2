@@ -53,6 +53,16 @@ export interface AwardDTO {
   wiltballWinnerName: string | null
 }
 
+export interface RankingDTO {
+  userId: number
+  username: string
+  userImage: string | null
+  goals: number
+  assists: number
+  matchesPlayed: number
+  wins: number
+}
+
 export interface DailyListItem {
   id: number
   dailyDate: string

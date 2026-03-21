@@ -2,11 +2,11 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { toast } from 'sonner'
 import NavBar from '../components/NavBar'
-import { getPelada, addPlayer, removePlayer, setAdmin, searchUsers, deletePelada } from '../api/peladas'
+import { getPelada, addPlayer, removePlayer, setAdmin, searchUsers, deletePelada, getRanking } from '../api/peladas'
 import { getDailiesForPelada, createDaily } from '../api/dailies'
 import type { PeladaDetail, PeladaMember } from '../types/pelada'
 import type { UserResponseDTO } from '../types/auth'
-import type { DailyListItem } from '../types/daily'
+import type { DailyListItem, RankingDTO } from '../types/daily'
 import { useAuth } from '../hooks/useAuth'
 import EditPeladaModal from '../components/EditPeladaModal'
 
@@ -333,6 +333,9 @@ export default function PeladaDetailPage() {
   const [dailies, setDailies] = useState<DailyListItem[]>([])
   const [dailiesLoading, setDailiesLoading] = useState(true)
   const [showCreateSession, setShowCreateSession] = useState(false)
+  const [ranking, setRanking] = useState<RankingDTO[]>([])
+  const [rankingLoading, setRankingLoading] = useState(true)
+  const [rankingSort, setRankingSort] = useState<{ col: 'goals' | 'assists' | 'matchesPlayed' | 'wins'; dir: 'asc' | 'desc' }>({ col: 'goals', dir: 'desc' })
 
   const fetchPelada = useCallback(() => {
     if (!id) return
@@ -357,6 +360,17 @@ export default function PeladaDetailPage() {
       .finally(() => setDailiesLoading(false))
   }, [id])
 
+  const fetchRanking = useCallback(() => {
+    if (!id) return
+    setRankingLoading(true)
+    getRanking(Number(id))
+      .then(setRanking)
+      .catch(() => {
+        // ignore errors silently
+      })
+      .finally(() => setRankingLoading(false))
+  }, [id])
+
   useEffect(() => {
     setLoading(true)
     fetchPelada()
@@ -365,6 +379,25 @@ export default function PeladaDetailPage() {
   useEffect(() => {
     fetchDailies()
   }, [fetchDailies])
+
+  useEffect(() => {
+    fetchRanking()
+  }, [fetchRanking])
+
+  type RankingCol = 'goals' | 'assists' | 'matchesPlayed' | 'wins'
+
+  const handleRankingSort = (col: RankingCol) => {
+    setRankingSort((prev) =>
+      prev.col === col
+        ? { col, dir: prev.dir === 'desc' ? 'asc' : 'desc' }
+        : { col, dir: 'desc' }
+    )
+  }
+
+  const sortedRanking = [...ranking].sort((a, b) => {
+    const diff = b[rankingSort.col] - a[rankingSort.col]
+    return rankingSort.dir === 'desc' ? diff : -diff
+  })
 
   const isCurrentUserAdmin = pelada?.members.find((m) => m.id === currentUser?.id)?.isAdmin ?? false
   const creatorId = pelada?.creatorId ?? null
@@ -542,6 +575,76 @@ export default function PeladaDetailPage() {
                   </div>
                 )
               })}
+            </div>
+
+            {/* Ranking section */}
+            <div className="mt-8">
+              <h2 className="text-lg font-semibold mb-3">Ranking</h2>
+              {rankingLoading ? (
+                <div className="space-y-2">
+                  {[0, 1, 2].map((i) => (
+                    <div key={i} className="flex items-center gap-3">
+                      <SkeletonBlock className="h-8 w-8 rounded-full flex-shrink-0" />
+                      <SkeletonBlock className="h-4 flex-1" />
+                      <SkeletonBlock className="h-4 w-8" />
+                      <SkeletonBlock className="h-4 w-8" />
+                      <SkeletonBlock className="h-4 w-8" />
+                      <SkeletonBlock className="h-4 w-8" />
+                    </div>
+                  ))}
+                </div>
+              ) : sortedRanking.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No ranking data yet.</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b text-muted-foreground text-xs">
+                        <th className="text-left pb-2 font-medium">Player</th>
+                        {(['goals', 'assists', 'matchesPlayed', 'wins'] as const).map((col) => {
+                          const labels: Record<string, string> = { goals: 'Goals', assists: 'Assists', matchesPlayed: 'Matches', wins: 'Wins' }
+                          const active = rankingSort.col === col
+                          return (
+                            <th
+                              key={col}
+                              className="text-center pb-2 px-2 font-medium cursor-pointer select-none hover:text-foreground"
+                              onClick={() => handleRankingSort(col)}
+                            >
+                              {labels[col]}{active ? (rankingSort.dir === 'desc' ? ' ▾' : ' ▴') : ''}
+                            </th>
+                          )
+                        })}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {sortedRanking.map((row) => (
+                        <tr key={row.userId} className="border-b last:border-0">
+                          <td className="py-2 pr-2">
+                            <div className="flex items-center gap-2">
+                              {row.userImage ? (
+                                <img
+                                  src={`/api/v1/files/${row.userImage}`}
+                                  alt={row.username}
+                                  className="h-7 w-7 rounded-full object-cover flex-shrink-0"
+                                />
+                              ) : (
+                                <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center flex-shrink-0 text-xs font-semibold">
+                                  {row.username.slice(0, 2).toUpperCase()}
+                                </div>
+                              )}
+                              <span className="font-medium">{row.username}</span>
+                            </div>
+                          </td>
+                          <td className="text-center py-2 px-2">{row.goals}</td>
+                          <td className="text-center py-2 px-2">{row.assists}</td>
+                          <td className="text-center py-2 px-2">{row.matchesPlayed}</td>
+                          <td className="text-center py-2 px-2">{row.wins}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
 
             {/* Sessions section */}
