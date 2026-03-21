@@ -23,6 +23,7 @@ Started: Sat Mar 21 00:00:00 PDT 2026
 - DailyDetailDTO includes `isAdmin` boolean — check pelada.getAdmins().contains(caller) in getDailyDetail
 - recharts is installed (added in stats cycle); BarChart/Bar/XAxis/YAxis/Tooltip available
 - @stomp/stompjs and sockjs-client need to be installed for WebSocket chat (npm install @stomp/stompjs sockjs-client @types/sockjs-client)
+- STOMP reconnect backoff: set `reconnectDelay: 0` to disable built-in, use setTimeout + retryCountRef + isDeactivatingRef for manual exponential backoff
 - STOMP JWT auth: pass in connectHeaders { Authorization: 'Bearer <token>' }; validate on backend via ChannelInterceptor in preSend() for CONNECT frames
 - WebSocket config: @EnableWebSocketMessageBroker; /ws endpoint with SockJS; broker on /topic; app prefix /app
 - ChatController uses @MessageMapping + SimpMessagingTemplate.convertAndSend to broadcast to /topic/pelada/{id}
@@ -30,6 +31,55 @@ Started: Sat Mar 21 00:00:00 PDT 2026
 - WebSocket /ws/** must be permitted in SecurityConfig to allow SockJS handshake without auth
 - ChatController is a @Controller (not @RestController); uses @MessageMapping not @GetMapping/@PostMapping
 - ChatService separates business logic from controller: member validation + content validation + persist + return DTO
+
+## 2026-03-21 - US-004
+- Added exponential backoff reconnection to ChatSidebar STOMP client
+- Disabled built-in @stomp/stompjs reconnect (`reconnectDelay: 0`); manual backoff via setTimeout
+- retryCountRef tracks attempts; scheduleReconnect() enforces max 3 retries (1s, 2s, 4s delays)
+- isDeactivatingRef prevents reconnect scheduling on intentional component unmount
+- reconnectTimerRef guards against double-scheduling; cleared on cleanup
+- Added `connectionState` state: 'connected' | 'reconnecting' | 'failed'
+- onConnect resets retryCountRef and sets state to 'connected' (handles reconnect re-subscribe automatically)
+- onDisconnect / onWebSocketError / onStompError all call scheduleReconnect()
+- Added banner UI: yellow 'Reconnecting...' and red 'Connection failed. Refresh to retry.' above body
+- Files changed: frontend/src/pages/PeladaDetailPage.tsx
+- **Learnings for future iterations:**
+  - Set `reconnectDelay: 0` to disable @stomp/stompjs built-in reconnect; handle manually with setTimeout
+  - `isDeactivatingRef` is critical to prevent reconnect loop on unmount cleanup
+  - Guard `scheduleReconnect` with `reconnectTimerRef !== null` check to prevent double-scheduling
+  - `onConnect` fires on every successful connect (initial + reconnects), so subscription code inside it handles re-subscribe automatically
+---
+
+## 2026-03-21 - US-003
+- Installed @stomp/stompjs, sockjs-client, @types/sockjs-client packages
+- Added STOMP WebSocket client to ChatSidebar in PeladaDetailPage
+- On mount: connects to /ws via SockJS, passes JWT from useAuth().token in connectHeaders
+- Subscribes to /topic/pelada/{peladaId}; appends incoming MessageDTO to messages state
+- Auto-scrolls to bottom on new message if user is within 100px of bottom (via scrollContainerRef)
+- Added text input + Send button at bottom of sidebar; Enter key also sends
+- Input cleared after send; whitespace-only input blocked; toast on publish error
+- Deactivates STOMP client on component unmount via useEffect cleanup
+- Files changed: frontend/package.json, frontend/src/pages/PeladaDetailPage.tsx
+- **Learnings for future iterations:**
+  - `stompClientRef.current.connected` checks live connection status before publishing
+  - Use `requestAnimationFrame` after setState to check scroll position (DOM not yet updated at setState time)
+  - `scrollContainerRef` on the scroll container div allows checking scrollTop/clientHeight/scrollHeight
+  - SockJS factory as `webSocketFactory: () => new SockJS('/ws')` — Vite proxies /ws to backend
+---
+
+## 2026-03-21 - US-002
+- Created src/types/chat.ts with SenderDTO and MessageDTO interfaces
+- Created src/api/chat.ts with getChatHistory(peladaId, page?, size?) using apiClient
+- Added ChatSidebar component to PeladaDetailPage: right-side panel, 80 chars wide on desktop, collapsible on mobile
+- ChatSidebar fetches history on mount, auto-scrolls to bottom, shows skeleton (5 rows), empty state
+- Own messages (matched by sender.id === currentUser.id) right-aligned with blue bg; others left-aligned with muted bg
+- Relative timestamps via inline formatRelativeTime(); absolute time on title hover
+- Layout widened from max-w-4xl to max-w-6xl to accommodate sidebar
+- **Learnings for future iterations:**
+  - ChatSidebar is a local component in PeladaDetailPage (not a separate file) to keep it self-contained
+  - `useRef<HTMLDivElement>` + `scrollIntoView()` after loading state change gives clean scroll-to-bottom
+  - `flex gap-6` with `flex-1 min-w-0` for main content and `w-full lg:w-80 flex-shrink-0` for sidebar gives responsive two-column layout
+---
 
 ## 2026-03-21 - US-001
 - Created Message JPA entity (pelada ManyToOne, sender ManyToOne, content 500 chars, sentAt @CreationTimestamp)
