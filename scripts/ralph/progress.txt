@@ -2,6 +2,22 @@
 Started: Fri Mar 20 10:34:34 PDT 2026
 ---
 
+## 2026-03-21 - US-019
+- Added finished daily view sections to DailyDetailPage (shown only when daily.status === 'FINISHED')
+- Match Results section: each match card shows team1 vs team2 with scores; winning team name is bold; draw shows "Draw" label
+- League Table section: table with Position, Team, W, D, L, GF, GA, GD, Points; position 1 row highlighted yellow; GD prefixed with + for positive values
+- Player Stats section: table with Player, Goals, Assists, Matches, Wins; sorted by goals desc then assists desc (client-side sort via [...spread].sort())
+- Awards section: grid of Puskas and Wiltball award cards, each showing player avatar (looked up from confirmedPlayers) + award label + name
+- Champion Image section: shows image if set; admin gets Upload/Replace button; hidden file input triggered via ref; uploadChampionImage API call then fetchDaily() to refetch
+- Added `useRef` import, `uploadChampionImage` import, `uploadLoading` state, `fileInputRef`, and `handleChampionUpload` handler
+- Files changed: frontend/src/pages/DailyDetailPage.tsx
+- **Learnings for future iterations:**
+  - When AwardDTO only has winner IDs/names (no image), look up the player from `daily.confirmedPlayers` to render PlayerAvatar
+  - uploadChampionImage returns DailyListItem (not DailyDetail) — use fetchDaily() to refetch the full detail after upload
+  - File input reset after upload: `if (fileInputRef.current) fileInputRef.current.value = ''` — prevents duplicate upload on same file selection
+  - Client-side sort: `[...daily.playerStats].sort(...)` — spread to avoid mutating the original array
+---
+
 ## 2026-03-21 - US-018
 - Added admin-only 'Finalize Daily' button on DailyDetailPage when status is IN_COURSE and daily.matches is non-empty
 - Opens FinalizeModal with two selects: Puskas Award and Wiltball Award, both populated from confirmedPlayers
