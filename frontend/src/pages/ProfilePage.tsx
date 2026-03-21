@@ -19,7 +19,8 @@ function ProfileSkeleton() {
           <SkeletonBlock key={i} className="h-24 w-full" />
         ))}
       </div>
-      <SkeletonBlock className="h-64 w-full" />
+      <SkeletonBlock className="h-64 w-full mb-8" />
+      <SkeletonBlock className="h-40 w-full" />
     </div>
   )
 }
@@ -104,6 +105,27 @@ export default function ProfilePage() {
                 <Bar dataKey="Assists" fill="#22c55e" />
               </BarChart>
             </ResponsiveContainer>
+          )}
+        </div>
+
+        <div className="border rounded-lg p-4">
+          <h2 className="text-lg font-semibold mb-4">Puskas Award History</h2>
+          {stats.puskasDates.length === 0 ? (
+            <p className="text-muted-foreground text-sm">No Puskas wins yet.</p>
+          ) : (
+            <ul className="space-y-2">
+              {[...stats.puskasDates]
+                .sort((a, b) => (a > b ? -1 : 1))
+                .map((dateStr, i) => (
+                  <li key={i} className="text-sm">
+                    {new Date(`${dateStr}T12:00:00`).toLocaleDateString('en-US', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                    })}
+                  </li>
+                ))}
+            </ul>
           )}
         </div>
       </div>
