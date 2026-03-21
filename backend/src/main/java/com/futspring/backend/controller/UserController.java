@@ -1,9 +1,13 @@
 package com.futspring.backend.controller;
 
+import com.futspring.backend.dto.ProfileDTO;
 import com.futspring.backend.dto.StatsDTO;
+import com.futspring.backend.dto.UpdateProfileRequest;
 import com.futspring.backend.dto.UserResponseDTO;
 import com.futspring.backend.service.PeladaService;
 import com.futspring.backend.service.StatsService;
+import com.futspring.backend.service.UserService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -18,6 +22,7 @@ public class UserController {
 
     private final PeladaService peladaService;
     private final StatsService statsService;
+    private final UserService userService;
 
     @GetMapping("/search")
     public ResponseEntity<List<UserResponseDTO>> searchUsers(@RequestParam String q) {
@@ -28,5 +33,19 @@ public class UserController {
     public ResponseEntity<StatsDTO> getUserStats(@PathVariable Long id, Authentication authentication) {
         String callerEmail = (String) authentication.getPrincipal();
         return ResponseEntity.ok(statsService.getStats(id, callerEmail));
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<ProfileDTO> getProfile(@PathVariable Long id) {
+        return ResponseEntity.ok(userService.getProfile(id));
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<ProfileDTO> updateProfile(
+            @PathVariable Long id,
+            @Valid @RequestBody UpdateProfileRequest request,
+            Authentication authentication) {
+        String callerEmail = (String) authentication.getPrincipal();
+        return ResponseEntity.ok(userService.updateProfile(id, request, callerEmail));
     }
 }

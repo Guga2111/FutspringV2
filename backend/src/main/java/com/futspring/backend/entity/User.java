@@ -30,7 +30,7 @@ public class User {
 
     @Column(nullable = false)
     @Builder.Default
-    private int stars = 0;
+    private int stars = 3;
 
     private String position;
 }
