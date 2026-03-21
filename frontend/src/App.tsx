@@ -4,6 +4,7 @@ import PrivateRoute from './components/PrivateRoute'
 import ErrorBoundary from './components/ErrorBoundary'
 import ScrollToTop from './components/ScrollToTop'
 
+const LandingPage = lazy(() => import('./pages/LandingPage'))
 const AuthPage = lazy(() => import('./pages/AuthPage'))
 const HomePage = lazy(() => import('./pages/HomePage'))
 const PeladaDetailPage = lazy(() => import('./pages/PeladaDetailPage'))
@@ -19,7 +20,7 @@ function App() {
       <ScrollToTop />
       <Suspense fallback={fallback}>
         <Routes>
-          <Route path="/" element={<div className="flex items-center justify-center min-h-screen"><h1 className="text-2xl font-bold">FutSpring — Welcome</h1></div>} />
+          <Route path="/" element={<ErrorBoundary><LandingPage /></ErrorBoundary>} />
           <Route path="/auth" element={<ErrorBoundary><AuthPage /></ErrorBoundary>} />
           <Route path="/home" element={<ErrorBoundary><PrivateRoute><HomePage /></PrivateRoute></ErrorBoundary>} />
           <Route path="/pelada/:id" element={<ErrorBoundary><PrivateRoute><PeladaDetailPage /></PrivateRoute></ErrorBoundary>} />
