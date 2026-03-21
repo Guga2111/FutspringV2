@@ -112,6 +112,36 @@ Started: Sat Mar 21 09:15:01 PDT 2026
   - Manual browser verification needed (no browser tools available)
 ---
 
+## 2026-03-21 - US-010
+- Added gradient overlay (`bg-gradient-to-t from-black/70 to-transparent`) + pelada name in white text over banner
+- Moved Edit/Delete buttons to banner top-right as icon-only buttons (Pencil, Trash2) with bg-black/40 background
+- Wrapped Members, Sessions, Ranking sections in shadcn Tabs (defaultValue="members")
+- Chat sidebar: `hidden lg:block` (desktop-only); mobile gets fixed bottom-right floating MessageCircle button
+- Mobile chat panel toggles as a fixed 400px panel above the floating button
+- Removed old pelada name heading and old inline Edit/Delete text buttons from content area
+- Files changed: frontend/src/pages/PeladaDetailPage.tsx
+- **Learnings for future iterations:**
+  - Tabs components from `../components/ui/tabs` use `Tabs`, `TabsList`, `TabsTrigger`, `TabsContent`
+  - Section headers (h2) can be dropped inside tabs since TabsTrigger acts as the header
+  - Mobile chat: `lg:hidden` on floating button hides it on desktop; `hidden lg:block` on sidebar hides it on mobile
+  - `isCurrentUserAdmin` is derived from `pelada.members` + `currentUser.id`; `isCurrentUserCreator` uses `pelada.creatorId`
+  - Manual browser verification needed (no browser tools available)
+---
+
+## 2026-03-21 - US-011
+- Replaced inline 'Make Admin' / 'Remove' buttons with a MoreVertical (3-dot) icon button per member row
+- Icon button opens a shadcn DropdownMenu with 'Make Admin' / 'Remove Admin' (toggled) and 'Remove from Pelada'
+- Member names changed from `<span>` to `<Link to={/profile/${member.id}}>` with hover underline
+- DropdownMenu uses existing `handleToggleAdmin` and `setConfirmRemoveMember` — no backend changes
+- 3-dot button shown only when `isCurrentUserAdmin && !isCreator`
+- Files changed: frontend/src/pages/PeladaDetailPage.tsx
+- **Learnings for future iterations:**
+  - `DropdownMenuContent` with `align="end"` positions the menu to the right of the trigger button
+  - `DropdownMenuItem` supports `disabled` prop natively (Radix UI)
+  - For destructive menu items use `className="text-destructive focus:text-destructive"` — no separate variant needed
+  - Manual browser verification needed (no browser tools available)
+---
+
 ## 2026-03-21 - US-009
 - Updated HomePage with polished pelada cards grid
 - Card changes: `rounded-xl border shadow-sm`, `font-bold text-lg` name, green gradient ⚽ placeholder, member count Badge, next session date
