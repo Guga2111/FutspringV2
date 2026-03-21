@@ -7,6 +7,7 @@ import type { MatchResultInput } from '../api/dailies'
 import type { DailyDetail, PlayerDTO, TeamDTO } from '../types/daily'
 import { useAuth } from '../hooks/useAuth'
 import { Button } from '../components/ui/button'
+import { Badge } from '../components/ui/badge'
 
 function SkeletonBlock({ className }: { className: string }) {
   return <div className={`bg-muted rounded animate-pulse ${className}`} />
@@ -751,12 +752,28 @@ export default function DailyDetailPage() {
               ← {daily.peladaName}
             </Link>
             <div className="flex items-center gap-3 mt-1 flex-wrap">
-              <h1 className="text-2xl font-bold">
+              <h1 className="text-2xl font-bold tracking-tight">
                 {formattedDate}
               </h1>
-              <StatusBadge status={daily.status} />
+              <Badge
+                className={{
+                  SCHEDULED: 'border-transparent bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
+                  CONFIRMED: 'border-transparent bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
+                  IN_COURSE: 'border-transparent bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
+                  FINISHED: 'border-transparent bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300',
+                  CANCELED: 'border-transparent bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
+                }[daily.status] ?? 'border-transparent bg-gray-100 text-gray-800'}
+              >
+                {daily.status.replace('_', ' ')}
+              </Badge>
+              {daily.status === 'IN_COURSE' && (
+                <span className="flex items-center gap-1.5 text-sm font-medium text-green-600 dark:text-green-400">
+                  <span className="animate-pulse bg-green-500 rounded-full w-2 h-2 inline-block" />
+                  Live
+                </span>
+              )}
             </div>
-            <p className="text-muted-foreground mt-1">{daily.dailyTime}</p>
+            <p className="text-sm text-muted-foreground mt-1">{daily.dailyTime}</p>
           </div>
 
           {/* Attendance action */}
@@ -782,12 +799,12 @@ export default function DailyDetailPage() {
             </div>
           )}
 
-          {/* Status action bar — admin only */}
-          {daily.isAdmin && (daily.status === 'SCHEDULED' || daily.status === 'CONFIRMED') && (
-            <div className="mb-6 flex flex-wrap gap-2">
+          {/* Admin action bar */}
+          {daily.isAdmin && (daily.status === 'SCHEDULED' || daily.status === 'CONFIRMED' || daily.status === 'IN_COURSE') && (
+            <div className="mb-6 rounded-xl border p-3 flex flex-wrap gap-2 bg-muted/40">
               {daily.status === 'SCHEDULED' && (
-                <button
-                  className="text-sm bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600 disabled:opacity-50"
+                <Button
+                  className="bg-gradient-to-br from-yellow-400 to-amber-500 text-white hover:from-yellow-300 hover:to-amber-400 transition-all duration-150"
                   onClick={() =>
                     setStatusDialog({
                       targetStatus: 'CONFIRMED',
@@ -796,7 +813,7 @@ export default function DailyDetailPage() {
                   }
                 >
                   Confirm Daily
-                </button>
+                </Button>
               )}
               {daily.status === 'CONFIRMED' && (
                 <Button
@@ -811,36 +828,31 @@ export default function DailyDetailPage() {
                   Start Session
                 </Button>
               )}
-              <button
-                className="text-sm bg-destructive text-destructive-foreground px-4 py-2 rounded hover:opacity-90 disabled:opacity-50"
-                onClick={() =>
-                  setStatusDialog({
-                    targetStatus: 'CANCELED',
-                    description: 'This will cancel the daily session. This action cannot be undone.',
-                  })
-                }
-              >
-                Cancel Daily
-              </button>
-            </div>
-          )}
-
-          {/* Admin actions — IN_COURSE */}
-          {daily.isAdmin && daily.status === 'IN_COURSE' && (
-            <div className="mb-6 flex flex-wrap gap-2">
-              <button
-                className="text-sm bg-primary text-primary-foreground px-4 py-2 rounded"
-                onClick={() => setResultsOpen(true)}
-              >
-                Enter Results
-              </button>
-              {daily.matches.length > 0 && (
-                <button
-                  className="text-sm bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
-                  onClick={() => setFinalizeOpen(true)}
+              {(daily.status === 'SCHEDULED' || daily.status === 'CONFIRMED') && (
+                <Button
+                  variant="outline"
+                  className="border-destructive text-destructive hover:bg-destructive/10 hover:text-destructive"
+                  onClick={() =>
+                    setStatusDialog({
+                      targetStatus: 'CANCELED',
+                      description: 'This will cancel the daily session. This action cannot be undone.',
+                    })
+                  }
                 >
-                  Finalize Daily
-                </button>
+                  Cancel Daily
+                </Button>
+              )}
+              {daily.status === 'IN_COURSE' && (
+                <>
+                  <Button variant="gradient" onClick={() => setResultsOpen(true)}>
+                    Enter Results / Finalize
+                  </Button>
+                  {daily.matches.length > 0 && (
+                    <Button variant="gradient" onClick={() => setFinalizeOpen(true)}>
+                      Finalize Daily
+                    </Button>
+                  )}
+                </>
               )}
             </div>
           )}
