@@ -1,17 +1,19 @@
 {
   "project": "FutSpring",
-  "branchName": "ralph/futspring-daily",
-  "description": "FutSpring Daily Lifecycle — full session flow from creation through attendance, team sorting, result entry, finalization, and stats display",
+  "branchName": "ralph/futspring-stats-rankings",
+  "description": "FutSpring Stats & Rankings — global user stats, per-pelada ranking, stats computation on finalization, and profile page stats display",
   "userStories": [
     {
       "id": "US-001",
-      "title": "Extend Daily entity and create Team entity",
-      "description": "As a developer, I need to extend the Daily stub entity with attendance/team fields and create the Team entity so the daily lifecycle can be tracked.",
+      "title": "Create Stats and Ranking entities and extend finalize to compute them",
+      "description": "As the system, I need global Stats and per-pelada Ranking entities created and populated during daily finalization so that aggregate performance data is persisted.",
       "acceptanceCriteria": [
-        "Extend existing Daily entity (backend/src/main/java/com/futspring/backend/entity/Daily.java) with: confirmedPlayers (ManyToMany<User>, join table daily_confirmed_players), isFinished (boolean, default false), championImage (String, nullable)",
-        "Create Team JPA entity with fields: id (Long, auto), daily (ManyToOne Daily, required), name (String, required), players (ManyToMany<User>, join table team_players), @Builder.Default players = new HashSet<>()",
-        "Create TeamRepository extending JpaRepository<Team, Long> with method: findByDaily(Daily daily)",
-        "Hibernate DDL auto creates team and daily_confirmed_players/team_players join tables",
+        "Create Stats JPA entity with fields: id (Long, auto), user (OneToOne User, required), goals (int, default 0), assists (int, default 0), matchesPlayed (int, default 0), wins (int, default 0), puskasDates (List<LocalDate>, stored as @ElementCollection in a stats_puskas_dates join table)",
+        "Create Ranking JPA entity with fields: id (Long, auto), pelada (ManyToOne Pelada, required), user (ManyToOne User, required), goals (int, default 0), assists (int, default 0), matchesPlayed (int, default 0), wins (int, default 0); unique constraint on (pelada, user)",
+        "Create StatsRepository extending JpaRepository<Stats, Long> with: findByUser(User user) returning Optional<Stats>",
+        "Create RankingRepository extending JpaRepository<Ranking, Long> with: findByPelada(Pelada pelada) and findByPeladaAndUser(Pelada pelada, User user) returning Optional<Ranking>",
+        "Extend DailyService.finalizeDaily() within the same @Transactional block: (1) determine the winning team (position 1 from LeagueTable, or null if tied); (2) for each confirmed player: upsert Ranking entry for the pelada (create if not exists, increment goals/assists/matchesPlayed/wins); upsert global Stats record (create if not exists, increment goals/assists/matchesPlayed/wins); if this player is the puskasWinner, append today's LocalDate to stats.puskasDates; (3) all upserts use findByX().orElse(new entity) then save",
+        "Finalization idempotency guard: check daily.isFinished at start of finalizeDaily; throw AppException(HttpStatus.CONFLICT, 'Daily already finalized') if true",
         "Typecheck passes"
       ],
       "priority": 1,
@@ -20,313 +22,68 @@
     },
     {
       "id": "US-002",
-      "title": "Create Match and PlayerMatchStat entities",
-      "description": "As a developer, I need Match and PlayerMatchStat entities to store post-session match results and per-player goals/assists.",
+      "title": "Backend ranking endpoint and frontend ranking table on Pelada page",
+      "description": "As a member, I want to see how players rank in our pelada so I know who the top performers are.",
       "acceptanceCriteria": [
-        "Create Match JPA entity with fields: id (Long, auto), daily (ManyToOne Daily, required), team1 (ManyToOne Team, required), team2 (ManyToOne Team, required), team1Score (Integer, nullable), team2Score (Integer, nullable), winner (ManyToOne Team, nullable)",
-        "Create PlayerMatchStat JPA entity with fields: id (Long, auto), match (ManyToOne Match, required), user (ManyToOne User, required), goals (int, default 0), assists (int, default 0)",
-        "Create MatchRepository extending JpaRepository<Match, Long> with method: findByDaily(Daily daily)",
-        "Create PlayerMatchStatRepository extending JpaRepository<PlayerMatchStat, Long> with method: findByMatch(Match match)",
-        "Hibernate DDL auto creates matches and player_match_stats tables",
+        "GET /api/v1/peladas/:id/ranking — members only (403 for non-members); returns List<RankingDTO> sorted by goals desc; players with no Ranking entry still appear with zeros (build from pelada.getMembers() and merge with existing Ranking rows)",
+        "RankingDTO fields: userId, username, userImage, goals, assists, matchesPlayed, wins",
+        "Add getRanking(peladaId, userEmail) method to a RankingService (or DailyService if simpler) annotated @Transactional(readOnly=true)",
+        "Add GET /peladas/{id}/ranking endpoint to PeladaController (or new RankingController)",
+        "Add RankingDTO interface to frontend src/types/daily.ts (or src/types/ranking.ts)",
+        "Add getRanking(peladaId) API function to src/api/peladas.ts (or src/api/ranking.ts) using existing Axios client",
+        "Add a Ranking tab or section to PeladaDetailPage: fetches getRanking(peladaId); shows shadcn/ui Table with columns: Player, Goals, Assists, Matches, Wins; default sort goals desc; column headers are clickable to sort asc/desc client-side; skeleton 3-row loading; empty state if no data",
         "Typecheck passes"
       ],
       "priority": 2,
-      "passes": true,
+      "passes": false,
       "notes": ""
     },
     {
       "id": "US-003",
-      "title": "Create UserDailyStats, LeagueTableEntry, and DailyAward entities",
-      "description": "As a developer, I need aggregate result entities to store per-user daily stats, team standings, and award winners after finalization.",
+      "title": "Daily stats and awards display on finished Daily page",
+      "description": "Player stats table and award cards on the finished daily page are already implemented in the daily cycle (US-019). Marking complete.",
       "acceptanceCriteria": [
-        "Create UserDailyStats JPA entity with fields: id (Long, auto), daily (ManyToOne Daily, required), user (ManyToOne User, required), goals (int, default 0), assists (int, default 0), matchesPlayed (int, default 0), wins (int, default 0)",
-        "Create LeagueTableEntry JPA entity with fields: id (Long, auto), daily (ManyToOne Daily, required), team (ManyToOne Team, required), position (int, default 0), wins (int, default 0), draws (int, default 0), losses (int, default 0), goalsFor (int, default 0), goalsAgainst (int, default 0), points (int, default 0)",
-        "Create DailyAward JPA entity with fields: id (Long, auto), daily (ManyToOne Daily, required, unique so one award record per daily), puskasWinner (ManyToOne User, nullable), wiltballWinner (ManyToOne User, nullable)",
-        "Create UserDailyStatsRepository extending JpaRepository<UserDailyStats, Long> with: findByDaily(Daily daily)",
-        "Create LeagueTableEntryRepository extending JpaRepository<LeagueTableEntry, Long> with: findByDailyOrderByPositionAsc(Daily daily)",
-        "Create DailyAwardRepository extending JpaRepository<DailyAward, Long> with: findByDaily(Daily daily)",
-        "Hibernate DDL auto creates the three tables",
-        "Typecheck passes"
+        "Already implemented: finished Daily page shows player stats table (Player, Goals, Assists, Matches, Wins sorted by goals desc)",
+        "Already implemented: finished Daily page shows award cards for Puskas and Wiltball winners with avatar and username"
       ],
       "priority": 3,
       "passes": true,
-      "notes": ""
+      "notes": "Implemented in daily cycle US-019"
     },
     {
       "id": "US-004",
-      "title": "Backend create daily + list dailies for pelada",
-      "description": "As a developer, I need endpoints to create a daily manually and list all dailies for a pelada so the frontend can show history and allow ad-hoc creation.",
+      "title": "Backend user stats endpoint and frontend Profile page with global stats",
+      "description": "As a user, I want to see my overall performance stats across all peladas on my profile.",
       "acceptanceCriteria": [
-        "POST /api/v1/peladas/:peladaId/dailies — body: { dailyDate (LocalDate, required), dailyTime (String, required) }; admin only (403 for non-admins); creates Daily with status SCHEDULED; returns DailyListItemDTO",
-        "GET /api/v1/peladas/:peladaId/dailies — returns list of DailyListItemDTO for all dailies of the pelada sorted by dailyDate descending; members only (403 for non-members)",
-        "DailyListItemDTO fields: id, dailyDate, dailyTime, status, confirmedPlayerCount (size of confirmedPlayers set), isFinished",
-        "CreateDailyRequestDTO with @Valid: dailyDate (@NotNull), dailyTime (@NotBlank)",
-        "DailyService created with createDaily(peladaId, request, userEmail) and getDailiesForPelada(peladaId, userEmail) methods annotated @Transactional",
-        "DailyController at /api/v1 with POST /peladas/{peladaId}/dailies and GET /peladas/{peladaId}/dailies endpoints",
+        "GET /api/v1/users/:id/stats — any authenticated user can view any user's stats; returns StatsDTO",
+        "StatsDTO fields: userId, username, goals, assists, matchesPlayed, wins, puskasDates (List<LocalDate>)",
+        "If no Stats record exists for the user, return zeros and empty puskasDates list",
+        "Add getStats(userId, callerEmail) method to a StatsService (or UserService) annotated @Transactional(readOnly=true)",
+        "Add GET /users/{id}/stats endpoint to UserController (or new StatsController)",
+        "Add StatsDTO interface to frontend src/types/stats.ts (or src/types/user.ts)",
+        "Add getUserStats(userId) API function using existing Axios client",
+        "Create ProfilePage at /profile/:id (lazy-loaded): fetches user info and getUserStats(userId); shows stats summary cards (Goals, Assists, Matches, Wins); shows Recharts BarChart with goals and assists as two bars; skeleton loading; empty/zero state renders without error",
+        "Add /profile/:id route to App.tsx (replace any existing placeholder)",
         "Typecheck passes"
       ],
       "priority": 4,
-      "passes": true,
+      "passes": false,
       "notes": ""
     },
     {
       "id": "US-005",
-      "title": "Backend get daily detail endpoint",
-      "description": "As a developer, I need a GET /api/v1/dailies/:id endpoint returning full daily state so the frontend can render the daily page.",
+      "title": "Frontend Puskas award history on Profile page",
+      "description": "As a user, I want to see when I've won the Puskas award on my profile page.",
       "acceptanceCriteria": [
-        "GET /api/v1/dailies/:id — members of the parent pelada only (403 otherwise); returns DailyDetailDTO",
-        "DailyDetailDTO fields: id, dailyDate, dailyTime, status, isFinished, championImage, confirmedPlayers (List of PlayerDTO: id, username, image, stars, position), teams (List of TeamDTO: id, name, totalStars, players List<PlayerDTO>), matches (List of MatchDTO: id, team1Id, team1Name, team2Id, team2Name, team1Score, team2Score, winnerId), playerStats (List of UserDailyStatsDTO: userId, username, goals, assists, matchesPlayed, wins), leagueTable (List of LeagueTableEntryDTO: teamId, teamName, position, wins, draws, losses, goalsFor, goalsAgainst, goalDiff, points), award (AwardDTO: puskasWinnerId, puskasWinnerName, wiltballWinnerId, wiltballWinnerName), peladaId, peladaName",
-        "totalStars on TeamDTO is computed as sum of stars of all players in that team",
-        "goalDiff on LeagueTableEntryDTO is goalsFor - goalsAgainst",
-        "GET /api/v1/dailies/:id added to DailyController; DailyService has getDailyDetail(id, userEmail) @Transactional(readOnly = true)",
+        "Profile page shows a 'Puskas Award History' section below the stats chart",
+        "Section lists each date in stats.puskasDates formatted as a readable date string (e.g. 'March 21, 2026')",
+        "Dates sorted most recent first",
+        "Empty state message 'No Puskas wins yet.' if puskasDates is empty",
+        "Section uses skeleton loading while stats are loading",
         "Typecheck passes"
       ],
       "priority": 5,
-      "passes": true,
-      "notes": ""
-    },
-    {
-      "id": "US-006",
-      "title": "Backend attendance endpoints (confirm and disconfirm)",
-      "description": "As a developer, I need endpoints for players to confirm and disconfirm attendance so the admin knows who's coming.",
-      "acceptanceCriteria": [
-        "POST /api/v1/dailies/:id/confirm — adds current user to daily.confirmedPlayers; user must be a member of the parent pelada (403 otherwise); returns 409 if already confirmed; returns 400 if daily status is IN_COURSE, FINISHED, or CANCELED",
-        "DELETE /api/v1/dailies/:id/confirm — removes current user from daily.confirmedPlayers; returns 400 if not confirmed or if daily status is IN_COURSE, FINISHED, or CANCELED",
-        "Both endpoints return updated DailyListItemDTO (id, status, confirmedPlayerCount)",
-        "DailyService has confirmAttendance(id, userEmail) and disconfirmAttendance(id, userEmail) methods annotated @Transactional",
-        "DailyController handles POST /dailies/{id}/confirm and DELETE /dailies/{id}/confirm",
-        "Typecheck passes"
-      ],
-      "priority": 6,
-      "passes": true,
-      "notes": ""
-    },
-    {
-      "id": "US-007",
-      "title": "Backend sort teams + swap players endpoints",
-      "description": "As a developer, I need endpoints to auto-balance teams from confirmed players and swap players between teams so admin can manage fair matchups.",
-      "acceptanceCriteria": [
-        "POST /api/v1/dailies/:id/sort-teams — admin only; requires at least 2 confirmed players; idempotent: deletes existing teams before recreating; greedy balancing algorithm: sort confirmed players by stars descending, assign each to team with lowest current totalStars (snake-draft), default 2 teams for MVP; returns updated DailyDetailDTO teams field; returns 400 if status is IN_COURSE, FINISHED, or CANCELED",
-        "PUT /api/v1/dailies/:id/teams/swap — body: { player1Id: Long, player2Id: Long }; admin only; swaps two players between their respective teams; both players must be on a team in this daily (400 otherwise); persists swap and returns updated teams list",
-        "DailyService has sortTeams(id, userEmail) and swapPlayers(id, player1Id, player2Id, userEmail) @Transactional methods",
-        "DailyController handles POST /dailies/{id}/sort-teams and PUT /dailies/{id}/teams/swap",
-        "Typecheck passes"
-      ],
-      "priority": 7,
-      "passes": true,
-      "notes": ""
-    },
-    {
-      "id": "US-008",
-      "title": "Backend daily status management (advance and cancel)",
-      "description": "As a developer, I need an endpoint to advance or cancel the daily status so the system reflects what is actually happening.",
-      "acceptanceCriteria": [
-        "PUT /api/v1/dailies/:id/status — body: { status: String }; admin only",
-        "Valid transitions: SCHEDULED → CONFIRMED, SCHEDULED → CANCELED, CONFIRMED → IN_COURSE, CONFIRMED → CANCELED; return 400 for any other transition",
-        "Returns updated DailyListItemDTO with new status",
-        "DailyService has updateStatus(id, newStatus, userEmail) @Transactional method",
-        "DailyController handles PUT /dailies/{id}/status",
-        "Typecheck passes"
-      ],
-      "priority": 8,
-      "passes": true,
-      "notes": ""
-    },
-    {
-      "id": "US-009",
-      "title": "Backend batch submit match results",
-      "description": "As a developer, I need an endpoint to batch create or overwrite match results and per-player stats so the admin can enter post-session data.",
-      "acceptanceCriteria": [
-        "POST /api/v1/dailies/:id/results — admin only; daily must have status IN_COURSE (400 otherwise)",
-        "Request body: List of MatchResultDTO { matchId (Long, nullable), team1Id (Long), team2Id (Long), team1Score (int, min 0), team2Score (int, min 0), playerStats: List of PlayerStatInputDTO { userId, goals (int, default 0, min 0), assists (int, default 0, min 0) } }",
-        "If matchId is provided and exists, overwrite that match's scores; if null or not found, create new Match",
-        "Derive winner: team with higher score; null if draw",
-        "Save or overwrite PlayerMatchStat records for each userId listed; any confirmed player not listed defaults to goals=0, assists=0 for that match",
-        "Returns updated list of MatchDTO",
-        "DailyService has submitResults(id, List<MatchResultDTO>, userEmail) @Transactional method",
-        "Typecheck passes"
-      ],
-      "priority": 9,
-      "passes": true,
-      "notes": ""
-    },
-    {
-      "id": "US-010",
-      "title": "Backend finalize daily with stats and league table computation",
-      "description": "As a developer, I need a finalize endpoint that computes UserDailyStats, the league table, and records awards then marks the daily as FINISHED.",
-      "acceptanceCriteria": [
-        "POST /api/v1/dailies/:id/finalize — body: { puskasWinnerId: Long, wiltballWinnerId: Long }; admin only; daily must be IN_COURSE with at least one match result (400 otherwise); both winner IDs must be confirmed players (400 otherwise)",
-        "Computation (all in one @Transactional method): (1) UserDailyStats per confirmed player: aggregate goals and assists from PlayerMatchStat records across all matches of this daily; matchesPlayed = number of matches that player appeared in; wins = number of those matches where the player's team was the winner; delete existing UserDailyStats for this daily before recomputing; (2) LeagueTableEntry per team: from match results compute W/D/L/GF/GA; points = win*3 + draw*1; sort by points desc then GD desc; set position field; delete existing LeagueTableEntry for this daily before recomputing; (3) DailyAward: create or update DailyAward for this daily with puskasWinnerId and wiltballWinnerId",
-        "Set daily.status = FINISHED and daily.isFinished = true",
-        "Returns updated DailyDetailDTO with all fields populated",
-        "DailyService has finalizeDaily(id, puskasWinnerId, wiltballWinnerId, userEmail) @Transactional method",
-        "Typecheck passes"
-      ],
-      "priority": 10,
-      "passes": true,
-      "notes": ""
-    },
-    {
-      "id": "US-011",
-      "title": "Backend champion image upload endpoint",
-      "description": "As a developer, I need an endpoint to upload a champion group photo after finalization so the admin can commemorate the session.",
-      "acceptanceCriteria": [
-        "PUT /api/v1/dailies/:id/champion-image — multipart/form-data; admin only; daily must be FINISHED (400 otherwise)",
-        "Store file under uploads/ with UUID prefix (same pattern as pelada image upload); max 5MB; JPEG/PNG/WebP only",
-        "Updates daily.championImage field with stored filename",
-        "Returns updated DailyListItemDTO",
-        "DailyService has uploadChampionImage(id, file, userEmail) @Transactional method",
-        "DailyController handles PUT /dailies/{id}/champion-image with @RequestParam(\"file\") MultipartFile",
-        "Typecheck passes"
-      ],
-      "priority": 11,
-      "passes": true,
-      "notes": ""
-    },
-    {
-      "id": "US-012",
-      "title": "Frontend API layer and TypeScript types for dailies",
-      "description": "As a developer, I need TypeScript interfaces and API functions for all daily endpoints so the frontend can call the backend.",
-      "acceptanceCriteria": [
-        "Create src/types/daily.ts with interfaces: PlayerDTO { id, username, image, stars, position }, TeamDTO { id, name, totalStars, players: PlayerDTO[] }, MatchDTO { id, team1Id, team1Name, team2Id, team2Name, team1Score, team2Score, winnerId }, UserDailyStatsDTO { userId, username, goals, assists, matchesPlayed, wins }, LeagueTableEntryDTO { teamId, teamName, position, wins, draws, losses, goalsFor, goalsAgainst, goalDiff, points }, AwardDTO { puskasWinnerId, puskasWinnerName, wiltballWinnerId, wiltballWinnerName }, DailyListItem { id, dailyDate, dailyTime, status, confirmedPlayerCount, isFinished }, DailyDetail { id, dailyDate, dailyTime, status, isFinished, championImage, confirmedPlayers: PlayerDTO[], teams: TeamDTO[], matches: MatchDTO[], playerStats: UserDailyStatsDTO[], leagueTable: LeagueTableEntryDTO[], award: AwardDTO | null, peladaId, peladaName }",
-        "Create src/api/dailies.ts with functions: getDailiesForPelada(peladaId), getDailyDetail(id), createDaily(peladaId, data), confirmAttendance(id), disconfirmAttendance(id), sortTeams(id), swapPlayers(id, player1Id, player2Id), updateDailyStatus(id, status), submitResults(id, results), finalizeDaily(id, puskasWinnerId, wiltballWinnerId), uploadChampionImage(id, file)",
-        "All functions use existing Axios client (src/api/client.ts)",
-        "Typecheck passes"
-      ],
-      "priority": 12,
-      "passes": true,
-      "notes": ""
-    },
-    {
-      "id": "US-013",
-      "title": "Frontend daily history list on Pelada page and Create Daily modal",
-      "description": "As an admin, I want to create a daily; as a member, I want to see the history of dailies on the pelada page.",
-      "acceptanceCriteria": [
-        "Add a 'Sessions' section below the members list on PeladaDetailPage that fetches and displays getDailiesForPelada(peladaId)",
-        "Each daily row shows: dailyDate (formatted), dailyTime, status badge (colored: SCHEDULED=blue, CONFIRMED=yellow, IN_COURSE=green, FINISHED=gray, CANCELED=red), confirmedPlayerCount",
-        "Each row links to /daily/:id",
-        "Skeleton loading state while fetching (3 skeleton rows)",
-        "Empty state: 'No sessions yet.' if no dailies",
-        "Admin-only 'Create Session' button in the Sessions section header; clicking opens a modal with fields: dailyDate (date input, required) and dailyTime (time input, required)",
-        "On create success: close modal, refetch dailies list, show success toast",
-        "Submit button shows loading state; error toast on failure",
-        "Add /daily/:id route to App.tsx with lazy-loaded DailyDetailPage (placeholder page for now)",
-        "Typecheck passes",
-        "Verify in browser using dev-browser skill"
-      ],
-      "priority": 13,
-      "passes": true,
-      "notes": ""
-    },
-    {
-      "id": "US-014",
-      "title": "Frontend Daily detail page — base structure and attendance",
-      "description": "As a member, I want to see the daily detail and confirm or disconfirm my attendance.",
-      "acceptanceCriteria": [
-        "Create DailyDetailPage at /daily/:id that fetches getDailyDetail(id); replace the placeholder from US-013",
-        "Header shows: pelada name (links to /pelada/:peladaId), date, time, status badge",
-        "Confirmed Players section: list of player avatars/names with count; skeleton while loading",
-        "Non-member accessing route sees 'Access Denied' (detect 403, no crash)",
-        "'Confirm' button shown to the current user when daily status is SCHEDULED or CONFIRMED and user is not yet in confirmedPlayers; calls confirmAttendance(id) on click",
-        "'Disconfirm' button shown when current user is already in confirmedPlayers and status is SCHEDULED or CONFIRMED; calls disconfirmAttendance(id) on click",
-        "Both buttons are hidden when status is IN_COURSE, FINISHED, or CANCELED",
-        "Confirmed players list updates immediately after confirm/disconfirm (refetch detail)",
-        "Toast shown on success and error for both actions",
-        "Typecheck passes",
-        "Verify in browser using dev-browser skill"
-      ],
-      "priority": 14,
-      "passes": true,
-      "notes": ""
-    },
-    {
-      "id": "US-015",
-      "title": "Frontend admin team management — sort and swap",
-      "description": "As an admin, I want to sort confirmed players into balanced teams and then manually swap players between teams.",
-      "acceptanceCriteria": [
-        "Admin-only 'Sort Teams' button on DailyDetailPage visible when status is SCHEDULED or CONFIRMED and confirmedPlayerCount >= 2; calls sortTeams(id) on click; shows loading state",
-        "After sorting, teams are displayed as cards: team name, total stars, list of players (avatar/name/stars)",
-        "If teams already exist (daily loaded with teams), they are always shown",
-        "'Re-sort Teams' label when teams already exist; clicking re-runs sort (replaces existing teams)",
-        "Each player in a team card has a 'Move' button (admin only); clicking a player selects them; then clicking another player in a different team calls swapPlayers(id, p1Id, p2Id) and refetches; cancel selection on same player click",
-        "Teams update without full page reload after swap",
-        "Toast on sort success and swap success; error toast on failure",
-        "Typecheck passes",
-        "Verify in browser using dev-browser skill"
-      ],
-      "priority": 15,
-      "passes": true,
-      "notes": ""
-    },
-    {
-      "id": "US-016",
-      "title": "Frontend status advancement and cancel daily",
-      "description": "As an admin, I want to advance the daily status or cancel it so the system reflects reality.",
-      "acceptanceCriteria": [
-        "Admin-only status action bar shown on DailyDetailPage based on current status: SCHEDULED → shows 'Confirm Daily' button (advances to CONFIRMED) and 'Cancel' button; CONFIRMED → shows 'Start Session' button (advances to IN_COURSE) and 'Cancel' button; IN_COURSE and later → no advance buttons",
-        "Each action opens a confirmation dialog with descriptive text before proceeding",
-        "On confirm: calls updateDailyStatus(id, newStatus); status badge updates immediately on success; toast on success and error",
-        "Cancel action advances status to CANCELED; page shows CANCELED badge; status action bar disappears",
-        "Typecheck passes",
-        "Verify in browser using dev-browser skill"
-      ],
-      "priority": 16,
-      "passes": true,
-      "notes": ""
-    },
-    {
-      "id": "US-017",
-      "title": "Frontend results entry form (admin, post-session)",
-      "description": "As an admin, I want to enter match scores and player stats after the session so the results can be recorded.",
-      "acceptanceCriteria": [
-        "Admin-only 'Enter Results' button on DailyDetailPage when status is IN_COURSE; opens a results entry modal/panel",
-        "Results form shows one row per match (based on teams: if 2 teams, 1 match shown; admin can add more matches with 'Add Match' button showing additional team1/team2 selects from available teams)",
-        "Each match row: team1 name + score input (number, min 0), team2 name + score input (number, min 0)",
-        "Below each match: expandable player stats section — for each confirmed player, inputs for goals (default 0) and assists (default 0)",
-        "If results already exist (daily.matches populated), form is pre-filled with existing data",
-        "Submit calls submitResults(id, results); shows loading state; toast on success/error; closes modal on success and refetches daily detail",
-        "Typecheck passes",
-        "Verify in browser using dev-browser skill"
-      ],
-      "priority": 17,
-      "passes": true,
-      "notes": ""
-    },
-    {
-      "id": "US-018",
-      "title": "Frontend finalization flow — select awards and finalize",
-      "description": "As an admin, I want to select Puskas and Wiltball award winners and finalize the daily so stats are computed and the session is officially closed.",
-      "acceptanceCriteria": [
-        "Admin-only 'Finalize Daily' button on DailyDetailPage when status is IN_COURSE and daily.matches is non-empty; opens finalization modal",
-        "Finalization modal shows two selects: 'Puskas Award' and 'Wiltball Award', each populated with confirmedPlayers; both required",
-        "Submit button disabled until both selects have a value",
-        "On submit: calls finalizeDaily(id, puskasWinnerId, wiltballWinnerId); shows loading state",
-        "On success: close modal, show success toast, refetch daily detail (page now shows FINISHED state)",
-        "Error toast on failure; modal stays open on error",
-        "Typecheck passes",
-        "Verify in browser using dev-browser skill"
-      ],
-      "priority": 18,
-      "passes": true,
-      "notes": ""
-    },
-    {
-      "id": "US-019",
-      "title": "Frontend finished daily view — results, league table, stats, and awards",
-      "description": "As a player, I want to view all results, standings, stats, and awards of a finished daily session.",
-      "acceptanceCriteria": [
-        "When daily.status is FINISHED, DailyDetailPage shows additional sections below the teams display:",
-        "Match Results section: each match shows team1 name vs team2 name with scores; winning team name is bold; draw displayed as 'Draw'",
-        "League Table section: table with columns Position, Team, W, D, L, GF, GA, GD, Points; sorted by position; winning team highlighted",
-        "Player Stats section: table with columns Player, Goals, Assists, Matches, Wins; sorted by goals desc",
-        "Awards section: shows Puskas Award winner and Wiltball Award winner with name and avatar",
-        "Champion Image section: if daily.championImage is set, show the image; admin sees 'Upload Champion Photo' button that opens a file picker and calls uploadChampionImage(); success toast and refetch on upload",
-        "All sections use skeleton placeholders while initial data is loading",
-        "Typecheck passes",
-        "Verify in browser using dev-browser skill"
-      ],
-      "priority": 19,
-      "passes": true,
+      "passes": false,
       "notes": ""
     }
   ]
