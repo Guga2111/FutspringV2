@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { Trophy, Sun, Moon } from 'lucide-react'
+import { Trophy, Sun, Moon, Menu } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { Button } from './ui/button'
@@ -12,6 +12,12 @@ import {
   DropdownMenuTrigger,
 } from './ui/dropdown-menu'
 import { Avatar, AvatarImage, AvatarFallback } from './ui/avatar'
+import {
+  Sheet,
+  SheetContent,
+  SheetTrigger,
+  SheetClose,
+} from './ui/sheet'
 
 export default function NavBar() {
   const { logout, user } = useAuth()
@@ -20,6 +26,7 @@ export default function NavBar() {
   const [isDark, setIsDark] = useState(() =>
     document.documentElement.classList.contains('dark')
   )
+  const [sheetOpen, setSheetOpen] = useState(false)
 
   useEffect(() => {
     const observer = new MutationObserver(() => {
@@ -69,53 +76,112 @@ export default function NavBar() {
         </Link>
       </div>
 
-      {/* Right: dark mode toggle + avatar dropdown */}
+      {/* Right: dark mode toggle + avatar dropdown (desktop) + hamburger (mobile) */}
       <div className="flex items-center gap-2">
+        {/* Desktop: dark mode toggle + avatar */}
         <Button
           variant="ghost"
           size="icon"
           aria-label="Toggle dark mode"
           onClick={handleToggleDark}
+          className="hidden sm:inline-flex"
         >
           {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
         </Button>
 
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button
-              className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              aria-label="User menu"
+        <div className="hidden sm:flex">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                aria-label="User menu"
+              >
+                <Avatar className="h-8 w-8 cursor-pointer">
+                  {user?.image && (
+                    <AvatarImage src={user.image} alt={user.username} />
+                  )}
+                  <AvatarFallback>{initials}</AvatarFallback>
+                </Avatar>
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel className="font-normal">
+                <div className="flex flex-col space-y-1">
+                  <p className="text-sm font-semibold leading-none">{user?.username}</p>
+                  <p className="text-xs leading-none text-muted-foreground">{user?.email}</p>
+                </div>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem asChild>
+                <Link to={`/profile/${user?.id}`} className="cursor-pointer w-full">
+                  View Profile
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="cursor-pointer text-destructive focus:text-destructive"
+                onClick={handleLogout}
+              >
+                Logout
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+
+        {/* Mobile: hamburger button */}
+        <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+          <SheetTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Open menu"
+              className="block sm:hidden"
             >
-              <Avatar className="h-8 w-8 cursor-pointer">
-                {user?.image && (
-                  <AvatarImage src={user.image} alt={user.username} />
-                )}
-                <AvatarFallback>{initials}</AvatarFallback>
-              </Avatar>
+              <Menu className="h-5 w-5" />
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="right" className="flex flex-col gap-6 pt-10">
+            {/* Nav link */}
+            <SheetClose asChild>
+              <Link
+                to="/home"
+                className={`text-base font-medium transition-colors hover:text-green-500 ${
+                  isHomeActive ? 'text-green-600' : 'text-foreground'
+                }`}
+              >
+                Home
+              </Link>
+            </SheetClose>
+
+            {/* Dark mode toggle */}
+            <button
+              className="flex items-center gap-2 text-base font-medium text-foreground hover:text-green-500 transition-colors"
+              onClick={() => { handleToggleDark(); setSheetOpen(false) }}
+              aria-label="Toggle dark mode"
+            >
+              {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+              {isDark ? 'Light Mode' : 'Dark Mode'}
             </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuLabel className="font-normal">
-              <div className="flex flex-col space-y-1">
-                <p className="text-sm font-semibold leading-none">{user?.username}</p>
-                <p className="text-xs leading-none text-muted-foreground">{user?.email}</p>
-              </div>
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
-              <Link to={`/profile/${user?.id}`} className="cursor-pointer w-full">
+
+            {/* View Profile */}
+            <SheetClose asChild>
+              <Link
+                to={`/profile/${user?.id}`}
+                className="text-base font-medium text-foreground hover:text-green-500 transition-colors"
+              >
                 View Profile
               </Link>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              className="cursor-pointer text-destructive focus:text-destructive"
-              onClick={handleLogout}
+            </SheetClose>
+
+            {/* Logout */}
+            <button
+              className="text-left text-base font-medium text-destructive hover:opacity-80 transition-opacity"
+              onClick={() => { setSheetOpen(false); handleLogout() }}
             >
               Logout
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+            </button>
+          </SheetContent>
+        </Sheet>
       </div>
     </nav>
   )
