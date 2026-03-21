@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { toast } from 'sonner'
 import NavBar from '../components/NavBar'
-import { getDailyDetail, confirmAttendance, disconfirmAttendance, sortTeams, swapPlayers, updateDailyStatus, submitResults } from '../api/dailies'
+import { getDailyDetail, confirmAttendance, disconfirmAttendance, sortTeams, swapPlayers, updateDailyStatus, submitResults, finalizeDaily } from '../api/dailies'
 import type { MatchResultInput } from '../api/dailies'
 import type { DailyDetail, PlayerDTO, TeamDTO } from '../types/daily'
 import { useAuth } from '../hooks/useAuth'
@@ -462,6 +462,104 @@ function ResultsModal({ daily, onClose, onSuccess }: ResultsModalProps) {
   )
 }
 
+// ── Finalize Modal ────────────────────────────────────────────────────────────
+
+interface FinalizeModalProps {
+  daily: DailyDetail
+  onClose: () => void
+  onSuccess: (updated: DailyDetail) => void
+}
+
+function FinalizeModal({ daily, onClose, onSuccess }: FinalizeModalProps) {
+  const [puskasWinnerId, setPuskasWinnerId] = useState<string>('')
+  const [wiltballWinnerId, setWiltballWinnerId] = useState<string>('')
+  const [loading, setLoading] = useState(false)
+
+  const canSubmit = puskasWinnerId !== '' && wiltballWinnerId !== ''
+
+  async function handleSubmit() {
+    if (!canSubmit) return
+    setLoading(true)
+    try {
+      const updated = await finalizeDaily(daily.id, Number(puskasWinnerId), Number(wiltballWinnerId))
+      toast.success('Daily finalized!')
+      onSuccess(updated)
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string } } }
+      toast.error(e?.response?.data?.message ?? 'Failed to finalize daily')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+      <div className="bg-background rounded-lg shadow-lg w-full max-w-md">
+        <div className="flex items-center justify-between p-4 border-b">
+          <h2 className="text-lg font-semibold">Finalize Daily</h2>
+          <button
+            className="text-muted-foreground hover:text-foreground text-xl leading-none"
+            onClick={onClose}
+          >
+            ×
+          </button>
+        </div>
+        <div className="p-4 space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Select the award winners to finalize the session and compute stats.
+          </p>
+          <div>
+            <label className="text-sm font-medium block mb-1">Puskas Award</label>
+            <select
+              className="w-full text-sm border rounded px-2 py-1.5 bg-background"
+              value={puskasWinnerId}
+              onChange={(e) => setPuskasWinnerId(e.target.value)}
+            >
+              <option value="">— Select player —</option>
+              {daily.confirmedPlayers.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.username}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="text-sm font-medium block mb-1">Wiltball Award</label>
+            <select
+              className="w-full text-sm border rounded px-2 py-1.5 bg-background"
+              value={wiltballWinnerId}
+              onChange={(e) => setWiltballWinnerId(e.target.value)}
+            >
+              <option value="">— Select player —</option>
+              {daily.confirmedPlayers.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.username}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+        <div className="flex justify-end gap-3 p-4 border-t">
+          <button
+            className="text-sm px-4 py-2 rounded border hover:bg-muted disabled:opacity-50"
+            disabled={loading}
+            onClick={onClose}
+          >
+            Cancel
+          </button>
+          <button
+            className="text-sm bg-primary text-primary-foreground px-4 py-2 rounded disabled:opacity-50"
+            disabled={loading || !canSubmit}
+            onClick={handleSubmit}
+          >
+            {loading ? 'Finalizing...' : 'Finalize'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function DailyDetailPage() {
@@ -479,6 +577,7 @@ export default function DailyDetailPage() {
   const [statusDialog, setStatusDialog] = useState<{ targetStatus: string; description: string } | null>(null)
   const [statusLoading, setStatusLoading] = useState(false)
   const [resultsOpen, setResultsOpen] = useState(false)
+  const [finalizeOpen, setFinalizeOpen] = useState(false)
 
   const fetchDaily = useCallback(async () => {
     try {
@@ -705,15 +804,23 @@ export default function DailyDetailPage() {
             </div>
           )}
 
-          {/* Enter Results button — admin, IN_COURSE */}
+          {/* Admin actions — IN_COURSE */}
           {daily.isAdmin && daily.status === 'IN_COURSE' && (
-            <div className="mb-6">
+            <div className="mb-6 flex flex-wrap gap-2">
               <button
                 className="text-sm bg-primary text-primary-foreground px-4 py-2 rounded"
                 onClick={() => setResultsOpen(true)}
               >
                 Enter Results
               </button>
+              {daily.matches.length > 0 && (
+                <button
+                  className="text-sm bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+                  onClick={() => setFinalizeOpen(true)}
+                >
+                  Finalize Daily
+                </button>
+              )}
             </div>
           )}
 
@@ -725,6 +832,18 @@ export default function DailyDetailPage() {
               onSuccess={(updated) => {
                 setDaily(updated)
                 setResultsOpen(false)
+              }}
+            />
+          )}
+
+          {/* Finalize modal */}
+          {finalizeOpen && daily && (
+            <FinalizeModal
+              daily={daily}
+              onClose={() => setFinalizeOpen(false)}
+              onSuccess={(updated) => {
+                setDaily(updated)
+                setFinalizeOpen(false)
               }}
             />
           )}
