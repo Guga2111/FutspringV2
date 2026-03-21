@@ -12,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -47,5 +48,23 @@ public class UserController {
             Authentication authentication) {
         String callerEmail = (String) authentication.getPrincipal();
         return ResponseEntity.ok(userService.updateProfile(id, request, callerEmail));
+    }
+
+    @PostMapping("/{id}/image")
+    public ResponseEntity<ProfileDTO> uploadUserImage(
+            @PathVariable Long id,
+            @RequestParam("file") MultipartFile file,
+            Authentication authentication) {
+        String callerEmail = (String) authentication.getPrincipal();
+        return ResponseEntity.ok(userService.uploadUserImage(id, file, callerEmail));
+    }
+
+    @PostMapping("/{id}/background-image")
+    public ResponseEntity<ProfileDTO> uploadBackgroundImage(
+            @PathVariable Long id,
+            @RequestParam("file") MultipartFile file,
+            Authentication authentication) {
+        String callerEmail = (String) authentication.getPrincipal();
+        return ResponseEntity.ok(userService.uploadBackgroundImage(id, file, callerEmail));
     }
 }
