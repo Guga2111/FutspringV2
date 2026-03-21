@@ -1,84 +1,22 @@
 # Ralph Progress Log
-Started: Sat Mar 21 00:00:00 PDT 2026
+Started: Sat Mar 21 09:15:01 PDT 2026
 ---
 
 ## Codebase Patterns
-- Backend uses Lombok @Data, @Builder, @NoArgsConstructor, @AllArgsConstructor on all entities and DTOs
-- DTOs have a static `from(Entity entity)` factory method for entity-to-DTO conversion
-- JPA entities use @CreationTimestamp from org.hibernate.annotations for createdAt fields
-- ManyToMany relationships use @JoinTable with explicit join column names
-- Hibernate DDL is set to `update` mode - tables auto-created from entities
-- Java/Maven not available in this environment - "Typecheck passes" means code is syntactically correct Java
-- Frontend TypeScript typecheck: `cd frontend && npx tsc -b --noEmit`
-- Controllers inject `Authentication` and get current user email via `(String) authentication.getPrincipal()`
-- Services use `@Transactional` (write) and `@Transactional(readOnly = true)` for read operations
-- Lazy-loaded collections (@ManyToMany with FetchType.LAZY) are safe to access within @Transactional service methods
-- Conflict responses use AppException(HttpStatus.CONFLICT, message)
-- File uploads: `@RequestParam("file") MultipartFile file`; store under `@Value("${app.uploads.dir:uploads}")` dir with UUID prefix; delete old file on replacement
-- File serving: Spring WebMvcConfigurer.addResourceHandlers() maps /api/v1/files/** to uploads/ directory; frontend accesses images via /api/v1/files/{filename}
-- No browser testing tools available; manual browser verification needed
-- When injecting a new service into a controller that uses @RequiredArgsConstructor, just add the final field — no @Autowired needed
-- Upsert pattern: repository.findByX().orElse(new Entity()) then save()
-- Date formatting for ISO date strings: append 'T12:00:00' before parsing to avoid timezone off-by-one
-- Status badge colors: SCHEDULED=blue-100/800, CONFIRMED=yellow-100/800, IN_COURSE=green-100/800, FINISHED=gray-100/800, CANCELED=red-100/800
-- recharts is installed; BarChart/Bar/XAxis/YAxis/Tooltip/ResponsiveContainer available
-- @stomp/stompjs and sockjs-client are installed (added in chat cycle)
-- User entity has: id, username, email, password, image (String nullable), backgroundImage (String nullable), stars (int), position (String nullable)
-- ProfilePage already has stats cards + Puskas history + BarChart from stats cycle — do not duplicate, just extend
-- getUserStats(userId) is already in src/api/users.ts from stats cycle
-- Image upload pattern: check content type (image/jpeg, image/png, image/webp), check size <= 5MB, delete old file if set, store with UUID prefix, update entity field, return DTO
-- position null in UpdateProfileRequest = don't change; position = "" (empty string) = clear position to null; position = valid value = set it
-- UserRepository.findByUsername() needed for uniqueness check on profile update
+- shadcn components live in `frontend/src/components/ui/` and are built manually from Radix UI primitives
+- All shadcn animation classes (`animate-in`, `animate-out`, `fade-in-0`, etc.) require `tailwindcss-animate` plugin in tailwind.config.js
+- The project uses `@radix-ui/react-slot`, `class-variance-authority`, `clsx`, `tailwind-merge` (via `cn()` in lib/utils.ts)
+- CSS variables for colors are defined elsewhere (index.css), following shadcn convention
+- Branch for this PRD: `ralph/frontend-redesign`
 
 ## 2026-03-21 - US-001
-- Implemented backend profile endpoints: GET /api/v1/users/:id and PUT /api/v1/users/:id
-- Fixed User.stars default from 0 to 3
-- Files created: ProfileDTO.java, UpdateProfileRequest.java, UserService.java
-- Files modified: User.java (stars default), UserRepository.java (findByUsername), UserController.java (new endpoints + UserService injection)
-- File serving was already handled by existing FileController at /api/v1/files/**
+- Created shadcn UI components manually: avatar.tsx, badge.tsx, skeleton.tsx, separator.tsx, dialog.tsx, dropdown-menu.tsx, sheet.tsx
+- Installed missing npm packages: @radix-ui/react-avatar, @radix-ui/react-dialog, @radix-ui/react-dropdown-menu, @radix-ui/react-separator, tailwindcss-animate
+- Added `tailwindcss-animate` plugin to tailwind.config.js (required for shadcn animation data attributes)
+- Existing components (button, card, input, label, tabs) left untouched
+- tailwind.config.js darkMode: ["class"] was already set correctly
 - **Learnings for future iterations:**
-  - FileController (serving /api/v1/files/**) was already implemented in a prior cycle — no WebMvcConfigurer needed
-  - Position update: null = no-op, empty string = clear to null, valid value = set
-  - UserResponseDTO already existed with same fields as ProfileDTO; created ProfileDTO per PRD spec anyway
----
-
-## 2026-03-21 - US-002
-- Implemented POST /api/v1/users/:id/image and POST /api/v1/users/:id/background-image
-- Both endpoints: auth check (403 if not own), content type check (jpeg/png/webp), size check (5MB), UUID filename, delete old file
-- Files modified: UserService.java (added uploadUserImage, uploadBackgroundImage, storeFile, deleteOldFile), UserController.java (added two POST endpoints)
-- **Learnings for future iterations:**
-  - Extracted storeFile() and deleteOldFile() as private helpers in UserService — reuse pattern for any future image upload
-  - Files.deleteIfExists() used for best-effort old file deletion (swallows IOException)
-  - @Value field injection works fine with @RequiredArgsConstructor — just add the field, not a constructor param
----
-
-## 2026-03-21 - US-004
-- Implemented Edit Profile modal in ProfilePage.tsx
-- Added updateUser, uploadUserImage, uploadBackgroundImage to src/api/users.ts
-- Modal: clickable background banner (uploads immediately), clickable avatar (uploads immediately), username input with inline 409 error, position select (blank = clear), star picker (clickable ★/☆), Save/Cancel buttons
-- Image uploads update both local preview and parent profile state without closing modal
-- Save calls PUT /users/:id; on success closes modal + toasts; on 409 shows inline error
-- Manual browser verification needed (no browser tools available)
-- **Learnings for future iterations:**
-  - Image uploads in modal update parent state via onProfileUpdated callback without closing modal
-  - File inputs are hidden; triggered via useRef + .click() from clickable UI elements
-  - 409 conflict detection: cast err to `{ response?: { status?: number } }` then check status
-  - position "" sent to backend means clear position; blank select option has value=""
----
-
-## 2026-03-21 - US-003
-- Implemented frontend Profile page with full identity display
-- Created src/types/user.ts with ProfileDTO interface
-- Added getUser(userId) to src/api/users.ts
-- Rewrote ProfilePage.tsx: background banner (200px, gradient fallback), circular avatar (96px overlapping banner), username + position badge + stars, Edit Profile button (own profile only), parallel fetch with skeleton loading
-- Position badge colors: GOALKEEPER=green, DEFENDER=blue, MIDFIELDER=yellow, FORWARD=red with short labels (GK/DEF/MID/FWD)
-- Stars rendered as ★/☆ characters (1-5)
-- Edit modal is a placeholder — full impl in US-004
-- Manual browser verification needed (no browser tools available)
-- **Learnings for future iterations:**
-  - ProfileDTO has same fields as UserResponseDTO in auth.ts — created separate type per PRD spec in src/types/user.ts
-  - Image URLs pattern: `/api/v1/files/${filename}` for both avatar and background
-  - `useAuth().user.id` gives current user's ID for own-profile checks
-  - Initials avatar: split username on spaces, take first letter of each word, uppercase, max 2 chars
-  - Edit Profile button and modal state are in ProfilePage; US-004 replaces the placeholder modal
+  - Sheet component reuses @radix-ui/react-dialog (not a separate package)
+  - Dialog and Sheet both need tailwindcss-animate for their open/close animations
+  - All created components follow standard shadcn patterns and work with existing CSS variable system
 ---

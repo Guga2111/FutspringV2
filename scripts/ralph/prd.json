@@ -1,18 +1,17 @@
 {
   "project": "FutSpring",
-  "branchName": "ralph/futspring-profile",
-  "description": "FutSpring Profile — view and edit user profile (avatar, background image, username, position, stars), display global stats and Puskas award history, image uploads",
+  "branchName": "ralph/frontend-redesign",
+  "description": "FutSpring Frontend Redesign & Polish — green gradient design system, real landing page, polished NavBar with dark mode and user avatar dropdown, per-page UX improvements, ErrorBoundary, 404 page, scroll-to-top, route transitions, shadcn/ui, and full responsive/accessibility audit.",
   "userStories": [
     {
       "id": "US-001",
-      "title": "Backend profile endpoints — get, update, and file serving",
-      "description": "As a developer, I need endpoints to retrieve and update user profile info and serve uploaded files.",
+      "title": "Install shadcn/ui and add missing UI primitives",
+      "description": "As a developer, I need shadcn/ui fully installed so I can use Dialog, DropdownMenu, Sheet, Avatar, Badge, Skeleton, Popover, and Separator throughout the redesign.",
       "acceptanceCriteria": [
-        "Ensure User entity has fields: image (String, nullable), backgroundImage (String, nullable), stars (int, default 3), position (String, nullable — store as String for simplicity, not enum, valid values: GOALKEEPER, DEFENDER, MIDFIELDER, FORWARD); add backgroundImage if missing",
-        "Create ProfileDTO with fields: id, username, email, image, backgroundImage, stars, position; static ProfileDTO.from(User u) factory",
-        "GET /api/v1/users/:id — any authenticated user; returns ProfileDTO; 404 if not found; add to UserController",
-        "PUT /api/v1/users/:id — authenticated user can only update own profile (403 if mismatch); body: UpdateProfileRequest { username (optional, min 3 max 30), position (optional, must be one of the 4 allowed values or null), stars (optional, 1–5) }; return 409 if username taken by another user; return updated ProfileDTO",
-        "Serve uploaded files: configure Spring MVC to serve files from uploads/ directory under /api/v1/files/**; use ResourceHttpRequestHandler or WebMvcConfigurer.addResourceHandlers(); files stored via existing upload endpoints (pelada images, champion images, user images) are all in the same uploads/ dir",
+        "Run `npx shadcn@latest init` in frontend/ — select existing Tailwind config, output to src/components/ui",
+        "Add these components via shadcn CLI or manual creation: avatar, badge, skeleton, dialog, dropdown-menu, sheet, separator",
+        "Existing ui/button.tsx, ui/card.tsx, ui/input.tsx, ui/label.tsx, ui/tabs.tsx remain intact (do not overwrite without verifying compatibility)",
+        "tailwind.config.js darkMode remains [\"class\"]",
         "Typecheck passes"
       ],
       "priority": 1,
@@ -21,69 +20,285 @@
     },
     {
       "id": "US-002",
-      "title": "Backend avatar and background image upload endpoints",
-      "description": "As a developer, I need endpoints to upload and replace a user's avatar and background image.",
+      "title": "Green gradient button variant",
+      "description": "As a developer, I need a reusable green gradient style so all primary CTAs have a consistent visual identity.",
       "acceptanceCriteria": [
-        "POST /api/v1/users/:id/image — multipart/form-data; authenticated user can only upload own image (403 if mismatch); accept JPEG/PNG/WebP only (check content type); max 5MB; store under uploads/ with UUID prefix; update user.image; delete old file from disk if it was previously set; return updated ProfileDTO",
-        "POST /api/v1/users/:id/background-image — same constraints as avatar upload; update user.backgroundImage; delete old background file if previously set; return updated ProfileDTO",
-        "Both endpoints return 400 for invalid file type or size",
-        "Add both endpoints to UserController; add uploadUserImage(id, file, email) and uploadBackgroundImage(id, file, email) methods to UserService (or a new ImageService)",
-        "Typecheck passes"
+        "Add a `gradient` variant to ui/button.tsx (or button-variants.ts): classes `bg-gradient-to-br from-green-500 to-emerald-600 text-white hover:from-green-400 hover:to-emerald-500 dark:from-green-400 dark:to-emerald-500 transition-all duration-150`",
+        "Apply the `gradient` variant to primary CTA buttons across all existing pages: 'Confirm Attendance', 'Create Pelada', 'Sort Teams', 'Start Session'",
+        "Secondary and destructive buttons are unchanged",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
       ],
       "priority": 2,
-      "passes": true,
+      "passes": false,
       "notes": ""
     },
     {
       "id": "US-003",
-      "title": "Frontend Profile page — full display with avatar, background, position, stars",
-      "description": "As a user, I want to view my profile (and other users' profiles) with all identity info, stats, and awards displayed.",
+      "title": "NavBar — logo, layout, and user avatar dropdown",
+      "description": "As a user, I want a polished NavBar with branding and quick access to my profile and logout so navigation feels professional.",
       "acceptanceCriteria": [
-        "Add ProfileDTO interface to src/types/user.ts (or src/types/profile.ts): { id, username, email, image, backgroundImage, stars, position }",
-        "Add getUser(userId) API function to src/api/users.ts using existing Axios client",
-        "Update ProfilePage to fetch both getUser(userId) and getUserStats(userId) in parallel (Promise.all or separate useEffects)",
-        "Profile page layout: background image spanning full width as a header banner (200px tall); if no backgroundImage, show a gradient fallback; avatar image overlapping the bottom of the banner (circular, 96px, border); below: username in large text, position as a colored badge (GOALKEEPER=green, DEFENDER=blue, MIDFIELDER=yellow, FORWARD=red — use text or short label), stars as filled/empty star icons (★/☆) 1–5",
-        "Image URLs: if image/backgroundImage is set, load from /api/v1/files/{filename}; if null, show initials avatar / gradient fallback",
-        "Stats section (already built): goals, assists, matches, wins cards — keep existing implementation",
-        "Puskas award history section (already built): keep existing implementation",
-        "Stats chart (already built): keep existing BarChart",
-        "'Edit Profile' button visible only when profileId === currentUser.id (use useAuth().user.id)",
-        "Skeleton loading while either getUser or getUserStats is loading",
-        "Typecheck passes"
+        "NavBar is sticky top with `backdrop-blur-sm bg-background/80 border-b`",
+        "Left: FutSpring wordmark with Trophy lucide icon, links to /home",
+        "Center (desktop, hidden on mobile): nav link 'Home' → /home with active green underline using useLocation",
+        "Right: dark mode toggle button (Sun/Moon icon, aria-label='Toggle dark mode') + user avatar button",
+        "User avatar button opens a shadcn DropdownMenu containing: non-clickable header with username + email, 'View Profile' → /profile/:id, 'Logout'",
+        "Avatar shown as shadcn Avatar component — uploaded image or initials fallback",
+        "Dropdown closes on outside click and Escape",
+        "Existing logout logic preserved inside dropdown",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
       ],
       "priority": 3,
-      "passes": true,
+      "passes": false,
       "notes": ""
     },
     {
       "id": "US-004",
-      "title": "Frontend Edit Profile modal — update info and upload images",
-      "description": "As a user, I want to edit my username, position, stars, avatar, and background image from my profile page.",
+      "title": "NavBar — dark mode toggle with localStorage persistence",
+      "description": "As a user, I want a sun/moon toggle in the NavBar so I can switch between light and dark mode and have my preference remembered.",
       "acceptanceCriteria": [
-        "Clicking 'Edit Profile' opens an edit modal",
-        "Modal fields: username (text input, pre-filled), position (select with options: GOALKEEPER, DEFENDER, MIDFIELDER, FORWARD, and a blank option for 'No position'), stars (number input or star-picker, 1–5)",
-        "Avatar upload: clicking the avatar in the modal opens file picker; on file select calls POST /users/:id/image immediately and updates preview on success",
-        "Background image upload: clicking the background area in the modal opens file picker; on file select calls POST /users/:id/background-image immediately and updates preview on success",
-        "Save button calls PUT /users/:id with username/position/stars values; on success: close modal, update displayed profile in place (setUser(updatedProfile)), show success toast",
-        "If PUT returns 409 (username taken): show inline error below username input; modal stays open",
-        "Image upload errors shown as error toast; modal stays open on upload error",
-        "Typecheck passes"
+        "On app mount (main.tsx or App.tsx): read localStorage.getItem('theme'), apply 'dark' class to document.documentElement if value is 'dark'",
+        "NavBar toggle button: on click, flip the 'dark' class on document.documentElement and write 'dark' or 'light' to localStorage",
+        "Icon: Sun when in dark mode (click to go light), Moon when in light mode (click to go dark)",
+        "Button has aria-label='Toggle dark mode'",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
       ],
       "priority": 4,
-      "passes": true,
+      "passes": false,
       "notes": ""
     },
     {
       "id": "US-005",
-      "title": "Stats chart and Puskas history already implemented",
-      "description": "The Recharts BarChart (goals vs assists) and Puskas award history section were implemented in the Stats & Rankings cycle. Marking complete.",
+      "title": "NavBar — mobile hamburger menu with Sheet drawer",
+      "description": "As a mobile user, I want a hamburger button that opens a slide-in drawer with all nav items so the NavBar doesn't overflow on small screens.",
       "acceptanceCriteria": [
-        "Already implemented: Recharts BarChart with goals and assists bars on ProfilePage",
-        "Already implemented: Puskas award history section with dates sorted most-recent-first and empty state"
+        "Menu lucide icon button shown only on mobile (block sm:hidden)",
+        "Desktop avatar + nav links hidden on mobile (hidden sm:flex)",
+        "Clicking Menu opens a shadcn Sheet (side='left' or side='right') containing: 'Home' nav link, dark mode toggle, 'View Profile' link, 'Logout' button",
+        "Sheet closes on any nav item click",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
       ],
       "priority": 5,
-      "passes": true,
-      "notes": "Implemented in stats-rankings cycle"
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-006",
+      "title": "Global — ErrorBoundary, 404 page, ScrollToTop, and route transitions",
+      "description": "As a developer, I need global infrastructure components so the app handles crashes gracefully, unknown routes show a 404, scroll resets on navigation, and pages fade in.",
+      "acceptanceCriteria": [
+        "Create src/components/ErrorBoundary.tsx as a React class component with componentDidCatch; renders 'Something went wrong' + 'Reload' button (window.location.reload())",
+        "Each lazy-loaded route in App.tsx is wrapped in its own <ErrorBoundary> (not a single top-level wrapper)",
+        "Create src/pages/NotFoundPage.tsx with a football-themed 404 message and a back-to-home button; add a path='*' catch-all route in App.tsx",
+        "Create src/components/ScrollToTop.tsx using useEffect + useLocation to call window.scrollTo(0,0) on route change; render it once inside <Router> in App.tsx",
+        "Add a CSS animation in index.css: @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }; each page root div gets class 'animate-[fadeIn_150ms_ease-in]' or a shared `page-enter` class",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 6,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-007",
+      "title": "Landing page — auth redirect + hero section",
+      "description": "As a guest visitor, I want a compelling hero section; as an authenticated user I want to be redirected to /home immediately.",
+      "acceptanceCriteria": [
+        "The / route checks auth state on mount; if authenticated, redirect to /home before landing page renders (no flash)",
+        "Full-width min-h-screen hero section with bg-gradient-to-br from-green-600 to-emerald-800",
+        "Headline: 'Your football crew, organized.' — text-4xl md:text-6xl font-bold text-white",
+        "Subheadline: short description in text-lg text-green-100",
+        "Two CTA buttons: 'Get Started' → /auth?tab=register (white filled), 'Sign In' → /auth (outlined white)",
+        "Decorative element on right side desktop (football emoji or SVG), hidden on mobile",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-008",
+      "title": "Landing page — features section, how-it-works section, and footer",
+      "description": "As a guest visitor, I want to understand FutSpring's key features and how it works before signing up, and see a complete footer.",
+      "acceptanceCriteria": [
+        "Features section: 3–4 cards in responsive grid (1 col mobile, 2 tablet, 4 desktop); light green tint background (bg-green-50 dark:bg-green-950/20); each card has lucide icon + title + short description; features: 'Schedule Sessions', 'Auto-balance Teams', 'Track Stats', 'Group Chat'",
+        "How It Works section: 3 steps with numbered green circles — '1. Create a Pelada', '2. Invite Friends', '3. Play & Track Stats'",
+        "Footer: dark background (bg-gray-900 text-gray-400), 'FutSpring © 2025', link to /auth; not sticky",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 8,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-009",
+      "title": "HomePage — pelada cards grid with skeleton and empty state",
+      "description": "As a user, I want to see my peladas as visual cards in a responsive grid with skeletons during load and a helpful empty state.",
+      "acceptanceCriteria": [
+        "Page header: 'My Peladas' (text-2xl font-bold tracking-tight) + '+ New Pelada' green gradient button top-right",
+        "Responsive grid: 1 col mobile, 2 col md:, 3 col lg:",
+        "Each card (rounded-xl border shadow-sm): banner image or green gradient ⚽ placeholder, pelada name (font-bold text-lg), day of week + time, member count Badge, next session date (nearest SCHEDULED/CONFIRMED daily) or 'No upcoming session'",
+        "Clicking card navigates to /pelada/:id",
+        "While loading: show 3 skeleton cards (Skeleton component, matching card shape)",
+        "Empty state (0 peladas): football icon + 'You're not in any pelada yet. Create one to get started.' + green gradient CTA button",
+        "'+ New Pelada' button opens existing CreatePeladaModal",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 9,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-010",
+      "title": "PeladaDetailPage — banner header overlay and tabs layout",
+      "description": "As a user, I want the pelada name overlaid on the banner image and the page content organised in tabs so it feels polished and navigable.",
+      "acceptanceCriteria": [
+        "Banner: add bg-gradient-to-t from-black/70 to-transparent overlay absolutely over banner image; pelada name in white text-2xl font-bold over overlay",
+        "Edit (Pencil) and Delete (Trash2) lucide icon buttons top-right of banner, visible only to admin/creator (isAdmin); Edit triggers existing EditPeladaModal",
+        "Content area uses existing shadcn Tabs component (ui/tabs.tsx) with three tabs: Members, Sessions, Ranking — default active: Members",
+        "Each tab renders its existing content section",
+        "On desktop: chat sidebar stays on the right; on mobile: chat sidebar hidden, replaced by a fixed bottom-right floating button (MessageCircle icon) that toggles the chat panel",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 10,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-011",
+      "title": "PeladaDetailPage — member 3-dot dropdown and clickable member names",
+      "description": "As an admin, I want a 3-dot dropdown per member row to manage members cleanly, and member names should link to their profiles.",
+      "acceptanceCriteria": [
+        "Replace inline 'Make Admin' / 'Remove' buttons with a MoreVertical lucide icon button per row",
+        "Icon button opens a shadcn DropdownMenu with: 'Make Admin' / 'Remove Admin' (toggled by current role), 'Remove from Pelada'",
+        "DropdownMenu calls existing API functions — no backend changes",
+        "DropdownMenu closes on outside click and Escape",
+        "3-dot button shown only when current user isAdmin",
+        "Member names rendered as <Link to={`/profile/${member.id}`}>",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 11,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-012",
+      "title": "PeladaDetailPage — sessions status borders, empty state, and ranking medals",
+      "description": "As a user, I want session rows to have status-colored left borders and the ranking tab to show medal icons for top 3.",
+      "acceptanceCriteria": [
+        "Each session row has left border color: SCHEDULED=yellow, CONFIRMED=green, IN_COURSE=blue, FINISHED=gray, CANCELLED=red (use border-l-4 with Tailwind color classes)",
+        "Sessions tab empty state: football icon + 'No sessions scheduled yet.'",
+        "Ranking tab row 1: 🥇, row 2: 🥈, row 3: 🥉 in the rank column; rows 4+ show numeric rank",
+        "Existing sorting logic unchanged",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 12,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-013",
+      "title": "DailyDetailPage — header polish with live badge and admin action bar",
+      "description": "As a user, I want the daily header to clearly show the date, status, and whether the session is live; as an admin, I want a visually distinct action bar.",
+      "acceptanceCriteria": [
+        "Date as large title: text-2xl font-bold tracking-tight",
+        "shadcn Badge next to title showing current status text",
+        "Time shown as subtitle below: text-sm text-muted-foreground",
+        "If status is IN_COURSE: pulsing green dot (animate-pulse bg-green-500 rounded-full w-2 h-2 inline-block) + 'Live' text next to the badge",
+        "Admin action bar wrapper: rounded-xl border p-3 flex flex-wrap gap-2 bg-muted/40; entire bar gated behind daily.isAdmin",
+        "'Confirm Daily' button: yellow gradient (bg-gradient-to-br from-yellow-400 to-amber-500 text-white)",
+        "'Start Session' button: green gradient variant",
+        "'Cancel Daily' button: destructive outlined",
+        "'Enter Results / Finalize' button: green gradient variant",
+        "Buttons wrap correctly on mobile (flex-wrap)",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 13,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-014",
+      "title": "DailyDetailPage — confirmed players section and teams section polish",
+      "description": "As a user, I want confirmed players to show avatars and links to profiles, and team cards to have colored headers so they are visually distinct.",
+      "acceptanceCriteria": [
+        "Confirmed players: each row shows shadcn Avatar (image or initials) + player name as <Link to={`/profile/${player.id}`}> + position Badge + star rating",
+        "Section header shows '(N confirmed)' count",
+        "Teams section: each team card has a colored header bar — Team A: bg-green-100 dark:bg-green-900/30, Team B: bg-blue-100 dark:bg-blue-900/30, additional teams cycle other colors",
+        "Players inside team card: shadcn Avatar + name + stars",
+        "Move/Swap button styled as small icon button with ArrowLeftRight lucide icon",
+        "Team cards stack to single column on mobile",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 14,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-015",
+      "title": "DailyDetailPage — finished state hero, trophy cards, and IN_COURSE CTA",
+      "description": "As a user reviewing a finished session, I want champion photo and awards displayed prominently; as an admin during a live session, I want a prominent CTA to enter results.",
+      "acceptanceCriteria": [
+        "Finished state: champion photo moved to top as full-width hero image (if it exists)",
+        "Awards section styled as trophy cards with gold (#FFD700) / silver (#C0C0C0) accent borders",
+        "Medal icons 🥇🥈🥉 on top 3 rows in league table and player stats",
+        "Player stats section collapsed by default with existing toggle",
+        "IN_COURSE state with no results entered: show a prominent card 'Session is live — enter results when ready' with Enter Results button (green gradient); card has pulsing green border",
+        "IN_COURSE card shown only to isAdmin; non-admins see a simpler 'Session is live' message without the button",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 15,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-016",
+      "title": "ProfilePage — peladas grid section and stats card green accent",
+      "description": "As a user viewing a profile, I want to see the peladas that person belongs to and have the stats cards aligned with the green design system.",
+      "acceptanceCriteria": [
+        "New 'Peladas' section below existing profile content",
+        "Fetch from /api/v1/peladas, filter to peladas where the profile user is a member (check members list for userId match)",
+        "Show pelada cards in a grid (2 col mobile, 3 col desktop): banner/placeholder + pelada name; clicking navigates to /pelada/:id",
+        "Empty state: 'Not in any peladas yet.'",
+        "Skeleton loading while fetching",
+        "Each stat card has subtle green top border: border-t-2 border-green-500",
+        "Edit modal verified to work in dark mode (no invisible text, correct bg colors)",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 16,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-017",
+      "title": "Global — toast audit, skeleton loading, and accessibility",
+      "description": "As a user, I want every async action to have success/error toasts, skeletons instead of spinners, and accessible interactive elements.",
+      "acceptanceCriteria": [
+        "Audit all API mutation calls (create, update, delete, confirm, start, cancel, finalize) across HomePage, PeladaDetailPage, DailyDetailPage, ProfilePage, AuthPage — every mutation has both toast.success(...) and toast.error(...)",
+        "GET fetch errors also have toast.error(...)",
+        "Replace any remaining spinner/bare 'Loading...' text with shadcn Skeleton components matching content shape in: PeladaDetailPage (banner + member list), DailyDetailPage (player list), ProfilePage (avatar + stats) — HomePage skeletons already done in US-009",
+        "Buttons that trigger async ops show disabled + opacity-50 during the request",
+        "All icon-only buttons have aria-label",
+        "All interactive elements have focus-visible:ring-2 focus-visible:ring-ring focus rings",
+        "All buttons meet minimum h-10 touch target",
+        "Typecheck passes"
+      ],
+      "priority": 17,
+      "passes": false,
+      "notes": ""
     }
   ]
 }
