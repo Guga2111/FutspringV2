@@ -223,7 +223,7 @@ export default function CreatePeladaModal({ onClose, onCreated }: CreatePeladaMo
             <Button type="button" variant="outline" className="flex-1" onClick={onClose} disabled={loading}>
               Cancel
             </Button>
-            <Button type="submit" className="flex-1" disabled={loading}>
+            <Button type="submit" variant="gradient" className="flex-1" disabled={loading}>
               {loading ? "Creating..." : "Create Pelada"}
             </Button>
           </div>

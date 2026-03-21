@@ -6,6 +6,7 @@ import { getDailyDetail, confirmAttendance, disconfirmAttendance, sortTeams, swa
 import type { MatchResultInput } from '../api/dailies'
 import type { DailyDetail, PlayerDTO, TeamDTO } from '../types/daily'
 import { useAuth } from '../hooks/useAuth'
+import { Button } from '../components/ui/button'
 
 function SkeletonBlock({ className }: { className: string }) {
   return <div className={`bg-muted rounded animate-pulse ${className}`} />
@@ -103,13 +104,14 @@ function TeamsSection({
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-lg font-semibold">Teams</h2>
         {canSort && (
-          <button
-            className="text-sm bg-primary text-primary-foreground px-3 py-1.5 rounded disabled:opacity-50"
+          <Button
+            variant="gradient"
+            size="sm"
             disabled={sortLoading || swapLoading}
             onClick={onSortTeams}
           >
             {sortLoading ? 'Sorting...' : hasTeams ? 'Re-sort Teams' : 'Sort Teams'}
-          </button>
+          </Button>
         )}
       </div>
       {selectedPlayer !== null && (
@@ -620,8 +622,8 @@ export default function DailyDetailPage() {
     if (!daily) return
     setSortLoading(true)
     try {
-      const updated = await sortTeams(daily.id)
-      setDaily(updated)
+      await sortTeams(daily.id)
+      await fetchDaily()
       toast.success('Teams sorted!')
     } catch (err: unknown) {
       const e = err as { response?: { data?: { message?: string } } }
@@ -649,8 +651,8 @@ export default function DailyDetailPage() {
     }
     setSwapLoading(true)
     try {
-      const updated = await swapPlayers(daily.id, selectedPlayer.id, playerId)
-      setDaily(updated)
+      await swapPlayers(daily.id, selectedPlayer.id, playerId)
+      await fetchDaily()
       setSelectedPlayer(null)
       toast.success('Players swapped!')
     } catch (err: unknown) {
@@ -769,13 +771,13 @@ export default function DailyDetailPage() {
                   {confirmLoading ? 'Updating...' : 'Disconfirm Attendance'}
                 </button>
               ) : (
-                <button
-                  className="text-sm bg-primary text-primary-foreground px-4 py-2 rounded disabled:opacity-50"
+                <Button
+                  variant="gradient"
                   disabled={confirmLoading}
                   onClick={handleConfirm}
                 >
                   {confirmLoading ? 'Updating...' : 'Confirm Attendance'}
-                </button>
+                </Button>
               )}
             </div>
           )}
@@ -797,8 +799,8 @@ export default function DailyDetailPage() {
                 </button>
               )}
               {daily.status === 'CONFIRMED' && (
-                <button
-                  className="text-sm bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 disabled:opacity-50"
+                <Button
+                  variant="gradient"
                   onClick={() =>
                     setStatusDialog({
                       targetStatus: 'IN_COURSE',
@@ -807,7 +809,7 @@ export default function DailyDetailPage() {
                   }
                 >
                   Start Session
-                </button>
+                </Button>
               )}
               <button
                 className="text-sm bg-destructive text-destructive-foreground px-4 py-2 rounded hover:opacity-90 disabled:opacity-50"

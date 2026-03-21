@@ -73,7 +73,7 @@ export default function HomePage() {
       <main className="flex-1 container max-w-5xl mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold">My Peladas</h1>
-          <Button onClick={() => setShowCreateModal(true)}>Create Pelada</Button>
+          <Button variant="gradient" onClick={() => setShowCreateModal(true)}>Create Pelada</Button>
         </div>
         {loading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
