@@ -111,3 +111,19 @@ Started: Sat Mar 21 09:15:01 PDT 2026
   - Used `page-enter` class on outermost div; hero section's `min-h-screen` stays on the hero div, not the root
   - Manual browser verification needed (no browser tools available)
 ---
+
+## 2026-03-21 - US-009
+- Updated HomePage with polished pelada cards grid
+- Card changes: `rounded-xl border shadow-sm`, `font-bold text-lg` name, green gradient ⚽ placeholder, member count Badge, next session date
+- Heading: added `tracking-tight`, button renamed to "+ New Pelada"
+- Grid: `grid-cols-1 md:grid-cols-2 lg:grid-cols-3` (breakpoints shifted right from previous sm/md)
+- Skeleton: updated to use shadcn `Skeleton` component (3 cards, matching card shape)
+- Empty state: updated text to "You're not in any pelada yet. Create one to get started." + green gradient button
+- Next session: fetches dailies for all peladas in parallel via `Promise.all(getDailiesForPelada(...))`, filters to SCHEDULED/CONFIRMED, picks earliest by date sort; shows "No upcoming session" if none
+- Files changed: frontend/src/pages/HomePage.tsx
+- **Learnings for future iterations:**
+  - `PeladaResponse` already has `memberCount` — no extra API call needed
+  - `DailyListItem.dailyDate` is a string in ISO format; `.localeCompare()` sorts correctly
+  - `nextSession === undefined` (loading state) shows "…"; `null` shows "No upcoming session"; string shows the date
+  - Manual browser verification needed (no browser tools available)
+---
