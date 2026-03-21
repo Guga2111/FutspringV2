@@ -41,3 +41,44 @@ Started: Sat Mar 21 00:00:00 PDT 2026
   - Position update: null = no-op, empty string = clear to null, valid value = set
   - UserResponseDTO already existed with same fields as ProfileDTO; created ProfileDTO per PRD spec anyway
 ---
+
+## 2026-03-21 - US-002
+- Implemented POST /api/v1/users/:id/image and POST /api/v1/users/:id/background-image
+- Both endpoints: auth check (403 if not own), content type check (jpeg/png/webp), size check (5MB), UUID filename, delete old file
+- Files modified: UserService.java (added uploadUserImage, uploadBackgroundImage, storeFile, deleteOldFile), UserController.java (added two POST endpoints)
+- **Learnings for future iterations:**
+  - Extracted storeFile() and deleteOldFile() as private helpers in UserService — reuse pattern for any future image upload
+  - Files.deleteIfExists() used for best-effort old file deletion (swallows IOException)
+  - @Value field injection works fine with @RequiredArgsConstructor — just add the field, not a constructor param
+---
+
+## 2026-03-21 - US-004
+- Implemented Edit Profile modal in ProfilePage.tsx
+- Added updateUser, uploadUserImage, uploadBackgroundImage to src/api/users.ts
+- Modal: clickable background banner (uploads immediately), clickable avatar (uploads immediately), username input with inline 409 error, position select (blank = clear), star picker (clickable ★/☆), Save/Cancel buttons
+- Image uploads update both local preview and parent profile state without closing modal
+- Save calls PUT /users/:id; on success closes modal + toasts; on 409 shows inline error
+- Manual browser verification needed (no browser tools available)
+- **Learnings for future iterations:**
+  - Image uploads in modal update parent state via onProfileUpdated callback without closing modal
+  - File inputs are hidden; triggered via useRef + .click() from clickable UI elements
+  - 409 conflict detection: cast err to `{ response?: { status?: number } }` then check status
+  - position "" sent to backend means clear position; blank select option has value=""
+---
+
+## 2026-03-21 - US-003
+- Implemented frontend Profile page with full identity display
+- Created src/types/user.ts with ProfileDTO interface
+- Added getUser(userId) to src/api/users.ts
+- Rewrote ProfilePage.tsx: background banner (200px, gradient fallback), circular avatar (96px overlapping banner), username + position badge + stars, Edit Profile button (own profile only), parallel fetch with skeleton loading
+- Position badge colors: GOALKEEPER=green, DEFENDER=blue, MIDFIELDER=yellow, FORWARD=red with short labels (GK/DEF/MID/FWD)
+- Stars rendered as ★/☆ characters (1-5)
+- Edit modal is a placeholder — full impl in US-004
+- Manual browser verification needed (no browser tools available)
+- **Learnings for future iterations:**
+  - ProfileDTO has same fields as UserResponseDTO in auth.ts — created separate type per PRD spec in src/types/user.ts
+  - Image URLs pattern: `/api/v1/files/${filename}` for both avatar and background
+  - `useAuth().user.id` gives current user's ID for own-profile checks
+  - Initials avatar: split username on spaces, take first letter of each word, uppercase, max 2 chars
+  - Edit Profile button and modal state are in ProfilePage; US-004 replaces the placeholder modal
+---
