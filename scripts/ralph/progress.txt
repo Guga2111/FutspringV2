@@ -87,3 +87,15 @@ Started: Sat Mar 21 09:15:01 PDT 2026
   - "Create Pelada" button appears in both HomePage (header) and CreatePeladaModal (submit) — both need updating
   - Typecheck had no issues; the `gradient` variant integrates cleanly with existing CVA setup
 ---
+
+## 2026-03-21 - US-007
+- Created LandingPage.tsx: min-h-screen green gradient hero, auth redirect (Navigate to /home if token exists), headline, subheadline, two CTA buttons ('Get Started' → /auth?tab=register, 'Sign In' → /auth), decorative football emoji (hidden on mobile)
+- Updated App.tsx: replaced inline placeholder with lazy-loaded LandingPage wrapped in ErrorBoundary
+- Fixed pre-existing ErrorBoundary.tsx type error: `ReactNode` must use type-only import (`import type`) when verbatimModuleSyntax is enabled
+- Files changed: frontend/src/pages/LandingPage.tsx (new), frontend/src/App.tsx, frontend/src/components/ErrorBoundary.tsx
+- **Learnings for future iterations:**
+  - Auth redirect in landing page uses `useAuth()` (token check) + `<Navigate to="/home" replace />` before rendering — no flash since token is read synchronously from localStorage
+  - `verbatimModuleSyntax` is enabled in tsconfig — all type imports must use `import type { ... }` syntax
+  - LandingPage doesn't need NavBar (it's a public marketing page with its own full-screen gradient)
+  - Manual browser verification needed (no browser tools available)
+---
