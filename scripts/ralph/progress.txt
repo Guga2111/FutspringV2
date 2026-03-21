@@ -158,6 +158,24 @@ Started: Sat Mar 21 09:15:01 PDT 2026
   - Manual browser verification needed (no browser tools available)
 ---
 
+## 2026-03-21 - US-013
+- Added `tracking-tight` to date h1 title
+- Replaced custom `StatusBadge` span with shadcn `Badge` component using status-specific className for color
+- Added pulsing green dot + "Live" text indicator for IN_COURSE status
+- Changed time subtitle to `text-sm text-muted-foreground`
+- Merged two separate admin action sections (SCHEDULED/CONFIRMED and IN_COURSE) into single styled wrapper: `rounded-xl border p-3 flex flex-wrap gap-2 bg-muted/40`
+- 'Confirm Daily': yellow gradient via inline className (`bg-gradient-to-br from-yellow-400 to-amber-500`)
+- 'Start Session': existing `variant="gradient"`
+- 'Cancel Daily': `variant="outline"` with `border-destructive text-destructive` classes
+- 'Enter Results / Finalize' and 'Finalize Daily': `variant="gradient"`
+- Files changed: frontend/src/pages/DailyDetailPage.tsx
+- **Learnings for future iterations:**
+  - shadcn Badge accepts `className` for per-status color overrides — no need for a custom variant
+  - The two admin action areas (SCHEDULED/CONFIRMED vs IN_COURSE) were previously separate divs — now unified in one `rounded-xl border bg-muted/40` container
+  - Yellow gradient for Confirm Daily uses inline className on Button, not a new button variant
+  - Manual browser verification needed (no browser tools available)
+---
+
 ## 2026-03-21 - US-012
 - Added `STATUS_BORDER` map alongside existing `STATUS_COLORS` for border-l-4 left border color per session status
 - Session rows: added `border-l-4 ${STATUS_BORDER[daily.status]}` class to Link — SCHEDULED=yellow, CONFIRMED=green, IN_COURSE=blue, FINISHED=gray, CANCELED/CANCELLED=red
