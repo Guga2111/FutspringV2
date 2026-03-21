@@ -236,6 +236,15 @@ const STATUS_COLORS: Record<string, string> = {
   CANCELED: 'bg-red-100 text-red-800',
 }
 
+const STATUS_BORDER: Record<string, string> = {
+  SCHEDULED: 'border-l-yellow-400',
+  CONFIRMED: 'border-l-green-500',
+  IN_COURSE: 'border-l-blue-500',
+  FINISHED: 'border-l-gray-400',
+  CANCELED: 'border-l-red-500',
+  CANCELLED: 'border-l-red-500',
+}
+
 function StatusBadge({ status }: { status: string }) {
   const cls = STATUS_COLORS[status] ?? 'bg-muted text-muted-foreground'
   return (
@@ -913,14 +922,17 @@ export default function PeladaDetailPage() {
                     ))}
                   </div>
                 ) : dailies.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No sessions yet.</p>
+                  <div className="flex flex-col items-center gap-2 py-8 text-muted-foreground">
+                    <span className="text-4xl">⚽</span>
+                    <p className="text-sm">No sessions scheduled yet.</p>
+                  </div>
                 ) : (
                   <div className="space-y-2">
                     {dailies.map((daily) => (
                       <Link
                         key={daily.id}
                         to={`/daily/${daily.id}`}
-                        className="flex items-center gap-3 p-3 rounded-lg border border-border hover:bg-muted transition-colors"
+                        className={`flex items-center gap-3 p-3 rounded-lg border border-border border-l-4 ${STATUS_BORDER[daily.status] ?? 'border-l-gray-300'} hover:bg-muted transition-colors`}
                       >
                         <span className="text-sm font-medium">
                           {new Date(daily.dailyDate + 'T12:00:00').toLocaleDateString('en-US', {
@@ -963,6 +975,7 @@ export default function PeladaDetailPage() {
                       <table className="w-full text-sm">
                         <thead>
                           <tr className="border-b text-muted-foreground text-xs">
+                            <th className="text-center pb-2 font-medium w-8">#</th>
                             <th className="text-left pb-2 font-medium">Player</th>
                             {(['goals', 'assists', 'matchesPlayed', 'wins'] as const).map((col) => {
                               const labels: Record<string, string> = { goals: 'Goals', assists: 'Assists', matchesPlayed: 'Matches', wins: 'Wins' }
@@ -980,8 +993,11 @@ export default function PeladaDetailPage() {
                           </tr>
                         </thead>
                         <tbody>
-                          {sortedRanking.map((row) => (
+                          {sortedRanking.map((row, idx) => (
                             <tr key={row.userId} className="border-b last:border-0">
+                              <td className="text-center py-2 text-base">
+                                {idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : idx + 1}
+                              </td>
                               <td className="py-2 pr-2">
                                 <div className="flex items-center gap-2">
                                   {row.userImage ? (
