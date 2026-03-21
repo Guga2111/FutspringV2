@@ -31,7 +31,9 @@ export default function NavBar() {
 
   function handleToggleDark() {
     document.documentElement.classList.toggle('dark')
-    setIsDark(document.documentElement.classList.contains('dark'))
+    const nowDark = document.documentElement.classList.contains('dark')
+    setIsDark(nowDark)
+    localStorage.setItem('theme', nowDark ? 'dark' : 'light')
   }
 
   function handleLogout() {

@@ -6,6 +6,14 @@ import './index.css'
 import App from './App.tsx'
 import { AuthProvider } from './context/AuthContext.tsx'
 
+// Apply saved theme before first render to avoid flash
+const savedTheme = localStorage.getItem('theme')
+if (savedTheme === 'dark') {
+  document.documentElement.classList.add('dark')
+} else {
+  document.documentElement.classList.remove('dark')
+}
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
