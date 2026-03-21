@@ -4,9 +4,11 @@ import { toast } from 'sonner'
 import NavBar from '../components/NavBar'
 import { getPelada, addPlayer, removePlayer, setAdmin, searchUsers, deletePelada, getRanking } from '../api/peladas'
 import { getDailiesForPelada, createDaily } from '../api/dailies'
+import { getChatHistory } from '../api/chat'
 import type { PeladaDetail, PeladaMember } from '../types/pelada'
 import type { UserResponseDTO } from '../types/auth'
 import type { DailyListItem, RankingDTO } from '../types/daily'
+import type { MessageDTO } from '../types/chat'
 import { useAuth } from '../hooks/useAuth'
 import EditPeladaModal from '../components/EditPeladaModal'
 
@@ -316,6 +318,131 @@ function CreateSessionDialog({
   )
 }
 
+function formatRelativeTime(sentAt: string): string {
+  const now = Date.now()
+  const sent = new Date(sentAt).getTime()
+  const diffMs = now - sent
+  const diffSec = Math.floor(diffMs / 1000)
+  if (diffSec < 60) return 'just now'
+  const diffMin = Math.floor(diffSec / 60)
+  if (diffMin < 60) return `${diffMin} min ago`
+  const diffHour = Math.floor(diffMin / 60)
+  if (diffHour < 24) return `${diffHour}h ago`
+  const diffDay = Math.floor(diffHour / 24)
+  return `${diffDay}d ago`
+}
+
+function ChatSidebar({
+  peladaId,
+  currentUserId,
+  collapsed,
+  onToggle,
+}: {
+  peladaId: number
+  currentUserId: number | null
+  collapsed: boolean
+  onToggle: () => void
+}) {
+  const [messages, setMessages] = useState<MessageDTO[]>([])
+  const [loading, setLoading] = useState(true)
+  const bottomRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    setLoading(true)
+    getChatHistory(peladaId)
+      .then(setMessages)
+      .catch(() => {/* ignore */})
+      .finally(() => setLoading(false))
+  }, [peladaId])
+
+  useEffect(() => {
+    if (!loading) {
+      bottomRef.current?.scrollIntoView()
+    }
+  }, [loading])
+
+  return (
+    <div className="flex flex-col border border-border rounded-lg overflow-hidden h-full min-h-[400px]">
+      {/* Header */}
+      <div className="flex items-center justify-between px-3 py-2 border-b border-border bg-muted/40 flex-shrink-0">
+        <span className="text-sm font-semibold">Chat</span>
+        <button
+          className="text-xs text-muted-foreground hover:text-foreground lg:hidden"
+          onClick={onToggle}
+        >
+          {collapsed ? 'Show' : 'Hide'}
+        </button>
+      </div>
+
+      {/* Body */}
+      {!collapsed && (
+        <div className="flex-1 overflow-y-auto p-3 space-y-3 min-h-0">
+          {loading ? (
+            <>
+              {[0, 1, 2, 3, 4].map((i) => (
+                <div key={i} className="flex items-start gap-2">
+                  <SkeletonBlock className="h-7 w-7 rounded-full flex-shrink-0" />
+                  <div className="flex-1 space-y-1">
+                    <SkeletonBlock className="h-3 w-20" />
+                    <SkeletonBlock className="h-4 w-40" />
+                  </div>
+                </div>
+              ))}
+            </>
+          ) : messages.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-8">No messages yet. Say hi!</p>
+          ) : (
+            messages.map((msg) => {
+              const isOwn = msg.sender.id === currentUserId
+              return (
+                <div key={msg.id} className={`flex items-end gap-2 ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}>
+                  {/* Avatar */}
+                  {!isOwn && (
+                    <div className="flex-shrink-0">
+                      {msg.sender.image ? (
+                        <img
+                          src={`/api/v1/files/${msg.sender.image}`}
+                          alt={msg.sender.username}
+                          className="h-7 w-7 rounded-full object-cover"
+                        />
+                      ) : (
+                        <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center text-xs font-semibold">
+                          {msg.sender.username.slice(0, 2).toUpperCase()}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  <div className={`flex flex-col max-w-[75%] ${isOwn ? 'items-end' : 'items-start'}`}>
+                    {!isOwn && (
+                      <span className="text-xs text-muted-foreground mb-0.5">{msg.sender.username}</span>
+                    )}
+                    <div
+                      className={`px-3 py-1.5 rounded-2xl text-sm break-words ${
+                        isOwn
+                          ? 'bg-blue-500 text-white rounded-br-sm'
+                          : 'bg-muted text-foreground rounded-bl-sm'
+                      }`}
+                    >
+                      {msg.content}
+                    </div>
+                    <span
+                      className="text-xs text-muted-foreground mt-0.5"
+                      title={new Date(msg.sentAt).toLocaleString()}
+                    >
+                      {formatRelativeTime(msg.sentAt)}
+                    </span>
+                  </div>
+                </div>
+              )
+            })
+          )}
+          <div ref={bottomRef} />
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function PeladaDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
@@ -336,6 +463,7 @@ export default function PeladaDetailPage() {
   const [ranking, setRanking] = useState<RankingDTO[]>([])
   const [rankingLoading, setRankingLoading] = useState(true)
   const [rankingSort, setRankingSort] = useState<{ col: 'goals' | 'assists' | 'matchesPlayed' | 'wins'; dir: 'asc' | 'desc' }>({ col: 'goals', dir: 'desc' })
+  const [chatCollapsed, setChatCollapsed] = useState(false)
 
   const fetchPelada = useCallback(() => {
     if (!id) return
@@ -475,7 +603,8 @@ export default function PeladaDetailPage() {
             </div>
           )}
 
-          <div className="container max-w-4xl mx-auto px-4 py-6">
+          <div className="container max-w-6xl mx-auto px-4 py-6 flex gap-6">
+            <div className="flex-1 min-w-0">
             {/* Pelada info */}
             <div className="flex items-start justify-between gap-4 mb-1">
               <h1 className="text-2xl font-bold">{pelada.name}</h1>
@@ -697,6 +826,17 @@ export default function PeladaDetailPage() {
                   ))}
                 </div>
               )}
+            </div>
+            </div>{/* end flex-1 main content */}
+
+            {/* Chat sidebar */}
+            <div className="w-full lg:w-80 flex-shrink-0">
+              <ChatSidebar
+                peladaId={pelada.id}
+                currentUserId={currentUser?.id ?? null}
+                collapsed={chatCollapsed}
+                onToggle={() => setChatCollapsed((v) => !v)}
+              />
             </div>
           </div>
         </main>
