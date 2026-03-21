@@ -39,6 +39,8 @@ public class DailyService {
     private final UserDailyStatsRepository userDailyStatsRepository;
     private final LeagueTableEntryRepository leagueTableEntryRepository;
     private final DailyAwardRepository dailyAwardRepository;
+    private final StatsRepository statsRepository;
+    private final RankingRepository rankingRepository;
 
     @Transactional
     public DailyListItemDTO createDaily(Long peladaId, CreateDailyRequestDTO request, String currentUserEmail) {
@@ -410,6 +412,10 @@ public class DailyService {
             throw new AppException(HttpStatus.FORBIDDEN, "Only admins can finalize dailies");
         }
 
+        if (daily.isFinished()) {
+            throw new AppException(HttpStatus.CONFLICT, "Daily already finalized");
+        }
+
         if (!"IN_COURSE".equals(daily.getStatus())) {
             throw new AppException(HttpStatus.BAD_REQUEST, "Daily must be IN_COURSE to finalize");
         }
@@ -515,6 +521,53 @@ public class DailyService {
             sortedEntries.get(i).setPosition(i + 1);
         }
         leagueTableEntryRepository.saveAll(sortedEntries);
+
+        // Determine winning team (position 1 from league table, null if tied)
+        Team winningTeam = null;
+        if (!sortedEntries.isEmpty()) {
+            LeagueTableEntry first = sortedEntries.get(0);
+            boolean tied = sortedEntries.size() > 1 &&
+                    sortedEntries.get(1).getPoints() == first.getPoints() &&
+                    (sortedEntries.get(1).getGoalsFor() - sortedEntries.get(1).getGoalsAgainst()) ==
+                    (first.getGoalsFor() - first.getGoalsAgainst());
+            if (!tied) {
+                winningTeam = first.getTeam();
+            }
+        }
+
+        // Upsert Ranking (per-pelada) and Stats (global) for each confirmed player
+        java.time.LocalDate today = java.time.LocalDate.now();
+        for (User player : confirmedPlayers) {
+            UserDailyStats playerDailyStats = statsMap.get(player.getId());
+            if (playerDailyStats == null) continue;
+
+            boolean isWinner = winningTeam != null && winningTeam.getPlayers().contains(player);
+
+            // Upsert Ranking
+            Ranking ranking = rankingRepository.findByPeladaAndUser(pelada, player)
+                    .orElse(Ranking.builder().pelada(pelada).user(player).build());
+            ranking.setGoals(ranking.getGoals() + playerDailyStats.getGoals());
+            ranking.setAssists(ranking.getAssists() + playerDailyStats.getAssists());
+            ranking.setMatchesPlayed(ranking.getMatchesPlayed() + playerDailyStats.getMatchesPlayed());
+            if (isWinner) {
+                ranking.setWins(ranking.getWins() + 1);
+            }
+            rankingRepository.save(ranking);
+
+            // Upsert global Stats
+            Stats stats = statsRepository.findByUser(player)
+                    .orElse(Stats.builder().user(player).build());
+            stats.setGoals(stats.getGoals() + playerDailyStats.getGoals());
+            stats.setAssists(stats.getAssists() + playerDailyStats.getAssists());
+            stats.setMatchesPlayed(stats.getMatchesPlayed() + playerDailyStats.getMatchesPlayed());
+            if (isWinner) {
+                stats.setWins(stats.getWins() + 1);
+            }
+            if (player.getId().equals(puskasWinnerId)) {
+                stats.getPuskasDates().add(today);
+            }
+            statsRepository.save(stats);
+        }
 
         // Create or update DailyAward
         DailyAward award = dailyAwardRepository.findByDaily(daily).orElse(DailyAward.builder().daily(daily).build());
