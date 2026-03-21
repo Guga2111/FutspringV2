@@ -22,6 +22,31 @@ Started: Sat Mar 21 09:15:01 PDT 2026
   - All created components follow standard shadcn patterns and work with existing CSS variable system
 ---
 
+## 2026-03-21 - US-003
+- Rewrote NavBar.tsx with sticky top bar, backdrop blur, Trophy icon wordmark linking to /home
+- Center desktop nav link 'Home' with active green underline via useLocation
+- Right side: dark mode toggle (Sun/Moon icons via MutationObserver) + user avatar DropdownMenu
+- DropdownMenu contains non-clickable user info header (username + email), 'View Profile' link, 'Logout'
+- Avatar uses shadcn Avatar with image or initials fallback
+- Files changed: frontend/src/components/NavBar.tsx
+- **Learnings for future iterations:**
+  - DropdownMenu closes on outside click/Escape automatically (Radix UI behavior)
+  - MutationObserver on document.documentElement is the right approach to sync icon with dark mode class changes from external sources
+  - DropdownMenuLabel is used for non-clickable header content in the avatar dropdown
+---
+
+## 2026-03-21 - US-004
+- Added localStorage theme persistence: read on app mount in main.tsx, write on toggle in NavBar.tsx
+- main.tsx: reads localStorage.getItem('theme') before React renders, applies/removes 'dark' class to avoid flash
+- NavBar.tsx: handleToggleDark now also calls localStorage.setItem('theme', nowDark ? 'dark' : 'light')
+- Icons (Sun/Moon) and aria-label were already correct from US-003
+- Files changed: frontend/src/main.tsx, frontend/src/components/NavBar.tsx
+- **Learnings for future iterations:**
+  - Theme init belongs before createRoot() in main.tsx to avoid flash-of-wrong-theme
+  - NavBar's MutationObserver from US-003 still works correctly — it just keeps local state in sync
+  - Manual browser verification needed (no browser tools available)
+---
+
 ## 2026-03-21 - US-002
 - Added `gradient` variant to `frontend/src/components/ui/button-variants.ts`
 - Applied `variant="gradient"` to: "Create Pelada" (HomePage + CreatePeladaModal), "Sort Teams", "Confirm Attendance", "Start Session" (DailyDetailPage)
