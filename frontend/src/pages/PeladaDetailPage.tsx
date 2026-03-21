@@ -349,9 +349,13 @@ function ChatSidebar({
   const [messages, setMessages] = useState<MessageDTO[]>([])
   const [loading, setLoading] = useState(true)
   const [inputValue, setInputValue] = useState('')
+  const [connectionState, setConnectionState] = useState<'connected' | 'reconnecting' | 'failed'>('reconnecting')
   const bottomRef = useRef<HTMLDivElement>(null)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const stompClientRef = useRef<Client | null>(null)
+  const retryCountRef = useRef(0)
+  const isDeactivatingRef = useRef(false)
+  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Load history on mount
   useEffect(() => {
@@ -369,12 +373,36 @@ function ChatSidebar({
     }
   }, [loading])
 
-  // STOMP WebSocket connection
+  // STOMP WebSocket connection with exponential backoff reconnection
   useEffect(() => {
+    retryCountRef.current = 0
+    isDeactivatingRef.current = false
+
+    const scheduleReconnect = (client: Client) => {
+      if (reconnectTimerRef.current !== null) return // already scheduled
+      const attempt = retryCountRef.current
+      if (attempt >= 3) {
+        setConnectionState('failed')
+        return
+      }
+      const delay = Math.pow(2, attempt) * 1000 // 1s, 2s, 4s
+      retryCountRef.current = attempt + 1
+      setConnectionState('reconnecting')
+      reconnectTimerRef.current = setTimeout(() => {
+        reconnectTimerRef.current = null
+        if (!isDeactivatingRef.current) {
+          client.activate()
+        }
+      }, delay)
+    }
+
     const client = new Client({
       webSocketFactory: () => new SockJS('/ws'),
       connectHeaders: token ? { Authorization: `Bearer ${token}` } : {},
+      reconnectDelay: 0,
       onConnect: () => {
+        retryCountRef.current = 0
+        setConnectionState('connected')
         client.subscribe(`/topic/pelada/${peladaId}`, (frame) => {
           try {
             const msg: MessageDTO = JSON.parse(frame.body)
@@ -398,12 +426,32 @@ function ChatSidebar({
           }
         })
       },
+      onDisconnect: () => {
+        if (!isDeactivatingRef.current) {
+          scheduleReconnect(client)
+        }
+      },
+      onWebSocketError: () => {
+        if (!isDeactivatingRef.current) {
+          scheduleReconnect(client)
+        }
+      },
+      onStompError: () => {
+        if (!isDeactivatingRef.current) {
+          scheduleReconnect(client)
+        }
+      },
     })
 
     client.activate()
     stompClientRef.current = client
 
     return () => {
+      isDeactivatingRef.current = true
+      if (reconnectTimerRef.current !== null) {
+        clearTimeout(reconnectTimerRef.current)
+        reconnectTimerRef.current = null
+      }
       client.deactivate()
       stompClientRef.current = null
     }
@@ -447,6 +495,18 @@ function ChatSidebar({
           {collapsed ? 'Show' : 'Hide'}
         </button>
       </div>
+
+      {/* Connection state banner */}
+      {connectionState === 'reconnecting' && (
+        <div className="px-3 py-1 text-xs text-center bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300 flex-shrink-0">
+          Reconnecting...
+        </div>
+      )}
+      {connectionState === 'failed' && (
+        <div className="px-3 py-1 text-xs text-center bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300 flex-shrink-0">
+          Connection failed. Refresh to retry.
+        </div>
+      )}
 
       {/* Body */}
       {!collapsed && (
