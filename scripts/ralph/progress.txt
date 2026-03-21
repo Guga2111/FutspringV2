@@ -77,3 +77,14 @@ Started: Sat Mar 21 00:00:00 PDT 2026
 - RankingService is a separate @Service (not added to PeladaService) and injected into PeladaController via @RequiredArgsConstructor
 - Frontend ranking sort state: use inline type `{ col: 'goals' | ...; dir: 'asc' | 'desc' }` in useState to avoid duplicate type alias errors inside the component function
 ---
+
+## 2026-03-21 - US-005
+- Added Puskas Award History section to ProfilePage below the bar chart
+- Section lists each date in stats.puskasDates sorted most-recent-first; empty state shows "No Puskas wins yet."
+- Updated ProfileSkeleton to include a skeleton block for the new section
+- Files changed: ProfilePage.tsx
+- **Learnings for future iterations:**
+  - Use `[...stats.puskasDates].sort((a, b) => (a > b ? -1 : 1))` for ISO date string descending sort (avoids mutating state)
+  - Date formatting: append 'T12:00:00' to ISO date strings before parsing to avoid timezone off-by-one (consistent with existing codebase pattern)
+  - Manual browser verification needed (no browser tools available)
+---
