@@ -2,11 +2,13 @@ package com.futspring.backend.controller;
 
 import com.futspring.backend.dto.AddPlayerRequestDTO;
 import com.futspring.backend.dto.CreatePeladaRequestDTO;
+import com.futspring.backend.dto.MessageDTO;
 import com.futspring.backend.dto.PeladaDetailResponseDTO;
 import com.futspring.backend.dto.PeladaResponseDTO;
 import com.futspring.backend.dto.RankingDTO;
 import com.futspring.backend.dto.SetAdminRequestDTO;
 import com.futspring.backend.dto.UpdatePeladaRequestDTO;
+import com.futspring.backend.service.ChatService;
 import com.futspring.backend.service.PeladaService;
 import com.futspring.backend.service.RankingService;
 import jakarta.validation.Valid;
@@ -26,6 +28,7 @@ public class PeladaController {
 
     private final PeladaService peladaService;
     private final RankingService rankingService;
+    private final ChatService chatService;
 
     @PostMapping
     public ResponseEntity<PeladaResponseDTO> createPelada(
@@ -112,6 +115,17 @@ public class PeladaController {
     ) {
         String email = (String) authentication.getPrincipal();
         return ResponseEntity.ok(rankingService.getRanking(id, email));
+    }
+
+    @GetMapping("/{id}/messages")
+    public ResponseEntity<List<MessageDTO>> getMessages(
+            @PathVariable Long id,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "50") int size,
+            Authentication authentication
+    ) {
+        String email = (String) authentication.getPrincipal();
+        return ResponseEntity.ok(chatService.getHistory(id, email, page, size));
     }
 
     @PostMapping("/{id}/image")

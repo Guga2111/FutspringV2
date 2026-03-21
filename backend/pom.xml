@@ -82,6 +82,12 @@
             <version>${bucket4j.version}</version>
         </dependency>
 
+        <!-- WebSocket (STOMP over SockJS) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-websocket</artifactId>
+        </dependency>
+
         <!-- Test -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
