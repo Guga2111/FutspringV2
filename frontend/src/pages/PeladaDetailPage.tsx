@@ -13,6 +13,8 @@ import type { DailyListItem, RankingDTO } from '../types/daily'
 import type { MessageDTO } from '../types/chat'
 import { useAuth } from '../hooks/useAuth'
 import EditPeladaModal from '../components/EditPeladaModal'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/tabs'
+import { Pencil, Trash2, MessageCircle } from 'lucide-react'
 
 function SkeletonBlock({ className }: { className: string }) {
   return <div className={`bg-muted rounded animate-pulse ${className}`} />
@@ -619,6 +621,7 @@ export default function PeladaDetailPage() {
   const [rankingLoading, setRankingLoading] = useState(true)
   const [rankingSort, setRankingSort] = useState<{ col: 'goals' | 'assists' | 'matchesPlayed' | 'wins'; dir: 'asc' | 'desc' }>({ col: 'goals', dir: 'desc' })
   const [chatCollapsed, setChatCollapsed] = useState(false)
+  const [showMobileChat, setShowMobileChat] = useState(false)
 
   const fetchPelada = useCallback(() => {
     if (!id) return
@@ -746,42 +749,47 @@ export default function PeladaDetailPage() {
       ) : pelada ? (
         <main>
           {/* Header image / banner */}
-          {pelada.image ? (
-            <img
-              src={`/api/v1/files/${pelada.image}`}
-              alt={pelada.name}
-              className="h-56 w-full object-cover"
-            />
-          ) : (
-            <div className="h-56 bg-muted flex items-center justify-center">
-              <span className="text-6xl">⚽</span>
-            </div>
-          )}
-
-          <div className="container max-w-6xl mx-auto px-4 py-6 flex gap-6">
-            <div className="flex-1 min-w-0">
-            {/* Pelada info */}
-            <div className="flex items-start justify-between gap-4 mb-1">
-              <h1 className="text-2xl font-bold">{pelada.name}</h1>
-              <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="relative h-56">
+            {pelada.image ? (
+              <img
+                src={`/api/v1/files/${pelada.image}`}
+                alt={pelada.name}
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <div className="h-full w-full bg-muted flex items-center justify-center">
+                <span className="text-6xl">⚽</span>
+              </div>
+            )}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
+            <h1 className="absolute bottom-4 left-4 text-2xl font-bold text-white">{pelada.name}</h1>
+            {(isCurrentUserAdmin || isCurrentUserCreator) && (
+              <div className="absolute top-3 right-3 flex items-center gap-2">
                 {isCurrentUserAdmin && (
                   <button
-                    className="text-sm border border-border px-3 py-1.5 rounded hover:bg-muted"
+                    aria-label="Edit pelada"
+                    className="p-2 rounded-full bg-black/40 text-white hover:bg-black/60 transition-colors"
                     onClick={() => setShowEdit(true)}
                   >
-                    Edit
+                    <Pencil className="h-4 w-4" />
                   </button>
                 )}
                 {isCurrentUserCreator && (
                   <button
-                    className="text-sm border border-destructive text-destructive px-3 py-1.5 rounded hover:bg-destructive hover:text-destructive-foreground"
+                    aria-label="Delete pelada"
+                    className="p-2 rounded-full bg-black/40 text-white hover:bg-black/60 transition-colors"
                     onClick={() => setShowDeleteConfirm(true)}
                   >
-                    Delete Pelada
+                    <Trash2 className="h-4 w-4" />
                   </button>
                 )}
               </div>
-            </div>
+            )}
+          </div>
+
+          <div className="container max-w-6xl mx-auto px-4 py-6 flex gap-6">
+            <div className="flex-1 min-w-0">
+            {/* Pelada info */}
             <p className="text-muted-foreground mb-1">
               {pelada.dayOfWeek} · {pelada.timeOfDay}
             </p>
@@ -799,193 +807,202 @@ export default function PeladaDetailPage() {
               </p>
             )}
 
-            {/* Members section */}
-            <div className="flex items-center justify-between mt-4 mb-3">
-              <h2 className="text-lg font-semibold">
-                Members ({pelada.members.length})
-              </h2>
-              {isCurrentUserAdmin && (
-                <button
-                  className="text-sm bg-primary text-primary-foreground px-4 py-2 rounded"
-                  onClick={() => setShowAddPlayer(true)}
-                >
-                  + Add Player
-                </button>
-              )}
-            </div>
-            <div className="space-y-3">
-              {pelada.members.map((member) => {
-                const isCreator = member.id === creatorId
-                return (
-                  <div key={member.id} className="flex items-center gap-3">
-                    <MemberAvatar username={member.username} image={member.image} />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-medium truncate">{member.username}</span>
-                        {member.isAdmin && (
-                          <span className="text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded-full">
-                            Admin
-                          </span>
-                        )}
-                        {member.position && (
-                          <span className="text-xs bg-muted px-2 py-0.5 rounded-full">
-                            {member.position}
-                          </span>
-                        )}
-                      </div>
-                      <StarRating stars={member.stars} />
-                    </div>
-                    {isCurrentUserAdmin && !isCreator && (
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        <button
-                          className="text-xs border border-border px-2 py-1 rounded hover:bg-muted disabled:opacity-50"
-                          disabled={togglingAdmin === member.id}
-                          onClick={() => handleToggleAdmin(member)}
-                        >
-                          {togglingAdmin === member.id
-                            ? '...'
-                            : member.isAdmin
-                            ? 'Remove Admin'
-                            : 'Make Admin'}
-                        </button>
-                        <button
-                          className="text-xs text-destructive border border-destructive px-2 py-1 rounded hover:bg-destructive hover:text-destructive-foreground disabled:opacity-50"
-                          onClick={() => setConfirmRemoveMember(member)}
-                        >
-                          Remove
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
+            <Tabs defaultValue="members" className="mt-4">
+              <TabsList>
+                <TabsTrigger value="members">Members</TabsTrigger>
+                <TabsTrigger value="sessions">Sessions</TabsTrigger>
+                <TabsTrigger value="ranking">Ranking</TabsTrigger>
+              </TabsList>
 
-            {/* Ranking section */}
-            <div className="mt-8">
-              <h2 className="text-lg font-semibold mb-3">Ranking</h2>
-              {rankingLoading ? (
-                <div className="space-y-2">
-                  {[0, 1, 2].map((i) => (
-                    <div key={i} className="flex items-center gap-3">
-                      <SkeletonBlock className="h-8 w-8 rounded-full flex-shrink-0" />
-                      <SkeletonBlock className="h-4 flex-1" />
-                      <SkeletonBlock className="h-4 w-8" />
-                      <SkeletonBlock className="h-4 w-8" />
-                      <SkeletonBlock className="h-4 w-8" />
-                      <SkeletonBlock className="h-4 w-8" />
-                    </div>
-                  ))}
-                </div>
-              ) : sortedRanking.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No ranking data yet.</p>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b text-muted-foreground text-xs">
-                        <th className="text-left pb-2 font-medium">Player</th>
-                        {(['goals', 'assists', 'matchesPlayed', 'wins'] as const).map((col) => {
-                          const labels: Record<string, string> = { goals: 'Goals', assists: 'Assists', matchesPlayed: 'Matches', wins: 'Wins' }
-                          const active = rankingSort.col === col
-                          return (
-                            <th
-                              key={col}
-                              className="text-center pb-2 px-2 font-medium cursor-pointer select-none hover:text-foreground"
-                              onClick={() => handleRankingSort(col)}
-                            >
-                              {labels[col]}{active ? (rankingSort.dir === 'desc' ? ' ▾' : ' ▴') : ''}
-                            </th>
-                          )
-                        })}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {sortedRanking.map((row) => (
-                        <tr key={row.userId} className="border-b last:border-0">
-                          <td className="py-2 pr-2">
-                            <div className="flex items-center gap-2">
-                              {row.userImage ? (
-                                <img
-                                  src={`/api/v1/files/${row.userImage}`}
-                                  alt={row.username}
-                                  className="h-7 w-7 rounded-full object-cover flex-shrink-0"
-                                />
-                              ) : (
-                                <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center flex-shrink-0 text-xs font-semibold">
-                                  {row.username.slice(0, 2).toUpperCase()}
-                                </div>
-                              )}
-                              <span className="font-medium">{row.username}</span>
-                            </div>
-                          </td>
-                          <td className="text-center py-2 px-2">{row.goals}</td>
-                          <td className="text-center py-2 px-2">{row.assists}</td>
-                          <td className="text-center py-2 px-2">{row.matchesPlayed}</td>
-                          <td className="text-center py-2 px-2">{row.wins}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-
-            {/* Sessions section */}
-            <div className="mt-8">
-              <div className="flex items-center justify-between mb-3">
-                <h2 className="text-lg font-semibold">Sessions</h2>
-                {isCurrentUserAdmin && (
-                  <button
-                    className="text-sm bg-primary text-primary-foreground px-4 py-2 rounded"
-                    onClick={() => setShowCreateSession(true)}
-                  >
-                    + Create Session
-                  </button>
-                )}
-              </div>
-              {dailiesLoading ? (
-                <div className="space-y-3">
-                  {[0, 1, 2].map((i) => (
-                    <div key={i} className="flex items-center gap-3">
-                      <SkeletonBlock className="h-4 w-24" />
-                      <SkeletonBlock className="h-4 w-16" />
-                      <SkeletonBlock className="h-5 w-20 rounded-full" />
-                      <SkeletonBlock className="h-4 w-12" />
-                    </div>
-                  ))}
-                </div>
-              ) : dailies.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No sessions yet.</p>
-              ) : (
-                <div className="space-y-2">
-                  {dailies.map((daily) => (
-                    <Link
-                      key={daily.id}
-                      to={`/daily/${daily.id}`}
-                      className="flex items-center gap-3 p-3 rounded-lg border border-border hover:bg-muted transition-colors"
+              {/* Members tab */}
+              <TabsContent value="members">
+                <div className="flex items-center justify-between mb-3 mt-2">
+                  <span className="text-sm text-muted-foreground">{pelada.members.length} members</span>
+                  {isCurrentUserAdmin && (
+                    <button
+                      className="text-sm bg-primary text-primary-foreground px-4 py-2 rounded"
+                      onClick={() => setShowAddPlayer(true)}
                     >
-                      <span className="text-sm font-medium">
-                        {new Date(daily.dailyDate + 'T12:00:00').toLocaleDateString('en-US', {
-                          month: 'short',
-                          day: 'numeric',
-                          year: 'numeric',
-                        })}
-                      </span>
-                      <span className="text-sm text-muted-foreground">{daily.dailyTime}</span>
-                      <StatusBadge status={daily.status} />
-                      <span className="text-sm text-muted-foreground ml-auto">
-                        {daily.confirmedPlayerCount} players
-                      </span>
-                    </Link>
-                  ))}
+                      + Add Player
+                    </button>
+                  )}
                 </div>
-              )}
-            </div>
+                <div className="space-y-3">
+                  {pelada.members.map((member) => {
+                    const isCreator = member.id === creatorId
+                    return (
+                      <div key={member.id} className="flex items-center gap-3">
+                        <MemberAvatar username={member.username} image={member.image} />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-medium truncate">{member.username}</span>
+                            {member.isAdmin && (
+                              <span className="text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded-full">
+                                Admin
+                              </span>
+                            )}
+                            {member.position && (
+                              <span className="text-xs bg-muted px-2 py-0.5 rounded-full">
+                                {member.position}
+                              </span>
+                            )}
+                          </div>
+                          <StarRating stars={member.stars} />
+                        </div>
+                        {isCurrentUserAdmin && !isCreator && (
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            <button
+                              className="text-xs border border-border px-2 py-1 rounded hover:bg-muted disabled:opacity-50"
+                              disabled={togglingAdmin === member.id}
+                              onClick={() => handleToggleAdmin(member)}
+                            >
+                              {togglingAdmin === member.id
+                                ? '...'
+                                : member.isAdmin
+                                ? 'Remove Admin'
+                                : 'Make Admin'}
+                            </button>
+                            <button
+                              className="text-xs text-destructive border border-destructive px-2 py-1 rounded hover:bg-destructive hover:text-destructive-foreground disabled:opacity-50"
+                              onClick={() => setConfirmRemoveMember(member)}
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              </TabsContent>
+
+              {/* Sessions tab */}
+              <TabsContent value="sessions">
+                <div className="flex items-center justify-between mb-3 mt-2">
+                  <span className="text-sm text-muted-foreground">{dailies.length} sessions</span>
+                  {isCurrentUserAdmin && (
+                    <button
+                      className="text-sm bg-primary text-primary-foreground px-4 py-2 rounded"
+                      onClick={() => setShowCreateSession(true)}
+                    >
+                      + Create Session
+                    </button>
+                  )}
+                </div>
+                {dailiesLoading ? (
+                  <div className="space-y-3">
+                    {[0, 1, 2].map((i) => (
+                      <div key={i} className="flex items-center gap-3">
+                        <SkeletonBlock className="h-4 w-24" />
+                        <SkeletonBlock className="h-4 w-16" />
+                        <SkeletonBlock className="h-5 w-20 rounded-full" />
+                        <SkeletonBlock className="h-4 w-12" />
+                      </div>
+                    ))}
+                  </div>
+                ) : dailies.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No sessions yet.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {dailies.map((daily) => (
+                      <Link
+                        key={daily.id}
+                        to={`/daily/${daily.id}`}
+                        className="flex items-center gap-3 p-3 rounded-lg border border-border hover:bg-muted transition-colors"
+                      >
+                        <span className="text-sm font-medium">
+                          {new Date(daily.dailyDate + 'T12:00:00').toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric',
+                          })}
+                        </span>
+                        <span className="text-sm text-muted-foreground">{daily.dailyTime}</span>
+                        <StatusBadge status={daily.status} />
+                        <span className="text-sm text-muted-foreground ml-auto">
+                          {daily.confirmedPlayerCount} players
+                        </span>
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </TabsContent>
+
+              {/* Ranking tab */}
+              <TabsContent value="ranking">
+                <div className="mt-2">
+                  {rankingLoading ? (
+                    <div className="space-y-2">
+                      {[0, 1, 2].map((i) => (
+                        <div key={i} className="flex items-center gap-3">
+                          <SkeletonBlock className="h-8 w-8 rounded-full flex-shrink-0" />
+                          <SkeletonBlock className="h-4 flex-1" />
+                          <SkeletonBlock className="h-4 w-8" />
+                          <SkeletonBlock className="h-4 w-8" />
+                          <SkeletonBlock className="h-4 w-8" />
+                          <SkeletonBlock className="h-4 w-8" />
+                        </div>
+                      ))}
+                    </div>
+                  ) : sortedRanking.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No ranking data yet.</p>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b text-muted-foreground text-xs">
+                            <th className="text-left pb-2 font-medium">Player</th>
+                            {(['goals', 'assists', 'matchesPlayed', 'wins'] as const).map((col) => {
+                              const labels: Record<string, string> = { goals: 'Goals', assists: 'Assists', matchesPlayed: 'Matches', wins: 'Wins' }
+                              const active = rankingSort.col === col
+                              return (
+                                <th
+                                  key={col}
+                                  className="text-center pb-2 px-2 font-medium cursor-pointer select-none hover:text-foreground"
+                                  onClick={() => handleRankingSort(col)}
+                                >
+                                  {labels[col]}{active ? (rankingSort.dir === 'desc' ? ' ▾' : ' ▴') : ''}
+                                </th>
+                              )
+                            })}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {sortedRanking.map((row) => (
+                            <tr key={row.userId} className="border-b last:border-0">
+                              <td className="py-2 pr-2">
+                                <div className="flex items-center gap-2">
+                                  {row.userImage ? (
+                                    <img
+                                      src={`/api/v1/files/${row.userImage}`}
+                                      alt={row.username}
+                                      className="h-7 w-7 rounded-full object-cover flex-shrink-0"
+                                    />
+                                  ) : (
+                                    <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center flex-shrink-0 text-xs font-semibold">
+                                      {row.username.slice(0, 2).toUpperCase()}
+                                    </div>
+                                  )}
+                                  <span className="font-medium">{row.username}</span>
+                                </div>
+                              </td>
+                              <td className="text-center py-2 px-2">{row.goals}</td>
+                              <td className="text-center py-2 px-2">{row.assists}</td>
+                              <td className="text-center py-2 px-2">{row.matchesPlayed}</td>
+                              <td className="text-center py-2 px-2">{row.wins}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              </TabsContent>
+            </Tabs>
             </div>{/* end flex-1 main content */}
 
-            {/* Chat sidebar */}
-            <div className="w-full lg:w-80 flex-shrink-0">
+            {/* Chat sidebar — desktop only */}
+            <div className="hidden lg:block w-80 flex-shrink-0">
               <ChatSidebar
                 peladaId={pelada.id}
                 currentUserId={currentUser?.id ?? null}
@@ -994,6 +1011,27 @@ export default function PeladaDetailPage() {
               />
             </div>
           </div>
+
+          {/* Mobile floating chat button */}
+          <button
+            aria-label="Open chat"
+            className="fixed bottom-6 right-6 z-40 lg:hidden p-3 rounded-full bg-green-600 text-white shadow-lg hover:bg-green-500 transition-colors"
+            onClick={() => setShowMobileChat((v) => !v)}
+          >
+            <MessageCircle className="h-6 w-6" />
+          </button>
+
+          {/* Mobile chat panel */}
+          {showMobileChat && (
+            <div className="fixed bottom-20 right-4 z-40 w-80 lg:hidden shadow-xl rounded-xl overflow-hidden" style={{ height: '400px' }}>
+              <ChatSidebar
+                peladaId={pelada.id}
+                currentUserId={currentUser?.id ?? null}
+                collapsed={false}
+                onToggle={() => setShowMobileChat(false)}
+              />
+            </div>
+          )}
         </main>
       ) : (
         <div className="flex items-center justify-center py-24">
