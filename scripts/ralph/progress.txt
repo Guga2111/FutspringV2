@@ -157,3 +157,16 @@ Started: Sat Mar 21 09:15:01 PDT 2026
   - `nextSession === undefined` (loading state) shows "…"; `null` shows "No upcoming session"; string shows the date
   - Manual browser verification needed (no browser tools available)
 ---
+
+## 2026-03-21 - US-012
+- Added `STATUS_BORDER` map alongside existing `STATUS_COLORS` for border-l-4 left border color per session status
+- Session rows: added `border-l-4 ${STATUS_BORDER[daily.status]}` class to Link — SCHEDULED=yellow, CONFIRMED=green, IN_COURSE=blue, FINISHED=gray, CANCELED/CANCELLED=red
+- Sessions empty state: replaced plain text with football emoji + 'No sessions scheduled yet.'
+- Ranking table: added '#' rank column as first column in thead; tbody rows use index to show 🥇🥈🥉 for top 3, numeric rank for rest
+- Sorting logic (rankingSort state + sortedRanking) unchanged — medals reflect sorted order
+- Files changed: frontend/src/pages/PeladaDetailPage.tsx
+- **Learnings for future iterations:**
+  - The codebase uses `CANCELED` (one L) not `CANCELLED` (two L's) — added both keys to STATUS_BORDER for safety
+  - `sortedRanking.map((row, idx) => ...)` — `idx` is the post-sort position, which is correct for medals
+  - Manual browser verification needed (no browser tools available)
+---
