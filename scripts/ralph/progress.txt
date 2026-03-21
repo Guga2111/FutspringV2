@@ -32,6 +32,20 @@ Started: Sat Mar 21 00:00:00 PDT 2026
 - Win determination for Ranking/Stats: check if winningTeam.getPlayers().contains(player); winningTeam is null if tied at top of league table
 - DailyService already uses import com.futspring.backend.entity.*; and import com.futspring.backend.repository.*; — new entities/repos are auto-imported
 
+## 2026-03-21 - US-002
+- Created RankingDTO with fromRanking() and fromUser() factory methods
+- Created RankingService with getRanking(peladaId, callerEmail): checks membership, merges ranking rows with full member list (zeros for no-ranking members), sorts by goals desc
+- Added GET /api/v1/peladas/{id}/ranking endpoint to PeladaController (injected RankingService)
+- Added RankingDTO interface to frontend src/types/daily.ts
+- Added getRanking(peladaId) to src/api/peladas.ts
+- Added Ranking section to PeladaDetailPage: skeleton loading, sortable columns (Goals/Assists/Matches/Wins), player avatar/initials, empty state
+- Files changed: RankingDTO.java, RankingService.java, PeladaController.java, daily.ts, peladas.ts, PeladaDetailPage.tsx
+- **Learnings for future iterations:**
+  - When injecting a new service into a controller that uses @RequiredArgsConstructor, just add the final field — no @Autowired needed
+  - Avoid duplicate `type X = ...` aliases inside the same function; use inline type in useState generic instead
+  - Manual browser verification needed (no browser tools available)
+---
+
 ## 2026-03-21 - US-001
 - Created Stats JPA entity (global per-user) with @ElementCollection puskasDates
 - Created Ranking JPA entity (per-pelada per-user) with unique constraint
@@ -42,4 +56,7 @@ Started: Sat Mar 21 00:00:00 PDT 2026
   - DailyService uses field injection via @RequiredArgsConstructor — adding new final repo fields is sufficient, no explicit @Autowired needed
   - The statsMap (UserDailyStats) already has per-player goals/assists/matchesPlayed computed — reuse it for Ranking/Stats upserts to avoid redundant DB queries
   - Winning team determination: compare points AND goal differential of top 2 entries to detect ties
+- RankingDTO has two factory methods: fromRanking(Ranking) and fromUser(User) to handle members with no ranking entries
+- RankingService is a separate @Service (not added to PeladaService) and injected into PeladaController via @RequiredArgsConstructor
+- Frontend ranking sort state: use inline type `{ col: 'goals' | ...; dir: 'asc' | 'desc' }` in useState to avoid duplicate type alias errors inside the component function
 ---
