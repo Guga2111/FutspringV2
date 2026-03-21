@@ -47,6 +47,36 @@ Started: Sat Mar 21 09:15:01 PDT 2026
   - Manual browser verification needed (no browser tools available)
 ---
 
+## 2026-03-21 - US-005
+- Added mobile hamburger menu (Menu lucide icon, block sm:hidden) that opens a shadcn Sheet (side='right')
+- Desktop: dark mode toggle + avatar DropdownMenu remain but are now hidden on mobile (hidden sm:flex / hidden sm:inline-flex)
+- Sheet drawer contains: Home nav link (SheetClose), dark mode toggle (closes sheet on click), View Profile link (SheetClose), Logout button (closes sheet + navigates)
+- Added `sheetOpen` state to control Sheet open/close programmatically
+- Files changed: frontend/src/components/NavBar.tsx
+- **Learnings for future iterations:**
+  - Sheet uses controlled open/onOpenChange pattern for programmatic close on item click
+  - SheetClose asChild wraps Link elements to auto-close sheet on navigation
+  - For non-Link items (dark mode, logout), manually call setSheetOpen(false) before the action
+  - Desktop controls use `hidden sm:flex` / `hidden sm:inline-flex`; mobile hamburger uses `block sm:hidden`
+  - Manual browser verification needed (no browser tools available)
+---
+
+## 2026-03-21 - US-006
+- Created ErrorBoundary.tsx (React class component, getDerivedStateFromError + componentDidCatch, renders 'Something went wrong' + Reload button)
+- Created ScrollToTop.tsx (useEffect + useLocation, calls window.scrollTo(0,0) on pathname change, rendered in App.tsx)
+- Created NotFoundPage.tsx (football ⚽ themed 404, Back to Home button using Button component)
+- Updated App.tsx: each lazy route wrapped in per-route ErrorBoundary, ScrollToTop rendered at top, catch-all `path="*"` route for 404
+- Updated index.css: added @keyframes fadeIn + .page-enter utility class (animation: fadeIn 150ms ease-in)
+- Added `page-enter` class to root divs of: HomePage, AuthPage, PeladaDetailPage, DailyDetailPage; ProfilePage fragment replaced with div
+- Files changed: ErrorBoundary.tsx, ScrollToTop.tsx, NotFoundPage.tsx, App.tsx, index.css, all 5 page files
+- **Learnings for future iterations:**
+  - ProfilePage uses `<>` fragment as root — must replace with `<div>` to add animation class
+  - ScrollToTop must be inside Router context (it's in App.tsx which is inside BrowserRouter from main.tsx)
+  - React class component ErrorBoundary requires `React.ErrorInfo` type import from 'react' for componentDidCatch
+  - The `page-enter` CSS class approach is cleaner than inline Tailwind arbitrary values for reuse across pages
+  - Manual browser verification needed (no browser tools available)
+---
+
 ## 2026-03-21 - US-002
 - Added `gradient` variant to `frontend/src/components/ui/button-variants.ts`
 - Applied `variant="gradient"` to: "Create Pelada" (HomePage + CreatePeladaModal), "Sort Teams", "Confirm Attendance", "Start Session" (DailyDetailPage)
