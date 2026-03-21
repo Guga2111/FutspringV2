@@ -8,6 +8,7 @@ Started: Sat Mar 21 09:15:01 PDT 2026
 - The project uses `@radix-ui/react-slot`, `class-variance-authority`, `clsx`, `tailwind-merge` (via `cn()` in lib/utils.ts)
 - CSS variables for colors are defined elsewhere (index.css), following shadcn convention
 - Branch for this PRD: `ralph/frontend-redesign`
+- Button variants live in `frontend/src/components/ui/button-variants.ts` (separate from button.tsx) — add new variants there
 
 ## 2026-03-21 - US-001
 - Created shadcn UI components manually: avatar.tsx, badge.tsx, skeleton.tsx, separator.tsx, dialog.tsx, dropdown-menu.tsx, sheet.tsx
@@ -19,4 +20,15 @@ Started: Sat Mar 21 09:15:01 PDT 2026
   - Sheet component reuses @radix-ui/react-dialog (not a separate package)
   - Dialog and Sheet both need tailwindcss-animate for their open/close animations
   - All created components follow standard shadcn patterns and work with existing CSS variable system
+---
+
+## 2026-03-21 - US-002
+- Added `gradient` variant to `frontend/src/components/ui/button-variants.ts`
+- Applied `variant="gradient"` to: "Create Pelada" (HomePage + CreatePeladaModal), "Sort Teams", "Confirm Attendance", "Start Session" (DailyDetailPage)
+- DailyDetailPage used raw `<button>` elements — imported `Button` component and replaced relevant buttons
+- Files changed: button-variants.ts, HomePage.tsx, CreatePeladaModal.tsx, DailyDetailPage.tsx
+- **Learnings for future iterations:**
+  - DailyDetailPage uses raw `<button>` elements (not the Button component) for most actions — must import Button when using variants
+  - "Create Pelada" button appears in both HomePage (header) and CreatePeladaModal (submit) — both need updating
+  - Typecheck had no issues; the `gradient` variant integrates cleanly with existing CVA setup
 ---
