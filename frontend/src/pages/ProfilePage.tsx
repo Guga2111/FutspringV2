@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import NavBar from '../components/NavBar'
-import { getUserStats, getUser } from '../api/users'
+import { getUserStats, getUser, updateUser, uploadUserImage, uploadBackgroundImage } from '../api/users'
 import { useAuth } from '../hooks/useAuth'
 import type { StatsDTO } from '../types/stats'
 import type { ProfileDTO } from '../types/user'
@@ -70,6 +70,191 @@ function StatCard({ label, value }: StatCardProps) {
     <div className="border rounded-lg p-4 flex flex-col items-center gap-1">
       <span className="text-2xl font-bold">{value}</span>
       <span className="text-sm text-muted-foreground">{label}</span>
+    </div>
+  )
+}
+
+const POSITIONS = ['GOALKEEPER', 'DEFENDER', 'MIDFIELDER', 'FORWARD'] as const
+
+interface EditProfileModalProps {
+  profile: ProfileDTO
+  onClose: () => void
+  onProfileUpdated: (updated: ProfileDTO) => void
+}
+
+function EditProfileModal({ profile, onClose, onProfileUpdated }: EditProfileModalProps) {
+  const [username, setUsername] = useState(profile.username)
+  const [position, setPosition] = useState(profile.position ?? '')
+  const [stars, setStars] = useState(profile.stars)
+  const [usernameError, setUsernameError] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(
+    profile.image ? `/api/v1/files/${profile.image}` : null,
+  )
+  const [bgPreview, setBgPreview] = useState<string | null>(
+    profile.backgroundImage ? `/api/v1/files/${profile.backgroundImage}` : null,
+  )
+  const avatarInputRef = useRef<HTMLInputElement>(null)
+  const bgInputRef = useRef<HTMLInputElement>(null)
+
+  const initials = profile.username
+    .split(' ')
+    .map((w) => w[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2)
+
+  async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    try {
+      const updated = await uploadUserImage(profile.id, file)
+      setAvatarPreview(updated.image ? `/api/v1/files/${updated.image}` : null)
+      onProfileUpdated(updated)
+    } catch {
+      toast.error('Failed to upload avatar')
+    }
+    e.target.value = ''
+  }
+
+  async function handleBgChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    try {
+      const updated = await uploadBackgroundImage(profile.id, file)
+      setBgPreview(updated.backgroundImage ? `/api/v1/files/${updated.backgroundImage}` : null)
+      onProfileUpdated(updated)
+    } catch {
+      toast.error('Failed to upload background image')
+    }
+    e.target.value = ''
+  }
+
+  async function handleSave() {
+    setUsernameError('')
+    setSaving(true)
+    try {
+      const updated = await updateUser(profile.id, {
+        username,
+        position,
+        stars,
+      })
+      onProfileUpdated(updated)
+      onClose()
+      toast.success('Profile updated!')
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { status?: number } }
+      if (axiosErr?.response?.status === 409) {
+        setUsernameError('Username is already taken')
+      } else {
+        toast.error('Failed to update profile')
+      }
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div className="bg-background rounded-lg w-full max-w-md overflow-hidden">
+        {/* Background image area */}
+        <div
+          className="w-full h-[120px] relative cursor-pointer group"
+          style={
+            bgPreview
+              ? { backgroundImage: `url(${bgPreview})`, backgroundSize: 'cover', backgroundPosition: 'center' }
+              : { background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }
+          }
+          onClick={() => bgInputRef.current?.click()}
+        >
+          <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+            <span className="text-white text-sm font-medium">Change background</span>
+          </div>
+        </div>
+        <input ref={bgInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleBgChange} />
+
+        {/* Avatar */}
+        <div className="px-6 -mt-10 mb-4">
+          <div
+            className="relative h-20 w-20 rounded-full border-4 border-background cursor-pointer group"
+            onClick={() => avatarInputRef.current?.click()}
+          >
+            {avatarPreview ? (
+              <img src={avatarPreview} alt={profile.username} className="h-full w-full rounded-full object-cover" />
+            ) : (
+              <div className="h-full w-full rounded-full bg-muted flex items-center justify-center text-lg font-bold">
+                {initials}
+              </div>
+            )}
+            <div className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+              <span className="text-white text-xs font-medium">Edit</span>
+            </div>
+          </div>
+          <input ref={avatarInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleAvatarChange} />
+        </div>
+
+        {/* Form fields */}
+        <div className="px-6 pb-6 space-y-4">
+          <div>
+            <label className="text-sm font-medium block mb-1">Username</label>
+            <input
+              type="text"
+              value={username}
+              onChange={(e) => { setUsername(e.target.value); setUsernameError('') }}
+              minLength={3}
+              maxLength={30}
+              className="w-full border rounded-md px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+            {usernameError && <p className="text-destructive text-xs mt-1">{usernameError}</p>}
+          </div>
+
+          <div>
+            <label className="text-sm font-medium block mb-1">Position</label>
+            <select
+              value={position}
+              onChange={(e) => setPosition(e.target.value)}
+              className="w-full border rounded-md px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+            >
+              <option value="">No position</option>
+              {POSITIONS.map((p) => (
+                <option key={p} value={p}>{p.charAt(0) + p.slice(1).toLowerCase()}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="text-sm font-medium block mb-1">Stars</label>
+            <div className="flex gap-1">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => setStars(i)}
+                  className="text-2xl text-yellow-400 hover:scale-110 transition-transform"
+                >
+                  {i <= stars ? '★' : '☆'}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex gap-3 pt-2">
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
+            >
+              {saving ? 'Saving…' : 'Save'}
+            </button>
+            <button
+              onClick={onClose}
+              className="flex-1 px-4 py-2 border rounded-md text-sm hover:bg-muted transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
@@ -230,19 +415,12 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      {/* Edit modal placeholder — implemented in US-004 */}
       {editOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-background rounded-lg p-6 w-full max-w-md">
-            <p className="text-muted-foreground">Edit profile coming soon.</p>
-            <button
-              onClick={() => setEditOpen(false)}
-              className="mt-4 px-4 py-2 border rounded-md hover:bg-muted transition-colors"
-            >
-              Close
-            </button>
-          </div>
-        </div>
+        <EditProfileModal
+          profile={profile}
+          onClose={() => setEditOpen(false)}
+          onProfileUpdated={(updated) => setProfile(updated)}
+        />
       )}
     </>
   )
