@@ -176,6 +176,21 @@ Started: Sat Mar 21 09:15:01 PDT 2026
   - Manual browser verification needed (no browser tools available)
 ---
 
+## 2026-03-21 - US-014
+- Confirmed players section: shadcn Avatar (image or initials fallback) + player name as Link to /profile/:id + position Badge + star rating
+- Section header updated to show '(N confirmed)' count
+- Teams section: TEAM_HEADER_COLORS array cycles bg-green-100, bg-blue-100, bg-purple-100, bg-orange-100 with dark variants
+- Team cards: colored header bar via `overflow-hidden` on card + colored header div; players show shadcn Avatar + name + stars
+- Move/Swap button: `<ArrowLeftRight className="h-3 w-3" />` icon button styled with border + rounded
+- Team cards grid: `grid-cols-1 sm:grid-cols-2` — single column on mobile
+- Files changed: frontend/src/pages/DailyDetailPage.tsx
+- **Learnings for future iterations:**
+  - PlayerAvatar custom component was replaced with shadcn Avatar in both confirmed players and team cards sections
+  - TEAM_HEADER_COLORS array is defined at module level before the TeamsSection component
+  - `overflow-hidden` on the team card container is required for the colored header to not overflow card border-radius
+  - Manual browser verification needed (no browser tools available)
+---
+
 ## 2026-03-21 - US-012
 - Added `STATUS_BORDER` map alongside existing `STATUS_COLORS` for border-l-4 left border color per session status
 - Session rows: added `border-l-4 ${STATUS_BORDER[daily.status]}` class to Link — SCHEDULED=yellow, CONFIRMED=green, IN_COURSE=blue, FINISHED=gray, CANCELED/CANCELLED=red
