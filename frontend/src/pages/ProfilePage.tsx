@@ -1,11 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, Link } from 'react-router-dom'
 import { toast } from 'sonner'
 import NavBar from '../components/NavBar'
 import { getUserStats, getUser, updateUser, uploadUserImage, uploadBackgroundImage } from '../api/users'
+import { getMyPeladas, getPelada } from '../api/peladas'
 import { useAuth } from '../hooks/useAuth'
 import type { StatsDTO } from '../types/stats'
 import type { ProfileDTO } from '../types/user'
+import type { PeladaResponse } from '../types/pelada'
+import { Skeleton } from '../components/ui/skeleton'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 
 const POSITION_COLORS: Record<string, string> = {
@@ -67,7 +70,7 @@ interface StatCardProps {
 
 function StatCard({ label, value }: StatCardProps) {
   return (
-    <div className="border rounded-lg p-4 flex flex-col items-center gap-1">
+    <div className="border border-t-2 border-t-green-500 rounded-lg p-4 flex flex-col items-center gap-1">
       <span className="text-2xl font-bold">{value}</span>
       <span className="text-sm text-muted-foreground">{label}</span>
     </div>
@@ -203,7 +206,7 @@ function EditProfileModal({ profile, onClose, onProfileUpdated }: EditProfileMod
               onChange={(e) => { setUsername(e.target.value); setUsernameError('') }}
               minLength={3}
               maxLength={30}
-              className="w-full border rounded-md px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+              className="w-full border rounded-md px-3 py-2 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
             />
             {usernameError && <p className="text-destructive text-xs mt-1">{usernameError}</p>}
           </div>
@@ -213,7 +216,7 @@ function EditProfileModal({ profile, onClose, onProfileUpdated }: EditProfileMod
             <select
               value={position}
               onChange={(e) => setPosition(e.target.value)}
-              className="w-full border rounded-md px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+              className="w-full border rounded-md px-3 py-2 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
             >
               <option value="">No position</option>
               {POSITIONS.map((p) => (
@@ -266,6 +269,8 @@ export default function ProfilePage() {
   const [stats, setStats] = useState<StatsDTO | null>(null)
   const [loading, setLoading] = useState(true)
   const [editOpen, setEditOpen] = useState(false)
+  const [profilePeladas, setProfilePeladas] = useState<PeladaResponse[]>([])
+  const [peladasLoading, setPeladasLoading] = useState(true)
 
   useEffect(() => {
     if (!id) return
@@ -277,6 +282,23 @@ export default function ProfilePage() {
       })
       .catch(() => toast.error('Failed to load profile'))
       .finally(() => setLoading(false))
+  }, [id])
+
+  useEffect(() => {
+    if (!id) return
+    const userId = Number(id)
+    setPeladasLoading(true)
+    getMyPeladas()
+      .then((myPeladas) =>
+        Promise.all(myPeladas.map((p) => getPelada(p.id))).then((details) =>
+          details
+            .filter((d) => d.members.some((m) => m.id === userId))
+            .map((d) => myPeladas.find((p) => p.id === d.id)!)
+        )
+      )
+      .then(setProfilePeladas)
+      .catch(() => toast.error('Failed to load peladas'))
+      .finally(() => setPeladasLoading(false))
   }, [id])
 
   if (loading) {
@@ -411,6 +433,50 @@ export default function ProfilePage() {
                   </li>
                 ))}
             </ul>
+          )}
+        </div>
+
+        {/* Peladas section */}
+        <div className="mb-8">
+          <h2 className="text-lg font-semibold mb-4">Peladas</h2>
+          {peladasLoading ? (
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="rounded-xl border overflow-hidden">
+                  <Skeleton className="h-28 w-full rounded-none" />
+                  <div className="p-3">
+                    <Skeleton className="h-4 w-3/4" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : profilePeladas.length === 0 ? (
+            <p className="text-muted-foreground text-sm">Not in any peladas yet.</p>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              {profilePeladas.map((pelada) => (
+                <Link
+                  key={pelada.id}
+                  to={`/pelada/${pelada.id}`}
+                  className="rounded-xl border overflow-hidden hover:opacity-90 transition-opacity block"
+                >
+                  {pelada.image ? (
+                    <img
+                      src={`/api/v1/files/${pelada.image}`}
+                      alt={pelada.name}
+                      className="h-28 w-full object-cover"
+                    />
+                  ) : (
+                    <div className="h-28 bg-gradient-to-br from-green-500 to-emerald-700 flex items-center justify-center">
+                      <span className="text-3xl">⚽</span>
+                    </div>
+                  )}
+                  <div className="p-3">
+                    <p className="font-semibold text-sm leading-tight">{pelada.name}</p>
+                  </div>
+                </Link>
+              ))}
+            </div>
           )}
         </div>
       </div>
