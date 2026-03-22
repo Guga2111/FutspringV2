@@ -599,6 +599,7 @@ export default function DailyDetailPage() {
   const [resultsOpen, setResultsOpen] = useState(false)
   const [finalizeOpen, setFinalizeOpen] = useState(false)
   const [uploadLoading, setUploadLoading] = useState(false)
+  const [playerStatsExpanded, setPlayerStatsExpanded] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const fetchDaily = useCallback(async () => {
@@ -973,9 +974,47 @@ export default function DailyDetailPage() {
             onPlayerClick={handlePlayerClick}
           />
 
+          {/* IN_COURSE CTA card */}
+          {daily.status === 'IN_COURSE' && daily.matches.length === 0 && (
+            <div className="mb-6">
+              {daily.isAdmin ? (
+                <div className="relative rounded-xl">
+                  <div className="absolute inset-0 rounded-xl border-2 border-green-500 animate-pulse pointer-events-none" />
+                  <div className="rounded-xl p-5 bg-green-50 dark:bg-green-950/20 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                    <div className="flex-1">
+                      <p className="font-semibold text-green-900 dark:text-green-100">Session is live — enter results when ready</p>
+                      <p className="text-sm text-green-700 dark:text-green-300 mt-1">
+                        Once the match is over, enter the scores and finalize the session.
+                      </p>
+                    </div>
+                    <Button variant="gradient" onClick={() => setResultsOpen(true)}>
+                      Enter Results
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="rounded-xl border border-green-500 p-4 bg-green-50 dark:bg-green-950/20 flex items-center gap-3">
+                  <span className="animate-pulse bg-green-500 rounded-full w-2.5 h-2.5 inline-block flex-shrink-0" />
+                  <p className="text-sm font-medium text-green-800 dark:text-green-200">Session is live</p>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Finished sections */}
           {daily.status === 'FINISHED' && (
             <>
+              {/* Champion Photo Hero */}
+              {daily.championImage && (
+                <div className="mb-8 -mx-4 sm:mx-0">
+                  <img
+                    src={`/api/v1/files/${daily.championImage}`}
+                    alt="Champion photo"
+                    className="w-full sm:rounded-xl object-cover max-h-80"
+                  />
+                </div>
+              )}
+
               {/* Match Results */}
               {daily.matches.length > 0 && (
                 <section className="mb-8">
@@ -1038,7 +1077,9 @@ export default function DailyDetailPage() {
                               key={entry.teamId}
                               className={`border-b last:border-0 ${isFirst ? 'bg-yellow-50 dark:bg-yellow-950/20' : ''}`}
                             >
-                              <td className="py-2 pr-2 text-muted-foreground">{entry.position}</td>
+                              <td className="py-2 pr-2 text-muted-foreground">
+                                {entry.position === 1 ? '🥇' : entry.position === 2 ? '🥈' : entry.position === 3 ? '🥉' : entry.position}
+                              </td>
                               <td className={`py-2 ${isFirst ? 'font-semibold' : ''}`}>{entry.teamName}</td>
                               <td className="py-2 text-center px-2">{entry.wins}</td>
                               <td className="py-2 text-center px-2">{entry.draws}</td>
@@ -1061,33 +1102,45 @@ export default function DailyDetailPage() {
               {/* Player Stats */}
               {daily.playerStats.length > 0 && (
                 <section className="mb-8">
-                  <h2 className="text-lg font-semibold mb-3">Player Stats</h2>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-b text-muted-foreground text-xs">
-                          <th className="text-left pb-2 font-medium">Player</th>
-                          <th className="text-center pb-2 px-2 font-medium">Goals</th>
-                          <th className="text-center pb-2 px-2 font-medium">Assists</th>
-                          <th className="text-center pb-2 px-2 font-medium">Matches</th>
-                          <th className="text-center pb-2 px-2 font-medium">Wins</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {[...daily.playerStats]
-                          .sort((a, b) => b.goals - a.goals || b.assists - a.assists)
-                          .map((stat) => (
-                            <tr key={stat.userId} className="border-b last:border-0">
-                              <td className="py-2">{stat.username}</td>
-                              <td className="py-2 text-center px-2">{stat.goals}</td>
-                              <td className="py-2 text-center px-2">{stat.assists}</td>
-                              <td className="py-2 text-center px-2">{stat.matchesPlayed}</td>
-                              <td className="py-2 text-center px-2">{stat.wins}</td>
-                            </tr>
-                          ))}
-                      </tbody>
-                    </table>
+                  <div className="flex items-center justify-between mb-3">
+                    <h2 className="text-lg font-semibold">Player Stats</h2>
+                    <button
+                      className="text-xs text-muted-foreground hover:text-foreground"
+                      onClick={() => setPlayerStatsExpanded((prev) => !prev)}
+                    >
+                      {playerStatsExpanded ? '▾ Hide' : '▸ Show'}
+                    </button>
                   </div>
+                  {playerStatsExpanded && (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b text-muted-foreground text-xs">
+                            <th className="text-left pb-2 font-medium">Player</th>
+                            <th className="text-center pb-2 px-2 font-medium">Goals</th>
+                            <th className="text-center pb-2 px-2 font-medium">Assists</th>
+                            <th className="text-center pb-2 px-2 font-medium">Matches</th>
+                            <th className="text-center pb-2 px-2 font-medium">Wins</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {[...daily.playerStats]
+                            .sort((a, b) => b.goals - a.goals || b.assists - a.assists)
+                            .map((stat, idx) => (
+                              <tr key={stat.userId} className="border-b last:border-0">
+                                <td className="py-2">
+                                  {idx === 0 ? '🥇 ' : idx === 1 ? '🥈 ' : idx === 2 ? '🥉 ' : null}{stat.username}
+                                </td>
+                                <td className="py-2 text-center px-2">{stat.goals}</td>
+                                <td className="py-2 text-center px-2">{stat.assists}</td>
+                                <td className="py-2 text-center px-2">{stat.matchesPlayed}</td>
+                                <td className="py-2 text-center px-2">{stat.wins}</td>
+                              </tr>
+                            ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
                 </section>
               )}
 
@@ -1098,7 +1151,7 @@ export default function DailyDetailPage() {
                     <h2 className="text-lg font-semibold mb-3">Awards</h2>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       {daily.award.puskasWinnerName && (
-                        <div className="border rounded-lg p-4 flex items-center gap-3">
+                        <div className="border-2 rounded-lg p-4 flex items-center gap-3" style={{ borderColor: '#FFD700' }}>
                           {(() => {
                             const p = daily.confirmedPlayers.find(
                               (cp) => cp.id === daily.award!.puskasWinnerId,
@@ -1110,13 +1163,13 @@ export default function DailyDetailPage() {
                             )
                           })()}
                           <div>
-                            <p className="text-xs text-muted-foreground">Puskas Award</p>
+                            <p className="text-xs text-muted-foreground">🏆 Puskas Award</p>
                             <p className="font-semibold">{daily.award.puskasWinnerName}</p>
                           </div>
                         </div>
                       )}
                       {daily.award.wiltballWinnerName && (
-                        <div className="border rounded-lg p-4 flex items-center gap-3">
+                        <div className="border-2 rounded-lg p-4 flex items-center gap-3" style={{ borderColor: '#C0C0C0' }}>
                           {(() => {
                             const p = daily.confirmedPlayers.find(
                               (cp) => cp.id === daily.award!.wiltballWinnerId,
@@ -1128,7 +1181,7 @@ export default function DailyDetailPage() {
                             )
                           })()}
                           <div>
-                            <p className="text-xs text-muted-foreground">Wiltball Award</p>
+                            <p className="text-xs text-muted-foreground">🥈 Wiltball Award</p>
                             <p className="font-semibold">{daily.award.wiltballWinnerName}</p>
                           </div>
                         </div>
@@ -1137,50 +1190,38 @@ export default function DailyDetailPage() {
                   </section>
                 )}
 
-              {/* Champion Image */}
-              <section className="mb-8">
-                <h2 className="text-lg font-semibold mb-3">Champion Photo</h2>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  className="hidden"
-                  onChange={handleChampionUpload}
-                />
-                {daily.championImage ? (
-                  <div className="space-y-3">
-                    <img
-                      src={`/api/v1/files/${daily.championImage}`}
-                      alt="Champion photo"
-                      className="rounded-lg max-w-full"
-                    />
-                    {daily.isAdmin && (
-                      <button
-                        className="text-sm text-muted-foreground underline disabled:opacity-50"
-                        disabled={uploadLoading}
-                        onClick={() => fileInputRef.current?.click()}
-                      >
-                        {uploadLoading ? 'Uploading...' : 'Replace Photo'}
-                      </button>
-                    )}
-                  </div>
-                ) : daily.isAdmin ? (
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-2">
-                      No champion photo uploaded yet.
-                    </p>
+              {/* Champion Photo Upload (admin only) */}
+              {daily.isAdmin && (
+                <section className="mb-8">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    className="hidden"
+                    onChange={handleChampionUpload}
+                  />
+                  {daily.championImage ? (
                     <button
-                      className="text-sm bg-primary text-primary-foreground px-4 py-2 rounded disabled:opacity-50"
+                      className="text-sm text-muted-foreground underline disabled:opacity-50"
                       disabled={uploadLoading}
                       onClick={() => fileInputRef.current?.click()}
                     >
-                      {uploadLoading ? 'Uploading...' : 'Upload Champion Photo'}
+                      {uploadLoading ? 'Uploading...' : 'Replace Champion Photo'}
                     </button>
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground">No champion photo uploaded yet.</p>
-                )}
-              </section>
+                  ) : (
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-2">No champion photo uploaded yet.</p>
+                      <button
+                        className="text-sm bg-primary text-primary-foreground px-4 py-2 rounded disabled:opacity-50"
+                        disabled={uploadLoading}
+                        onClick={() => fileInputRef.current?.click()}
+                      >
+                        {uploadLoading ? 'Uploading...' : 'Upload Champion Photo'}
+                      </button>
+                    </div>
+                  )}
+                </section>
+              )}
             </>
           )}
         </main>
