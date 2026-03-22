@@ -15,8 +15,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '../components/ui/chart'
 import type { ChartConfig } from '../components/ui/chart'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid } from 'recharts'
-import { getUserStatsTimeline } from '../api/users'
-import type { TimelinePoint } from '../types/stats'
+import { getUserStatsTimeline, getUserMatchHistory } from '../api/users'
+import type { TimelinePoint, MatchHistoryRow } from '../types/stats'
+import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '../components/ui/table'
+import { Badge } from '../components/ui/badge'
 
 const POSITION_COLORS: Record<string, string> = {
   GOALKEEPER: 'bg-green-100 text-green-800',
@@ -286,6 +288,8 @@ export default function ProfilePage() {
   const [chartRange, setChartRange] = useState<'7d' | '1m' | '3m'>('1m')
   const [timelinePoints, setTimelinePoints] = useState<TimelinePoint[]>([])
   const [timelineLoading, setTimelineLoading] = useState(true)
+  const [matchHistory, setMatchHistory] = useState<MatchHistoryRow[]>([])
+  const [matchHistoryLoading, setMatchHistoryLoading] = useState(true)
 
   useEffect(() => {
     if (!id) return
@@ -332,6 +336,16 @@ export default function ProfilePage() {
       .catch(() => toast.error('Failed to load stats timeline'))
       .finally(() => setTimelineLoading(false))
   }, [id, chartRange])
+
+  useEffect(() => {
+    if (!id) return
+    const userId = Number(id)
+    setMatchHistoryLoading(true)
+    getUserMatchHistory(userId)
+      .then((data) => setMatchHistory(data.rows))
+      .catch(() => toast.error('Failed to load match history'))
+      .finally(() => setMatchHistoryLoading(false))
+  }, [id])
 
   if (loading) {
     return (
@@ -511,6 +525,71 @@ export default function ProfilePage() {
                 </Link>
               ))}
             </div>
+          )}
+        </div>
+
+        {/* Match History section */}
+        <div className="mb-8">
+          <h2 className="text-lg font-semibold mb-4">Match History</h2>
+          {matchHistoryLoading ? (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Pelada</TableHead>
+                  <TableHead>Goals</TableHead>
+                  <TableHead>Assists</TableHead>
+                  <TableHead>Matches</TableHead>
+                  <TableHead>Result</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {[0, 1, 2, 3, 4].map((i) => (
+                  <TableRow key={i}>
+                    {[0, 1, 2, 3, 4, 5].map((j) => (
+                      <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>
+                    ))}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          ) : matchHistory.length === 0 ? (
+            <p className="text-muted-foreground text-sm">No match history yet.</p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Pelada</TableHead>
+                  <TableHead>Goals</TableHead>
+                  <TableHead>Assists</TableHead>
+                  <TableHead>Matches</TableHead>
+                  <TableHead>Result</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {matchHistory.map((row) => (
+                  <TableRow key={row.dailyId}>
+                    <TableCell className="text-sm">{row.date}</TableCell>
+                    <TableCell>
+                      <Link to={`/pelada/${row.peladaId}`} className="hover:underline text-sm">
+                        {row.peladaName}
+                      </Link>
+                    </TableCell>
+                    <TableCell className="text-sm">{row.goals}</TableCell>
+                    <TableCell className="text-sm">{row.assists}</TableCell>
+                    <TableCell className="text-sm">{row.matchesPlayed}</TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={row.result === 'W' ? 'default' : row.result === 'L' ? 'secondary' : 'outline'}
+                      >
+                        {row.result}
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           )}
         </div>
       </div>
