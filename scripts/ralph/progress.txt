@@ -276,3 +276,16 @@ Started: Sat Mar 21 09:15:01 PDT 2026
   - JPQL navigation: `uds.daily.dailyDate` correctly traverses the ManyToOne `daily` relationship to access the `dailyDate` field on `Daily` entity
   - Existing `findByDaily(Daily daily)` method is unchanged
 ---
+
+## 2026-03-22 - US-019
+- Created `UserStatsTimelineDTO.java` with inner static class `TimelinePoint` (date, goals, assists, wins, matchesPlayed)
+- Added `getTimeline(Long userId, LocalDate from, LocalDate to, String callerEmail)` to `StatsService` — injects `UserDailyStatsRepository`, calls `findByUserAndDateRange`, maps to TimelinePoint list
+- Added `@GetMapping("/{id}/stats/timeline")` to `UserController` with `@RequestParam @DateTimeFormat(iso=DATE) LocalDate from, to`
+- Returns 404 if user not found, empty `points` array if no stats in range (not 404)
+- Files changed: `backend/.../dto/UserStatsTimelineDTO.java` (new), `backend/.../service/StatsService.java`, `backend/.../controller/UserController.java`
+- **Learnings for future iterations:**
+  - `@DateTimeFormat(iso = DateTimeFormat.ISO.DATE)` on `@RequestParam LocalDate` parameters handles ISO 8601 date strings (YYYY-MM-DD) automatically
+  - `StatsService` needed `UserDailyStatsRepository` injected — Lombok `@RequiredArgsConstructor` handles this automatically when added as a `final` field
+  - The JPQL repository query from US-018 returns results already sorted ASC by date — no additional sorting needed in the service layer
+  - No Java runtime available — backend compilation verified by manual code review only
+---

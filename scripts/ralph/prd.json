@@ -328,7 +328,7 @@
         "`mvn compile` passes; existing `/stats` endpoint unaffected"
       ],
       "priority": 19,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
