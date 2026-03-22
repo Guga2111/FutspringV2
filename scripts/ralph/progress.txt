@@ -204,6 +204,21 @@ Started: Sat Mar 21 09:15:01 PDT 2026
   - Manual browser verification needed (no browser tools available)
 ---
 
+## 2026-03-21 - US-016
+- Added green top border to StatCard: `border border-t-2 border-t-green-500 rounded-lg`
+- Added Peladas section below Puskas Award History: fetches `getMyPeladas()` + `getPelada(id)` for each, filters to those where profile user is in members list
+- Pelada cards: 2 col mobile (`grid-cols-2`) / 3 col desktop (`md:grid-cols-3`); banner image or green gradient ⚽ placeholder; clicking → /pelada/:id
+- Skeleton: 3 skeleton cards (shadcn Skeleton) while loading
+- Empty state: 'Not in any peladas yet.'
+- Fixed EditProfileModal dark mode: added `text-foreground` to username input and position select so text isn't invisible in dark mode
+- Files changed: frontend/src/pages/ProfilePage.tsx
+- **Learnings for future iterations:**
+  - No backend endpoint for "get peladas for user X" — workaround: fetch `getMyPeladas()` + `getPelada(id)` for each, then filter by profile userId in members; shows only shared peladas when viewing another user's profile
+  - ProfilePage uses a custom `SkeletonBlock` for its own profile skeleton (not shadcn) — keep both; use shadcn `Skeleton` for new sections
+  - StatCard's border classes must include `border` (for sides) AND `border-t-2 border-t-green-500` — Tailwind's `border-t-2` overrides top but doesn't auto-add the other sides
+  - Manual browser verification needed (no browser tools available)
+---
+
 ## 2026-03-21 - US-015
 - Champion photo moved to top of FINISHED section as full-width hero image (`-mx-4 sm:mx-0 w-full sm:rounded-xl object-cover max-h-80`)
 - Admin upload button/section kept at bottom of finished block (no image shown there, just the upload action)
