@@ -301,6 +301,19 @@ Started: Sat Mar 21 09:15:01 PDT 2026
   - No Java runtime available — backend compilation verified by manual code review only
 ---
 
+## 2026-03-22 - US-022
+- Added 4 new interfaces to `src/types/stats.ts`: TimelinePoint, UserStatsTimelineDTO, MatchHistoryRow, UserMatchHistoryDTO
+- Updated import in `src/api/users.ts` to include the new types
+- Added `getUserStatsTimeline(userId, from, to)` calling GET `/api/v1/users/{id}/stats/timeline?from=&to=`
+- Added `getUserMatchHistory(userId)` calling GET `/api/v1/users/{id}/stats/matches`
+- `tsc --noEmit` passes with no errors
+- Files changed: `frontend/src/types/stats.ts`, `frontend/src/api/users.ts`
+- **Learnings for future iterations:**
+  - Timeline dates are `string` (ISO 8601 "YYYY-MM-DD") on the frontend — backend uses LocalDate but JSON serializes to string
+  - `from`/`to` query params are passed via axios `params` option — axios serializes them automatically
+  - Existing `StatsDTO` import in `users.ts` combined with new types in a single import statement
+---
+
 ## 2026-03-22 - US-021
 - Created `src/components/ui/table.tsx` manually with standard shadcn Table component exports: Table, TableHeader, TableBody, TableFooter, TableHead, TableRow, TableCell, TableCaption
 - Created `src/components/ui/chart.tsx` manually with: ChartContainer (wraps recharts ResponsiveContainer + injects CSS color vars), ChartTooltip (re-export of recharts Tooltip), ChartTooltipContent (styled tooltip), ChartLegend, ChartLegendContent; also exports ChartConfig type
