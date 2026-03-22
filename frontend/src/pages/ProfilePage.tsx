@@ -11,6 +11,7 @@ import type { ProfileDTO } from '../types/user'
 import type { PeladaResponse } from '../types/pelada'
 import { Skeleton } from '../components/ui/skeleton'
 import { Card, CardHeader, CardContent } from '../components/ui/card'
+import { Separator } from '../components/ui/separator'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select'
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '../components/ui/chart'
 import type { ChartConfig } from '../components/ui/chart'
@@ -60,14 +61,35 @@ function ProfileSkeleton() {
             <SkeletonBlock className="h-5 w-24" />
           </div>
         </div>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      </div>
+      <section className="px-6 lg:px-12 mb-10">
+        <SkeletonBlock className="h-6 w-32 mb-2" />
+        <SkeletonBlock className="h-px w-full mb-6" />
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {[0, 1, 2, 3].map((i) => (
             <SkeletonBlock key={i} className="h-24 w-full" />
           ))}
         </div>
-        <SkeletonBlock className="h-64 w-full mb-8" />
+      </section>
+      <section className="px-6 lg:px-12 mb-10">
+        <SkeletonBlock className="h-6 w-32 mb-2" />
+        <SkeletonBlock className="h-px w-full mb-6" />
+        <SkeletonBlock className="h-[200px] w-full" />
+      </section>
+      <section className="px-6 lg:px-12 mb-10">
+        <SkeletonBlock className="h-6 w-32 mb-2" />
+        <SkeletonBlock className="h-px w-full mb-6" />
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          {[0, 1, 2].map((i) => (
+            <SkeletonBlock key={i} className="h-36 w-full rounded-xl" />
+          ))}
+        </div>
+      </section>
+      <section className="px-6 lg:px-12 mb-10">
+        <SkeletonBlock className="h-6 w-32 mb-2" />
+        <SkeletonBlock className="h-px w-full mb-6" />
         <SkeletonBlock className="h-40 w-full" />
-      </div>
+      </section>
     </div>
   )
 }
@@ -426,9 +448,13 @@ export default function ProfilePage() {
             </div>
           </div>
         </div>
+      </div>
 
-        {/* KPI cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      {/* KPI cards */}
+      <section className="px-6 lg:px-12 mb-10">
+        <h2 className="text-xl font-semibold mb-4">Performance</h2>
+        <Separator className="mb-6" />
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <KpiCard label="Goals" value={stats.goals} />
           <KpiCard label="Assists" value={stats.assists} />
           <KpiCard label="Matches Played" value={stats.matchesPlayed} />
@@ -437,101 +463,105 @@ export default function ProfilePage() {
             value={`${stats.matchesPlayed > 0 ? Math.round((stats.wins / stats.matchesPlayed) * 100) : 0}%`}
           />
         </div>
+      </section>
 
-        {/* Stats chart */}
-        <div className="border rounded-lg p-4 mb-8">
-          <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-            <h2 className="text-lg font-semibold">Stats Over Time</h2>
-            <div className="flex gap-2">
-              <Select value={chartMetric} onValueChange={(v) => setChartMetric(v as typeof chartMetric)}>
-                <SelectTrigger className="h-8 w-32 text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="goals">Goals</SelectItem>
-                  <SelectItem value="assists">Assists</SelectItem>
-                  <SelectItem value="wins">Wins</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={chartRange} onValueChange={(v) => setChartRange(v as typeof chartRange)}>
-                <SelectTrigger className="h-8 w-36 text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="7d">Last 7 days</SelectItem>
-                  <SelectItem value="1m">Last 1 month</SelectItem>
-                  <SelectItem value="3m">Last 3 months</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+      {/* Stats chart */}
+      <section className="px-6 lg:px-12 mb-10">
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+          <h2 className="text-xl font-semibold">Stats Over Time</h2>
+          <div className="flex gap-2">
+            <Select value={chartMetric} onValueChange={(v) => setChartMetric(v as typeof chartMetric)}>
+              <SelectTrigger className="h-8 w-32 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="goals">Goals</SelectItem>
+                <SelectItem value="assists">Assists</SelectItem>
+                <SelectItem value="wins">Wins</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={chartRange} onValueChange={(v) => setChartRange(v as typeof chartRange)}>
+              <SelectTrigger className="h-8 w-36 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="7d">Last 7 days</SelectItem>
+                <SelectItem value="1m">Last 1 month</SelectItem>
+                <SelectItem value="3m">Last 3 months</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
-          {timelineLoading ? (
-            <Skeleton className="h-[200px] w-full" />
-          ) : timelinePoints.length === 0 ? (
-            <p className="text-muted-foreground text-sm">No stats recorded in this period.</p>
-          ) : (
-            <ChartContainer config={{ [chartMetric]: { label: chartMetric.charAt(0).toUpperCase() + chartMetric.slice(1), color: '#22c55e' } } satisfies ChartConfig} className="h-[200px]">
-              <AreaChart data={timelinePoints}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" tick={{ fontSize: 11 }} />
-                <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
-                <ChartTooltip content={<ChartTooltipContent />} />
-                <Area type="monotone" dataKey={chartMetric} stroke="#22c55e" fill="#bbf7d0" strokeWidth={2} />
-              </AreaChart>
-            </ChartContainer>
-          )}
         </div>
+        <Separator className="mb-6" />
+        {timelineLoading ? (
+          <Skeleton className="h-[200px] w-full" />
+        ) : timelinePoints.length === 0 ? (
+          <p className="text-muted-foreground text-sm">No stats recorded in this period.</p>
+        ) : (
+          <ChartContainer config={{ [chartMetric]: { label: chartMetric.charAt(0).toUpperCase() + chartMetric.slice(1), color: '#22c55e' } } satisfies ChartConfig} className="h-[200px]">
+            <AreaChart data={timelinePoints}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="date" tick={{ fontSize: 11 }} />
+              <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
+              <ChartTooltip content={<ChartTooltipContent />} />
+              <Area type="monotone" dataKey={chartMetric} stroke="#22c55e" fill="#bbf7d0" strokeWidth={2} />
+            </AreaChart>
+          </ChartContainer>
+        )}
+      </section>
 
-        {/* Peladas section */}
-        <div className="mb-8">
-          <h2 className="text-lg font-semibold mb-4">Peladas</h2>
-          {peladasLoading ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              {[0, 1, 2].map((i) => (
-                <div key={i} className="rounded-xl border overflow-hidden">
-                  <Skeleton className="h-28 w-full rounded-none" />
-                  <div className="p-3">
-                    <Skeleton className="h-4 w-3/4" />
-                  </div>
+      {/* Peladas section */}
+      <section className="px-6 lg:px-12 mb-10">
+        <h2 className="text-xl font-semibold mb-4">Peladas</h2>
+        <Separator className="mb-6" />
+        {peladasLoading ? (
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="rounded-xl border overflow-hidden">
+                <Skeleton className="h-28 w-full rounded-none" />
+                <div className="p-3">
+                  <Skeleton className="h-4 w-3/4" />
                 </div>
-              ))}
-            </div>
-          ) : profilePeladas.length === 0 ? (
-            <p className="text-muted-foreground text-sm">Not in any peladas yet.</p>
-          ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              {profilePeladas.map((pelada) => (
-                <Link
-                  key={pelada.id}
-                  to={`/pelada/${pelada.id}`}
-                  className="rounded-xl border overflow-hidden hover:opacity-90 transition-opacity block"
-                >
-                  {pelada.image ? (
-                    <img
-                      src={getFileUrl(pelada.image)}
-                      alt={pelada.name}
-                      className="h-28 w-full object-cover"
-                    />
-                  ) : (
-                    <div className={`h-28 ${getPeladaGradient(pelada.name)} flex items-center justify-center`}>
-                      <span className="text-2xl font-extrabold text-white tracking-wide select-none">
-                        {getPeladaInitials(pelada.name)}
-                      </span>
-                    </div>
-                  )}
-                  <div className="p-3">
-                    <p className="font-semibold text-sm leading-tight">{pelada.name}</p>
+              </div>
+            ))}
+          </div>
+        ) : profilePeladas.length === 0 ? (
+          <p className="text-muted-foreground text-sm">Not in any peladas yet.</p>
+        ) : (
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            {profilePeladas.map((pelada) => (
+              <Link
+                key={pelada.id}
+                to={`/pelada/${pelada.id}`}
+                className="rounded-xl border overflow-hidden hover:shadow-md transition-shadow block"
+              >
+                {pelada.image ? (
+                  <img
+                    src={getFileUrl(pelada.image)}
+                    alt={pelada.name}
+                    className="h-28 w-full object-cover"
+                  />
+                ) : (
+                  <div className={`h-28 ${getPeladaGradient(pelada.name)} flex items-center justify-center`}>
+                    <span className="text-2xl font-extrabold text-white tracking-wide select-none">
+                      {getPeladaInitials(pelada.name)}
+                    </span>
                   </div>
-                </Link>
-              ))}
-            </div>
-          )}
-        </div>
+                )}
+                <div className="p-3">
+                  <p className="font-semibold text-sm leading-tight">{pelada.name}</p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
+      </section>
 
-        {/* Match History section */}
-        <div className="mb-8">
-          <h2 className="text-lg font-semibold mb-4">Match History</h2>
-          {matchHistoryLoading ? (
+      {/* Match History section */}
+      <section className="px-6 lg:px-12 mb-10">
+        <h2 className="text-xl font-semibold mb-4">Match History</h2>
+        <Separator className="mb-6" />
+        {matchHistoryLoading ? (
             <Table>
               <TableHeader>
                 <TableRow>
@@ -591,8 +621,7 @@ export default function ProfilePage() {
               </TableBody>
             </Table>
           )}
-        </div>
-      </div>
+      </section>
 
       {editOpen && (
         <EditProfileModal
