@@ -4,16 +4,19 @@ import com.futspring.backend.dto.ProfileDTO;
 import com.futspring.backend.dto.StatsDTO;
 import com.futspring.backend.dto.UpdateProfileRequest;
 import com.futspring.backend.dto.UserResponseDTO;
+import com.futspring.backend.dto.UserStatsTimelineDTO;
 import com.futspring.backend.service.PeladaService;
 import com.futspring.backend.service.StatsService;
 import com.futspring.backend.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -34,6 +37,16 @@ public class UserController {
     public ResponseEntity<StatsDTO> getUserStats(@PathVariable Long id, Authentication authentication) {
         String callerEmail = (String) authentication.getPrincipal();
         return ResponseEntity.ok(statsService.getStats(id, callerEmail));
+    }
+
+    @GetMapping("/{id}/stats/timeline")
+    public ResponseEntity<UserStatsTimelineDTO> getUserStatsTimeline(
+            @PathVariable Long id,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+            Authentication authentication) {
+        String callerEmail = (String) authentication.getPrincipal();
+        return ResponseEntity.ok(statsService.getTimeline(id, from, to, callerEmail));
     }
 
     @GetMapping("/{id}")
