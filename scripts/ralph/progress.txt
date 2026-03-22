@@ -236,3 +236,43 @@ Started: Sat Mar 21 09:15:01 PDT 2026
   - Champion hero section uses negative horizontal margin `-mx-4 sm:mx-0` for full-bleed effect on mobile within a padded container
   - Manual browser verification needed (no browser tools available)
 ---
+
+## 2026-03-21 - US-017
+- Toast audit: added `toast.error('Failed to load peladas')` to `HomePage.fetchPeladas()` (was silently swallowed); added toast.error to `PeladaDetailPage.fetchDailies()` and `fetchRanking()` (were both silently ignoring errors); added non-403 error toast to `fetchPelada()`
+- Skeleton loading: replaced custom `SkeletonBlock` (`bg-muted rounded animate-pulse`) with shadcn `Skeleton` component in PeladaDetailPage `DetailSkeleton`, sessions tab skeleton, ranking tab skeleton, and chat loading skeleton; same replacement in DailyDetailPage `DetailSkeleton`
+- Removed now-unused `SkeletonBlock` function from DailyDetailPage
+- Accessibility: added `aria-label="Close"` to ResultsModal and FinalizeModal `×` close buttons; added `aria-label="Send message"` to chat Send button; added `aria-label` to chat Hide/Show toggle button
+- Touch targets: updated `+ Add Player` and `+ Create Session` buttons to include `h-10` and `focus-visible:ring-2 focus-visible:ring-ring` classes
+- `Disconfirm Attendance` raw button: added `h-10 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2` for consistency with shadcn Button
+- Files changed: frontend/src/pages/HomePage.tsx, frontend/src/pages/PeladaDetailPage.tsx, frontend/src/pages/DailyDetailPage.tsx
+- **Learnings for future iterations:**
+  - `getMyPeladas()` in HomePage used `.then().finally()` with no `.catch()` — GET errors were silently swallowed
+  - PeladaDetailPage `fetchDailies()` and `fetchRanking()` had comments like "ignore errors silently" — these should surface toasts to the user
+  - The shadcn `Skeleton` component is identical to `SkeletonBlock` visually but is the canonical shadcn component — prefer it
+  - When removing a component (SkeletonBlock), search all usages including sub-components like ChatSidebar which is defined in the same file
+  - Manual browser verification needed (no browser tools available)
+---
+
+## 2026-03-22 - PRD Sprint 2 Planning
+- Added US-018 through US-027 to prd.json for Profile Page Redesign
+- Sprint covers: 3 backend stories (repository queries, timeline endpoint, match history endpoint) + 5 frontend stories (shadcn table/chart install, API types, layout refactor, KPI cards, chart section, match history table, polish)
+- All US-001–017 remain passes: true; new stories start at passes: false
+- **Learnings for future iterations:**
+  - Backend needs two new endpoints before frontend chart/table stories can be completed
+  - shadcn chart component wraps recharts (already installed) — no duplicate dependency
+  - shadcn table/chart components must be installed via CLI before US-022 and beyond
+  - StatsService.getMatchHistory() must be @Transactional(readOnly = true) to avoid LazyInitializationException when accessing daily.pelada
+  - ProfilePage root element is a <div> (fixed in US-006) — safe to add full-width layout classes
+---
+
+## 2026-03-22 - US-018
+- Added two new query methods to UserDailyStatsRepository:
+  - `findByUserOrderByDailyDailyDateDesc(User user)` — derived query using Spring Data JPA nested property traversal
+  - `findByUserAndDateRange(User user, LocalDate from, LocalDate to)` — @Query JPQL method with date range filter, sorted ASC by dailyDate
+- Files changed: backend/src/main/java/com/futspring/backend/repository/UserDailyStatsRepository.java
+- **Learnings for future iterations:**
+  - Spring Data JPA supports nested property traversal in method names: `findByUserOrderByDailyDailyDateDesc` navigates `user` → `daily.dailyDate` correctly
+  - No Java runtime available in the dev environment — backend compilation cannot be verified with `mvn compile`; code reviewed manually for correctness
+  - JPQL navigation: `uds.daily.dailyDate` correctly traverses the ManyToOne `daily` relationship to access the `dailyDate` field on `Daily` entity
+  - Existing `findByDaily(Daily daily)` method is unchanged
+---

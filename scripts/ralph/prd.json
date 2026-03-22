@@ -297,6 +297,170 @@
         "Typecheck passes"
       ],
       "priority": 17,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-018",
+      "title": "Backend — Repository Query Methods for User Timeline & Match History",
+      "description": "As a developer, I need new query methods on UserDailyStatsRepository to fetch user stats by date range and full history, so the new service methods have efficient data access.",
+      "acceptanceCriteria": [
+        "Add `findByUserOrderByDailyDailyDateDesc(User user)` to UserDailyStatsRepository",
+        "Add `@Query` JPQL method `findByUserAndDateRange(@Param('user') User user, @Param('from') LocalDate from, @Param('to') LocalDate to)` returning List<UserDailyStats> sorted ASC by dailyDate",
+        "`mvn compile` passes with no errors",
+        "No existing repository methods are altered"
+      ],
+      "priority": 18,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-019",
+      "title": "Backend — GET /api/v1/users/{userId}/stats/timeline Endpoint",
+      "description": "As a frontend developer, I need a timeline endpoint so the chart can display time-series stats filtered by a date range.",
+      "acceptanceCriteria": [
+        "Create `UserStatsTimelineDTO` with inner class `TimelinePoint` (fields: date LocalDate, goals int, assists int, wins int, matchesPlayed int)",
+        "Add `getTimeline(Long userId, LocalDate from, LocalDate to, String callerEmail)` to StatsService using the new repository method from US-018",
+        "Add `@GetMapping('/{id}/stats/timeline')` to UserController accepting `@RequestParam @DateTimeFormat(iso=DATE) LocalDate from, to` and `Authentication authentication`",
+        "Returns 200 with `{ points: [...] }` sorted ascending by date",
+        "Returns 404 if userId not found",
+        "Returns empty points array (not 404) if user has no stats in range",
+        "`mvn compile` passes; existing `/stats` endpoint unaffected"
+      ],
+      "priority": 19,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-020",
+      "title": "Backend — GET /api/v1/users/{userId}/stats/matches Endpoint",
+      "description": "As a frontend developer, I need a match history endpoint so the statistics table can show a per-daily session breakdown.",
+      "acceptanceCriteria": [
+        "Create `UserMatchHistoryDTO` with inner class `MatchRow` (fields: dailyId Long, date LocalDate, peladaId Long, peladaName String, goals int, assists int, matchesPlayed int, wins int, result String)",
+        "`result` computed on backend: wins > 0 → 'W', matchesPlayed > 0 && wins == 0 → 'L', else '—'",
+        "Add `getMatchHistory(Long userId, String callerEmail)` to StatsService annotated `@Transactional(readOnly = true)`",
+        "Add `@GetMapping('/{id}/stats/matches')` to UserController with `Authentication authentication`",
+        "Returns rows sorted by date DESC",
+        "Returns empty rows array if user has no sessions",
+        "`mvn compile` passes"
+      ],
+      "priority": 20,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-021",
+      "title": "Frontend — Install shadcn Table and Chart Components",
+      "description": "As a developer, I need the shadcn Table and Chart components installed so they can be used in the redesigned profile page.",
+      "acceptanceCriteria": [
+        "Run `npx shadcn@latest add table` in frontend/ → `src/components/ui/table.tsx` exists and exports Table, TableHeader, TableBody, TableHead, TableRow, TableCell",
+        "Run `npx shadcn@latest add chart` in frontend/ → `src/components/ui/chart.tsx` exists and exports ChartContainer, ChartTooltip, ChartTooltipContent",
+        "`bun run build` or `tsc --noEmit` passes with no type errors",
+        "No existing components are overwritten or broken"
+      ],
+      "priority": 21,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-022",
+      "title": "Frontend — New API Functions and TypeScript Types for Profile Stats",
+      "description": "As a developer, I need typed API functions and TypeScript interfaces for the two new backend endpoints so the frontend can consume them safely.",
+      "acceptanceCriteria": [
+        "Add to `src/types/stats.ts` (or create if missing): interfaces TimelinePoint, UserStatsTimelineDTO, MatchHistoryRow, UserMatchHistoryDTO",
+        "Add to `src/api/users.ts`: `getUserStatsTimeline(userId: number, from: string, to: string): Promise<UserStatsTimelineDTO>`",
+        "Add to `src/api/users.ts`: `getUserMatchHistory(userId: number): Promise<UserMatchHistoryDTO>`",
+        "`tsc --noEmit` passes"
+      ],
+      "priority": 22,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-023",
+      "title": "Frontend — ProfilePage: Remove Purple Gradient and Full-Width Layout",
+      "description": "As a user, I want the profile page to use the full screen width with a clean flat design so it feels modern and spacious.",
+      "acceptanceCriteria": [
+        "Remove `container max-w-2xl mx-auto` wrapper from main content area",
+        "Replace purple gradient inline style fallback on banner div with `bg-muted` class",
+        "All content sections use `px-6 lg:px-12` horizontal padding",
+        "ProfileSkeleton updated to match new full-width layout (remove container wrapper from skeleton too)",
+        "No purple gradient visible at any viewport width",
+        "`tsc --noEmit` passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 23,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-024",
+      "title": "Frontend — ProfilePage: KPI Dashboard Section with shadcn Card",
+      "description": "As a user, I want to see 4 KPI cards at the top of my profile so I can quickly understand my overall performance at a glance.",
+      "acceptanceCriteria": [
+        "Replace old StatCard component with shadcn Card-based KpiCard using CardHeader and CardContent",
+        "4 cards: Goals, Assists, Matches Played, Win Rate",
+        "Win Rate computed as `Math.round((wins / matchesPlayed) * 100)` — shows 0% if matchesPlayed is 0",
+        "Green top border accent on each card: `border-t-2 border-t-green-500`",
+        "Grid: `grid-cols-2 lg:grid-cols-4 gap-4`",
+        "Old StatCard component and old wins count card removed",
+        "`tsc --noEmit` passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 24,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-025",
+      "title": "Frontend — ProfilePage: Configurable Chart Section with shadcn Chart",
+      "description": "As a user, I want to see my stats visualized over time with a configurable area chart so I can track performance trends.",
+      "acceptanceCriteria": [
+        "Area chart using shadcn ChartContainer + recharts AreaChart (replaces old BarChart)",
+        "Metric selector using shadcn Select: Goals / Assists / Wins — one series shown at a time",
+        "Time range selector using shadcn Select: Last 7 days / Last 1 month / Last 3 months",
+        "Chart fetches from `getUserStatsTimeline` on mount and on range change",
+        "Shadcn Skeleton shown while loading; empty state message shown when timeline is empty",
+        "Old BarChart and puskasDates (Puskas Award History) section removed from ProfilePage",
+        "`tsc --noEmit` passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 25,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-026",
+      "title": "Frontend — ProfilePage: Match History Table with shadcn Table",
+      "description": "As a user, I want to see a detailed breakdown of all my past sessions so I can review my individual performance over time.",
+      "acceptanceCriteria": [
+        "shadcn Table with 6 columns: Date, Pelada, Goals, Assists, Matches, Result",
+        "Pelada column renders as `<Link to={'/pelada/:id'}>` with hover underline",
+        "Result column shows shadcn Badge: default variant for W, secondary for L, outline for —",
+        "5 skeleton rows (each cell has Skeleton) shown while loading",
+        "Empty state: 'No match history yet.' text shown if rows array is empty",
+        "Section header 'Match History' above the table",
+        "`tsc --noEmit` passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 26,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-027",
+      "title": "Frontend — ProfilePage: Full-Width Polish and Consistent Section Layout",
+      "description": "As a user, I want all four sections to feel visually consistent and polished so the redesigned profile page looks professional end-to-end.",
+      "acceptanceCriteria": [
+        "All 4 sections (KPI cards, Chart, Peladas, Match History) wrapped in `<section className='px-6 lg:px-12 mb-10'>`",
+        "Consistent section headings: `<h2 className='text-xl font-semibold mb-4'>` with `<Separator className='mb-6' />` below each",
+        "Peladas cards get `hover:shadow-md transition-shadow`",
+        "ProfileSkeleton updated to include skeleton blocks for all 4 sections",
+        "`page-enter` animation class preserved on outermost wrapper",
+        "`tsc --noEmit` passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 27,
       "passes": false,
       "notes": ""
     }
