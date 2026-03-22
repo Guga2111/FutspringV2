@@ -22,26 +22,24 @@ import {
   DropdownMenuTrigger,
 } from '../components/ui/dropdown-menu'
 
-function SkeletonBlock({ className }: { className: string }) {
-  return <div className={`bg-muted rounded animate-pulse ${className}`} />
-}
+import { Skeleton } from '../components/ui/skeleton'
 
 function DetailSkeleton() {
   return (
     <div>
-      <SkeletonBlock className="h-56 w-full rounded-none" />
+      <Skeleton className="h-56 w-full rounded-none" />
       <div className="container max-w-4xl mx-auto px-4 py-6">
-        <SkeletonBlock className="h-8 w-1/2 mb-3" />
-        <SkeletonBlock className="h-4 w-1/3 mb-2" />
-        <SkeletonBlock className="h-4 w-1/4 mb-2" />
-        <SkeletonBlock className="h-4 w-2/5 mb-6" />
-        <SkeletonBlock className="h-6 w-32 mb-4" />
+        <Skeleton className="h-8 w-1/2 mb-3" />
+        <Skeleton className="h-4 w-1/3 mb-2" />
+        <Skeleton className="h-4 w-1/4 mb-2" />
+        <Skeleton className="h-4 w-2/5 mb-6" />
+        <Skeleton className="h-6 w-32 mb-4" />
         {[0, 1, 2].map((i) => (
           <div key={i} className="flex items-center gap-3 mb-3">
-            <SkeletonBlock className="h-10 w-10 rounded-full flex-shrink-0" />
+            <Skeleton className="h-10 w-10 rounded-full flex-shrink-0" />
             <div className="flex-1">
-              <SkeletonBlock className="h-4 w-32 mb-1" />
-              <SkeletonBlock className="h-3 w-20" />
+              <Skeleton className="h-4 w-32 mb-1" />
+              <Skeleton className="h-3 w-20" />
             </div>
           </div>
         ))}
@@ -506,7 +504,8 @@ function ChatSidebar({
       <div className="flex items-center justify-between px-3 py-2 border-b border-border bg-muted/40 flex-shrink-0">
         <span className="text-sm font-semibold">Chat</span>
         <button
-          className="text-xs text-muted-foreground hover:text-foreground lg:hidden"
+          aria-label={collapsed ? 'Show chat' : 'Hide chat'}
+          className="text-xs text-muted-foreground hover:text-foreground lg:hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
           onClick={onToggle}
         >
           {collapsed ? 'Show' : 'Hide'}
@@ -533,10 +532,10 @@ function ChatSidebar({
               <>
                 {[0, 1, 2, 3, 4].map((i) => (
                   <div key={i} className="flex items-start gap-2">
-                    <SkeletonBlock className="h-7 w-7 rounded-full flex-shrink-0" />
+                    <Skeleton className="h-7 w-7 rounded-full flex-shrink-0" />
                     <div className="flex-1 space-y-1">
-                      <SkeletonBlock className="h-3 w-20" />
-                      <SkeletonBlock className="h-4 w-40" />
+                      <Skeleton className="h-3 w-20" />
+                      <Skeleton className="h-4 w-40" />
                     </div>
                   </div>
                 ))}
@@ -602,9 +601,10 @@ function ChatSidebar({
               className="flex-1 text-sm bg-muted rounded-full px-3 py-1.5 outline-none focus:ring-1 focus:ring-ring"
             />
             <button
+              aria-label="Send message"
               onClick={sendMessage}
               disabled={!inputValue.trim()}
-              className="text-sm font-medium text-primary disabled:opacity-40 hover:opacity-80 transition-opacity"
+              className="text-sm font-medium text-primary disabled:opacity-40 hover:opacity-80 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
             >
               Send
             </button>
@@ -645,6 +645,8 @@ export default function PeladaDetailPage() {
       .catch((err) => {
         if (err?.response?.status === 403) {
           setAccessDenied(true)
+        } else {
+          toast.error('Failed to load pelada')
         }
       })
       .finally(() => setLoading(false))
@@ -655,9 +657,7 @@ export default function PeladaDetailPage() {
     setDailiesLoading(true)
     getDailiesForPelada(Number(id))
       .then(setDailies)
-      .catch(() => {
-        // ignore errors silently; pelada fetch handles 403
-      })
+      .catch(() => toast.error('Failed to load sessions'))
       .finally(() => setDailiesLoading(false))
   }, [id])
 
@@ -666,9 +666,7 @@ export default function PeladaDetailPage() {
     setRankingLoading(true)
     getRanking(Number(id))
       .then(setRanking)
-      .catch(() => {
-        // ignore errors silently
-      })
+      .catch(() => toast.error('Failed to load ranking'))
       .finally(() => setRankingLoading(false))
   }, [id])
 
@@ -835,7 +833,7 @@ export default function PeladaDetailPage() {
                   <span className="text-sm text-muted-foreground">{pelada.members.length} members</span>
                   {isCurrentUserAdmin && (
                     <button
-                      className="text-sm bg-primary text-primary-foreground px-4 py-2 rounded"
+                      className="h-10 text-sm bg-primary text-primary-foreground px-4 py-2 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                       onClick={() => setShowAddPlayer(true)}
                     >
                       + Add Player
@@ -903,7 +901,7 @@ export default function PeladaDetailPage() {
                   <span className="text-sm text-muted-foreground">{dailies.length} sessions</span>
                   {isCurrentUserAdmin && (
                     <button
-                      className="text-sm bg-primary text-primary-foreground px-4 py-2 rounded"
+                      className="h-10 text-sm bg-primary text-primary-foreground px-4 py-2 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                       onClick={() => setShowCreateSession(true)}
                     >
                       + Create Session
@@ -914,10 +912,10 @@ export default function PeladaDetailPage() {
                   <div className="space-y-3">
                     {[0, 1, 2].map((i) => (
                       <div key={i} className="flex items-center gap-3">
-                        <SkeletonBlock className="h-4 w-24" />
-                        <SkeletonBlock className="h-4 w-16" />
-                        <SkeletonBlock className="h-5 w-20 rounded-full" />
-                        <SkeletonBlock className="h-4 w-12" />
+                        <Skeleton className="h-4 w-24" />
+                        <Skeleton className="h-4 w-16" />
+                        <Skeleton className="h-5 w-20 rounded-full" />
+                        <Skeleton className="h-4 w-12" />
                       </div>
                     ))}
                   </div>
@@ -959,12 +957,12 @@ export default function PeladaDetailPage() {
                     <div className="space-y-2">
                       {[0, 1, 2].map((i) => (
                         <div key={i} className="flex items-center gap-3">
-                          <SkeletonBlock className="h-8 w-8 rounded-full flex-shrink-0" />
-                          <SkeletonBlock className="h-4 flex-1" />
-                          <SkeletonBlock className="h-4 w-8" />
-                          <SkeletonBlock className="h-4 w-8" />
-                          <SkeletonBlock className="h-4 w-8" />
-                          <SkeletonBlock className="h-4 w-8" />
+                          <Skeleton className="h-8 w-8 rounded-full flex-shrink-0" />
+                          <Skeleton className="h-4 flex-1" />
+                          <Skeleton className="h-4 w-8" />
+                          <Skeleton className="h-4 w-8" />
+                          <Skeleton className="h-4 w-8" />
+                          <Skeleton className="h-4 w-8" />
                         </div>
                       ))}
                     </div>

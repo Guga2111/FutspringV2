@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { toast } from 'sonner'
 import NavBar from '../components/NavBar'
 import { Card, CardContent } from '../components/ui/card'
 import { Button } from '../components/ui/button'
@@ -91,6 +92,7 @@ export default function HomePage() {
           setNextSessions(map)
         })
       })
+      .catch(() => toast.error('Failed to load peladas'))
       .finally(() => setLoading(false))
   }
 

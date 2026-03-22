@@ -10,10 +10,7 @@ import { useAuth } from '../hooks/useAuth'
 import { Button } from '../components/ui/button'
 import { Badge } from '../components/ui/badge'
 import { Avatar, AvatarImage, AvatarFallback } from '../components/ui/avatar'
-
-function SkeletonBlock({ className }: { className: string }) {
-  return <div className={`bg-muted rounded animate-pulse ${className}`} />
-}
+import { Skeleton } from '../components/ui/skeleton'
 
 function StatusBadge({ status }: { status: string }) {
   const colorMap: Record<string, string> = {
@@ -52,14 +49,14 @@ function PlayerAvatar({ player }: { player: PlayerDTO }) {
 function DetailSkeleton() {
   return (
     <div className="container max-w-4xl mx-auto px-4 py-6">
-      <SkeletonBlock className="h-6 w-1/3 mb-2" />
-      <SkeletonBlock className="h-8 w-1/2 mb-3" />
-      <SkeletonBlock className="h-5 w-24 mb-6" />
-      <SkeletonBlock className="h-6 w-40 mb-4" />
+      <Skeleton className="h-6 w-1/3 mb-2" />
+      <Skeleton className="h-8 w-1/2 mb-3" />
+      <Skeleton className="h-5 w-24 mb-6" />
+      <Skeleton className="h-6 w-40 mb-4" />
       {[0, 1, 2].map((i) => (
         <div key={i} className="flex items-center gap-3 mb-3">
-          <SkeletonBlock className="h-10 w-10 rounded-full flex-shrink-0" />
-          <SkeletonBlock className="h-4 w-32" />
+          <Skeleton className="h-10 w-10 rounded-full flex-shrink-0" />
+          <Skeleton className="h-4 w-32" />
         </div>
       ))}
     </div>
@@ -316,7 +313,8 @@ function ResultsModal({ daily, onClose, onSuccess }: ResultsModalProps) {
         <div className="flex items-center justify-between p-4 border-b">
           <h2 className="text-lg font-semibold">Enter Match Results</h2>
           <button
-            className="text-muted-foreground hover:text-foreground text-xl leading-none"
+            aria-label="Close"
+            className="text-muted-foreground hover:text-foreground text-xl leading-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
             onClick={onClose}
           >
             ×
@@ -518,7 +516,8 @@ function FinalizeModal({ daily, onClose, onSuccess }: FinalizeModalProps) {
         <div className="flex items-center justify-between p-4 border-b">
           <h2 className="text-lg font-semibold">Finalize Daily</h2>
           <button
-            className="text-muted-foreground hover:text-foreground text-xl leading-none"
+            aria-label="Close"
+            className="text-muted-foreground hover:text-foreground text-xl leading-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
             onClick={onClose}
           >
             ×
@@ -799,7 +798,7 @@ export default function DailyDetailPage() {
             <div className="mb-6">
               {isCurrentUserConfirmed ? (
                 <button
-                  className="text-sm bg-destructive text-destructive-foreground px-4 py-2 rounded disabled:opacity-50"
+                  className="h-10 text-sm bg-destructive text-destructive-foreground px-4 py-2 rounded disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                   disabled={confirmLoading}
                   onClick={handleDisconfirm}
                 >
