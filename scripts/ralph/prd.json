@@ -345,7 +345,7 @@
         "`mvn compile` passes"
       ],
       "priority": 20,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
@@ -359,7 +359,7 @@
         "No existing components are overwritten or broken"
       ],
       "priority": 21,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {

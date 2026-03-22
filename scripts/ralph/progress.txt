@@ -277,6 +277,17 @@ Started: Sat Mar 21 09:15:01 PDT 2026
   - Existing `findByDaily(Daily daily)` method is unchanged
 ---
 
+## 2026-03-22 - US-020
+- Created `UserMatchHistoryDTO.java` with inner static class `MatchRow` (dailyId, date, peladaId, peladaName, goals, assists, matchesPlayed, wins, result)
+- Added `getMatchHistory(Long userId, String callerEmail)` to `StatsService` annotated `@Transactional(readOnly = true)`; uses `findByUserOrderByDailyDailyDateDesc` from US-018; result computed as "W"/"L"/"—"
+- Added `@GetMapping("/{id}/stats/matches")` to `UserController`; returns 404 if user not found, empty rows array if no sessions
+- Files changed: `UserMatchHistoryDTO.java` (new), `StatsService.java`, `UserController.java`
+- **Learnings for future iterations:**
+  - `@Transactional(readOnly = true)` is essential when accessing lazy-loaded nested relationships (`daily.pelada.name`) — without it a LazyInitializationException would occur
+  - The `findByUserOrderByDailyDailyDateDesc` repository method from US-018 already returns DESC order — no sorting needed in service
+  - No Java runtime available — compilation verified by manual code review only
+---
+
 ## 2026-03-22 - US-019
 - Created `UserStatsTimelineDTO.java` with inner static class `TimelinePoint` (date, goals, assists, wins, matchesPlayed)
 - Added `getTimeline(Long userId, LocalDate from, LocalDate to, String callerEmail)` to `StatsService` — injects `UserDailyStatsRepository`, calls `findByUserAndDateRange`, maps to TimelinePoint list
@@ -288,4 +299,17 @@ Started: Sat Mar 21 09:15:01 PDT 2026
   - `StatsService` needed `UserDailyStatsRepository` injected — Lombok `@RequiredArgsConstructor` handles this automatically when added as a `final` field
   - The JPQL repository query from US-018 returns results already sorted ASC by date — no additional sorting needed in the service layer
   - No Java runtime available — backend compilation verified by manual code review only
+---
+
+## 2026-03-22 - US-021
+- Created `src/components/ui/table.tsx` manually with standard shadcn Table component exports: Table, TableHeader, TableBody, TableFooter, TableHead, TableRow, TableCell, TableCaption
+- Created `src/components/ui/chart.tsx` manually with: ChartContainer (wraps recharts ResponsiveContainer + injects CSS color vars), ChartTooltip (re-export of recharts Tooltip), ChartTooltipContent (styled tooltip), ChartLegend, ChartLegendContent; also exports ChartConfig type
+- recharts ^3.8.0 was already installed — no new packages needed
+- `tsc --noEmit` passes with no errors
+- Files changed: `frontend/src/components/ui/table.tsx` (new), `frontend/src/components/ui/chart.tsx` (new)
+- **Learnings for future iterations:**
+  - recharts 3.x changed `TooltipContentProps` — import it as `import type { TooltipContentProps } from "recharts"` for typed tooltip content
+  - recharts 3.x `TooltipPayload` is `ReadonlyArray<TooltipPayloadEntry>` — payload items use `item.color`, `item.fill`, `item.value`, `item.dataKey`, `item.name`
+  - ChartContainer uses `data-chart` attribute + inline `<style>` tag to inject `--color-{key}` CSS variables from ChartConfig
+  - No browser verification needed for this infrastructure story (no UI changes)
 ---
