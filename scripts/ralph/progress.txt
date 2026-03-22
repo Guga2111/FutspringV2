@@ -326,3 +326,28 @@ Started: Sat Mar 21 09:15:01 PDT 2026
   - ChartContainer uses `data-chart` attribute + inline `<style>` tag to inject `--color-{key}` CSS variables from ChartConfig
   - No browser verification needed for this infrastructure story (no UI changes)
 ---
+
+## 2026-03-22 - US-023
+- Removed `container max-w-2xl mx-auto px-4` from main content wrapper; replaced with `px-6 lg:px-12` for full-width layout
+- Replaced purple gradient inline style fallback on banner div with `bg-muted` class; bg image still uses inline style when present
+- ProfileSkeleton inner wrapper changed from `container max-w-2xl mx-auto px-4` to `px-6 lg:px-12` to match new layout
+- Files changed: frontend/src/pages/ProfilePage.tsx
+- **Learnings for future iterations:**
+  - Banner fallback: `className={...bgUrl ? '' : 'bg-muted'}` + `style={bgUrl ? {...} : undefined}` cleanly handles image vs. no-image without purple gradient
+  - ProfileSkeleton must mirror the main layout's container/padding changes to avoid layout jumps on load
+  - Manual browser verification needed (no browser tools available)
+---
+
+## 2026-03-22 - US-024
+- Replaced `StatCard` (plain div) with `KpiCard` using shadcn `Card`, `CardHeader`, `CardContent`
+- 4 KPI cards: Goals, Assists, Matches Played, Win Rate — Win Rate computed as `Math.round((wins / matchesPlayed) * 100)` with 0% fallback
+- Each card has `border-t-2 border-t-green-500` green top accent
+- Grid changed from `grid-cols-2 sm:grid-cols-4` to `grid-cols-2 lg:grid-cols-4`; ProfileSkeleton grid also updated
+- Old `StatCard` interface and component removed; old Wins count card replaced by Win Rate
+- Files changed: frontend/src/pages/ProfilePage.tsx
+- **Learnings for future iterations:**
+  - shadcn `Card` default has `rounded-lg border` — `border-t-2 border-t-green-500` is sufficient to add the accent (no need to re-specify other border sides)
+  - `KpiCard` accepts `value: string | number` to support both numeric values and the formatted `Win Rate` string with `%`
+  - `CardHeader` default has `p-6`; override with `pb-2 pt-4 px-4` for compact card layout
+  - Manual browser verification needed (no browser tools available)
+---
