@@ -338,6 +338,21 @@ Started: Sat Mar 21 09:15:01 PDT 2026
   - Manual browser verification needed (no browser tools available)
 ---
 
+## 2026-03-22 - US-025
+- Replaced old recharts `BarChart` + Puskas Award History section with configurable area chart
+- `ChartContainer` + recharts `AreaChart` + `Area` — one series at a time based on metric selector
+- Metric selector (Goals/Assists/Wins) and time range selector (7d/1m/3m) using shadcn `Select`
+- `getUserStatsTimeline` called on mount and on `chartRange` change; `timelineLoading` shows shadcn `Skeleton`
+- Empty state: 'No stats recorded in this period.' when `timelinePoints.length === 0`
+- Removed `chartData` variable and recharts `BarChart`, `Bar`, `Legend`, `ResponsiveContainer` imports
+- Files changed: frontend/src/pages/ProfilePage.tsx
+- **Learnings for future iterations:**
+  - `ChartConfig` must be imported as a type (`import type { ChartConfig }`) from the chart component
+  - `satisfies ChartConfig` TypeScript operator used on inline config object for type safety without widening
+  - `ChartContainer` wraps `ResponsiveContainer` internally — do NOT add an extra `ResponsiveContainer`
+  - Manual browser verification needed (no browser tools available)
+---
+
 ## 2026-03-22 - US-024
 - Replaced `StatCard` (plain div) with `KpiCard` using shadcn `Card`, `CardHeader`, `CardContent`
 - 4 KPI cards: Goals, Assists, Matches Played, Win Rate — Win Rate computed as `Math.round((wins / matchesPlayed) * 100)` with 0% fallback
