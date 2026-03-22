@@ -1,6 +1,7 @@
 package com.futspring.backend.service;
 
 import com.futspring.backend.dto.StatsDTO;
+import com.futspring.backend.dto.UserMatchHistoryDTO;
 import com.futspring.backend.dto.UserStatsTimelineDTO;
 import com.futspring.backend.entity.User;
 import com.futspring.backend.entity.UserDailyStats;
@@ -54,6 +55,44 @@ public class StatsService {
 
         return UserStatsTimelineDTO.builder()
                 .points(points)
+                .build();
+    }
+
+    @Transactional(readOnly = true)
+    public UserMatchHistoryDTO getMatchHistory(Long userId, String callerEmail) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "User not found"));
+
+        List<UserDailyStats> statsList = userDailyStatsRepository.findByUserOrderByDailyDailyDateDesc(user);
+
+        List<UserMatchHistoryDTO.MatchRow> rows = statsList.stream()
+                .map(uds -> {
+                    int wins = uds.getWins();
+                    int matchesPlayed = uds.getMatchesPlayed();
+                    String result;
+                    if (wins > 0) {
+                        result = "W";
+                    } else if (matchesPlayed > 0) {
+                        result = "L";
+                    } else {
+                        result = "—";
+                    }
+                    return UserMatchHistoryDTO.MatchRow.builder()
+                            .dailyId(uds.getDaily().getId())
+                            .date(uds.getDaily().getDailyDate())
+                            .peladaId(uds.getDaily().getPelada().getId())
+                            .peladaName(uds.getDaily().getPelada().getName())
+                            .goals(uds.getGoals())
+                            .assists(uds.getAssists())
+                            .matchesPlayed(matchesPlayed)
+                            .wins(wins)
+                            .result(result)
+                            .build();
+                })
+                .collect(Collectors.toList());
+
+        return UserMatchHistoryDTO.builder()
+                .rows(rows)
                 .build();
     }
 }

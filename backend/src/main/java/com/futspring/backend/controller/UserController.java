@@ -3,6 +3,7 @@ package com.futspring.backend.controller;
 import com.futspring.backend.dto.ProfileDTO;
 import com.futspring.backend.dto.StatsDTO;
 import com.futspring.backend.dto.UpdateProfileRequest;
+import com.futspring.backend.dto.UserMatchHistoryDTO;
 import com.futspring.backend.dto.UserResponseDTO;
 import com.futspring.backend.dto.UserStatsTimelineDTO;
 import com.futspring.backend.service.PeladaService;
@@ -47,6 +48,14 @@ public class UserController {
             Authentication authentication) {
         String callerEmail = (String) authentication.getPrincipal();
         return ResponseEntity.ok(statsService.getTimeline(id, from, to, callerEmail));
+    }
+
+    @GetMapping("/{id}/stats/matches")
+    public ResponseEntity<UserMatchHistoryDTO> getUserMatchHistory(
+            @PathVariable Long id,
+            Authentication authentication) {
+        String callerEmail = (String) authentication.getPrincipal();
+        return ResponseEntity.ok(statsService.getMatchHistory(id, callerEmail));
     }
 
     @GetMapping("/{id}")
