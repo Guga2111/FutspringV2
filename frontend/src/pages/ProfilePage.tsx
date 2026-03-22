@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom'
 import { toast } from 'sonner'
 import NavBar from '../components/NavBar'
 import { getUserStats, getUser, updateUser, uploadUserImage, uploadBackgroundImage } from '../api/users'
+import { getPeladaInitials, getPeladaGradient, getFileUrl } from '../lib/utils'
 import { getMyPeladas, getPelada } from '../api/peladas'
 import { useAuth } from '../hooks/useAuth'
 import type { StatsDTO } from '../types/stats'
@@ -43,7 +44,7 @@ function ProfileSkeleton() {
   return (
     <div>
       <SkeletonBlock className="w-full h-[200px]" />
-      <div className="container max-w-2xl mx-auto px-4">
+      <div className="px-6 lg:px-12">
         <div className="flex items-end gap-4 -mt-12 mb-6">
           <SkeletonBlock className="h-24 w-24 rounded-full border-4 border-background" />
           <div className="flex-1 pb-2 space-y-2">
@@ -92,10 +93,10 @@ function EditProfileModal({ profile, onClose, onProfileUpdated }: EditProfileMod
   const [usernameError, setUsernameError] = useState('')
   const [saving, setSaving] = useState(false)
   const [avatarPreview, setAvatarPreview] = useState<string | null>(
-    profile.image ? `/api/v1/files/${profile.image}` : null,
+    profile.image ? getFileUrl(profile.image)! : null,
   )
   const [bgPreview, setBgPreview] = useState<string | null>(
-    profile.backgroundImage ? `/api/v1/files/${profile.backgroundImage}` : null,
+    profile.backgroundImage ? getFileUrl(profile.backgroundImage)! : null,
   )
   const avatarInputRef = useRef<HTMLInputElement>(null)
   const bgInputRef = useRef<HTMLInputElement>(null)
@@ -112,7 +113,7 @@ function EditProfileModal({ profile, onClose, onProfileUpdated }: EditProfileMod
     if (!file) return
     try {
       const updated = await uploadUserImage(profile.id, file)
-      setAvatarPreview(updated.image ? `/api/v1/files/${updated.image}` : null)
+      setAvatarPreview(updated.image ? getFileUrl(updated.image)! : null)
       onProfileUpdated(updated)
     } catch {
       toast.error('Failed to upload avatar')
@@ -125,7 +126,7 @@ function EditProfileModal({ profile, onClose, onProfileUpdated }: EditProfileMod
     if (!file) return
     try {
       const updated = await uploadBackgroundImage(profile.id, file)
-      setBgPreview(updated.backgroundImage ? `/api/v1/files/${updated.backgroundImage}` : null)
+      setBgPreview(updated.backgroundImage ? getFileUrl(updated.backgroundImage)! : null)
       onProfileUpdated(updated)
     } catch {
       toast.error('Failed to upload background image')
@@ -245,13 +246,13 @@ function EditProfileModal({ profile, onClose, onProfileUpdated }: EditProfileMod
             <button
               onClick={handleSave}
               disabled={saving}
-              className="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
+              className="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-full text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
             >
               {saving ? 'Saving…' : 'Save'}
             </button>
             <button
               onClick={onClose}
-              className="flex-1 px-4 py-2 border rounded-md text-sm hover:bg-muted transition-colors"
+              className="flex-1 px-4 py-2 border rounded-full text-sm hover:bg-muted transition-colors"
             >
               Cancel
             </button>
@@ -323,8 +324,8 @@ export default function ProfilePage() {
 
   const isOwnProfile = currentUser?.id === profile.id
   const chartData = [{ name: stats.username, Goals: stats.goals, Assists: stats.assists }]
-  const avatarUrl = profile.image ? `/api/v1/files/${profile.image}` : null
-  const bgUrl = profile.backgroundImage ? `/api/v1/files/${profile.backgroundImage}` : null
+  const avatarUrl = profile.image ? getFileUrl(profile.image)! : null
+  const bgUrl = profile.backgroundImage ? getFileUrl(profile.backgroundImage)! : null
 
   const initials = profile.username
     .split(' ')
@@ -339,15 +340,11 @@ export default function ProfilePage() {
 
       {/* Background banner */}
       <div
-        className="w-full h-[200px] relative"
-        style={
-          bgUrl
-            ? { backgroundImage: `url(${bgUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' }
-            : { background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }
-        }
+        className={`w-full h-[200px] relative ${!bgUrl ? 'bg-muted' : ''}`}
+        style={bgUrl ? { backgroundImage: `url(${bgUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}
       />
 
-      <div className="container max-w-2xl mx-auto px-4">
+      <div className="px-6 lg:px-12">
         {/* Avatar + name row */}
         <div className="flex items-end gap-4 -mt-12 mb-6">
           {avatarUrl ? (
@@ -367,7 +364,7 @@ export default function ProfilePage() {
               {isOwnProfile && (
                 <button
                   onClick={() => setEditOpen(true)}
-                  className="text-sm px-3 py-1 border rounded-md hover:bg-muted transition-colors"
+                  className="text-sm px-3 py-1 border rounded-full hover:bg-muted transition-colors"
                 >
                   Edit Profile
                 </button>
@@ -462,13 +459,15 @@ export default function ProfilePage() {
                 >
                   {pelada.image ? (
                     <img
-                      src={`/api/v1/files/${pelada.image}`}
+                      src={getFileUrl(pelada.image)}
                       alt={pelada.name}
                       className="h-28 w-full object-cover"
                     />
                   ) : (
-                    <div className="h-28 bg-gradient-to-br from-green-500 to-emerald-700 flex items-center justify-center">
-                      <span className="text-3xl">⚽</span>
+                    <div className={`h-28 ${getPeladaGradient(pelada.name)} flex items-center justify-center`}>
+                      <span className="text-2xl font-extrabold text-white tracking-wide select-none">
+                        {getPeladaInitials(pelada.name)}
+                      </span>
                     </div>
                   )}
                   <div className="p-3">
