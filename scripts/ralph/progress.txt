@@ -338,6 +338,21 @@ Started: Sat Mar 21 09:15:01 PDT 2026
   - Manual browser verification needed (no browser tools available)
 ---
 
+## 2026-03-22 - US-027
+- Restructured ProfilePage layout: removed outer `px-6 lg:px-12` wrapper; each of the 4 sections (KPI, Chart, Peladas, Match History) is now `<section className="px-6 lg:px-12 mb-10">`
+- Avatar + name row kept in its own `<div className="px-6 lg:px-12">` outside the sections
+- All 4 section headings changed to `<h2 className="text-xl font-semibold mb-4">` + `<Separator className="mb-6" />`
+- Peladas card links changed from `hover:opacity-90 transition-opacity` to `hover:shadow-md transition-shadow`
+- ProfileSkeleton updated: avatar row div closed early, 4 `<section>` blocks with skeleton heading + separator + content
+- `page-enter` class preserved on outermost `<div>` wrapper
+- Files changed: frontend/src/pages/ProfilePage.tsx
+- **Learnings for future iterations:**
+  - When splitting a single padding wrapper into per-section wrappers, close the avatar div before the sections start
+  - `Separator` from `../components/ui/separator` is a horizontal rule via Radix UI `@radix-ui/react-separator`
+  - For chart sections with heading + controls row, the `<Separator>` goes after the flex row containing both heading and controls
+  - Manual browser verification needed (no browser tools available)
+---
+
 ## 2026-03-22 - US-026
 - Added Match History section below Peladas using shadcn `Table` (Table, TableHeader, TableBody, TableHead, TableRow, TableCell)
 - 6 columns: Date, Pelada (as Link with hover underline), Goals, Assists, Matches, Result
