@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { toast } from 'sonner'
+import { ArrowLeftRight } from 'lucide-react'
 import NavBar from '../components/NavBar'
 import { getDailyDetail, confirmAttendance, disconfirmAttendance, sortTeams, swapPlayers, updateDailyStatus, submitResults, finalizeDaily, uploadChampionImage } from '../api/dailies'
 import type { MatchResultInput } from '../api/dailies'
@@ -8,6 +9,7 @@ import type { DailyDetail, PlayerDTO, TeamDTO } from '../types/daily'
 import { useAuth } from '../hooks/useAuth'
 import { Button } from '../components/ui/button'
 import { Badge } from '../components/ui/badge'
+import { Avatar, AvatarImage, AvatarFallback } from '../components/ui/avatar'
 
 function SkeletonBlock({ className }: { className: string }) {
   return <div className={`bg-muted rounded animate-pulse ${className}`} />
@@ -83,6 +85,13 @@ interface TeamsSectionProps {
   onPlayerClick: (playerId: number, teamId: number) => void
 }
 
+const TEAM_HEADER_COLORS = [
+  'bg-green-100 dark:bg-green-900/30',
+  'bg-blue-100 dark:bg-blue-900/30',
+  'bg-purple-100 dark:bg-purple-900/30',
+  'bg-orange-100 dark:bg-orange-900/30',
+]
+
 function TeamsSection({
   daily,
   sortLoading,
@@ -122,13 +131,13 @@ function TeamsSection({
       )}
       {hasTeams ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {daily.teams.map((team: TeamDTO) => (
-            <div key={team.id} className="border rounded-lg p-4">
-              <div className="flex items-center justify-between mb-2">
+          {daily.teams.map((team: TeamDTO, idx: number) => (
+            <div key={team.id} className="border rounded-lg overflow-hidden">
+              <div className={`px-4 py-2 flex items-center justify-between ${TEAM_HEADER_COLORS[idx % TEAM_HEADER_COLORS.length]}`}>
                 <h3 className="font-semibold">{team.name}</h3>
                 <StarRating stars={team.totalStars} />
               </div>
-              <div className="space-y-1">
+              <div className="p-3 space-y-1">
                 {team.players.map((player: PlayerDTO) => {
                   const isSelected = selectedPlayer?.id === player.id
                   return (
@@ -136,18 +145,26 @@ function TeamsSection({
                       key={player.id}
                       className={`flex items-center gap-2 p-1.5 rounded ${isSelected ? 'bg-primary/10 ring-1 ring-primary' : 'hover:bg-muted'}`}
                     >
-                      <PlayerAvatar player={player} />
+                      <Avatar className="h-8 w-8 flex-shrink-0">
+                        {player.image ? (
+                          <AvatarImage src={`/api/v1/files/${player.image}`} alt={player.username} />
+                        ) : null}
+                        <AvatarFallback className="text-xs font-semibold">
+                          {player.username.slice(0, 2).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium truncate">{player.username}</p>
                       </div>
                       <StarRating stars={player.stars} />
                       {daily.isAdmin && (
                         <button
-                          className={`text-xs px-2 py-0.5 rounded border ${isSelected ? 'bg-primary text-primary-foreground border-primary' : 'border-muted-foreground text-muted-foreground hover:bg-muted'} disabled:opacity-50`}
+                          className={`p-1 rounded border ${isSelected ? 'bg-primary text-primary-foreground border-primary' : 'border-muted-foreground text-muted-foreground hover:bg-muted'} disabled:opacity-50`}
                           disabled={swapLoading}
                           onClick={() => onPlayerClick(player.id, team.id)}
+                          aria-label={isSelected ? 'Cancel swap' : 'Move or swap player'}
                         >
-                          {isSelected ? 'Cancel' : 'Move'}
+                          <ArrowLeftRight className="h-3 w-3" />
                         </button>
                       )}
                     </div>
@@ -910,7 +927,7 @@ export default function DailyDetailPage() {
           {/* Confirmed Players */}
           <section className="mb-8">
             <h2 className="text-lg font-semibold mb-3">
-              Confirmed Players ({daily.confirmedPlayers.length})
+              Confirmed Players ({daily.confirmedPlayers.length} confirmed)
             </h2>
             {daily.confirmedPlayers.length === 0 ? (
               <p className="text-sm text-muted-foreground">No players confirmed yet.</p>
@@ -918,18 +935,28 @@ export default function DailyDetailPage() {
               <div className="space-y-2">
                 {daily.confirmedPlayers.map((player) => (
                   <div key={player.id} className="flex items-center gap-3 p-2 rounded hover:bg-muted">
-                    <PlayerAvatar player={player} />
-                    <div>
-                      <p className="text-sm font-medium">{player.username}</p>
+                    <Avatar className="h-10 w-10 flex-shrink-0">
+                      {player.image ? (
+                        <AvatarImage src={`/api/v1/files/${player.image}`} alt={player.username} />
+                      ) : null}
+                      <AvatarFallback className="text-sm font-semibold">
+                        {player.username.slice(0, 2).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0 flex items-center gap-2 flex-wrap">
+                      <Link
+                        to={`/profile/${player.id}`}
+                        className="text-sm font-medium hover:underline"
+                      >
+                        {player.username}
+                      </Link>
                       {player.position && (
-                        <p className="text-xs text-muted-foreground">{player.position}</p>
+                        <Badge variant="secondary" className="text-xs">
+                          {player.position}
+                        </Badge>
                       )}
                     </div>
-                    <div className="ml-auto text-yellow-400 text-sm">
-                      {Array.from({ length: 5 }, (_, i) => (
-                        <span key={i}>{i < player.stars ? '★' : '☆'}</span>
-                      ))}
-                    </div>
+                    <StarRating stars={player.stars} />
                   </div>
                 ))}
               </div>
