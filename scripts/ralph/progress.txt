@@ -203,3 +203,21 @@ Started: Sat Mar 21 09:15:01 PDT 2026
   - `sortedRanking.map((row, idx) => ...)` — `idx` is the post-sort position, which is correct for medals
   - Manual browser verification needed (no browser tools available)
 ---
+
+## 2026-03-21 - US-015
+- Champion photo moved to top of FINISHED section as full-width hero image (`-mx-4 sm:mx-0 w-full sm:rounded-xl object-cover max-h-80`)
+- Admin upload button/section kept at bottom of finished block (no image shown there, just the upload action)
+- Awards styled as trophy cards with `border-2` and inline `style={{ borderColor: '#FFD700' }}` (gold) / `#C0C0C0` (silver)
+- Medal icons 🥇🥈🥉 added to league table position column (via ternary on `entry.position`)
+- Medal icons added to player stats first column using `idx` from `.map((stat, idx) => ...)`
+- Player stats section collapsed by default: added `playerStatsExpanded` state (false) + toggle button
+- IN_COURSE CTA card added when `daily.status === 'IN_COURSE' && daily.matches.length === 0`:
+  - Admin: prominent card with `animate-pulse` absolute border overlay (green) + "Enter Results" gradient button
+  - Non-admin: simple "Session is live" card with pulsing dot
+- Files changed: frontend/src/pages/DailyDetailPage.tsx
+- **Learnings for future iterations:**
+  - Pulsing border effect: use `absolute inset-0 rounded-xl border-2 border-green-500 animate-pulse pointer-events-none` overlay on a `relative` container — avoids pulsing content opacity
+  - For inline color values outside Tailwind palette (like `#FFD700`, `#C0C0C0`), use `style={{ borderColor: '...' }}` prop
+  - Champion hero section uses negative horizontal margin `-mx-4 sm:mx-0` for full-bleed effect on mobile within a padded container
+  - Manual browser verification needed (no browser tools available)
+---
