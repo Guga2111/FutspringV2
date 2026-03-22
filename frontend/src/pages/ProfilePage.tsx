@@ -10,6 +10,7 @@ import type { StatsDTO } from '../types/stats'
 import type { ProfileDTO } from '../types/user'
 import type { PeladaResponse } from '../types/pelada'
 import { Skeleton } from '../components/ui/skeleton'
+import { Card, CardHeader, CardContent } from '../components/ui/card'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 
 const POSITION_COLORS: Record<string, string> = {
@@ -52,7 +53,7 @@ function ProfileSkeleton() {
             <SkeletonBlock className="h-5 w-24" />
           </div>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           {[0, 1, 2, 3].map((i) => (
             <SkeletonBlock key={i} className="h-24 w-full" />
           ))}
@@ -64,17 +65,21 @@ function ProfileSkeleton() {
   )
 }
 
-interface StatCardProps {
+interface KpiCardProps {
   label: string
-  value: number
+  value: string | number
 }
 
-function StatCard({ label, value }: StatCardProps) {
+function KpiCard({ label, value }: KpiCardProps) {
   return (
-    <div className="border border-t-2 border-t-green-500 rounded-lg p-4 flex flex-col items-center gap-1">
-      <span className="text-2xl font-bold">{value}</span>
-      <span className="text-sm text-muted-foreground">{label}</span>
-    </div>
+    <Card className="border-t-2 border-t-green-500">
+      <CardHeader className="pb-2 pt-4 px-4">
+        <span className="text-sm text-muted-foreground">{label}</span>
+      </CardHeader>
+      <CardContent className="px-4 pb-4">
+        <span className="text-2xl font-bold">{value}</span>
+      </CardContent>
+    </Card>
   )
 }
 
@@ -383,12 +388,15 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* Stats cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
-          <StatCard label="Goals" value={stats.goals} />
-          <StatCard label="Assists" value={stats.assists} />
-          <StatCard label="Matches" value={stats.matchesPlayed} />
-          <StatCard label="Wins" value={stats.wins} />
+        {/* KPI cards */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <KpiCard label="Goals" value={stats.goals} />
+          <KpiCard label="Assists" value={stats.assists} />
+          <KpiCard label="Matches Played" value={stats.matchesPlayed} />
+          <KpiCard
+            label="Win Rate"
+            value={`${stats.matchesPlayed > 0 ? Math.round((stats.wins / stats.matchesPlayed) * 100) : 0}%`}
+          />
         </div>
 
         {/* Goals & Assists chart */}
