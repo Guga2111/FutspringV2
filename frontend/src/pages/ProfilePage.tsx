@@ -11,7 +11,12 @@ import type { ProfileDTO } from '../types/user'
 import type { PeladaResponse } from '../types/pelada'
 import { Skeleton } from '../components/ui/skeleton'
 import { Card, CardHeader, CardContent } from '../components/ui/card'
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select'
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from '../components/ui/chart'
+import type { ChartConfig } from '../components/ui/chart'
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid } from 'recharts'
+import { getUserStatsTimeline } from '../api/users'
+import type { TimelinePoint } from '../types/stats'
 
 const POSITION_COLORS: Record<string, string> = {
   GOALKEEPER: 'bg-green-100 text-green-800',
@@ -277,6 +282,10 @@ export default function ProfilePage() {
   const [editOpen, setEditOpen] = useState(false)
   const [profilePeladas, setProfilePeladas] = useState<PeladaResponse[]>([])
   const [peladasLoading, setPeladasLoading] = useState(true)
+  const [chartMetric, setChartMetric] = useState<'goals' | 'assists' | 'wins'>('goals')
+  const [chartRange, setChartRange] = useState<'7d' | '1m' | '3m'>('1m')
+  const [timelinePoints, setTimelinePoints] = useState<TimelinePoint[]>([])
+  const [timelineLoading, setTimelineLoading] = useState(true)
 
   useEffect(() => {
     if (!id) return
@@ -307,6 +316,23 @@ export default function ProfilePage() {
       .finally(() => setPeladasLoading(false))
   }, [id])
 
+  useEffect(() => {
+    if (!id) return
+    const userId = Number(id)
+    setTimelineLoading(true)
+    const today = new Date()
+    const to = today.toISOString().slice(0, 10)
+    const fromDate = new Date(today)
+    if (chartRange === '7d') fromDate.setDate(fromDate.getDate() - 7)
+    else if (chartRange === '1m') fromDate.setMonth(fromDate.getMonth() - 1)
+    else fromDate.setMonth(fromDate.getMonth() - 3)
+    const from = fromDate.toISOString().slice(0, 10)
+    getUserStatsTimeline(userId, from, to)
+      .then((data) => setTimelinePoints(data.points))
+      .catch(() => toast.error('Failed to load stats timeline'))
+      .finally(() => setTimelineLoading(false))
+  }, [id, chartRange])
+
   if (loading) {
     return (
       <>
@@ -328,7 +354,6 @@ export default function ProfilePage() {
   }
 
   const isOwnProfile = currentUser?.id === profile.id
-  const chartData = [{ name: stats.username, Goals: stats.goals, Assists: stats.assists }]
   const avatarUrl = profile.image ? getFileUrl(profile.image)! : null
   const bgUrl = profile.backgroundImage ? getFileUrl(profile.backgroundImage)! : null
 
@@ -399,45 +424,47 @@ export default function ProfilePage() {
           />
         </div>
 
-        {/* Goals & Assists chart */}
+        {/* Stats chart */}
         <div className="border rounded-lg p-4 mb-8">
-          <h2 className="text-lg font-semibold mb-4">Goals & Assists</h2>
-          {stats.goals === 0 && stats.assists === 0 ? (
-            <p className="text-muted-foreground text-sm">No stats recorded yet.</p>
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+            <h2 className="text-lg font-semibold">Stats Over Time</h2>
+            <div className="flex gap-2">
+              <Select value={chartMetric} onValueChange={(v) => setChartMetric(v as typeof chartMetric)}>
+                <SelectTrigger className="h-8 w-32 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="goals">Goals</SelectItem>
+                  <SelectItem value="assists">Assists</SelectItem>
+                  <SelectItem value="wins">Wins</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={chartRange} onValueChange={(v) => setChartRange(v as typeof chartRange)}>
+                <SelectTrigger className="h-8 w-36 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="7d">Last 7 days</SelectItem>
+                  <SelectItem value="1m">Last 1 month</SelectItem>
+                  <SelectItem value="3m">Last 3 months</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          {timelineLoading ? (
+            <Skeleton className="h-[200px] w-full" />
+          ) : timelinePoints.length === 0 ? (
+            <p className="text-muted-foreground text-sm">No stats recorded in this period.</p>
           ) : (
-            <ResponsiveContainer width="100%" height={200}>
-              <BarChart data={chartData}>
+            <ChartContainer config={{ [chartMetric]: { label: chartMetric.charAt(0).toUpperCase() + chartMetric.slice(1), color: '#22c55e' } } satisfies ChartConfig} className="h-[200px]">
+              <AreaChart data={timelinePoints}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis allowDecimals={false} />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="Goals" fill="#3b82f6" />
-                <Bar dataKey="Assists" fill="#22c55e" />
-              </BarChart>
-            </ResponsiveContainer>
-          )}
-        </div>
-
-        {/* Puskas Award History */}
-        <div className="border rounded-lg p-4 mb-8">
-          <h2 className="text-lg font-semibold mb-4">Puskas Award History</h2>
-          {stats.puskasDates.length === 0 ? (
-            <p className="text-muted-foreground text-sm">No Puskas wins yet.</p>
-          ) : (
-            <ul className="space-y-2">
-              {[...stats.puskasDates]
-                .sort((a, b) => (a > b ? -1 : 1))
-                .map((dateStr, i) => (
-                  <li key={i} className="text-sm">
-                    {new Date(`${dateStr}T12:00:00`).toLocaleDateString('en-US', {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric',
-                    })}
-                  </li>
-                ))}
-            </ul>
+                <XAxis dataKey="date" tick={{ fontSize: 11 }} />
+                <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
+                <ChartTooltip content={<ChartTooltipContent />} />
+                <Area type="monotone" dataKey={chartMetric} stroke="#22c55e" fill="#bbf7d0" strokeWidth={2} />
+              </AreaChart>
+            </ChartContainer>
           )}
         </div>
 
