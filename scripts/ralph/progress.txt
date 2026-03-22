@@ -338,6 +338,20 @@ Started: Sat Mar 21 09:15:01 PDT 2026
   - Manual browser verification needed (no browser tools available)
 ---
 
+## 2026-03-22 - US-026
+- Added Match History section below Peladas using shadcn `Table` (Table, TableHeader, TableBody, TableHead, TableRow, TableCell)
+- 6 columns: Date, Pelada (as Link with hover underline), Goals, Assists, Matches, Result
+- Result column uses shadcn `Badge`: `default` variant for W, `secondary` for L, `outline` for —
+- 5 skeleton rows (6 cells each with `Skeleton`) shown while loading
+- Empty state: 'No match history yet.' when `matchHistory.length === 0`
+- `getUserMatchHistory` fetched on mount via `useEffect([id])`
+- Files changed: frontend/src/pages/ProfilePage.tsx
+- **Learnings for future iterations:**
+  - shadcn `Table` wraps `<table>` in a `<div className="relative w-full overflow-auto">` — no need for extra overflow wrapper
+  - `Badge` variant `"default"` gives colored background; `"secondary"` gives muted background; `"outline"` gives outlined style
+  - Manual browser verification needed (no browser tools available)
+---
+
 ## 2026-03-22 - US-025
 - Replaced old recharts `BarChart` + Puskas Award History section with configurable area chart
 - `ChartContainer` + recharts `AreaChart` + `Area` — one series at a time based on metric selector
