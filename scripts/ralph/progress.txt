@@ -5,6 +5,8 @@
 - When adding a new service dependency, update ALL test files that `new` the affected service class
 - `@Value("${app.uploads.dir:uploads}")` fields cannot coexist with `@RequiredArgsConstructor` if you want them injected — use `@Value` on a non-final field instead, or move to a config bean
 - File upload logic uses: 5MB size check → MIME check (jpeg/png/webp) → UUID filename → Files.copy → return filename; IOException → AppException(500, "Failed to store file")
+- UserAuthenticationHelper lives in `com.futspring.backend.helper` and delegates user lookup to avoid repeating the findByEmail pattern; services that removed their userRepository dependency (ChatService, RankingService, AwardsService) drop the repo from their imports but DailyService/PeladaService retain it for other uses
+- Tests that check user-not-found now mock `userAuthHelper.getAuthenticatedUser(email)` to throw `AppException(NOT_FOUND)` instead of returning `Optional.empty()` from userRepository — and assert NOT_FOUND (not UNAUTHORIZED)
 
 ---
 
@@ -24,4 +26,22 @@
   - The constructor arg order matters: @RequiredArgsConstructor generates constructor in field declaration order — FileUploadService was added first in DailyService so it's the first arg
   - PeladaServiceTest and UserServiceProfileTest also direct-instantiate their services, so both needed to be updated in addition to PeladaServiceImageTest and UserServiceTest
   - When refactoring file upload tests, the old tests verified real file I/O via @TempDir; after mocking FileUploadService, the tests now verify the mock was called (verify()) instead of file existence (assertThat(path).exists())
+---
+
+## 2026-04-10 - US-002
+- Created `UserAuthenticationHelper` @Component at `backend/src/main/java/com/futspring/backend/helper/UserAuthenticationHelper.java`
+  - `getAuthenticatedUser(String email): User` — delegates to `userRepository.findByEmail(email).orElseThrow(AppException(NOT_FOUND, "User not found"))`
+- Updated DailyService: added `UserAuthenticationHelper` as 2nd constructor field; replaced 17 findByEmail+orElseThrow calls; kept `userRepository` for `findAllById` in `populateFromMessage`
+- Updated PeladaService: added `UserAuthenticationHelper` as 4th constructor field; replaced 9 findByEmail+orElseThrow calls; kept `userRepository` for `findById` and `searchByUsernameOrEmail`
+- Updated ChatService: replaced `UserRepository` with `UserAuthenticationHelper` entirely (only used for findByEmail)
+- Updated RankingService: replaced `UserRepository` with `UserAuthenticationHelper` entirely
+- Updated AwardsService: replaced `UserRepository` with `UserAuthenticationHelper` entirely
+- Updated test files: DailyServiceTest, PeladaServiceTest, PeladaServiceImageTest, ChatServiceTest, RankingServiceTest, AwardsServiceTest
+  - Added `@Mock UserAuthenticationHelper userAuthHelper`; updated constructor calls; replaced userRepository.findByEmail stubs with userAuthHelper.getAuthenticatedUser stubs; updated "callerNotFound" assertions from UNAUTHORIZED to NOT_FOUND
+- Files changed: UserAuthenticationHelper.java (new), DailyService.java, PeladaService.java, ChatService.java, RankingService.java, AwardsService.java + 6 test files + prd.json + progress.txt
+- **Learnings for future iterations:**
+  - `@RequiredArgsConstructor` constructor arg order follows field declaration order — add new helper field in the position that matches where you insert it in tests
+  - When a service only uses `userRepository.findByEmail` (ChatService, RankingService, AwardsService), the whole userRepository dependency can be dropped after extracting to the helper
+  - Test stubs for "user not found" now use `.thenThrow(new AppException(HttpStatus.NOT_FOUND, ...))` directly on the helper mock, not `.thenReturn(Optional.empty())` on userRepository
+  - Java is not installed in this environment — cannot run ./mvnw compile; correctness verified by manual review of all changed files
 ---
