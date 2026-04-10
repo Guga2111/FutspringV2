@@ -1,4 +1,6 @@
 ## Codebase Patterns
+- When extracting a service, the delegation stub in the original service must @Transactional-annotate wrapper methods and call the sub-service; the original service's tests become delegation tests (mock sub-service → verify call), and a new test file covers the real logic
+- `DailyAttendanceService` is in the same package as `DailyService` so clearAttendees (package-private) is accessible to future orchestration code in that package
 - Backend services use `@Service` + `@RequiredArgsConstructor` + `private final` constructor injection (no @Autowired field injection)
 - AppException(HttpStatus, message) is the standard error pattern
 - Tests use `new ServiceClass(repo1, repo2, ...)` with Mockito `@Mock` fields — no Spring context
@@ -44,4 +46,24 @@
   - When a service only uses `userRepository.findByEmail` (ChatService, RankingService, AwardsService), the whole userRepository dependency can be dropped after extracting to the helper
   - Test stubs for "user not found" now use `.thenThrow(new AppException(HttpStatus.NOT_FOUND, ...))` directly on the helper mock, not `.thenReturn(Optional.empty())` on userRepository
   - Java is not installed in this environment — cannot run ./mvnw compile; correctness verified by manual review of all changed files
+---
+
+## 2026-04-10 - US-003
+- Created `DailyAttendanceService` @Service at `backend/src/main/java/com/futspring/backend/service/DailyAttendanceService.java`
+  - `confirmAttendance(Long id, String email): DailyListItemDTO` — membership check, locked-status guard, duplicate guard, adds player
+  - `disconfirmAttendance(Long id, String email): DailyListItemDTO` — locked-status guard, not-confirmed guard, removes player
+  - `adminConfirmAttendance(Long dailyId, Long targetUserId, String email): DailyListItemDTO` — admin check, target lookup/member check, locked guard, conflict guard
+  - `adminDisconfirmAttendance(Long dailyId, Long targetUserId, String email): DailyListItemDTO` — admin check, target lookup/member check, locked guard, not-confirmed guard
+  - `clearAttendees(Daily daily): void` — package-private, clears confirmed players and saves
+  - Dependencies: UserAuthenticationHelper, DailyRepository, UserRepository
+- Updated DailyService: added `DailyAttendanceService dailyAttendanceService` as 3rd field (after userAuthHelper); replaced 4 attendance methods with 1-line delegation stubs; LOCKED_STATUSES kept (still used by sortTeams/swapPlayers)
+- Updated DailyServiceTest: added `@Mock DailyAttendanceService`; updated constructor call (14 args); replaced 13 attendance-logic tests with 4 delegation tests; added missing `ReflectionTestUtils` import
+- Created DailyAttendanceServiceTest: 21 unit tests covering all paths for all 5 methods
+- Files changed: DailyAttendanceService.java (new), DailyService.java, DailyServiceTest.java, DailyAttendanceServiceTest.java (new), prd.json, progress.txt
+- **Learnings for future iterations:**
+  - When extracting a service, the original service's @Transactional wrapper delegates with a single return statement; the original tests become delegation tests and a new test file covers the real logic
+  - `DailyAttendanceService` has its own `LOCKED_STATUSES` constant (duplicated from DailyService); DailyService keeps its copy for sortTeams/swapPlayers (US-004 will move those)
+  - The `clearAttendees` method is package-private (no modifier) — accessible within `com.futspring.backend.service` package for future orchestration
+  - DailyServiceTest was missing `import org.springframework.test.util.ReflectionTestUtils` — added it as part of this update
+  - Java is not installed in this environment — cannot run ./mvnw compile; correctness verified by manual review
 ---
