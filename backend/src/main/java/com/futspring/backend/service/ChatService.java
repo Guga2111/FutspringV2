@@ -5,9 +5,9 @@ import com.futspring.backend.entity.Message;
 import com.futspring.backend.entity.Pelada;
 import com.futspring.backend.entity.User;
 import com.futspring.backend.exception.AppException;
+import com.futspring.backend.helper.UserAuthenticationHelper;
 import com.futspring.backend.repository.MessageRepository;
 import com.futspring.backend.repository.PeladaRepository;
-import com.futspring.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
@@ -24,15 +24,14 @@ public class ChatService {
 
     private final MessageRepository messageRepository;
     private final PeladaRepository peladaRepository;
-    private final UserRepository userRepository;
+    private final UserAuthenticationHelper userAuthHelper;
 
     @Transactional
     public MessageDTO saveAndBroadcast(Long peladaId, String senderEmail, String content) {
         Pelada pelada = peladaRepository.findById(peladaId)
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Pelada not found"));
 
-        User sender = userRepository.findByEmail(senderEmail)
-                .orElseThrow(() -> new AppException(HttpStatus.UNAUTHORIZED, "User not found"));
+        User sender = userAuthHelper.getAuthenticatedUser(senderEmail);
 
         if (!pelada.getMembers().contains(sender)) {
             throw new AppException(HttpStatus.FORBIDDEN, "Not a member of this pelada");
@@ -61,8 +60,7 @@ public class ChatService {
         Pelada pelada = peladaRepository.findById(peladaId)
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Pelada not found"));
 
-        User caller = userRepository.findByEmail(callerEmail)
-                .orElseThrow(() -> new AppException(HttpStatus.UNAUTHORIZED, "User not found"));
+        User caller = userAuthHelper.getAuthenticatedUser(callerEmail);
 
         if (!pelada.getMembers().contains(caller)) {
             throw new AppException(HttpStatus.FORBIDDEN, "Not a member of this pelada");

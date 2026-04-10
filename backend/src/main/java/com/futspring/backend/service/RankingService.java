@@ -5,9 +5,9 @@ import com.futspring.backend.entity.Pelada;
 import com.futspring.backend.entity.Ranking;
 import com.futspring.backend.entity.User;
 import com.futspring.backend.exception.AppException;
+import com.futspring.backend.helper.UserAuthenticationHelper;
 import com.futspring.backend.repository.PeladaRepository;
 import com.futspring.backend.repository.RankingRepository;
-import com.futspring.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -22,13 +22,12 @@ import java.util.stream.Collectors;
 public class RankingService {
 
     private final PeladaRepository peladaRepository;
-    private final UserRepository userRepository;
+    private final UserAuthenticationHelper userAuthHelper;
     private final RankingRepository rankingRepository;
 
     @Transactional(readOnly = true)
     public List<RankingDTO> getRanking(Long peladaId, String callerEmail) {
-        User caller = userRepository.findByEmail(callerEmail)
-                .orElseThrow(() -> new AppException(HttpStatus.UNAUTHORIZED, "User not found"));
+        User caller = userAuthHelper.getAuthenticatedUser(callerEmail);
 
         Pelada pelada = peladaRepository.findById(peladaId)
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Pelada not found"));

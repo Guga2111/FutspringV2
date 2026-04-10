@@ -4,6 +4,7 @@ import com.futspring.backend.dto.PeladaResponseDTO;
 import com.futspring.backend.entity.Pelada;
 import com.futspring.backend.entity.User;
 import com.futspring.backend.exception.AppException;
+import com.futspring.backend.helper.UserAuthenticationHelper;
 import com.futspring.backend.repository.PeladaRepository;
 import com.futspring.backend.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -33,6 +34,9 @@ class PeladaServiceImageTest {
     @Mock
     FileUploadService fileUploadService;
 
+    @Mock
+    UserAuthenticationHelper userAuthHelper;
+
     PeladaService peladaService;
 
     User admin;
@@ -41,7 +45,7 @@ class PeladaServiceImageTest {
 
     @BeforeEach
     void setUp() {
-        peladaService = new PeladaService(peladaRepository, userRepository, fileUploadService);
+        peladaService = new PeladaService(peladaRepository, userRepository, fileUploadService, userAuthHelper);
 
         admin = User.builder().id(1L).email("admin@example.com").username("admin").password("hash").build();
         member = User.builder().id(2L).email("member@example.com").username("member").password("hash").build();
@@ -62,7 +66,7 @@ class PeladaServiceImageTest {
 
     @Test
     void uploadPeladaImage_success() {
-        when(userRepository.findByEmail("admin@example.com")).thenReturn(Optional.of(admin));
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
         when(peladaRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         when(fileUploadService.uploadImage(any())).thenReturn("new-cover.jpg");
@@ -77,7 +81,7 @@ class PeladaServiceImageTest {
 
     @Test
     void uploadPeladaImage_nonAdminForbidden() {
-        when(userRepository.findByEmail("member@example.com")).thenReturn(Optional.of(member));
+        when(userAuthHelper.getAuthenticatedUser("member@example.com")).thenReturn(member);
         when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
 
         MockMultipartFile file = new MockMultipartFile("file", "cover.jpg", "image/jpeg", new byte[100]);
@@ -89,7 +93,7 @@ class PeladaServiceImageTest {
 
     @Test
     void uploadPeladaImage_peladaNotFound() {
-        when(userRepository.findByEmail("admin@example.com")).thenReturn(Optional.of(admin));
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(peladaRepository.findById(99L)).thenReturn(Optional.empty());
 
         MockMultipartFile file = new MockMultipartFile("file", "cover.jpg", "image/jpeg", new byte[100]);
@@ -101,7 +105,7 @@ class PeladaServiceImageTest {
 
     @Test
     void uploadPeladaImage_fileTooLarge() {
-        when(userRepository.findByEmail("admin@example.com")).thenReturn(Optional.of(admin));
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
         when(fileUploadService.uploadImage(any())).thenThrow(new AppException(HttpStatus.BAD_REQUEST, "File size exceeds 5MB limit"));
 
@@ -115,7 +119,7 @@ class PeladaServiceImageTest {
 
     @Test
     void uploadPeladaImage_invalidMimeType() {
-        when(userRepository.findByEmail("admin@example.com")).thenReturn(Optional.of(admin));
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
         when(fileUploadService.uploadImage(any())).thenThrow(new AppException(HttpStatus.BAD_REQUEST, "Only JPEG, PNG, and WebP images are allowed"));
 
@@ -130,7 +134,7 @@ class PeladaServiceImageTest {
     void uploadPeladaImage_deletesOldImage() {
         pelada.setImage("old-cover.jpg");
 
-        when(userRepository.findByEmail("admin@example.com")).thenReturn(Optional.of(admin));
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
         when(peladaRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         when(fileUploadService.uploadImage(any())).thenReturn("new-cover.png");

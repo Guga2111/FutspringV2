@@ -8,6 +8,7 @@ import com.futspring.backend.dto.UserResponseDTO;
 import com.futspring.backend.entity.Pelada;
 import com.futspring.backend.entity.User;
 import com.futspring.backend.exception.AppException;
+import com.futspring.backend.helper.UserAuthenticationHelper;
 import com.futspring.backend.repository.PeladaRepository;
 import com.futspring.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -26,11 +27,11 @@ public class PeladaService {
     private final PeladaRepository peladaRepository;
     private final UserRepository userRepository;
     private final FileUploadService fileUploadService;
+    private final UserAuthenticationHelper userAuthHelper;
 
     @Transactional
     public PeladaResponseDTO createPelada(CreatePeladaRequestDTO request, String currentUserEmail) {
-        User user = userRepository.findByEmail(currentUserEmail)
-                .orElseThrow(() -> new AppException(HttpStatus.UNAUTHORIZED, "User not found"));
+        User user = userAuthHelper.getAuthenticatedUser(currentUserEmail);
 
         Pelada pelada = Pelada.builder()
                 .name(request.getName())
@@ -54,8 +55,7 @@ public class PeladaService {
 
     @Transactional(readOnly = true)
     public List<PeladaResponseDTO> getMyPeladas(String currentUserEmail) {
-        User user = userRepository.findByEmail(currentUserEmail)
-                .orElseThrow(() -> new AppException(HttpStatus.UNAUTHORIZED, "User not found"));
+        User user = userAuthHelper.getAuthenticatedUser(currentUserEmail);
 
         return peladaRepository.findByMembersContaining(user).stream()
                 .map(PeladaResponseDTO::from)
@@ -64,8 +64,7 @@ public class PeladaService {
 
     @Transactional(readOnly = true)
     public PeladaDetailResponseDTO getPeladaDetail(Long id, String currentUserEmail) {
-        User user = userRepository.findByEmail(currentUserEmail)
-                .orElseThrow(() -> new AppException(HttpStatus.UNAUTHORIZED, "User not found"));
+        User user = userAuthHelper.getAuthenticatedUser(currentUserEmail);
 
         Pelada pelada = peladaRepository.findById(id)
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Pelada not found"));
@@ -79,8 +78,7 @@ public class PeladaService {
 
     @Transactional
     public void addPlayer(Long peladaId, Long targetUserId, String currentUserEmail) {
-        User caller = userRepository.findByEmail(currentUserEmail)
-                .orElseThrow(() -> new AppException(HttpStatus.UNAUTHORIZED, "User not found"));
+        User caller = userAuthHelper.getAuthenticatedUser(currentUserEmail);
 
         Pelada pelada = peladaRepository.findById(peladaId)
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Pelada not found"));
@@ -102,8 +100,7 @@ public class PeladaService {
 
     @Transactional
     public void removePlayer(Long peladaId, Long targetUserId, String currentUserEmail) {
-        User caller = userRepository.findByEmail(currentUserEmail)
-                .orElseThrow(() -> new AppException(HttpStatus.UNAUTHORIZED, "User not found"));
+        User caller = userAuthHelper.getAuthenticatedUser(currentUserEmail);
 
         Pelada pelada = peladaRepository.findById(peladaId)
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Pelada not found"));
@@ -126,8 +123,7 @@ public class PeladaService {
 
     @Transactional
     public void setAdmin(Long peladaId, Long targetUserId, boolean isAdmin, String currentUserEmail) {
-        User caller = userRepository.findByEmail(currentUserEmail)
-                .orElseThrow(() -> new AppException(HttpStatus.UNAUTHORIZED, "User not found"));
+        User caller = userAuthHelper.getAuthenticatedUser(currentUserEmail);
 
         Pelada pelada = peladaRepository.findById(peladaId)
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Pelada not found"));
@@ -161,8 +157,7 @@ public class PeladaService {
 
     @Transactional
     public PeladaResponseDTO updatePelada(Long peladaId, UpdatePeladaRequestDTO request, String currentUserEmail) {
-        User caller = userRepository.findByEmail(currentUserEmail)
-                .orElseThrow(() -> new AppException(HttpStatus.UNAUTHORIZED, "User not found"));
+        User caller = userAuthHelper.getAuthenticatedUser(currentUserEmail);
 
         Pelada pelada = peladaRepository.findById(peladaId)
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Pelada not found"));
@@ -184,8 +179,7 @@ public class PeladaService {
 
     @Transactional
     public void deletePelada(Long peladaId, String currentUserEmail) {
-        User caller = userRepository.findByEmail(currentUserEmail)
-                .orElseThrow(() -> new AppException(HttpStatus.UNAUTHORIZED, "User not found"));
+        User caller = userAuthHelper.getAuthenticatedUser(currentUserEmail);
 
         Pelada pelada = peladaRepository.findById(peladaId)
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Pelada not found"));
@@ -201,8 +195,7 @@ public class PeladaService {
 
     @Transactional
     public PeladaResponseDTO uploadPeladaImage(Long peladaId, MultipartFile file, String currentUserEmail) {
-        User caller = userRepository.findByEmail(currentUserEmail)
-                .orElseThrow(() -> new AppException(HttpStatus.UNAUTHORIZED, "User not found"));
+        User caller = userAuthHelper.getAuthenticatedUser(currentUserEmail);
 
         Pelada pelada = peladaRepository.findById(peladaId)
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Pelada not found"));

@@ -5,6 +5,7 @@ import com.futspring.backend.dto.DailyDetailDTO;
 import com.futspring.backend.dto.DailyListItemDTO;
 import com.futspring.backend.entity.*;
 import com.futspring.backend.exception.AppException;
+import com.futspring.backend.helper.UserAuthenticationHelper;
 import com.futspring.backend.repository.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -24,6 +25,7 @@ import static org.mockito.Mockito.*;
 class DailyServiceTest {
 
     @Mock FileUploadService fileUploadService;
+    @Mock UserAuthenticationHelper userAuthHelper;
     @Mock DailyRepository dailyRepository;
     @Mock PeladaRepository peladaRepository;
     @Mock UserRepository userRepository;
@@ -47,7 +49,7 @@ class DailyServiceTest {
     @BeforeEach
     void setUp() {
         dailyService = new DailyService(
-                fileUploadService,
+                fileUploadService, userAuthHelper,
                 dailyRepository, peladaRepository, userRepository, teamRepository,
                 matchRepository, playerMatchStatRepository, userDailyStatsRepository,
                 leagueTableEntryRepository, dailyAwardRepository, statsRepository, rankingRepository);
@@ -83,7 +85,7 @@ class DailyServiceTest {
 
     @Test
     void createDaily_success_returnsDTO() {
-        when(userRepository.findByEmail("admin@example.com")).thenReturn(Optional.of(admin));
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
         when(dailyRepository.save(any(Daily.class))).thenAnswer(inv -> {
             Daily d = inv.getArgument(0);
@@ -102,7 +104,7 @@ class DailyServiceTest {
 
     @Test
     void createDaily_callerNotFound_throwsUnauthorized() {
-        when(userRepository.findByEmail("ghost@example.com")).thenReturn(Optional.empty());
+        when(userAuthHelper.getAuthenticatedUser("ghost@example.com")).thenThrow(new AppException(HttpStatus.NOT_FOUND, "User not found"));
 
         CreateDailyRequestDTO req = new CreateDailyRequestDTO();
         req.setDailyDate(LocalDate.now().plusDays(7));
@@ -110,12 +112,12 @@ class DailyServiceTest {
 
         assertThatThrownBy(() -> dailyService.createDaily(10L, req, "ghost@example.com"))
                 .isInstanceOf(AppException.class)
-                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.UNAUTHORIZED));
+                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.NOT_FOUND));
     }
 
     @Test
     void createDaily_peladaNotFound_throwsNotFound() {
-        when(userRepository.findByEmail("admin@example.com")).thenReturn(Optional.of(admin));
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(peladaRepository.findById(999L)).thenReturn(Optional.empty());
 
         CreateDailyRequestDTO req = new CreateDailyRequestDTO();
@@ -129,7 +131,7 @@ class DailyServiceTest {
 
     @Test
     void createDaily_callerNotAdmin_throwsForbidden() {
-        when(userRepository.findByEmail("member@example.com")).thenReturn(Optional.of(member));
+        when(userAuthHelper.getAuthenticatedUser("member@example.com")).thenReturn(member);
         when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
 
         CreateDailyRequestDTO req = new CreateDailyRequestDTO();
@@ -145,7 +147,7 @@ class DailyServiceTest {
 
     @Test
     void getDailiesForPelada_success_returnsList() {
-        when(userRepository.findByEmail("member@example.com")).thenReturn(Optional.of(member));
+        when(userAuthHelper.getAuthenticatedUser("member@example.com")).thenReturn(member);
         when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
         when(dailyRepository.findByPeladaOrderByDailyDateDesc(pelada)).thenReturn(List.of(scheduledDaily));
 
@@ -156,16 +158,16 @@ class DailyServiceTest {
 
     @Test
     void getDailiesForPelada_callerNotFound_throwsUnauthorized() {
-        when(userRepository.findByEmail("ghost@example.com")).thenReturn(Optional.empty());
+        when(userAuthHelper.getAuthenticatedUser("ghost@example.com")).thenThrow(new AppException(HttpStatus.NOT_FOUND, "User not found"));
 
         assertThatThrownBy(() -> dailyService.getDailiesForPelada(10L, "ghost@example.com"))
                 .isInstanceOf(AppException.class)
-                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.UNAUTHORIZED));
+                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.NOT_FOUND));
     }
 
     @Test
     void getDailiesForPelada_peladaNotFound_throwsNotFound() {
-        when(userRepository.findByEmail("admin@example.com")).thenReturn(Optional.of(admin));
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(peladaRepository.findById(999L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> dailyService.getDailiesForPelada(999L, "admin@example.com"))
@@ -175,7 +177,7 @@ class DailyServiceTest {
 
     @Test
     void getDailiesForPelada_callerNotMember_throwsForbidden() {
-        when(userRepository.findByEmail("out@example.com")).thenReturn(Optional.of(outsider));
+        when(userAuthHelper.getAuthenticatedUser("out@example.com")).thenReturn(outsider);
         when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
 
         assertThatThrownBy(() -> dailyService.getDailiesForPelada(10L, "out@example.com"))
@@ -190,7 +192,7 @@ class DailyServiceTest {
         Daily newer = Daily.builder().id(2L).pelada(pelada).dailyDate(LocalDate.of(2024, 3, 1))
                 .dailyTime("18:00").status("SCHEDULED").confirmedPlayers(new HashSet<>()).build();
 
-        when(userRepository.findByEmail("member@example.com")).thenReturn(Optional.of(member));
+        when(userAuthHelper.getAuthenticatedUser("member@example.com")).thenReturn(member);
         when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
         // Repository already returns in desc order
         when(dailyRepository.findByPeladaOrderByDailyDateDesc(pelada)).thenReturn(List.of(newer, older));
@@ -205,7 +207,7 @@ class DailyServiceTest {
 
     @Test
     void getDailyDetail_success_returnsDTO() {
-        when(userRepository.findByEmail("member@example.com")).thenReturn(Optional.of(member));
+        when(userAuthHelper.getAuthenticatedUser("member@example.com")).thenReturn(member);
         when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
         when(teamRepository.findByDaily(scheduledDaily)).thenReturn(Collections.emptyList());
         when(matchRepository.findByDaily(scheduledDaily)).thenReturn(Collections.emptyList());
@@ -221,16 +223,16 @@ class DailyServiceTest {
 
     @Test
     void getDailyDetail_callerNotFound_throwsUnauthorized() {
-        when(userRepository.findByEmail("ghost@example.com")).thenReturn(Optional.empty());
+        when(userAuthHelper.getAuthenticatedUser("ghost@example.com")).thenThrow(new AppException(HttpStatus.NOT_FOUND, "User not found"));
 
         assertThatThrownBy(() -> dailyService.getDailyDetail(100L, "ghost@example.com"))
                 .isInstanceOf(AppException.class)
-                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.UNAUTHORIZED));
+                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.NOT_FOUND));
     }
 
     @Test
     void getDailyDetail_dailyNotFound_throwsNotFound() {
-        when(userRepository.findByEmail("member@example.com")).thenReturn(Optional.of(member));
+        when(userAuthHelper.getAuthenticatedUser("member@example.com")).thenReturn(member);
         when(dailyRepository.findById(999L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> dailyService.getDailyDetail(999L, "member@example.com"))
@@ -240,7 +242,7 @@ class DailyServiceTest {
 
     @Test
     void getDailyDetail_callerNotMember_throwsForbidden() {
-        when(userRepository.findByEmail("out@example.com")).thenReturn(Optional.of(outsider));
+        when(userAuthHelper.getAuthenticatedUser("out@example.com")).thenReturn(outsider);
         when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
 
         assertThatThrownBy(() -> dailyService.getDailyDetail(100L, "out@example.com"))
@@ -252,7 +254,7 @@ class DailyServiceTest {
 
     @Test
     void confirmAttendance_success_addsPlayer() {
-        when(userRepository.findByEmail("member@example.com")).thenReturn(Optional.of(member));
+        when(userAuthHelper.getAuthenticatedUser("member@example.com")).thenReturn(member);
         when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
         when(dailyRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
@@ -263,16 +265,16 @@ class DailyServiceTest {
 
     @Test
     void confirmAttendance_callerNotFound_throwsUnauthorized() {
-        when(userRepository.findByEmail("ghost@example.com")).thenReturn(Optional.empty());
+        when(userAuthHelper.getAuthenticatedUser("ghost@example.com")).thenThrow(new AppException(HttpStatus.NOT_FOUND, "User not found"));
 
         assertThatThrownBy(() -> dailyService.confirmAttendance(100L, "ghost@example.com"))
                 .isInstanceOf(AppException.class)
-                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.UNAUTHORIZED));
+                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.NOT_FOUND));
     }
 
     @Test
     void confirmAttendance_dailyNotFound_throwsNotFound() {
-        when(userRepository.findByEmail("member@example.com")).thenReturn(Optional.of(member));
+        when(userAuthHelper.getAuthenticatedUser("member@example.com")).thenReturn(member);
         when(dailyRepository.findById(999L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> dailyService.confirmAttendance(999L, "member@example.com"))
@@ -282,7 +284,7 @@ class DailyServiceTest {
 
     @Test
     void confirmAttendance_notMember_throwsForbidden() {
-        when(userRepository.findByEmail("out@example.com")).thenReturn(Optional.of(outsider));
+        when(userAuthHelper.getAuthenticatedUser("out@example.com")).thenReturn(outsider);
         when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
 
         assertThatThrownBy(() -> dailyService.confirmAttendance(100L, "out@example.com"))
@@ -293,7 +295,7 @@ class DailyServiceTest {
     @Test
     void confirmAttendance_statusInCourse_throwsBadRequest() {
         scheduledDaily.setStatus("IN_COURSE");
-        when(userRepository.findByEmail("member@example.com")).thenReturn(Optional.of(member));
+        when(userAuthHelper.getAuthenticatedUser("member@example.com")).thenReturn(member);
         when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
 
         assertThatThrownBy(() -> dailyService.confirmAttendance(100L, "member@example.com"))
@@ -304,7 +306,7 @@ class DailyServiceTest {
     @Test
     void confirmAttendance_statusFinished_throwsBadRequest() {
         scheduledDaily.setStatus("FINISHED");
-        when(userRepository.findByEmail("member@example.com")).thenReturn(Optional.of(member));
+        when(userAuthHelper.getAuthenticatedUser("member@example.com")).thenReturn(member);
         when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
 
         assertThatThrownBy(() -> dailyService.confirmAttendance(100L, "member@example.com"))
@@ -315,7 +317,7 @@ class DailyServiceTest {
     @Test
     void confirmAttendance_statusCanceled_throwsBadRequest() {
         scheduledDaily.setStatus("CANCELED");
-        when(userRepository.findByEmail("member@example.com")).thenReturn(Optional.of(member));
+        when(userAuthHelper.getAuthenticatedUser("member@example.com")).thenReturn(member);
         when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
 
         assertThatThrownBy(() -> dailyService.confirmAttendance(100L, "member@example.com"))
@@ -326,7 +328,7 @@ class DailyServiceTest {
     @Test
     void confirmAttendance_alreadyConfirmed_throwsConflict() {
         scheduledDaily.getConfirmedPlayers().add(member);
-        when(userRepository.findByEmail("member@example.com")).thenReturn(Optional.of(member));
+        when(userAuthHelper.getAuthenticatedUser("member@example.com")).thenReturn(member);
         when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
 
         assertThatThrownBy(() -> dailyService.confirmAttendance(100L, "member@example.com"))
@@ -339,7 +341,7 @@ class DailyServiceTest {
     @Test
     void disconfirmAttendance_success_removesPlayer() {
         scheduledDaily.getConfirmedPlayers().add(member);
-        when(userRepository.findByEmail("member@example.com")).thenReturn(Optional.of(member));
+        when(userAuthHelper.getAuthenticatedUser("member@example.com")).thenReturn(member);
         when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
         when(dailyRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
@@ -350,16 +352,16 @@ class DailyServiceTest {
 
     @Test
     void disconfirmAttendance_callerNotFound_throwsUnauthorized() {
-        when(userRepository.findByEmail("ghost@example.com")).thenReturn(Optional.empty());
+        when(userAuthHelper.getAuthenticatedUser("ghost@example.com")).thenThrow(new AppException(HttpStatus.NOT_FOUND, "User not found"));
 
         assertThatThrownBy(() -> dailyService.disconfirmAttendance(100L, "ghost@example.com"))
                 .isInstanceOf(AppException.class)
-                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.UNAUTHORIZED));
+                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.NOT_FOUND));
     }
 
     @Test
     void disconfirmAttendance_dailyNotFound_throwsNotFound() {
-        when(userRepository.findByEmail("member@example.com")).thenReturn(Optional.of(member));
+        when(userAuthHelper.getAuthenticatedUser("member@example.com")).thenReturn(member);
         when(dailyRepository.findById(999L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> dailyService.disconfirmAttendance(999L, "member@example.com"))
@@ -370,7 +372,7 @@ class DailyServiceTest {
     @Test
     void disconfirmAttendance_locked_throwsBadRequest() {
         scheduledDaily.setStatus("FINISHED");
-        when(userRepository.findByEmail("member@example.com")).thenReturn(Optional.of(member));
+        when(userAuthHelper.getAuthenticatedUser("member@example.com")).thenReturn(member);
         when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
 
         assertThatThrownBy(() -> dailyService.disconfirmAttendance(100L, "member@example.com"))
@@ -380,7 +382,7 @@ class DailyServiceTest {
 
     @Test
     void disconfirmAttendance_notConfirmed_throwsBadRequest() {
-        when(userRepository.findByEmail("member@example.com")).thenReturn(Optional.of(member));
+        when(userAuthHelper.getAuthenticatedUser("member@example.com")).thenReturn(member);
         when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
 
         assertThatThrownBy(() -> dailyService.disconfirmAttendance(100L, "member@example.com"))
@@ -392,7 +394,7 @@ class DailyServiceTest {
 
     @Test
     void updateStatus_scheduledToConfirmed_succeeds() {
-        when(userRepository.findByEmail("admin@example.com")).thenReturn(Optional.of(admin));
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
         when(dailyRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
@@ -403,7 +405,7 @@ class DailyServiceTest {
 
     @Test
     void updateStatus_scheduledToCanceled_succeeds() {
-        when(userRepository.findByEmail("admin@example.com")).thenReturn(Optional.of(admin));
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
         when(dailyRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
@@ -415,7 +417,7 @@ class DailyServiceTest {
     @Test
     void updateStatus_confirmedToInCourse_succeeds() {
         scheduledDaily.setStatus("CONFIRMED");
-        when(userRepository.findByEmail("admin@example.com")).thenReturn(Optional.of(admin));
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
         when(dailyRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
@@ -426,7 +428,7 @@ class DailyServiceTest {
 
     @Test
     void updateStatus_invalidTransition_throwsBadRequest() {
-        when(userRepository.findByEmail("admin@example.com")).thenReturn(Optional.of(admin));
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
 
         // SCHEDULED -> IN_COURSE is invalid (must go through CONFIRMED first)
@@ -437,7 +439,7 @@ class DailyServiceTest {
 
     @Test
     void updateStatus_callerNotAdmin_throwsForbidden() {
-        when(userRepository.findByEmail("member@example.com")).thenReturn(Optional.of(member));
+        when(userAuthHelper.getAuthenticatedUser("member@example.com")).thenReturn(member);
         when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
 
         assertThatThrownBy(() -> dailyService.updateStatus(100L, "CONFIRMED", "member@example.com"))
@@ -447,16 +449,16 @@ class DailyServiceTest {
 
     @Test
     void updateStatus_callerNotFound_throwsUnauthorized() {
-        when(userRepository.findByEmail("ghost@example.com")).thenReturn(Optional.empty());
+        when(userAuthHelper.getAuthenticatedUser("ghost@example.com")).thenThrow(new AppException(HttpStatus.NOT_FOUND, "User not found"));
 
         assertThatThrownBy(() -> dailyService.updateStatus(100L, "CONFIRMED", "ghost@example.com"))
                 .isInstanceOf(AppException.class)
-                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.UNAUTHORIZED));
+                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.NOT_FOUND));
     }
 
     @Test
     void updateStatus_dailyNotFound_throwsNotFound() {
-        when(userRepository.findByEmail("admin@example.com")).thenReturn(Optional.of(admin));
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(dailyRepository.findById(999L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> dailyService.updateStatus(999L, "CONFIRMED", "admin@example.com"))
@@ -467,7 +469,7 @@ class DailyServiceTest {
     @Test
     void updateStatus_finishedToAnyStatus_throwsBadRequest() {
         scheduledDaily.setStatus("FINISHED");
-        when(userRepository.findByEmail("admin@example.com")).thenReturn(Optional.of(admin));
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
 
         // FINISHED has no valid transitions
@@ -484,7 +486,7 @@ class DailyServiceTest {
         scheduledDaily.getConfirmedPlayers().add(admin);
         scheduledDaily.getConfirmedPlayers().add(member);
 
-        when(userRepository.findByEmail("admin@example.com")).thenReturn(Optional.of(admin));
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
         when(teamRepository.findByDaily(scheduledDaily)).thenReturn(Collections.emptyList());
         when(teamRepository.save(any(Team.class))).thenAnswer(inv -> {
@@ -501,7 +503,7 @@ class DailyServiceTest {
 
     @Test
     void sortTeams_callerNotAdmin_throwsForbidden() {
-        when(userRepository.findByEmail("member@example.com")).thenReturn(Optional.of(member));
+        when(userAuthHelper.getAuthenticatedUser("member@example.com")).thenReturn(member);
         when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
 
         assertThatThrownBy(() -> dailyService.sortTeams(100L, "member@example.com"))
@@ -512,7 +514,7 @@ class DailyServiceTest {
     @Test
     void sortTeams_lockedStatus_throwsBadRequest() {
         scheduledDaily.setStatus("FINISHED");
-        when(userRepository.findByEmail("admin@example.com")).thenReturn(Optional.of(admin));
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
 
         assertThatThrownBy(() -> dailyService.sortTeams(100L, "admin@example.com"))
@@ -523,7 +525,7 @@ class DailyServiceTest {
     @Test
     void sortTeams_wrongPlayerCount_throwsBadRequest() {
         // 0 players but need 2 (2 teams x 1 player)
-        when(userRepository.findByEmail("admin@example.com")).thenReturn(Optional.of(admin));
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
         when(teamRepository.findByDaily(scheduledDaily)).thenReturn(Collections.emptyList());
 
@@ -539,7 +541,7 @@ class DailyServiceTest {
 
         Team existingTeam = Team.builder().id(1L).daily(scheduledDaily).name("Old Team").players(new HashSet<>()).build();
 
-        when(userRepository.findByEmail("admin@example.com")).thenReturn(Optional.of(admin));
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
         when(teamRepository.findByDaily(scheduledDaily)).thenReturn(List.of(existingTeam));
         when(teamRepository.save(any(Team.class))).thenAnswer(inv -> {
@@ -556,16 +558,16 @@ class DailyServiceTest {
 
     @Test
     void sortTeams_callerNotFound_throwsUnauthorized() {
-        when(userRepository.findByEmail("ghost@example.com")).thenReturn(Optional.empty());
+        when(userAuthHelper.getAuthenticatedUser("ghost@example.com")).thenThrow(new AppException(HttpStatus.NOT_FOUND, "User not found"));
 
         assertThatThrownBy(() -> dailyService.sortTeams(100L, "ghost@example.com"))
                 .isInstanceOf(AppException.class)
-                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.UNAUTHORIZED));
+                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.NOT_FOUND));
     }
 
     @Test
     void sortTeams_dailyNotFound_throwsNotFound() {
-        when(userRepository.findByEmail("admin@example.com")).thenReturn(Optional.of(admin));
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(dailyRepository.findById(999L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> dailyService.sortTeams(999L, "admin@example.com"))
@@ -580,7 +582,7 @@ class DailyServiceTest {
         scheduledDaily.getConfirmedPlayers().add(member);
         scheduledDaily.getConfirmedPlayers().add(outsider);
 
-        when(userRepository.findByEmail("admin@example.com")).thenReturn(Optional.of(admin));
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
         when(teamRepository.findByDaily(scheduledDaily)).thenReturn(Collections.emptyList());
 
@@ -598,7 +600,7 @@ class DailyServiceTest {
         Team team2 = Team.builder().id(2L).daily(scheduledDaily).name("Team 2")
                 .players(new HashSet<>(Set.of(member))).build();
 
-        when(userRepository.findByEmail("admin@example.com")).thenReturn(Optional.of(admin));
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
         when(teamRepository.findByDaily(scheduledDaily)).thenReturn(List.of(team1, team2));
         when(teamRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
@@ -611,7 +613,7 @@ class DailyServiceTest {
 
     @Test
     void swapPlayers_callerNotAdmin_throwsForbidden() {
-        when(userRepository.findByEmail("member@example.com")).thenReturn(Optional.of(member));
+        when(userAuthHelper.getAuthenticatedUser("member@example.com")).thenReturn(member);
         when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
 
         assertThatThrownBy(() -> dailyService.swapPlayers(100L, 1L, 2L, "member@example.com"))
@@ -622,7 +624,7 @@ class DailyServiceTest {
     @Test
     void swapPlayers_lockedStatus_throwsBadRequest() {
         scheduledDaily.setStatus("FINISHED");
-        when(userRepository.findByEmail("admin@example.com")).thenReturn(Optional.of(admin));
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
 
         assertThatThrownBy(() -> dailyService.swapPlayers(100L, 1L, 2L, "admin@example.com"))
@@ -635,7 +637,7 @@ class DailyServiceTest {
         Team team2 = Team.builder().id(2L).daily(scheduledDaily).name("Team 2")
                 .players(new HashSet<>(Set.of(member))).build();
 
-        when(userRepository.findByEmail("admin@example.com")).thenReturn(Optional.of(admin));
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
         when(teamRepository.findByDaily(scheduledDaily)).thenReturn(List.of(team2));
 
@@ -649,7 +651,7 @@ class DailyServiceTest {
         Team team1 = Team.builder().id(1L).daily(scheduledDaily).name("Team 1")
                 .players(new HashSet<>(Set.of(admin))).build();
 
-        when(userRepository.findByEmail("admin@example.com")).thenReturn(Optional.of(admin));
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
         when(teamRepository.findByDaily(scheduledDaily)).thenReturn(List.of(team1));
 
@@ -660,16 +662,16 @@ class DailyServiceTest {
 
     @Test
     void swapPlayers_callerNotFound_throwsUnauthorized() {
-        when(userRepository.findByEmail("ghost@example.com")).thenReturn(Optional.empty());
+        when(userAuthHelper.getAuthenticatedUser("ghost@example.com")).thenThrow(new AppException(HttpStatus.NOT_FOUND, "User not found"));
 
         assertThatThrownBy(() -> dailyService.swapPlayers(100L, 1L, 2L, "ghost@example.com"))
                 .isInstanceOf(AppException.class)
-                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.UNAUTHORIZED));
+                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.NOT_FOUND));
     }
 
     @Test
     void swapPlayers_dailyNotFound_throwsNotFound() {
-        when(userRepository.findByEmail("admin@example.com")).thenReturn(Optional.of(admin));
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(dailyRepository.findById(999L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> dailyService.swapPlayers(999L, 1L, 2L, "admin@example.com"))

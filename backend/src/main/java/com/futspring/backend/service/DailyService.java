@@ -8,6 +8,7 @@ import com.futspring.backend.dto.MatchResultDTO;
 import com.futspring.backend.dto.PopulateDailyRequestDTO;
 import com.futspring.backend.entity.*;
 import com.futspring.backend.exception.AppException;
+import com.futspring.backend.helper.UserAuthenticationHelper;
 import com.futspring.backend.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -32,6 +33,7 @@ import java.util.stream.Collectors;
 public class DailyService {
 
     private final FileUploadService fileUploadService;
+    private final UserAuthenticationHelper userAuthHelper;
     private final DailyRepository dailyRepository;
     private final PeladaRepository peladaRepository;
     private final UserRepository userRepository;
@@ -46,8 +48,7 @@ public class DailyService {
 
     @Transactional
     public DailyListItemDTO createDaily(Long peladaId, CreateDailyRequestDTO request, String currentUserEmail) {
-        User caller = userRepository.findByEmail(currentUserEmail)
-                .orElseThrow(() -> new AppException(HttpStatus.UNAUTHORIZED, "User not found"));
+        User caller = userAuthHelper.getAuthenticatedUser(currentUserEmail);
 
         Pelada pelada = peladaRepository.findById(peladaId)
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Pelada not found"));
@@ -68,8 +69,7 @@ public class DailyService {
 
     @Transactional(readOnly = true)
     public List<DailyListItemDTO> getDailiesForPelada(Long peladaId, String currentUserEmail) {
-        User caller = userRepository.findByEmail(currentUserEmail)
-                .orElseThrow(() -> new AppException(HttpStatus.UNAUTHORIZED, "User not found"));
+        User caller = userAuthHelper.getAuthenticatedUser(currentUserEmail);
 
         Pelada pelada = peladaRepository.findById(peladaId)
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Pelada not found"));
@@ -110,8 +110,7 @@ public class DailyService {
 
     @Transactional
     public DailyListItemDTO confirmAttendance(Long id, String currentUserEmail) {
-        User caller = userRepository.findByEmail(currentUserEmail)
-                .orElseThrow(() -> new AppException(HttpStatus.UNAUTHORIZED, "User not found"));
+        User caller = userAuthHelper.getAuthenticatedUser(currentUserEmail);
 
         Daily daily = dailyRepository.findById(id)
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Daily not found"));
@@ -136,8 +135,7 @@ public class DailyService {
 
     @Transactional
     public DailyListItemDTO disconfirmAttendance(Long id, String currentUserEmail) {
-        User caller = userRepository.findByEmail(currentUserEmail)
-                .orElseThrow(() -> new AppException(HttpStatus.UNAUTHORIZED, "User not found"));
+        User caller = userAuthHelper.getAuthenticatedUser(currentUserEmail);
 
         Daily daily = dailyRepository.findById(id)
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Daily not found"));
@@ -162,8 +160,7 @@ public class DailyService {
 
     @Transactional
     public DailyListItemDTO updateStatus(Long id, String newStatus, String currentUserEmail) {
-        User caller = userRepository.findByEmail(currentUserEmail)
-                .orElseThrow(() -> new AppException(HttpStatus.UNAUTHORIZED, "User not found"));
+        User caller = userAuthHelper.getAuthenticatedUser(currentUserEmail);
 
         Daily daily = dailyRepository.findById(id)
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Daily not found"));
@@ -186,8 +183,7 @@ public class DailyService {
 
     @Transactional
     public List<DailyDetailDTO.TeamDTO> sortTeams(Long id, String currentUserEmail) {
-        User caller = userRepository.findByEmail(currentUserEmail)
-                .orElseThrow(() -> new AppException(HttpStatus.UNAUTHORIZED, "User not found"));
+        User caller = userAuthHelper.getAuthenticatedUser(currentUserEmail);
 
         Daily daily = dailyRepository.findById(id)
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Daily not found"));
@@ -262,8 +258,7 @@ public class DailyService {
 
     @Transactional
     public List<DailyDetailDTO.TeamDTO> swapPlayers(Long id, Long player1Id, Long player2Id, String currentUserEmail) {
-        User caller = userRepository.findByEmail(currentUserEmail)
-                .orElseThrow(() -> new AppException(HttpStatus.UNAUTHORIZED, "User not found"));
+        User caller = userAuthHelper.getAuthenticatedUser(currentUserEmail);
 
         Daily daily = dailyRepository.findById(id)
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Daily not found"));
@@ -318,8 +313,7 @@ public class DailyService {
 
     @Transactional
     public List<MatchDTO> submitResults(Long id, List<MatchResultDTO> results, String currentUserEmail) {
-        User caller = userRepository.findByEmail(currentUserEmail)
-                .orElseThrow(() -> new AppException(HttpStatus.UNAUTHORIZED, "User not found"));
+        User caller = userAuthHelper.getAuthenticatedUser(currentUserEmail);
 
         Daily daily = dailyRepository.findById(id)
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Daily not found"));
@@ -494,8 +488,7 @@ public class DailyService {
 
     @Transactional
     public DailyDetailDTO finalizeDaily(Long id, List<Long> puskasWinnerIds, List<Long> wiltballWinnerIds, String currentUserEmail) {
-        User caller = userRepository.findByEmail(currentUserEmail)
-                .orElseThrow(() -> new AppException(HttpStatus.UNAUTHORIZED, "User not found"));
+        User caller = userAuthHelper.getAuthenticatedUser(currentUserEmail);
 
         Daily daily = dailyRepository.findById(id)
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Daily not found"));
@@ -692,8 +685,7 @@ public class DailyService {
 
     @Transactional
     public void deleteDaily(Long id, String currentUserEmail) {
-        User caller = userRepository.findByEmail(currentUserEmail)
-                .orElseThrow(() -> new AppException(HttpStatus.UNAUTHORIZED, "User not found"));
+        User caller = userAuthHelper.getAuthenticatedUser(currentUserEmail);
 
         Daily daily = dailyRepository.findById(id)
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Daily not found"));
@@ -802,8 +794,7 @@ public class DailyService {
 
     @Transactional
     public DailyListItemDTO uploadChampionImage(Long id, MultipartFile file, String currentUserEmail) {
-        User caller = userRepository.findByEmail(currentUserEmail)
-                .orElseThrow(() -> new AppException(HttpStatus.UNAUTHORIZED, "User not found"));
+        User caller = userAuthHelper.getAuthenticatedUser(currentUserEmail);
 
         Daily daily = dailyRepository.findById(id)
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Daily not found"));
@@ -825,8 +816,7 @@ public class DailyService {
 
     @Transactional(readOnly = true)
     public DailyDetailDTO getDailyDetail(Long id, String currentUserEmail) {
-        User caller = userRepository.findByEmail(currentUserEmail)
-                .orElseThrow(() -> new AppException(HttpStatus.UNAUTHORIZED, "User not found"));
+        User caller = userAuthHelper.getAuthenticatedUser(currentUserEmail);
 
         Daily daily = dailyRepository.findById(id)
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Daily not found"));
@@ -956,8 +946,7 @@ public class DailyService {
 
     @Transactional
     public DailyListItemDTO adminConfirmAttendance(Long dailyId, Long targetUserId, String callerEmail) {
-        User caller = userRepository.findByEmail(callerEmail)
-                .orElseThrow(() -> new AppException(HttpStatus.UNAUTHORIZED, "User not found"));
+        User caller = userAuthHelper.getAuthenticatedUser(callerEmail);
 
         Daily daily = dailyRepository.findById(dailyId)
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Daily not found"));
@@ -989,8 +978,7 @@ public class DailyService {
 
     @Transactional
     public DailyDetailDTO.TeamDTO updateTeamName(Long dailyId, Long teamId, String name, String callerEmail) {
-        User caller = userRepository.findByEmail(callerEmail)
-                .orElseThrow(() -> new AppException(HttpStatus.UNAUTHORIZED, "User not found"));
+        User caller = userAuthHelper.getAuthenticatedUser(callerEmail);
 
         Daily daily = dailyRepository.findById(dailyId)
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Daily not found"));
@@ -1022,8 +1010,7 @@ public class DailyService {
 
     @Transactional
     public DailyDetailDTO.TeamDTO updateTeamColor(Long dailyId, Long teamId, String color, String callerEmail) {
-        User caller = userRepository.findByEmail(callerEmail)
-                .orElseThrow(() -> new AppException(HttpStatus.UNAUTHORIZED, "User not found"));
+        User caller = userAuthHelper.getAuthenticatedUser(callerEmail);
 
         Daily daily = dailyRepository.findById(dailyId)
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Daily not found"));
@@ -1055,8 +1042,7 @@ public class DailyService {
 
     @Transactional
     public DailyListItemDTO adminDisconfirmAttendance(Long dailyId, Long targetUserId, String callerEmail) {
-        User caller = userRepository.findByEmail(callerEmail)
-                .orElseThrow(() -> new AppException(HttpStatus.UNAUTHORIZED, "User not found"));
+        User caller = userAuthHelper.getAuthenticatedUser(callerEmail);
 
         Daily daily = dailyRepository.findById(dailyId)
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Daily not found"));
@@ -1088,8 +1074,7 @@ public class DailyService {
 
     @Transactional
     public DailyDetailDTO populateFromMessage(Long id, PopulateDailyRequestDTO request, String currentUserEmail) {
-        User caller = userRepository.findByEmail(currentUserEmail)
-                .orElseThrow(() -> new AppException(HttpStatus.UNAUTHORIZED, "User not found"));
+        User caller = userAuthHelper.getAuthenticatedUser(currentUserEmail);
 
         Daily daily = dailyRepository.findById(id)
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Daily not found"));

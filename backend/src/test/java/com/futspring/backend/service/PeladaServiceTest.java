@@ -8,6 +8,7 @@ import com.futspring.backend.dto.UserResponseDTO;
 import com.futspring.backend.entity.Pelada;
 import com.futspring.backend.entity.User;
 import com.futspring.backend.exception.AppException;
+import com.futspring.backend.helper.UserAuthenticationHelper;
 import com.futspring.backend.repository.PeladaRepository;
 import com.futspring.backend.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -39,6 +40,9 @@ class PeladaServiceTest {
     @Mock
     FileUploadService fileUploadService;
 
+    @Mock
+    UserAuthenticationHelper userAuthHelper;
+
     PeladaService peladaService;
 
     User admin;
@@ -48,7 +52,7 @@ class PeladaServiceTest {
 
     @BeforeEach
     void setUp() {
-        peladaService = new PeladaService(peladaRepository, userRepository, fileUploadService);
+        peladaService = new PeladaService(peladaRepository, userRepository, fileUploadService, userAuthHelper);
 
         admin = User.builder().id(1L).email("admin@example.com").username("admin").password("hash").build();
         member = User.builder().id(2L).email("member@example.com").username("member").password("hash").build();
@@ -75,7 +79,7 @@ class PeladaServiceTest {
 
     @Test
     void createPelada_success_returnsDTO() {
-        when(userRepository.findByEmail("admin@example.com")).thenReturn(Optional.of(admin));
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(peladaRepository.save(any(Pelada.class))).thenAnswer(inv -> {
             Pelada p = inv.getArgument(0);
             ReflectionTestUtils.setField(p, "id", 10L);
@@ -98,7 +102,7 @@ class PeladaServiceTest {
 
     @Test
     void createPelada_callerNotFound_throwsUnauthorized() {
-        when(userRepository.findByEmail("ghost@example.com")).thenReturn(Optional.empty());
+        when(userAuthHelper.getAuthenticatedUser("ghost@example.com")).thenThrow(new AppException(HttpStatus.NOT_FOUND, "User not found"));
 
         CreatePeladaRequestDTO req = new CreatePeladaRequestDTO();
         req.setName("Pelada");
@@ -108,12 +112,12 @@ class PeladaServiceTest {
 
         assertThatThrownBy(() -> peladaService.createPelada(req, "ghost@example.com"))
                 .isInstanceOf(AppException.class)
-                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.UNAUTHORIZED));
+                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.NOT_FOUND));
     }
 
     @Test
     void createPelada_creatorIsAddedAsMemberAndAdmin() {
-        when(userRepository.findByEmail("admin@example.com")).thenReturn(Optional.of(admin));
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(peladaRepository.save(any(Pelada.class))).thenAnswer(inv -> {
             Pelada p = inv.getArgument(0);
             ReflectionTestUtils.setField(p, "id", 11L);
@@ -136,7 +140,7 @@ class PeladaServiceTest {
 
     @Test
     void getMyPeladas_success_returnsUserPeladas() {
-        when(userRepository.findByEmail("admin@example.com")).thenReturn(Optional.of(admin));
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(peladaRepository.findByMembersContaining(admin)).thenReturn(List.of(pelada));
 
         List<PeladaResponseDTO> result = peladaService.getMyPeladas("admin@example.com");
@@ -147,16 +151,16 @@ class PeladaServiceTest {
 
     @Test
     void getMyPeladas_callerNotFound_throwsUnauthorized() {
-        when(userRepository.findByEmail("ghost@example.com")).thenReturn(Optional.empty());
+        when(userAuthHelper.getAuthenticatedUser("ghost@example.com")).thenThrow(new AppException(HttpStatus.NOT_FOUND, "User not found"));
 
         assertThatThrownBy(() -> peladaService.getMyPeladas("ghost@example.com"))
                 .isInstanceOf(AppException.class)
-                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.UNAUTHORIZED));
+                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.NOT_FOUND));
     }
 
     @Test
     void getMyPeladas_noPeladas_returnsEmptyList() {
-        when(userRepository.findByEmail("admin@example.com")).thenReturn(Optional.of(admin));
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(peladaRepository.findByMembersContaining(admin)).thenReturn(Collections.emptyList());
 
         List<PeladaResponseDTO> result = peladaService.getMyPeladas("admin@example.com");
@@ -168,7 +172,7 @@ class PeladaServiceTest {
 
     @Test
     void getPeladaDetail_success_returnsDTO() {
-        when(userRepository.findByEmail("member@example.com")).thenReturn(Optional.of(member));
+        when(userAuthHelper.getAuthenticatedUser("member@example.com")).thenReturn(member);
         when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
 
         PeladaDetailResponseDTO result = peladaService.getPeladaDetail(10L, "member@example.com");
@@ -179,16 +183,16 @@ class PeladaServiceTest {
 
     @Test
     void getPeladaDetail_callerNotFound_throwsUnauthorized() {
-        when(userRepository.findByEmail("ghost@example.com")).thenReturn(Optional.empty());
+        when(userAuthHelper.getAuthenticatedUser("ghost@example.com")).thenThrow(new AppException(HttpStatus.NOT_FOUND, "User not found"));
 
         assertThatThrownBy(() -> peladaService.getPeladaDetail(10L, "ghost@example.com"))
                 .isInstanceOf(AppException.class)
-                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.UNAUTHORIZED));
+                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.NOT_FOUND));
     }
 
     @Test
     void getPeladaDetail_peladaNotFound_throwsNotFound() {
-        when(userRepository.findByEmail("admin@example.com")).thenReturn(Optional.of(admin));
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(peladaRepository.findById(999L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> peladaService.getPeladaDetail(999L, "admin@example.com"))
@@ -198,7 +202,7 @@ class PeladaServiceTest {
 
     @Test
     void getPeladaDetail_callerNotMember_throwsForbidden() {
-        when(userRepository.findByEmail("outsider@example.com")).thenReturn(Optional.of(outsider));
+        when(userAuthHelper.getAuthenticatedUser("outsider@example.com")).thenReturn(outsider);
         when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
 
         assertThatThrownBy(() -> peladaService.getPeladaDetail(10L, "outsider@example.com"))
@@ -210,7 +214,7 @@ class PeladaServiceTest {
 
     @Test
     void addPlayer_success_addsMemberToPelada() {
-        when(userRepository.findByEmail("admin@example.com")).thenReturn(Optional.of(admin));
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
         when(userRepository.findById(3L)).thenReturn(Optional.of(outsider));
         when(peladaRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
@@ -222,16 +226,16 @@ class PeladaServiceTest {
 
     @Test
     void addPlayer_callerNotFound_throwsUnauthorized() {
-        when(userRepository.findByEmail("ghost@example.com")).thenReturn(Optional.empty());
+        when(userAuthHelper.getAuthenticatedUser("ghost@example.com")).thenThrow(new AppException(HttpStatus.NOT_FOUND, "User not found"));
 
         assertThatThrownBy(() -> peladaService.addPlayer(10L, 3L, "ghost@example.com"))
                 .isInstanceOf(AppException.class)
-                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.UNAUTHORIZED));
+                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.NOT_FOUND));
     }
 
     @Test
     void addPlayer_callerNotAdmin_throwsForbidden() {
-        when(userRepository.findByEmail("member@example.com")).thenReturn(Optional.of(member));
+        when(userAuthHelper.getAuthenticatedUser("member@example.com")).thenReturn(member);
         when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
 
         assertThatThrownBy(() -> peladaService.addPlayer(10L, 3L, "member@example.com"))
@@ -241,7 +245,7 @@ class PeladaServiceTest {
 
     @Test
     void addPlayer_targetNotFound_throwsNotFound() {
-        when(userRepository.findByEmail("admin@example.com")).thenReturn(Optional.of(admin));
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
         when(userRepository.findById(999L)).thenReturn(Optional.empty());
 
@@ -252,7 +256,7 @@ class PeladaServiceTest {
 
     @Test
     void addPlayer_alreadyMember_throwsConflict() {
-        when(userRepository.findByEmail("admin@example.com")).thenReturn(Optional.of(admin));
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
         when(userRepository.findById(2L)).thenReturn(Optional.of(member));
 
@@ -263,7 +267,7 @@ class PeladaServiceTest {
 
     @Test
     void addPlayer_peladaNotFound_throwsNotFound() {
-        when(userRepository.findByEmail("admin@example.com")).thenReturn(Optional.of(admin));
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(peladaRepository.findById(999L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> peladaService.addPlayer(999L, 3L, "admin@example.com"))
@@ -275,7 +279,7 @@ class PeladaServiceTest {
 
     @Test
     void removePlayer_success_removesMemberFromPelada() {
-        when(userRepository.findByEmail("admin@example.com")).thenReturn(Optional.of(admin));
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
         when(userRepository.findById(2L)).thenReturn(Optional.of(member));
         when(peladaRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
@@ -287,7 +291,7 @@ class PeladaServiceTest {
 
     @Test
     void removePlayer_callerNotAdmin_throwsForbidden() {
-        when(userRepository.findByEmail("member@example.com")).thenReturn(Optional.of(member));
+        when(userAuthHelper.getAuthenticatedUser("member@example.com")).thenReturn(member);
         when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
 
         assertThatThrownBy(() -> peladaService.removePlayer(10L, 3L, "member@example.com"))
@@ -297,7 +301,7 @@ class PeladaServiceTest {
 
     @Test
     void removePlayer_targetNotFound_throwsNotFound() {
-        when(userRepository.findByEmail("admin@example.com")).thenReturn(Optional.of(admin));
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
         when(userRepository.findById(999L)).thenReturn(Optional.empty());
 
@@ -308,7 +312,7 @@ class PeladaServiceTest {
 
     @Test
     void removePlayer_creatorCannotBeRemoved_throwsForbidden() {
-        when(userRepository.findByEmail("admin@example.com")).thenReturn(Optional.of(admin));
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
         when(userRepository.findById(1L)).thenReturn(Optional.of(admin));
 
@@ -319,7 +323,7 @@ class PeladaServiceTest {
 
     @Test
     void removePlayer_peladaNotFound_throwsNotFound() {
-        when(userRepository.findByEmail("admin@example.com")).thenReturn(Optional.of(admin));
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(peladaRepository.findById(999L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> peladaService.removePlayer(999L, 2L, "admin@example.com"))
@@ -329,18 +333,18 @@ class PeladaServiceTest {
 
     @Test
     void removePlayer_callerNotFound_throwsUnauthorized() {
-        when(userRepository.findByEmail("ghost@example.com")).thenReturn(Optional.empty());
+        when(userAuthHelper.getAuthenticatedUser("ghost@example.com")).thenThrow(new AppException(HttpStatus.NOT_FOUND, "User not found"));
 
         assertThatThrownBy(() -> peladaService.removePlayer(10L, 2L, "ghost@example.com"))
                 .isInstanceOf(AppException.class)
-                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.UNAUTHORIZED));
+                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.NOT_FOUND));
     }
 
     // --- setAdmin ---
 
     @Test
     void setAdmin_promote_success() {
-        when(userRepository.findByEmail("admin@example.com")).thenReturn(Optional.of(admin));
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
         when(userRepository.findById(2L)).thenReturn(Optional.of(member));
         when(peladaRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
@@ -353,7 +357,7 @@ class PeladaServiceTest {
     @Test
     void setAdmin_demote_success() {
         pelada.getAdmins().add(member);
-        when(userRepository.findByEmail("admin@example.com")).thenReturn(Optional.of(admin));
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
         when(userRepository.findById(2L)).thenReturn(Optional.of(member));
         when(peladaRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
@@ -365,7 +369,7 @@ class PeladaServiceTest {
 
     @Test
     void setAdmin_callerNotAdmin_throwsForbidden() {
-        when(userRepository.findByEmail("member@example.com")).thenReturn(Optional.of(member));
+        when(userAuthHelper.getAuthenticatedUser("member@example.com")).thenReturn(member);
         when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
 
         assertThatThrownBy(() -> peladaService.setAdmin(10L, 3L, true, "member@example.com"))
@@ -375,7 +379,7 @@ class PeladaServiceTest {
 
     @Test
     void setAdmin_targetIsCreator_throwsForbidden() {
-        when(userRepository.findByEmail("admin@example.com")).thenReturn(Optional.of(admin));
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
         when(userRepository.findById(1L)).thenReturn(Optional.of(admin));
 
@@ -386,7 +390,7 @@ class PeladaServiceTest {
 
     @Test
     void setAdmin_peladaNotFound_throwsNotFound() {
-        when(userRepository.findByEmail("admin@example.com")).thenReturn(Optional.of(admin));
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(peladaRepository.findById(999L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> peladaService.setAdmin(999L, 2L, true, "admin@example.com"))
@@ -396,16 +400,16 @@ class PeladaServiceTest {
 
     @Test
     void setAdmin_callerNotFound_throwsUnauthorized() {
-        when(userRepository.findByEmail("ghost@example.com")).thenReturn(Optional.empty());
+        when(userAuthHelper.getAuthenticatedUser("ghost@example.com")).thenThrow(new AppException(HttpStatus.NOT_FOUND, "User not found"));
 
         assertThatThrownBy(() -> peladaService.setAdmin(10L, 2L, true, "ghost@example.com"))
                 .isInstanceOf(AppException.class)
-                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.UNAUTHORIZED));
+                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.NOT_FOUND));
     }
 
     @Test
     void setAdmin_targetNotFound_throwsNotFound() {
-        when(userRepository.findByEmail("admin@example.com")).thenReturn(Optional.of(admin));
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
         when(userRepository.findById(999L)).thenReturn(Optional.empty());
 
@@ -438,7 +442,7 @@ class PeladaServiceTest {
 
     @Test
     void updatePelada_success_updatesFields() {
-        when(userRepository.findByEmail("admin@example.com")).thenReturn(Optional.of(admin));
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
         when(peladaRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
@@ -453,7 +457,7 @@ class PeladaServiceTest {
 
     @Test
     void updatePelada_callerNotAdmin_throwsForbidden() {
-        when(userRepository.findByEmail("member@example.com")).thenReturn(Optional.of(member));
+        when(userAuthHelper.getAuthenticatedUser("member@example.com")).thenReturn(member);
         when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
 
         UpdatePeladaRequestDTO req = new UpdatePeladaRequestDTO();
@@ -466,7 +470,7 @@ class PeladaServiceTest {
 
     @Test
     void updatePelada_peladaNotFound_throwsNotFound() {
-        when(userRepository.findByEmail("admin@example.com")).thenReturn(Optional.of(admin));
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(peladaRepository.findById(999L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> peladaService.updatePelada(999L, new UpdatePeladaRequestDTO(), "admin@example.com"))
@@ -476,16 +480,16 @@ class PeladaServiceTest {
 
     @Test
     void updatePelada_callerNotFound_throwsUnauthorized() {
-        when(userRepository.findByEmail("ghost@example.com")).thenReturn(Optional.empty());
+        when(userAuthHelper.getAuthenticatedUser("ghost@example.com")).thenThrow(new AppException(HttpStatus.NOT_FOUND, "User not found"));
 
         assertThatThrownBy(() -> peladaService.updatePelada(10L, new UpdatePeladaRequestDTO(), "ghost@example.com"))
                 .isInstanceOf(AppException.class)
-                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.UNAUTHORIZED));
+                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.NOT_FOUND));
     }
 
     @Test
     void updatePelada_nullFields_noChange() {
-        when(userRepository.findByEmail("admin@example.com")).thenReturn(Optional.of(admin));
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
         when(peladaRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
@@ -501,7 +505,7 @@ class PeladaServiceTest {
 
     @Test
     void deletePelada_success_deletesPelada() {
-        when(userRepository.findByEmail("admin@example.com")).thenReturn(Optional.of(admin));
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
 
         peladaService.deletePelada(10L, "admin@example.com");
@@ -511,7 +515,7 @@ class PeladaServiceTest {
 
     @Test
     void deletePelada_callerNotCreator_throwsForbidden() {
-        when(userRepository.findByEmail("member@example.com")).thenReturn(Optional.of(member));
+        when(userAuthHelper.getAuthenticatedUser("member@example.com")).thenReturn(member);
         when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
 
         assertThatThrownBy(() -> peladaService.deletePelada(10L, "member@example.com"))
@@ -521,7 +525,7 @@ class PeladaServiceTest {
 
     @Test
     void deletePelada_peladaNotFound_throwsNotFound() {
-        when(userRepository.findByEmail("admin@example.com")).thenReturn(Optional.of(admin));
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(peladaRepository.findById(999L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> peladaService.deletePelada(999L, "admin@example.com"))
@@ -531,10 +535,10 @@ class PeladaServiceTest {
 
     @Test
     void deletePelada_callerNotFound_throwsUnauthorized() {
-        when(userRepository.findByEmail("ghost@example.com")).thenReturn(Optional.empty());
+        when(userAuthHelper.getAuthenticatedUser("ghost@example.com")).thenThrow(new AppException(HttpStatus.NOT_FOUND, "User not found"));
 
         assertThatThrownBy(() -> peladaService.deletePelada(10L, "ghost@example.com"))
                 .isInstanceOf(AppException.class)
-                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.UNAUTHORIZED));
+                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.NOT_FOUND));
     }
 }
