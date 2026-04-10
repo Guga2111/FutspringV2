@@ -11,18 +11,12 @@ import com.futspring.backend.exception.AppException;
 import com.futspring.backend.repository.PeladaRepository;
 import com.futspring.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.List;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -31,9 +25,7 @@ public class PeladaService {
 
     private final PeladaRepository peladaRepository;
     private final UserRepository userRepository;
-
-    @Value("${app.uploads.dir:uploads}")
-    private String uploadsDir;
+    private final FileUploadService fileUploadService;
 
     @Transactional
     public PeladaResponseDTO createPelada(CreatePeladaRequestDTO request, String currentUserEmail) {
@@ -48,6 +40,8 @@ public class PeladaService {
                 .address(request.getAddress())
                 .reference(request.getReference())
                 .autoCreateDailyEnabled(request.isAutoCreateDailyEnabled())
+                .numberOfTeams(request.getNumberOfTeams())
+                .playersPerTeam(request.getPlayersPerTeam())
                 .creator(user)
                 .build();
 
@@ -217,31 +211,8 @@ public class PeladaService {
             throw new AppException(HttpStatus.FORBIDDEN, "Only admins can upload pelada image");
         }
 
-        if (file.getSize() > 5 * 1024 * 1024) {
-            throw new AppException(HttpStatus.BAD_REQUEST, "File size exceeds 5MB limit");
-        }
-
-        String contentType = file.getContentType();
-        if (contentType == null || (!contentType.equals("image/jpeg") && !contentType.equals("image/png") && !contentType.equals("image/webp"))) {
-            throw new AppException(HttpStatus.BAD_REQUEST, "Only JPEG, PNG, and WebP images are allowed");
-        }
-
-        String originalFilename = file.getOriginalFilename();
-        String extension = (originalFilename != null && originalFilename.contains("."))
-                ? originalFilename.substring(originalFilename.lastIndexOf("."))
-                : ".jpg";
-        String filename = UUID.randomUUID().toString() + extension;
-
-        try {
-            Path uploadPath = Paths.get(uploadsDir);
-            if (!Files.exists(uploadPath)) {
-                Files.createDirectories(uploadPath);
-            }
-            Files.copy(file.getInputStream(), uploadPath.resolve(filename));
-        } catch (IOException e) {
-            throw new AppException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to store file");
-        }
-
+        String filename = fileUploadService.uploadImage(file);
+        fileUploadService.deleteImage(pelada.getImage());
         pelada.setImage(filename);
         return PeladaResponseDTO.from(peladaRepository.save(pelada));
     }
