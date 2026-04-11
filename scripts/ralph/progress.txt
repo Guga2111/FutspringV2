@@ -244,3 +244,24 @@
   - The thin-shell pattern: modal = hook call + form render; no business logic or state in the shell component
   - Browser testing not available — manual verification needed for UI changes
 ---
+
+## 2026-04-11 - US-013
+- Created `Stars` named export at `frontend/src/components/profile/Stars.tsx`
+  - Renders 5 star characters (★/☆) based on `count` prop
+- Created `SkeletonBlock` named export at `frontend/src/components/profile/SkeletonBlock.tsx`
+  - Renders a `bg-muted rounded animate-pulse` div with passed `className`
+- Created `ProfileSkeleton` named export at `frontend/src/components/profile/ProfileSkeleton.tsx`
+  - Imports `SkeletonBlock` from `./SkeletonBlock`; renders full-page loading skeleton with 5 sections
+- Created barrel file `frontend/src/components/profile/index.ts`
+  - Re-exports `Stars`, `SkeletonBlock`, `ProfileSkeleton`
+- Updated `ProfilePage.tsx`:
+  - Added `import { Stars, ProfileSkeleton } from '../components/profile'`
+  - Removed 3 inline component definitions (Stars, SkeletonBlock, ProfileSkeleton) — ~65 lines removed
+- TypeScript typecheck (`npx tsc --noEmit`) passed with zero errors
+- Files changed: `frontend/src/components/profile/Stars.tsx` (new), `frontend/src/components/profile/SkeletonBlock.tsx` (new), `frontend/src/components/profile/ProfileSkeleton.tsx` (new), `frontend/src/components/profile/index.ts` (new), `frontend/src/pages/ProfilePage.tsx`, `scripts/ralph/prd.json`, `scripts/ralph/progress.txt`
+- **Learnings for future iterations:**
+  - `ProfilePage.tsx` only imports `Stars` and `ProfileSkeleton` from the barrel (not `SkeletonBlock`) because `SkeletonBlock` is only used inside `ProfileSkeleton` now — don't import what you don't need
+  - The barrel `index.ts` exports all three so future consumers can choose what they need
+  - `ProfileSkeleton` imports `SkeletonBlock` with a relative sibling path (`./SkeletonBlock`), not from the barrel (avoids circular import via index.ts)
+  - Browser testing not available — manual verification needed for UI changes
+---

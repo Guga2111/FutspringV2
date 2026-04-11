@@ -222,7 +222,7 @@
         "Typecheck passes"
       ],
       "priority": 13,
-      "passes": false,
+      "passes": true,
       "notes": "Phase 3 — independent of US-011 and US-012"
     }
   ]
