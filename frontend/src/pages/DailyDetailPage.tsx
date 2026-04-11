@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import { CalendarCheck, CalendarX } from 'lucide-react'
 import { useParams, Link } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -22,6 +22,7 @@ import PlayerStatsSection from '../components/daily/PlayerStatsSection'
 import AwardsSection from '../components/daily/AwardsSection'
 import ChampionPhotoSection from '../components/daily/ChampionPhotoSection'
 import { useDailyDetail } from '../components/daily/hooks/useDailyDetail'
+import { useDailyModals } from '../components/daily/hooks/useDailyModals'
 
 export default function DailyDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -34,14 +35,17 @@ export default function DailyDetailPage() {
   const [sortLoading, setSortLoading] = useState(false)
   const [selectedPlayer, setSelectedPlayer] = useState<{ id: number; teamId: number } | null>(null)
   const [swapLoading, setSwapLoading] = useState(false)
-  const [statusDialog, setStatusDialog] = useState<{ targetStatus: string; description: string } | null>(null)
-  const [statusLoading, setStatusLoading] = useState(false)
-  const [resultsOpen, setResultsOpen] = useState(false)
-  const [finalizeOpen, setFinalizeOpen] = useState(false)
-  const [importOpen, setImportOpen] = useState(false)
-  const [uploadLoading, setUploadLoading] = useState(false)
   const [adminToggleLoading, setAdminToggleLoading] = useState<number | null>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const {
+    resultsOpen, openResults, closeResults,
+    finalizeOpen, openFinalize, closeFinalize,
+    importOpen, openImport, closeImport,
+    uploadLoading, setUploadLoading,
+    statusDialog, setStatusDialog,
+    statusLoading, setStatusLoading,
+    fileInputRef,
+  } = useDailyModals()
 
   const handleConfirm = async () => {
     if (!daily) return
@@ -306,19 +310,19 @@ export default function DailyDetailPage() {
                 description: 'Isso vai cancelar a sessão atual. Essa ação nao pode ser desfeita.',
               })
             }
-            onEnterResults={() => setResultsOpen(true)}
-            onFinalizeDaily={() => setFinalizeOpen(true)}
-            onImportFromMessage={() => setImportOpen(true)}
+            onEnterResults={openResults}
+            onFinalizeDaily={openFinalize}
+            onImportFromMessage={openImport}
           />
 
           {/* Results modal */}
           {resultsOpen && (
             <ResultsModal
               daily={daily}
-              onClose={() => setResultsOpen(false)}
+              onClose={closeResults}
               onSuccess={(updated) => {
                 setDaily(updated)
-                setResultsOpen(false)
+                closeResults()
               }}
             />
           )}
@@ -327,10 +331,10 @@ export default function DailyDetailPage() {
           {finalizeOpen && (
             <FinalizeModal
               daily={daily}
-              onClose={() => setFinalizeOpen(false)}
+              onClose={closeFinalize}
               onSuccess={(updated) => {
                 setDaily(updated)
-                setFinalizeOpen(false)
+                closeFinalize()
               }}
             />
           )}
@@ -339,8 +343,8 @@ export default function DailyDetailPage() {
           {importOpen && daily && (
             <ImportFromMessageModal
               daily={daily}
-              onClose={() => setImportOpen(false)}
-              onSuccess={(updated) => { setDaily(updated); setImportOpen(false) }}
+              onClose={closeImport}
+              onSuccess={(updated) => { setDaily(updated); closeImport() }}
             />
           )}
 
@@ -380,7 +384,7 @@ export default function DailyDetailPage() {
           )}
 
           {/* IN_COURSE CTA card */}
-          <LiveSessionCard daily={daily} onEnterResults={() => setResultsOpen(true)} />
+          <LiveSessionCard daily={daily} onEnterResults={openResults} />
 
           {/* Live results during IN_COURSE */}
           {daily.status === 'IN_COURSE' && (
