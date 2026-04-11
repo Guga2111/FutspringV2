@@ -35,6 +35,8 @@ public class DailyService {
     private final FileUploadService fileUploadService;
     private final UserAuthenticationHelper userAuthHelper;
     private final DailyAttendanceService dailyAttendanceService;
+    private final DailyTeamManagementService dailyTeamManagementService;
+    private final DailyDTOMapper dailyDTOMapper;
     private final DailyRepository dailyRepository;
     private final PeladaRepository peladaRepository;
     private final UserRepository userRepository;
@@ -84,31 +86,6 @@ public class DailyService {
                 .collect(Collectors.toList());
     }
 
-    private static final java.util.Set<String> LOCKED_STATUSES = java.util.Set.of("IN_COURSE", "FINISHED", "CANCELED");
-
-    private DailyDetailDTO.TeamDTO buildTeamDTO(Team team) {
-        java.util.List<DailyDetailDTO.PlayerDTO> playerDTOs = team.getPlayers().stream()
-                .map(u -> DailyDetailDTO.PlayerDTO.builder()
-                        .id(u.getId())
-                        .username(u.getUsername())
-                        .image(u.getImage())
-                        .stars(u.getStars())
-                        .position(u.getPosition())
-                        .build())
-                .collect(Collectors.toList());
-        int totalStars = playerDTOs.stream().mapToInt(DailyDetailDTO.PlayerDTO::getStars).sum();
-        double averageStars = playerDTOs.isEmpty() ? 0.0
-                : Math.round(totalStars / (double) playerDTOs.size() * 100.0) / 100.0;
-        return DailyDetailDTO.TeamDTO.builder()
-                .id(team.getId())
-                .name(team.getName())
-                .totalStars(totalStars)
-                .averageStars(averageStars)
-                .color(team.getColor())
-                .players(playerDTOs)
-                .build();
-    }
-
     @Transactional
     public DailyListItemDTO confirmAttendance(Long id, String currentUserEmail) {
         return dailyAttendanceService.confirmAttendance(id, currentUserEmail);
@@ -149,132 +126,12 @@ public class DailyService {
 
     @Transactional
     public List<DailyDetailDTO.TeamDTO> sortTeams(Long id, String currentUserEmail) {
-        User caller = userAuthHelper.getAuthenticatedUser(currentUserEmail);
-
-        Daily daily = dailyRepository.findById(id)
-                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Daily not found"));
-
-        Pelada pelada = daily.getPelada();
-        if (!pelada.getAdmins().contains(caller)) {
-            throw new AppException(HttpStatus.FORBIDDEN, "Only admins can sort teams");
-        }
-
-        if (LOCKED_STATUSES.contains(daily.getStatus())) {
-            throw new AppException(HttpStatus.BAD_REQUEST, "Cannot sort teams for a daily with status " + daily.getStatus());
-        }
-
-        // Group by star rating, shuffle within each tier, then flatten (desc by stars)
-        java.util.List<User> players = daily.getConfirmedPlayers().stream()
-                .collect(java.util.stream.Collectors.groupingBy(User::getStars))
-                .entrySet().stream()
-                .sorted(java.util.Map.Entry.<Integer, java.util.List<User>>comparingByKey().reversed())
-                .flatMap(e -> {
-                    java.util.Collections.shuffle(e.getValue());
-                    return e.getValue().stream();
-                })
-                .collect(Collectors.toList());
-
-        int numberOfTeams = daily.getPelada().getNumberOfTeams();
-        int playersPerTeam = daily.getPelada().getPlayersPerTeam();
-        int required = numberOfTeams * playersPerTeam;
-
-        if (players.size() != required) {
-            throw new AppException(HttpStatus.BAD_REQUEST,
-                "Exactly " + required + " confirmed players are required (" +
-                numberOfTeams + " teams × " + playersPerTeam + " players). " +
-                "Currently: " + players.size());
-        }
-
-        // Delete existing teams
-        List<Team> existingTeams = teamRepository.findByDaily(daily);
-        for (Team t : existingTeams) {
-            t.getPlayers().clear();
-            teamRepository.save(t);
-        }
-        teamRepository.deleteAll(existingTeams);
-
-        // Create N teams dynamically
-        List<Team> teams = new ArrayList<>();
-        for (int i = 1; i <= numberOfTeams; i++) {
-            teams.add(teamRepository.save(
-                Team.builder().daily(daily).name("Team " + i).build()));
-        }
-
-        // Karmarkar-Karp (LPT): assign each player (highest stars first)
-        // to the non-full team with the lowest current total — minimises imbalance
-        int[] totals = new int[numberOfTeams];
-        int[] sizes  = new int[numberOfTeams];
-        for (User player : players) {
-            int minIdx = -1, minTotal = Integer.MAX_VALUE;
-            for (int j = 0; j < numberOfTeams; j++) {
-                if (sizes[j] < playersPerTeam && totals[j] < minTotal) {
-                    minTotal = totals[j];
-                    minIdx = j;
-                }
-            }
-            teams.get(minIdx).getPlayers().add(player);
-            totals[minIdx] += player.getStars();
-            sizes[minIdx]++;
-        }
-
-        teamRepository.saveAll(teams);
-
-        return teams.stream().map(this::buildTeamDTO).collect(Collectors.toList());
+        return dailyTeamManagementService.sortTeams(id, currentUserEmail);
     }
 
     @Transactional
     public List<DailyDetailDTO.TeamDTO> swapPlayers(Long id, Long player1Id, Long player2Id, String currentUserEmail) {
-        User caller = userAuthHelper.getAuthenticatedUser(currentUserEmail);
-
-        Daily daily = dailyRepository.findById(id)
-                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Daily not found"));
-
-        Pelada pelada = daily.getPelada();
-        if (!pelada.getAdmins().contains(caller)) {
-            throw new AppException(HttpStatus.FORBIDDEN, "Only admins can swap players");
-        }
-
-        if (LOCKED_STATUSES.contains(daily.getStatus())) {
-            throw new AppException(HttpStatus.BAD_REQUEST,
-                "Cannot swap players for a daily with status " + daily.getStatus());
-        }
-
-        java.util.List<Team> teams = teamRepository.findByDaily(daily);
-
-        Team team1 = null;
-        Team team2 = null;
-        User player1 = null;
-        User player2 = null;
-
-        for (Team team : teams) {
-            for (User p : team.getPlayers()) {
-                if (p.getId().equals(player1Id)) {
-                    team1 = team;
-                    player1 = p;
-                }
-                if (p.getId().equals(player2Id)) {
-                    team2 = team;
-                    player2 = p;
-                }
-            }
-        }
-
-        if (team1 == null || player1 == null) {
-            throw new AppException(HttpStatus.BAD_REQUEST, "Player 1 is not on any team in this daily");
-        }
-        if (team2 == null || player2 == null) {
-            throw new AppException(HttpStatus.BAD_REQUEST, "Player 2 is not on any team in this daily");
-        }
-
-        team1.getPlayers().remove(player1);
-        team2.getPlayers().remove(player2);
-        team1.getPlayers().add(player2);
-        team2.getPlayers().add(player1);
-
-        teamRepository.save(team1);
-        teamRepository.save(team2);
-
-        return teams.stream().map(this::buildTeamDTO).collect(Collectors.toList());
+        return dailyTeamManagementService.swapPlayers(id, player1Id, player2Id, currentUserEmail);
     }
 
     @Transactional
@@ -804,7 +661,7 @@ public class DailyService {
 
         List<Team> teams = teamRepository.findByDaily(daily);
         List<TeamDTO> teamDTOs = teams.stream()
-                .map(this::buildTeamDTO)
+                .map(dailyDTOMapper::buildTeamDTO)
                 .collect(Collectors.toList());
 
         List<Match> matches = matchRepository.findByDaily(daily);
@@ -917,66 +774,12 @@ public class DailyService {
 
     @Transactional
     public DailyDetailDTO.TeamDTO updateTeamName(Long dailyId, Long teamId, String name, String callerEmail) {
-        User caller = userAuthHelper.getAuthenticatedUser(callerEmail);
-
-        Daily daily = dailyRepository.findById(dailyId)
-                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Daily not found"));
-
-        Pelada pelada = daily.getPelada();
-        if (!pelada.getMembers().contains(caller)) {
-            throw new AppException(HttpStatus.FORBIDDEN, "Access denied: you are not a member of this pelada");
-        }
-
-        Team team = teamRepository.findById(teamId)
-                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Team not found"));
-
-        if (!team.getDaily().getId().equals(dailyId)) {
-            throw new AppException(HttpStatus.NOT_FOUND, "Team not found in this daily");
-        }
-
-        if (!team.getPlayers().contains(caller)) {
-            throw new AppException(HttpStatus.FORBIDDEN, "Only team members can rename their team");
-        }
-
-        if (name == null || name.isBlank()) {
-            throw new AppException(HttpStatus.BAD_REQUEST, "Team name must not be blank");
-        }
-
-        team.setName(name.trim());
-        teamRepository.save(team);
-        return buildTeamDTO(team);
+        return dailyTeamManagementService.updateTeamName(dailyId, teamId, name, callerEmail);
     }
 
     @Transactional
     public DailyDetailDTO.TeamDTO updateTeamColor(Long dailyId, Long teamId, String color, String callerEmail) {
-        User caller = userAuthHelper.getAuthenticatedUser(callerEmail);
-
-        Daily daily = dailyRepository.findById(dailyId)
-                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Daily not found"));
-
-        Pelada pelada = daily.getPelada();
-        if (!pelada.getMembers().contains(caller)) {
-            throw new AppException(HttpStatus.FORBIDDEN, "Access denied: you are not a member of this pelada");
-        }
-
-        Team team = teamRepository.findById(teamId)
-                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Team not found"));
-
-        if (!team.getDaily().getId().equals(dailyId)) {
-            throw new AppException(HttpStatus.NOT_FOUND, "Team not found in this daily");
-        }
-
-        if (!team.getPlayers().contains(caller) && !pelada.getAdmins().contains(caller)) {
-            throw new AppException(HttpStatus.FORBIDDEN, "Only team members or admins can change a team's color");
-        }
-
-        if (color == null || !color.matches("^#[0-9a-fA-F]{6}$")) {
-            throw new AppException(HttpStatus.BAD_REQUEST, "Color must be a valid 6-digit hex (e.g. #3b82f6)");
-        }
-
-        team.setColor(color);
-        teamRepository.save(team);
-        return buildTeamDTO(team);
+        return dailyTeamManagementService.updateTeamColor(dailyId, teamId, color, callerEmail);
     }
 
     @Transactional

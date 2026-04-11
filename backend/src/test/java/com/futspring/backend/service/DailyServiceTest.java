@@ -28,6 +28,8 @@ class DailyServiceTest {
     @Mock FileUploadService fileUploadService;
     @Mock UserAuthenticationHelper userAuthHelper;
     @Mock DailyAttendanceService dailyAttendanceService;
+    @Mock DailyTeamManagementService dailyTeamManagementService;
+    @Mock DailyDTOMapper dailyDTOMapper;
     @Mock DailyRepository dailyRepository;
     @Mock PeladaRepository peladaRepository;
     @Mock UserRepository userRepository;
@@ -52,6 +54,7 @@ class DailyServiceTest {
     void setUp() {
         dailyService = new DailyService(
                 fileUploadService, userAuthHelper, dailyAttendanceService,
+                dailyTeamManagementService, dailyDTOMapper,
                 dailyRepository, peladaRepository, userRepository, teamRepository,
                 matchRepository, playerMatchStatRepository, userDailyStatsRepository,
                 leagueTableEntryRepository, dailyAwardRepository, statsRepository, rankingRepository);
@@ -386,204 +389,49 @@ class DailyServiceTest {
                 .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.BAD_REQUEST));
     }
 
-    // --- sortTeams ---
+    // --- sortTeams (delegation) ---
 
     @Test
-    void sortTeams_success_createsTeams() {
-        // 2 teams x 1 player each = need exactly 2 confirmed players
-        scheduledDaily.getConfirmedPlayers().add(admin);
-        scheduledDaily.getConfirmedPlayers().add(member);
-
-        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
-        when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
-        when(teamRepository.findByDaily(scheduledDaily)).thenReturn(Collections.emptyList());
-        when(teamRepository.save(any(Team.class))).thenAnswer(inv -> {
-            Team t = inv.getArgument(0);
-            if (t.getId() == null) ReflectionTestUtils.setField(t, "id", (long)(Math.random() * 1000));
-            return t;
-        });
-        when(teamRepository.saveAll(anyList())).thenAnswer(inv -> inv.getArgument(0));
+    void sortTeams_delegatesToTeamManagementService() {
+        List<DailyDetailDTO.TeamDTO> expected = List.of();
+        when(dailyTeamManagementService.sortTeams(100L, "admin@example.com")).thenReturn(expected);
 
         List<DailyDetailDTO.TeamDTO> result = dailyService.sortTeams(100L, "admin@example.com");
 
-        assertThat(result).hasSize(2);
+        verify(dailyTeamManagementService).sortTeams(100L, "admin@example.com");
+        assertThat(result).isEqualTo(expected);
     }
 
     @Test
-    void sortTeams_callerNotAdmin_throwsForbidden() {
-        when(userAuthHelper.getAuthenticatedUser("member@example.com")).thenReturn(member);
-        when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
-
-        assertThatThrownBy(() -> dailyService.sortTeams(100L, "member@example.com"))
-                .isInstanceOf(AppException.class)
-                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.FORBIDDEN));
-    }
-
-    @Test
-    void sortTeams_lockedStatus_throwsBadRequest() {
-        scheduledDaily.setStatus("FINISHED");
-        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
-        when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
+    void sortTeams_propagatesException() {
+        when(dailyTeamManagementService.sortTeams(100L, "admin@example.com"))
+                .thenThrow(new AppException(HttpStatus.BAD_REQUEST, "Cannot sort teams"));
 
         assertThatThrownBy(() -> dailyService.sortTeams(100L, "admin@example.com"))
                 .isInstanceOf(AppException.class)
                 .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.BAD_REQUEST));
     }
 
-    @Test
-    void sortTeams_wrongPlayerCount_throwsBadRequest() {
-        // 0 players but need 2 (2 teams x 1 player)
-        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
-        when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
-        when(teamRepository.findByDaily(scheduledDaily)).thenReturn(Collections.emptyList());
-
-        assertThatThrownBy(() -> dailyService.sortTeams(100L, "admin@example.com"))
-                .isInstanceOf(AppException.class)
-                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.BAD_REQUEST));
-    }
+    // --- swapPlayers (delegation) ---
 
     @Test
-    void sortTeams_deletesExistingTeams() {
-        scheduledDaily.getConfirmedPlayers().add(admin);
-        scheduledDaily.getConfirmedPlayers().add(member);
-
-        Team existingTeam = Team.builder().id(1L).daily(scheduledDaily).name("Old Team").players(new HashSet<>()).build();
-
-        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
-        when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
-        when(teamRepository.findByDaily(scheduledDaily)).thenReturn(List.of(existingTeam));
-        when(teamRepository.save(any(Team.class))).thenAnswer(inv -> {
-            Team t = inv.getArgument(0);
-            if (t.getId() == null) ReflectionTestUtils.setField(t, "id", (long)(Math.random() * 1000));
-            return t;
-        });
-        when(teamRepository.saveAll(anyList())).thenAnswer(inv -> inv.getArgument(0));
-
-        dailyService.sortTeams(100L, "admin@example.com");
-
-        verify(teamRepository).deleteAll(List.of(existingTeam));
-    }
-
-    @Test
-    void sortTeams_callerNotFound_throwsUnauthorized() {
-        when(userAuthHelper.getAuthenticatedUser("ghost@example.com")).thenThrow(new AppException(HttpStatus.NOT_FOUND, "User not found"));
-
-        assertThatThrownBy(() -> dailyService.sortTeams(100L, "ghost@example.com"))
-                .isInstanceOf(AppException.class)
-                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.NOT_FOUND));
-    }
-
-    @Test
-    void sortTeams_dailyNotFound_throwsNotFound() {
-        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
-        when(dailyRepository.findById(999L)).thenReturn(Optional.empty());
-
-        assertThatThrownBy(() -> dailyService.sortTeams(999L, "admin@example.com"))
-                .isInstanceOf(AppException.class)
-                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.NOT_FOUND));
-    }
-
-    @Test
-    void sortTeams_tooManyPlayers_throwsBadRequest() {
-        // need exactly 2 (2 teams x 1), add 3
-        scheduledDaily.getConfirmedPlayers().add(admin);
-        scheduledDaily.getConfirmedPlayers().add(member);
-        scheduledDaily.getConfirmedPlayers().add(outsider);
-
-        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
-        when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
-        when(teamRepository.findByDaily(scheduledDaily)).thenReturn(Collections.emptyList());
-
-        assertThatThrownBy(() -> dailyService.sortTeams(100L, "admin@example.com"))
-                .isInstanceOf(AppException.class)
-                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.BAD_REQUEST));
-    }
-
-    // --- swapPlayers ---
-
-    @Test
-    void swapPlayers_success_swapsPlayers() {
-        Team team1 = Team.builder().id(1L).daily(scheduledDaily).name("Team 1")
-                .players(new HashSet<>(Set.of(admin))).build();
-        Team team2 = Team.builder().id(2L).daily(scheduledDaily).name("Team 2")
-                .players(new HashSet<>(Set.of(member))).build();
-
-        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
-        when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
-        when(teamRepository.findByDaily(scheduledDaily)).thenReturn(List.of(team1, team2));
-        when(teamRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+    void swapPlayers_delegatesToTeamManagementService() {
+        List<DailyDetailDTO.TeamDTO> expected = List.of();
+        when(dailyTeamManagementService.swapPlayers(100L, 1L, 2L, "admin@example.com")).thenReturn(expected);
 
         List<DailyDetailDTO.TeamDTO> result = dailyService.swapPlayers(100L, 1L, 2L, "admin@example.com");
 
-        assertThat(team1.getPlayers()).contains(member);
-        assertThat(team2.getPlayers()).contains(admin);
+        verify(dailyTeamManagementService).swapPlayers(100L, 1L, 2L, "admin@example.com");
+        assertThat(result).isEqualTo(expected);
     }
 
     @Test
-    void swapPlayers_callerNotAdmin_throwsForbidden() {
-        when(userAuthHelper.getAuthenticatedUser("member@example.com")).thenReturn(member);
-        when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
-
-        assertThatThrownBy(() -> dailyService.swapPlayers(100L, 1L, 2L, "member@example.com"))
-                .isInstanceOf(AppException.class)
-                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.FORBIDDEN));
-    }
-
-    @Test
-    void swapPlayers_lockedStatus_throwsBadRequest() {
-        scheduledDaily.setStatus("FINISHED");
-        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
-        when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
+    void swapPlayers_propagatesException() {
+        when(dailyTeamManagementService.swapPlayers(100L, 1L, 2L, "admin@example.com"))
+                .thenThrow(new AppException(HttpStatus.BAD_REQUEST, "Player not on any team"));
 
         assertThatThrownBy(() -> dailyService.swapPlayers(100L, 1L, 2L, "admin@example.com"))
                 .isInstanceOf(AppException.class)
                 .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.BAD_REQUEST));
-    }
-
-    @Test
-    void swapPlayers_player1NotOnTeam_throwsBadRequest() {
-        Team team2 = Team.builder().id(2L).daily(scheduledDaily).name("Team 2")
-                .players(new HashSet<>(Set.of(member))).build();
-
-        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
-        when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
-        when(teamRepository.findByDaily(scheduledDaily)).thenReturn(List.of(team2));
-
-        assertThatThrownBy(() -> dailyService.swapPlayers(100L, 999L, 2L, "admin@example.com"))
-                .isInstanceOf(AppException.class)
-                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.BAD_REQUEST));
-    }
-
-    @Test
-    void swapPlayers_player2NotOnTeam_throwsBadRequest() {
-        Team team1 = Team.builder().id(1L).daily(scheduledDaily).name("Team 1")
-                .players(new HashSet<>(Set.of(admin))).build();
-
-        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
-        when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
-        when(teamRepository.findByDaily(scheduledDaily)).thenReturn(List.of(team1));
-
-        assertThatThrownBy(() -> dailyService.swapPlayers(100L, 1L, 999L, "admin@example.com"))
-                .isInstanceOf(AppException.class)
-                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.BAD_REQUEST));
-    }
-
-    @Test
-    void swapPlayers_callerNotFound_throwsUnauthorized() {
-        when(userAuthHelper.getAuthenticatedUser("ghost@example.com")).thenThrow(new AppException(HttpStatus.NOT_FOUND, "User not found"));
-
-        assertThatThrownBy(() -> dailyService.swapPlayers(100L, 1L, 2L, "ghost@example.com"))
-                .isInstanceOf(AppException.class)
-                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.NOT_FOUND));
-    }
-
-    @Test
-    void swapPlayers_dailyNotFound_throwsNotFound() {
-        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
-        when(dailyRepository.findById(999L)).thenReturn(Optional.empty());
-
-        assertThatThrownBy(() -> dailyService.swapPlayers(999L, 1L, 2L, "admin@example.com"))
-                .isInstanceOf(AppException.class)
-                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.NOT_FOUND));
     }
 }

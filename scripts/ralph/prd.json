@@ -74,7 +74,7 @@
         "All existing tests pass; ./mvnw compile succeeds"
       ],
       "priority": 4,
-      "passes": false,
+      "passes": true,
       "notes": "Depends on US-002"
     },
     {

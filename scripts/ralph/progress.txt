@@ -9,6 +9,8 @@
 - File upload logic uses: 5MB size check → MIME check (jpeg/png/webp) → UUID filename → Files.copy → return filename; IOException → AppException(500, "Failed to store file")
 - UserAuthenticationHelper lives in `com.futspring.backend.helper` and delegates user lookup to avoid repeating the findByEmail pattern; services that removed their userRepository dependency (ChatService, RankingService, AwardsService) drop the repo from their imports but DailyService/PeladaService retain it for other uses
 - Tests that check user-not-found now mock `userAuthHelper.getAuthenticatedUser(email)` to throw `AppException(NOT_FOUND)` instead of returning `Optional.empty()` from userRepository — and assert NOT_FOUND (not UNAUTHORIZED)
+- `DailyDTOMapper` is a `@Component` (not `@Service`) that holds `buildTeamDTO` — injected into both `DailyTeamManagementService` and `DailyService` (for `getDailyDetail`); use `dailyDTOMapper::buildTeamDTO` method reference, never `this::buildTeamDTO`
+- `DailyTeamManagementService` and `DailyDTOMapper` live in the same `service` package as `DailyService`; `clearTeams` is package-private (no visibility modifier)
 
 ---
 
@@ -66,4 +68,20 @@
   - The `clearAttendees` method is package-private (no modifier) — accessible within `com.futspring.backend.service` package for future orchestration
   - DailyServiceTest was missing `import org.springframework.test.util.ReflectionTestUtils` — added it as part of this update
   - Java is not installed in this environment — cannot run ./mvnw compile; correctness verified by manual review
+---
+
+## 2026-04-11 - US-004
+- `DailyTeamManagementService` and `DailyDTOMapper` were already created in a prior partial run (US-003 commit left them untracked). This iteration completed the wiring.
+- Fixed `DailyService.java`: changed `this::buildTeamDTO` (compile error — no such private method) to `dailyDTOMapper::buildTeamDTO` at line 664 in `getDailyDetail`
+- Updated `DailyServiceTest.java`: added `@Mock DailyTeamManagementService dailyTeamManagementService` and `@Mock DailyDTOMapper dailyDTOMapper`; updated `new DailyService(...)` constructor call to include both new mocks; replaced 14 inline `sortTeams`/`swapPlayers` logic tests with 4 delegation tests (2 per method)
+- Created `DailyTeamManagementServiceTest.java` with 12 unit tests covering:
+  - `sortTeams` error paths: callerNotAdmin, locked statuses (IN_COURSE/FINISHED/CANCELED), tooFewPlayers, tooManyPlayers, dailyNotFound, callerNotFound
+  - `sortTeams` success path: verifies old teams deleted, 2 new teams created
+  - `swapPlayers` swap logic: verifies players exchanged between teams and both teams saved
+  - `swapPlayers` error paths: callerNotAdmin, lockedStatus, player1NotOnTeam, player2NotOnTeam, dailyNotFound, callerNotFound
+- Files changed: DailyService.java (1 line fix), DailyServiceTest.java (mocks + constructor + delegation tests), DailyTeamManagementServiceTest.java (new), scripts/ralph/prd.json, scripts/ralph/progress.txt
+- **Learnings for future iterations:**
+  - When a prior run creates files but doesn't commit them (they show as `??` in git status), check the implementation for any compile-breaking gaps before assuming it's complete
+  - `DailyDTOMapper` must be injected into any service that needs `buildTeamDTO` — including the retained `getDailyDetail` in `DailyService`
+  - `DailyTeamManagementService.LOCKED_STATUSES` is its own copy; `DailyService` no longer needs that constant after US-006 removes the remaining stubs
 ---
