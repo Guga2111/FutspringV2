@@ -1,4 +1,6 @@
 ## Codebase Patterns
+- Frontend custom hooks live at `frontend/src/components/<feature>/hooks/<hookName>.ts`; the hooks directory is created on first use (not pre-existing)
+- Custom data-fetching hooks expose individual refetch functions (e.g., `refetchPelada`, `refetchDailies`) in addition to a combined `refetch` so callers can trigger targeted refreshes
 - When extracting a service, the delegation stub in the original service must @Transactional-annotate wrapper methods and call the sub-service; the original service's tests become delegation tests (mock sub-service → verify call), and a new test file covers the real logic
 - `DailyAttendanceService` is in the same package as `DailyService` so clearAttendees (package-private) is accessible to future orchestration code in that package
 - Backend services use `@Service` + `@RequiredArgsConstructor` + `private final` constructor injection (no @Autowired field injection)
@@ -127,4 +129,25 @@
   - `getDailyDetail` still reads from 6 repositories (teams, matches, playerMatchStats, userDailyStats, leagueTableEntries, awards) — intentional for the read-model DTO; a future `DailyQueryService` could extract it
   - Strict Mockito fails on unnecessary stubs; don't stub `playerMatchStatRepository.findByMatchInWithUser` in getDailyDetail tests since Mockito returns an empty list by default for List return types
   - Java is not installed in this environment — cannot run ./mvnw compile; correctness verified by manual review
+---
+
+## 2026-04-11 - US-007
+- Created `usePeladaDetail(id: string | undefined)` hook at `frontend/src/components/pelada/hooks/usePeladaDetail.ts`
+  - Consolidates four data-fetching concerns: pelada (loading, accessDenied, error), dailies (dailiesLoading), ranking (rankingLoading), awards (awardsLoading)
+  - Each concern has its own loading flag via separate useCallback + useEffect pairs
+  - Returns `{ pelada, dailies, ranking, awards, loading, rankingLoading, dailiesLoading, awardsLoading, accessDenied, error, refetch, refetchPelada, refetchDailies }`
+  - `refetchPelada` and `refetchDailies` exposed individually for targeted refreshes (used in remove-player, toggle-admin, add-player, edit-pelada, create-session handlers)
+- Updated `PeladaDetailPage.tsx`:
+  - Removed 4 useState pairs (pelada+loading, dailies+dailiesLoading, ranking+rankingLoading, awards+awardsLoading)
+  - Removed 4 useCallback + 4 useEffect fetch definitions
+  - Removed imports: useCallback, useEffect, getPelada, getRanking, getPeladaAwards, getDailiesForPelada, PeladaDetail, DailyListItem, RankingDTO, PeladaAwards
+  - Replaced with single `usePeladaDetail(id)` call
+  - `rankingSort` state and `sortedRanking` remain on the page
+  - All 6 call sites using `fetchPelada`/`fetchDailies` replaced with `refetchPelada`/`refetchDailies`
+- Files changed: `frontend/src/components/pelada/hooks/usePeladaDetail.ts` (new), `frontend/src/pages/PeladaDetailPage.tsx`, `scripts/ralph/prd.json`, `scripts/ralph/progress.txt`
+- **Learnings for future iterations:**
+  - `npx tsc --noEmit` is the typecheck command for this frontend (no separate lint script needed for type correctness)
+  - The `hooks/` directory under a component folder does not pre-exist — create it with mkdir before writing hook files
+  - When a page uses `fetchX` in both useEffect deps and event handlers, the hook must expose named individual refetch functions, not just a combined `refetch`
+  - Browser testing not available in this environment — manual verification needed for UI changes
 ---
