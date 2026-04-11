@@ -25,7 +25,6 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class DailyServiceTest {
 
-    @Mock FileUploadService fileUploadService;
     @Mock UserAuthenticationHelper userAuthHelper;
     @Mock DailyAttendanceService dailyAttendanceService;
     @Mock DailyTeamManagementService dailyTeamManagementService;
@@ -33,15 +32,12 @@ class DailyServiceTest {
     @Mock DailyDTOMapper dailyDTOMapper;
     @Mock DailyRepository dailyRepository;
     @Mock PeladaRepository peladaRepository;
-    @Mock UserRepository userRepository;
     @Mock TeamRepository teamRepository;
     @Mock MatchRepository matchRepository;
     @Mock PlayerMatchStatRepository playerMatchStatRepository;
     @Mock UserDailyStatsRepository userDailyStatsRepository;
     @Mock LeagueTableEntryRepository leagueTableEntryRepository;
     @Mock DailyAwardRepository dailyAwardRepository;
-    @Mock StatsRepository statsRepository;
-    @Mock RankingRepository rankingRepository;
 
     DailyService dailyService;
 
@@ -54,11 +50,11 @@ class DailyServiceTest {
     @BeforeEach
     void setUp() {
         dailyService = new DailyService(
-                fileUploadService, userAuthHelper, dailyAttendanceService,
-                dailyTeamManagementService, dailyResultsService, dailyDTOMapper,
-                dailyRepository, peladaRepository, userRepository, teamRepository,
+                userAuthHelper, dailyAttendanceService, dailyTeamManagementService,
+                dailyResultsService, dailyDTOMapper,
+                dailyRepository, peladaRepository, teamRepository,
                 matchRepository, playerMatchStatRepository, userDailyStatsRepository,
-                leagueTableEntryRepository, dailyAwardRepository, statsRepository, rankingRepository);
+                leagueTableEntryRepository, dailyAwardRepository);
 
         admin = User.builder().id(1L).email("admin@example.com").username("admin").password("hash").stars(4).build();
         member = User.builder().id(2L).email("member@example.com").username("member").password("hash").stars(3).build();
@@ -109,7 +105,7 @@ class DailyServiceTest {
     }
 
     @Test
-    void createDaily_callerNotFound_throwsUnauthorized() {
+    void createDaily_callerNotFound_throwsNotFound() {
         when(userAuthHelper.getAuthenticatedUser("ghost@example.com")).thenThrow(new AppException(HttpStatus.NOT_FOUND, "User not found"));
 
         CreateDailyRequestDTO req = new CreateDailyRequestDTO();
@@ -163,7 +159,7 @@ class DailyServiceTest {
     }
 
     @Test
-    void getDailiesForPelada_callerNotFound_throwsUnauthorized() {
+    void getDailiesForPelada_callerNotFound_throwsNotFound() {
         when(userAuthHelper.getAuthenticatedUser("ghost@example.com")).thenThrow(new AppException(HttpStatus.NOT_FOUND, "User not found"));
 
         assertThatThrownBy(() -> dailyService.getDailiesForPelada(10L, "ghost@example.com"))
@@ -200,7 +196,6 @@ class DailyServiceTest {
 
         when(userAuthHelper.getAuthenticatedUser("member@example.com")).thenReturn(member);
         when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
-        // Repository already returns in desc order
         when(dailyRepository.findByPeladaOrderByDailyDateDesc(pelada)).thenReturn(List.of(newer, older));
 
         List<DailyListItemDTO> result = dailyService.getDailiesForPelada(10L, "member@example.com");
@@ -228,7 +223,7 @@ class DailyServiceTest {
     }
 
     @Test
-    void getDailyDetail_callerNotFound_throwsUnauthorized() {
+    void getDailyDetail_callerNotFound_throwsNotFound() {
         when(userAuthHelper.getAuthenticatedUser("ghost@example.com")).thenThrow(new AppException(HttpStatus.NOT_FOUND, "User not found"));
 
         assertThatThrownBy(() -> dailyService.getDailyDetail(100L, "ghost@example.com"))
@@ -256,52 +251,6 @@ class DailyServiceTest {
                 .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.FORBIDDEN));
     }
 
-    // --- confirmAttendance (delegation) ---
-
-    @Test
-    void confirmAttendance_delegatesToAttendanceService() {
-        DailyListItemDTO expected = DailyListItemDTO.from(scheduledDaily);
-        when(dailyAttendanceService.confirmAttendance(100L, "member@example.com")).thenReturn(expected);
-
-        DailyListItemDTO result = dailyService.confirmAttendance(100L, "member@example.com");
-
-        verify(dailyAttendanceService).confirmAttendance(100L, "member@example.com");
-        assertThat(result).isEqualTo(expected);
-    }
-
-    @Test
-    void confirmAttendance_propagatesException() {
-        when(dailyAttendanceService.confirmAttendance(100L, "member@example.com"))
-                .thenThrow(new AppException(HttpStatus.CONFLICT, "Already confirmed"));
-
-        assertThatThrownBy(() -> dailyService.confirmAttendance(100L, "member@example.com"))
-                .isInstanceOf(AppException.class)
-                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.CONFLICT));
-    }
-
-    // --- disconfirmAttendance (delegation) ---
-
-    @Test
-    void disconfirmAttendance_delegatesToAttendanceService() {
-        DailyListItemDTO expected = DailyListItemDTO.from(scheduledDaily);
-        when(dailyAttendanceService.disconfirmAttendance(100L, "member@example.com")).thenReturn(expected);
-
-        DailyListItemDTO result = dailyService.disconfirmAttendance(100L, "member@example.com");
-
-        verify(dailyAttendanceService).disconfirmAttendance(100L, "member@example.com");
-        assertThat(result).isEqualTo(expected);
-    }
-
-    @Test
-    void disconfirmAttendance_propagatesException() {
-        when(dailyAttendanceService.disconfirmAttendance(100L, "member@example.com"))
-                .thenThrow(new AppException(HttpStatus.BAD_REQUEST, "Not confirmed"));
-
-        assertThatThrownBy(() -> dailyService.disconfirmAttendance(100L, "member@example.com"))
-                .isInstanceOf(AppException.class)
-                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.BAD_REQUEST));
-    }
-
     // --- updateStatus ---
 
     @Test
@@ -310,7 +259,7 @@ class DailyServiceTest {
         when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
         when(dailyRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        DailyListItemDTO result = dailyService.updateStatus(100L, "CONFIRMED", "admin@example.com");
+        dailyService.updateStatus(100L, "CONFIRMED", "admin@example.com");
 
         assertThat(scheduledDaily.getStatus()).isEqualTo("CONFIRMED");
     }
@@ -343,7 +292,6 @@ class DailyServiceTest {
         when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
 
-        // SCHEDULED -> IN_COURSE is invalid (must go through CONFIRMED first)
         assertThatThrownBy(() -> dailyService.updateStatus(100L, "IN_COURSE", "admin@example.com"))
                 .isInstanceOf(AppException.class)
                 .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.BAD_REQUEST));
@@ -360,7 +308,7 @@ class DailyServiceTest {
     }
 
     @Test
-    void updateStatus_callerNotFound_throwsUnauthorized() {
+    void updateStatus_callerNotFound_throwsNotFound() {
         when(userAuthHelper.getAuthenticatedUser("ghost@example.com")).thenThrow(new AppException(HttpStatus.NOT_FOUND, "User not found"));
 
         assertThatThrownBy(() -> dailyService.updateStatus(100L, "CONFIRMED", "ghost@example.com"))
@@ -384,138 +332,55 @@ class DailyServiceTest {
         when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
 
-        // FINISHED has no valid transitions
         assertThatThrownBy(() -> dailyService.updateStatus(100L, "SCHEDULED", "admin@example.com"))
                 .isInstanceOf(AppException.class)
                 .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.BAD_REQUEST));
     }
 
-    // --- sortTeams (delegation) ---
+    // --- deleteDaily ---
 
     @Test
-    void sortTeams_delegatesToTeamManagementService() {
-        List<DailyDetailDTO.TeamDTO> expected = List.of();
-        when(dailyTeamManagementService.sortTeams(100L, "admin@example.com")).thenReturn(expected);
-
-        List<DailyDetailDTO.TeamDTO> result = dailyService.sortTeams(100L, "admin@example.com");
-
-        verify(dailyTeamManagementService).sortTeams(100L, "admin@example.com");
-        assertThat(result).isEqualTo(expected);
-    }
-
-    @Test
-    void sortTeams_propagatesException() {
-        when(dailyTeamManagementService.sortTeams(100L, "admin@example.com"))
-                .thenThrow(new AppException(HttpStatus.BAD_REQUEST, "Cannot sort teams"));
-
-        assertThatThrownBy(() -> dailyService.sortTeams(100L, "admin@example.com"))
-                .isInstanceOf(AppException.class)
-                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.BAD_REQUEST));
-    }
-
-    // --- swapPlayers (delegation) ---
-
-    @Test
-    void swapPlayers_delegatesToTeamManagementService() {
-        List<DailyDetailDTO.TeamDTO> expected = List.of();
-        when(dailyTeamManagementService.swapPlayers(100L, 1L, 2L, "admin@example.com")).thenReturn(expected);
-
-        List<DailyDetailDTO.TeamDTO> result = dailyService.swapPlayers(100L, 1L, 2L, "admin@example.com");
-
-        verify(dailyTeamManagementService).swapPlayers(100L, 1L, 2L, "admin@example.com");
-        assertThat(result).isEqualTo(expected);
-    }
-
-    @Test
-    void swapPlayers_propagatesException() {
-        when(dailyTeamManagementService.swapPlayers(100L, 1L, 2L, "admin@example.com"))
-                .thenThrow(new AppException(HttpStatus.BAD_REQUEST, "Player not on any team"));
-
-        assertThatThrownBy(() -> dailyService.swapPlayers(100L, 1L, 2L, "admin@example.com"))
-                .isInstanceOf(AppException.class)
-                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.BAD_REQUEST));
-    }
-
-    // --- submitResults (delegation) ---
-
-    @Test
-    void submitResults_delegatesToResultsService() {
-        List<DailyDetailDTO.MatchDTO> expected = List.of();
-        when(dailyResultsService.submitResults(100L, List.of(), "admin@example.com")).thenReturn(expected);
-
-        List<DailyDetailDTO.MatchDTO> result = dailyService.submitResults(100L, List.of(), "admin@example.com");
-
-        verify(dailyResultsService).submitResults(100L, List.of(), "admin@example.com");
-        assertThat(result).isEqualTo(expected);
-    }
-
-    @Test
-    void submitResults_propagatesException() {
-        when(dailyResultsService.submitResults(100L, List.of(), "admin@example.com"))
-                .thenThrow(new AppException(HttpStatus.FORBIDDEN, "Only admins can submit results"));
-
-        assertThatThrownBy(() -> dailyService.submitResults(100L, List.of(), "admin@example.com"))
-                .isInstanceOf(AppException.class)
-                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.FORBIDDEN));
-    }
-
-    // --- finalizeDaily (delegation) ---
-
-    @Test
-    void finalizeDaily_delegatesToResultsServiceThenCallsGetDetail() {
-        doNothing().when(dailyResultsService).finalizeDaily(100L, List.of(), List.of(), "admin@example.com");
+    void deleteDaily_success_orchestratesSubServicesAndDeletes() {
         when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
-        when(teamRepository.findByDaily(scheduledDaily)).thenReturn(Collections.emptyList());
-        when(matchRepository.findByDaily(scheduledDaily)).thenReturn(Collections.emptyList());
-        when(userDailyStatsRepository.findByDaily(scheduledDaily)).thenReturn(Collections.emptyList());
-        when(leagueTableEntryRepository.findByDailyOrderByPositionAsc(scheduledDaily)).thenReturn(Collections.emptyList());
-        when(dailyAwardRepository.findByDaily(scheduledDaily)).thenReturn(Optional.empty());
 
-        DailyDetailDTO result = dailyService.finalizeDaily(100L, List.of(), List.of(), "admin@example.com");
+        dailyService.deleteDaily(100L, "admin@example.com");
 
-        verify(dailyResultsService).finalizeDaily(100L, List.of(), List.of(), "admin@example.com");
-        assertThat(result).isNotNull();
+        verify(dailyResultsService).clearResults(scheduledDaily, pelada);
+        verify(dailyTeamManagementService).clearTeams(scheduledDaily);
+        verify(dailyAttendanceService).clearAttendees(scheduledDaily);
+        verify(dailyRepository).delete(scheduledDaily);
     }
 
     @Test
-    void finalizeDaily_propagatesException() {
-        doThrow(new AppException(HttpStatus.BAD_REQUEST, "No matches to finalize"))
-                .when(dailyResultsService).finalizeDaily(100L, List.of(), List.of(), "admin@example.com");
-
-        assertThatThrownBy(() -> dailyService.finalizeDaily(100L, List.of(), List.of(), "admin@example.com"))
-                .isInstanceOf(AppException.class)
-                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.BAD_REQUEST));
-    }
-
-    // --- populateFromMessage (delegation) ---
-
-    @Test
-    void populateFromMessage_delegatesToResultsServiceThenCallsGetDetail() {
-        com.futspring.backend.dto.PopulateDailyRequestDTO request = new com.futspring.backend.dto.PopulateDailyRequestDTO();
-        doNothing().when(dailyResultsService).populateFromMessage(100L, request, "admin@example.com");
-        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
+    void deleteDaily_callerNotAdmin_throwsForbidden() {
+        when(userAuthHelper.getAuthenticatedUser("member@example.com")).thenReturn(member);
         when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
-        when(teamRepository.findByDaily(scheduledDaily)).thenReturn(Collections.emptyList());
-        when(matchRepository.findByDaily(scheduledDaily)).thenReturn(Collections.emptyList());
-        when(userDailyStatsRepository.findByDaily(scheduledDaily)).thenReturn(Collections.emptyList());
-        when(leagueTableEntryRepository.findByDailyOrderByPositionAsc(scheduledDaily)).thenReturn(Collections.emptyList());
-        when(dailyAwardRepository.findByDaily(scheduledDaily)).thenReturn(Optional.empty());
 
-        DailyDetailDTO result = dailyService.populateFromMessage(100L, request, "admin@example.com");
-
-        verify(dailyResultsService).populateFromMessage(100L, request, "admin@example.com");
-        assertThat(result).isNotNull();
-    }
-
-    @Test
-    void populateFromMessage_propagatesException() {
-        com.futspring.backend.dto.PopulateDailyRequestDTO request = new com.futspring.backend.dto.PopulateDailyRequestDTO();
-        doThrow(new AppException(HttpStatus.FORBIDDEN, "Only admins can populate"))
-                .when(dailyResultsService).populateFromMessage(100L, request, "member@example.com");
-
-        assertThatThrownBy(() -> dailyService.populateFromMessage(100L, request, "member@example.com"))
+        assertThatThrownBy(() -> dailyService.deleteDaily(100L, "member@example.com"))
                 .isInstanceOf(AppException.class)
                 .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.FORBIDDEN));
+
+        verify(dailyResultsService, never()).clearResults(any(), any());
+        verify(dailyRepository, never()).delete(any(Daily.class));
+    }
+
+    @Test
+    void deleteDaily_dailyNotFound_throwsNotFound() {
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
+        when(dailyRepository.findById(999L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> dailyService.deleteDaily(999L, "admin@example.com"))
+                .isInstanceOf(AppException.class)
+                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.NOT_FOUND));
+    }
+
+    @Test
+    void deleteDaily_callerNotFound_throwsNotFound() {
+        when(userAuthHelper.getAuthenticatedUser("ghost@example.com")).thenThrow(new AppException(HttpStatus.NOT_FOUND, "User not found"));
+
+        assertThatThrownBy(() -> dailyService.deleteDaily(100L, "ghost@example.com"))
+                .isInstanceOf(AppException.class)
+                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.NOT_FOUND));
     }
 }

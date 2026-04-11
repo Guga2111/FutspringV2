@@ -110,7 +110,7 @@
         "Create docs/adr/001-daily-service-split.md with Context, Decision, Consequences"
       ],
       "priority": 6,
-      "passes": false,
+      "passes": true,
       "notes": "Depends on US-003, US-004, US-005"
     },
     {

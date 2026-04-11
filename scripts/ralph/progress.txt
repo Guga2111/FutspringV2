@@ -11,6 +11,8 @@
 - Tests that check user-not-found now mock `userAuthHelper.getAuthenticatedUser(email)` to throw `AppException(NOT_FOUND)` instead of returning `Optional.empty()` from userRepository — and assert NOT_FOUND (not UNAUTHORIZED)
 - `DailyDTOMapper` is a `@Component` (not `@Service`) that holds `buildTeamDTO` — injected into both `DailyTeamManagementService` and `DailyService` (for `getDailyDetail`); use `dailyDTOMapper::buildTeamDTO` method reference, never `this::buildTeamDTO`
 - `DailyTeamManagementService` and `DailyDTOMapper` live in the same `service` package as `DailyService`; `clearTeams` is package-private (no visibility modifier)
+- `DailyController` injects all 4 service beans (DailyService, DailyAttendanceService, DailyTeamManagementService, DailyResultsService); `finalizeDaily` and `populateFromMessage` routes call the results sub-service then `dailyService.getDailyDetail` because the sub-service returns void
+- `deleteDaily` orchestration order: clearResults → clearTeams → clearAttendees → dailyRepository.delete (preserves referential integrity)
 
 ---
 
@@ -108,5 +110,21 @@
   - `clearResults` consolidates the results-teardown logic from `deleteDaily` — US-006 should replace `deleteDaily`'s inline deletion code with a call to `dailyResultsService.clearResults(daily, pelada)` + team/attendance teardown
   - `DailyResultsService` takes all 12 repositories in its constructor (in declaration order); when writing tests, pass them in the same order as the field declarations
   - `distributeStats` is a stateful private method (uses Collections.shuffle); tests for `populateFromMessage` would require mocking randomness — unit tests for the paths suffice, `distributeStats` logic is well-isolated
+  - Java is not installed in this environment — cannot run ./mvnw compile; correctness verified by manual review
+---
+
+## 2026-04-11 - US-006
+- Slimmed `DailyService` to 5 lifecycle methods: `createDaily`, `getDailiesForPelada`, `updateStatus`, `deleteDaily`, `getDailyDetail` (253 lines, under 300)
+- Removed 12 delegation stubs from `DailyService` (confirmAttendance, disconfirmAttendance, adminConfirmAttendance, adminDisconfirmAttendance, sortTeams, swapPlayers, updateTeamName, updateTeamColor, submitResults, finalizeDaily, uploadChampionImage, populateFromMessage)
+- Removed no-longer-needed constructor fields from `DailyService`: FileUploadService, UserRepository, StatsRepository, RankingRepository
+- Refactored `deleteDaily` to delegate teardown in correct order: `dailyResultsService.clearResults` → `dailyTeamManagementService.clearTeams` → `dailyAttendanceService.clearAttendees` → `dailyRepository.delete`
+- Updated `DailyController` to inject `DailyAttendanceService`, `DailyTeamManagementService`, `DailyResultsService` directly; `finalizeDaily` and `populateFromMessage` now call results service then `dailyService.getDailyDetail`
+- Updated `DailyServiceTest`: removed 4 mock fields (FileUploadService, UserRepository, StatsRepository, RankingRepository); updated constructor; removed 14 delegation tests; added 4 deleteDaily tests (success, callerNotAdmin, dailyNotFound, callerNotFound)
+- Created `docs/adr/001-daily-service-split.md` with Context, Decision, Consequences
+- Files changed: DailyService.java, DailyController.java, DailyServiceTest.java, docs/adr/001-daily-service-split.md (new), prd.json, progress.txt
+- **Learnings for future iterations:**
+  - When DailyService loses its delegation stubs, DailyController must inject the sub-services directly — `finalizeDaily` and `populateFromMessage` need a two-step call (sub-service → getDailyDetail) because the results service returns void
+  - `getDailyDetail` still reads from 6 repositories (teams, matches, playerMatchStats, userDailyStats, leagueTableEntries, awards) — intentional for the read-model DTO; a future `DailyQueryService` could extract it
+  - Strict Mockito fails on unnecessary stubs; don't stub `playerMatchStatRepository.findByMatchInWithUser` in getDailyDetail tests since Mockito returns an empty list by default for List return types
   - Java is not installed in this environment — cannot run ./mvnw compile; correctness verified by manual review
 ---

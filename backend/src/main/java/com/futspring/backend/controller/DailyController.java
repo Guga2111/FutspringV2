@@ -5,9 +5,15 @@ import com.futspring.backend.dto.DailyDetailDTO;
 import com.futspring.backend.dto.DailyListItemDTO;
 import com.futspring.backend.dto.FinalizeDailyRequestDTO;
 import com.futspring.backend.dto.MatchResultDTO;
+import com.futspring.backend.dto.PopulateDailyRequestDTO;
 import com.futspring.backend.dto.SwapPlayersRequestDTO;
 import com.futspring.backend.dto.UpdateDailyStatusRequestDTO;
+import com.futspring.backend.dto.UpdateTeamNameRequestDTO;
+import com.futspring.backend.dto.UpdateTeamColorRequestDTO;
+import com.futspring.backend.service.DailyAttendanceService;
+import com.futspring.backend.service.DailyResultsService;
 import com.futspring.backend.service.DailyService;
+import com.futspring.backend.service.DailyTeamManagementService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -24,6 +30,9 @@ import java.util.List;
 public class DailyController {
 
     private final DailyService dailyService;
+    private final DailyAttendanceService dailyAttendanceService;
+    private final DailyTeamManagementService dailyTeamManagementService;
+    private final DailyResultsService dailyResultsService;
 
     @PostMapping("/peladas/{peladaId}/dailies")
     public ResponseEntity<DailyListItemDTO> createDaily(
@@ -59,7 +68,7 @@ public class DailyController {
             Authentication authentication
     ) {
         String email = (String) authentication.getPrincipal();
-        return ResponseEntity.ok(dailyService.confirmAttendance(id, email));
+        return ResponseEntity.ok(dailyAttendanceService.confirmAttendance(id, email));
     }
 
     @DeleteMapping("/dailies/{id}/confirm")
@@ -68,26 +77,26 @@ public class DailyController {
             Authentication authentication
     ) {
         String email = (String) authentication.getPrincipal();
-        return ResponseEntity.ok(dailyService.disconfirmAttendance(id, email));
+        return ResponseEntity.ok(dailyAttendanceService.disconfirmAttendance(id, email));
     }
 
     @PostMapping("/dailies/{id}/sort-teams")
-    public ResponseEntity<java.util.List<DailyDetailDTO.TeamDTO>> sortTeams(
+    public ResponseEntity<List<DailyDetailDTO.TeamDTO>> sortTeams(
             @PathVariable Long id,
             Authentication authentication
     ) {
         String email = (String) authentication.getPrincipal();
-        return ResponseEntity.ok(dailyService.sortTeams(id, email));
+        return ResponseEntity.ok(dailyTeamManagementService.sortTeams(id, email));
     }
 
     @PutMapping("/dailies/{id}/teams/swap")
-    public ResponseEntity<java.util.List<DailyDetailDTO.TeamDTO>> swapPlayers(
+    public ResponseEntity<List<DailyDetailDTO.TeamDTO>> swapPlayers(
             @PathVariable Long id,
             @RequestBody SwapPlayersRequestDTO request,
             Authentication authentication
     ) {
         String email = (String) authentication.getPrincipal();
-        return ResponseEntity.ok(dailyService.swapPlayers(id, request.getPlayer1Id(), request.getPlayer2Id(), email));
+        return ResponseEntity.ok(dailyTeamManagementService.swapPlayers(id, request.getPlayer1Id(), request.getPlayer2Id(), email));
     }
 
     @PutMapping("/dailies/{id}/status")
@@ -101,13 +110,13 @@ public class DailyController {
     }
 
     @PostMapping("/dailies/{id}/results")
-    public ResponseEntity<java.util.List<DailyDetailDTO.MatchDTO>> submitResults(
+    public ResponseEntity<List<DailyDetailDTO.MatchDTO>> submitResults(
             @PathVariable Long id,
-            @RequestBody java.util.List<MatchResultDTO> results,
+            @RequestBody List<MatchResultDTO> results,
             Authentication authentication
     ) {
         String email = (String) authentication.getPrincipal();
-        return ResponseEntity.ok(dailyService.submitResults(id, results, email));
+        return ResponseEntity.ok(dailyResultsService.submitResults(id, results, email));
     }
 
     @PostMapping("/dailies/{id}/finalize")
@@ -117,7 +126,71 @@ public class DailyController {
             Authentication authentication
     ) {
         String email = (String) authentication.getPrincipal();
-        return ResponseEntity.ok(dailyService.finalizeDaily(id, request.getPuskasWinnerId(), request.getWiltballWinnerId(), email));
+        dailyResultsService.finalizeDaily(id, request.getPuskasWinnerIds(), request.getWiltballWinnerIds(), email);
+        return ResponseEntity.ok(dailyService.getDailyDetail(id, email));
+    }
+
+    @PostMapping("/dailies/{id}/confirm/{userId}")
+    public ResponseEntity<DailyListItemDTO> adminConfirmAttendance(
+            @PathVariable Long id,
+            @PathVariable Long userId,
+            Authentication authentication
+    ) {
+        String email = (String) authentication.getPrincipal();
+        return ResponseEntity.ok(dailyAttendanceService.adminConfirmAttendance(id, userId, email));
+    }
+
+    @DeleteMapping("/dailies/{id}/confirm/{userId}")
+    public ResponseEntity<DailyListItemDTO> adminDisconfirmAttendance(
+            @PathVariable Long id,
+            @PathVariable Long userId,
+            Authentication authentication
+    ) {
+        String email = (String) authentication.getPrincipal();
+        return ResponseEntity.ok(dailyAttendanceService.adminDisconfirmAttendance(id, userId, email));
+    }
+
+    @PatchMapping("/dailies/{dailyId}/teams/{teamId}/name")
+    public ResponseEntity<DailyDetailDTO.TeamDTO> updateTeamName(
+            @PathVariable Long dailyId,
+            @PathVariable Long teamId,
+            @RequestBody UpdateTeamNameRequestDTO request,
+            Authentication authentication
+    ) {
+        String email = (String) authentication.getPrincipal();
+        return ResponseEntity.ok(dailyTeamManagementService.updateTeamName(dailyId, teamId, request.getName(), email));
+    }
+
+    @PatchMapping("/dailies/{dailyId}/teams/{teamId}/color")
+    public ResponseEntity<DailyDetailDTO.TeamDTO> updateTeamColor(
+            @PathVariable Long dailyId,
+            @PathVariable Long teamId,
+            @RequestBody UpdateTeamColorRequestDTO request,
+            Authentication authentication
+    ) {
+        String email = (String) authentication.getPrincipal();
+        return ResponseEntity.ok(dailyTeamManagementService.updateTeamColor(dailyId, teamId, request.getColor(), email));
+    }
+
+    @PostMapping("/dailies/{id}/populate")
+    public ResponseEntity<DailyDetailDTO> populateFromMessage(
+            @PathVariable Long id,
+            @RequestBody PopulateDailyRequestDTO request,
+            Authentication authentication
+    ) {
+        String email = (String) authentication.getPrincipal();
+        dailyResultsService.populateFromMessage(id, request, email);
+        return ResponseEntity.ok(dailyService.getDailyDetail(id, email));
+    }
+
+    @DeleteMapping("/dailies/{id}")
+    public ResponseEntity<Void> deleteDaily(
+            @PathVariable Long id,
+            Authentication authentication
+    ) {
+        String email = (String) authentication.getPrincipal();
+        dailyService.deleteDaily(id, email);
+        return ResponseEntity.noContent().build();
     }
 
     @PutMapping("/dailies/{id}/champion-image")
@@ -127,6 +200,6 @@ public class DailyController {
             Authentication authentication
     ) {
         String email = (String) authentication.getPrincipal();
-        return ResponseEntity.ok(dailyService.uploadChampionImage(id, file, email));
+        return ResponseEntity.ok(dailyResultsService.uploadChampionImage(id, file, email));
     }
 }
