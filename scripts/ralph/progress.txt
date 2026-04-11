@@ -221,3 +221,26 @@
   - `ResultsModal` does not contain checkbox player-selection; if it gains such UI in future, apply `usePlayerSelection` then
   - Browser testing not available — manual verification needed for UI changes
 ---
+
+## 2026-04-11 - US-012
+- Extracted `buildPlayerStats` pure function to `frontend/src/utils/matchStats.ts`
+  - Takes `daily`, `team1Id`, `team2Id`, and optional `existing` stats array; returns player stats array with goals/assists defaulting to 0
+- Created `useMatchResults(daily, onSubmit)` hook at `frontend/src/components/daily/hooks/useMatchResults.ts`
+  - Owns: `rows` (MatchFormRow[]) state, `loading` state, `initMatchRows` initializer
+  - Exports: `updateRow`, `updateScore`, `updateStat`, `addMatch`, `removeMatch`, `handleSubmit`
+  - `handleSubmit` calls `submitResults`, then `getDailyDetail`, toasts success/error, calls `onSubmit(updated)`
+  - Also exports `MatchFormRow` interface for use in `ResultsForm`
+- Created `ResultsForm.tsx` at `frontend/src/components/daily/ResultsForm.tsx`
+  - Pure presentational component; receives all state and handlers as props
+  - Renders identical input fields (team selects, score steppers, player stat rows, add/remove match buttons)
+  - Imports `buildPlayerStats` for team-select onChange handlers (recomputes playerStats on team change)
+- Refactored `ResultsModal.tsx` to thin shell (20 lines)
+  - Calls `useMatchResults(daily, onSuccess)`, passes everything to `ResultsForm`
+- TypeScript typecheck (`npx tsc --noEmit`) passed with zero errors
+- Files changed: `frontend/src/utils/matchStats.ts` (new), `frontend/src/components/daily/hooks/useMatchResults.ts` (new), `frontend/src/components/daily/ResultsForm.tsx` (new), `frontend/src/components/daily/ResultsModal.tsx` (refactored), `scripts/ralph/prd.json`, `scripts/ralph/progress.txt`
+- **Learnings for future iterations:**
+  - When a form component calls `buildPlayerStats` in event handlers (onChange for team selects), `ResultsForm` needs to import `buildPlayerStats` directly — it cannot be passed as a prop because it's used inside the render JSX callbacks
+  - `MatchFormRow` interface should be exported from the hook file so `ResultsForm` can import it as a type, avoiding duplication
+  - The thin-shell pattern: modal = hook call + form render; no business logic or state in the shell component
+  - Browser testing not available — manual verification needed for UI changes
+---
