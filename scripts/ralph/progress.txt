@@ -164,3 +164,17 @@
   - Verification stories confirm that previous extractions didn't break prop contracts — run `npx tsc --noEmit` and grep for `import.*from.*api/` in component directories to audit quickly
   - Tab components in this codebase are pure presentational: data comes from page-level state/hooks, mutations are lifted as callbacks
 ---
+
+## 2026-04-11 - US-009
+- `useDailyDetail(id: number)` hook was already created at `frontend/src/components/daily/hooks/useDailyDetail.ts` as part of a prior partial run; `DailyDetailPage.tsx` was already refactored to use it
+- Hook consolidates: `daily` state with `setDaily`, `loading`, `accessDenied`, `error`, `isAdmin` (derived from `daily.isAdmin`), `formattedDate` (derived), and stable `refetch` callback via `useCallback([id])`
+- `selectedPlayer` and `swapLoading` remain at page level as required
+- DailyDetailPage.tsx was massively reduced (594 → 35 import lines + business logic), with all sub-components extracted to `frontend/src/components/daily/` — this entire untracked directory is committed as part of this story
+- TypeScript typecheck (`npx tsc --noEmit`) passes with zero errors
+- Files changed: `frontend/src/components/daily/hooks/useDailyDetail.ts` (new), `frontend/src/pages/DailyDetailPage.tsx` (modified), `frontend/src/components/daily/` directory (all sub-components committed), `scripts/ralph/prd.json`, `scripts/ralph/progress.txt`
+- **Learnings for future iterations:**
+  - `useDailyDetail` accepts `number` (not `string`) because `DailyDetailPage` converts the URL param with `Number(id)`; the PRD's `id: string` type hint is aspirational — trust the actual usage
+  - When an untracked directory supports a modified file (imports from it), commit both together; typecheck will fail otherwise
+  - The `setDaily` setter is exposed from the hook so callers can do optimistic updates (e.g., `updateDailyStatus` returns the updated status and sets it directly without a refetch)
+  - Browser testing not available — manual verification needed for UI changes
+---
