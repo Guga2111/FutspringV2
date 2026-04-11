@@ -201,3 +201,23 @@
   - `statusDialog` requires a raw `setStatusDialog` setter (not just open/close) because callers pass structured data (`{ targetStatus, description }`) when opening; the hook type exports `StatusDialog` implicitly via inference
   - `useRef` can be removed from a page import as soon as its last ref is moved to a hook
 ---
+
+## 2026-04-11 - US-011
+- Created `usePlayerSelection(initialSelected?: number[])` hook at `frontend/src/components/daily/hooks/usePlayerSelection.ts`
+  - Exposes `{ selected: number[], toggle(playerId: number): void, reset(): void }`
+  - Uses `useState<number[]>(initialSelected)` — toggle adds/removes a single id, reset returns to initialSelected
+- Updated `FinalizeModal.tsx`:
+  - Added `import { usePlayerSelection } from './hooks/usePlayerSelection'`
+  - Replaced `const [puskasIds, setPuskasIds] = useState<number[]>([])` and `const [wiltballIds, setWiltballIds] = useState<number[]>([])` with `const puskas = usePlayerSelection()` and `const wiltball = usePlayerSelection()`
+  - `handleSubmit` now passes `puskas.selected` and `wiltball.selected` to `finalizeDaily`
+  - Inline `toggle` function removed from `PlayerCheckboxList`; now receives `toggle: (id: number) => void` prop from hook instances
+  - All count-display labels updated from `puskasIds.length` / `wiltballIds.length` to `puskas.selected.length` / `wiltball.selected.length`
+- `ResultsModal.tsx` has no inline player-selection state (no checkbox lists, only score/stat counters) — the acceptance criterion was not applicable; no changes needed
+- TypeScript typecheck (`npx tsc --noEmit`) passed with zero errors
+- Files changed: `frontend/src/components/daily/hooks/usePlayerSelection.ts` (new), `frontend/src/components/daily/FinalizeModal.tsx`, `scripts/ralph/prd.json`, `scripts/ralph/progress.txt`
+- **Learnings for future iterations:**
+  - `usePlayerSelection` uses `initialSelected` as the reset target — pass `[]` for fresh state, or a non-empty array for pre-populated selection
+  - When updating `PlayerCheckboxList` to use the hook's `toggle`, the inline toggle closure inside the component can be removed entirely — the component just calls `toggle(p.id)` directly
+  - `ResultsModal` does not contain checkbox player-selection; if it gains such UI in future, apply `usePlayerSelection` then
+  - Browser testing not available — manual verification needed for UI changes
+---

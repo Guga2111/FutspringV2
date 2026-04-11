@@ -3,6 +3,7 @@ import { toast } from 'sonner'
 import type { DailyDetail } from '../../types/daily'
 import { finalizeDaily } from '../../api/dailies'
 import { Button } from '../ui/button'
+import { usePlayerSelection } from './hooks/usePlayerSelection'
 
 interface FinalizeModalProps {
   daily: DailyDetail
@@ -13,16 +14,12 @@ interface FinalizeModalProps {
 function PlayerCheckboxList({
   players,
   selected,
-  onChange,
+  toggle,
 }: {
   players: DailyDetail['confirmedPlayers']
   selected: number[]
-  onChange: (ids: number[]) => void
+  toggle: (id: number) => void
 }) {
-  function toggle(id: number) {
-    onChange(selected.includes(id) ? selected.filter(x => x !== id) : [...selected, id])
-  }
-
   return (
     <div className="max-h-48 overflow-y-auto rounded-md border border-border divide-y divide-border">
       {players.map(p => (
@@ -44,14 +41,14 @@ function PlayerCheckboxList({
 }
 
 export default function FinalizeModal({ daily, onClose, onSuccess }: FinalizeModalProps) {
-  const [puskasIds, setPuskasIds] = useState<number[]>([])
-  const [wiltballIds, setWiltballIds] = useState<number[]>([])
+  const puskas = usePlayerSelection()
+  const wiltball = usePlayerSelection()
   const [loading, setLoading] = useState(false)
 
   async function handleSubmit() {
     setLoading(true)
     try {
-      const updated = await finalizeDaily(daily.id, puskasIds, wiltballIds)
+      const updated = await finalizeDaily(daily.id, puskas.selected, wiltball.selected)
       toast.success('Diária Finalizada')
       onSuccess(updated)
     } catch (err: unknown) {
@@ -83,32 +80,32 @@ export default function FinalizeModal({ daily, onClose, onSuccess }: FinalizeMod
           <div>
             <label className="text-sm font-medium block mb-1.5">
               Puskas
-              {puskasIds.length > 0 && (
+              {puskas.selected.length > 0 && (
                 <span className="ml-2 text-xs text-muted-foreground font-normal">
-                  ({puskasIds.length} selecionado{puskasIds.length > 1 ? 's' : ''})
+                  ({puskas.selected.length} selecionado{puskas.selected.length > 1 ? 's' : ''})
                 </span>
               )}
             </label>
             <PlayerCheckboxList
               players={daily.confirmedPlayers}
-              selected={puskasIds}
-              onChange={setPuskasIds}
+              selected={puskas.selected}
+              toggle={puskas.toggle}
             />
           </div>
 
           <div>
             <label className="text-sm font-medium block mb-1.5">
               Bola Murcha
-              {wiltballIds.length > 0 && (
+              {wiltball.selected.length > 0 && (
                 <span className="ml-2 text-xs text-muted-foreground font-normal">
-                  ({wiltballIds.length} selecionado{wiltballIds.length > 1 ? 's' : ''})
+                  ({wiltball.selected.length} selecionado{wiltball.selected.length > 1 ? 's' : ''})
                 </span>
               )}
             </label>
             <PlayerCheckboxList
               players={daily.confirmedPlayers}
-              selected={wiltballIds}
-              onChange={setWiltballIds}
+              selected={wiltball.selected}
+              toggle={wiltball.toggle}
             />
           </div>
         </div>
