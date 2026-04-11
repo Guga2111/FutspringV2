@@ -178,3 +178,26 @@
   - The `setDaily` setter is exposed from the hook so callers can do optimistic updates (e.g., `updateDailyStatus` returns the updated status and sets it directly without a refetch)
   - Browser testing not available — manual verification needed for UI changes
 ---
+
+## 2026-04-11 - US-010
+- Created `useDailyModals()` hook at `frontend/src/components/daily/hooks/useDailyModals.ts`
+  - Manages: `resultsOpen`, `finalizeOpen`, `importOpen` (boolean visibility), `uploadLoading`, `statusDialog` (`{ targetStatus, description } | null`), `statusLoading`
+  - `fileInputRef` (`useRef<HTMLInputElement>`) co-located with `uploadLoading` in the hook
+  - Exposes named open/close handlers: `openResults`/`closeResults`, `openFinalize`/`closeFinalize`, `openImport`/`closeImport`
+  - Exposes setters for imperative state: `setUploadLoading`, `setStatusDialog`, `setStatusLoading`
+- Updated `DailyDetailPage.tsx`:
+  - Removed `useRef` import (no longer needed at page level)
+  - Removed 6 `useState` calls + `useRef` call for modal/dialog state
+  - Replaced with `useDailyModals()` destructuring
+  - Replaced `setResultsOpen(true/false)` → `openResults()`/`closeResults()` at all 4 call sites
+  - Replaced `setFinalizeOpen(true/false)` → `openFinalize()`/`closeFinalize()` at all 2 call sites
+  - Replaced `setImportOpen(true/false)` → `openImport()`/`closeImport()` at all 2 call sites
+  - `setUploadLoading`, `setStatusDialog`, `setStatusLoading`, `fileInputRef` used directly from hook
+- TypeScript typecheck (`npx tsc --noEmit`) passed with zero errors
+- Files changed: `frontend/src/components/daily/hooks/useDailyModals.ts` (new), `frontend/src/pages/DailyDetailPage.tsx`, `scripts/ralph/prd.json`, `scripts/ralph/progress.txt`
+- **Learnings for future iterations:**
+  - Modal hooks benefit from exposing named open/close functions rather than raw setters — callers read as `openResults()` not `setResultsOpen(true)`, improving readability
+  - `fileInputRef` lives in the same hook as `uploadLoading` because both belong to the champion upload flow; co-location makes reset logic (`fileInputRef.current.value = ''`) stay with upload state
+  - `statusDialog` requires a raw `setStatusDialog` setter (not just open/close) because callers pass structured data (`{ targetStatus, description }`) when opening; the hook type exports `StatusDialog` implicitly via inference
+  - `useRef` can be removed from a page import as soon as its last ref is moved to a hook
+---
