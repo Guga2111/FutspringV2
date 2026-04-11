@@ -151,3 +151,16 @@
   - When a page uses `fetchX` in both useEffect deps and event handlers, the hook must expose named individual refetch functions, not just a combined `refetch`
   - Browser testing not available in this environment — manual verification needed for UI changes
 ---
+
+## 2026-04-11 - US-008
+- Verified and confirmed alignment of all four tab components with usePeladaDetail()
+- All four tabs (SessionsTable, MembersTable, RankingTable, AwardsTab) already received data exclusively via props from PeladaDetailPage
+- No tab component issued any direct API call — API imports only exist in usePeladaDetail.ts (the hook), CreateSessionDialog.tsx, AddPlayerDialog.tsx, ChatSidebar.tsx (dialog/sidebar components, not tabs)
+- Prop types were already correctly defined for all four components
+- TypeScript typecheck (`npx tsc --noEmit`) passed with zero errors
+- This was a verification story — US-007's extraction already satisfied all acceptance criteria
+- Files changed: scripts/ralph/prd.json, scripts/ralph/progress.txt
+- **Learnings for future iterations:**
+  - Verification stories confirm that previous extractions didn't break prop contracts — run `npx tsc --noEmit` and grep for `import.*from.*api/` in component directories to audit quickly
+  - Tab components in this codebase are pure presentational: data comes from page-level state/hooks, mutations are lifted as callbacks
+---
