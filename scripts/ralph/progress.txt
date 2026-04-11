@@ -85,3 +85,28 @@
   - `DailyDTOMapper` must be injected into any service that needs `buildTeamDTO` — including the retained `getDailyDetail` in `DailyService`
   - `DailyTeamManagementService.LOCKED_STATUSES` is its own copy; `DailyService` no longer needs that constant after US-006 removes the remaining stubs
 ---
+
+## 2026-04-11 - US-005
+- Created `DailyResultsService` @Service at `backend/src/main/java/com/futspring/backend/service/DailyResultsService.java`
+  - `submitResults(Long id, List<MatchResultDTO> results, String email): List<MatchDTO>` — validates admin, status, team IDs, player stats totals, persists matches+stats, calls persistLiveLeagueTable
+  - `finalizeDaily(Long id, List<Long> puskasIds, List<Long> wiltballIds, String email): void` — validates admin, status, matches; computes UserDailyStats/LeagueTable/Awards/Ranking/Stats; marks FINISHED (no getDailyDetail call)
+  - `uploadChampionImage(Long id, MultipartFile file, String email): DailyListItemDTO` — validates admin, FINISHED status, delegates to fileUploadService
+  - `populateFromMessage(Long id, PopulateDailyRequestDTO req, String email): void` — validates admin, status; wipes existing teams/matches; creates teams+matches+stats; sets IN_COURSE (no getDailyDetail call)
+  - `clearResults(Daily daily, Pelada pelada): void` — package-private; deletes awards, userDailyStats, playerMatchStats, matches, leagueEntries; recalculates Ranking+Stats if was finished
+  - `persistLiveLeagueTable(Daily, List<Team>, List<Match>): List<LeagueTableEntry>` — private; recalculates league table from scratch
+  - `distributeStats(...)` — private; redistributes player goals/assists across matches
+- Updated `DailyService.java`: added `DailyResultsService dailyResultsService` as 5th field; replaced 4 method bodies with delegation stubs; `finalizeDaily` and `populateFromMessage` call getDailyDetail after delegating; removed `persistLiveLeagueTable` and `distributeStats` private methods; cleaned up 3 unused imports (Collection, Comparator, HashSet)
+- Updated `DailyServiceTest.java`: added `@Mock DailyResultsService dailyResultsService`; updated constructor call (18 args); added 8 new delegation tests for all 4 delegated methods
+- Created `DailyResultsServiceTest.java` with 10 unit tests covering:
+  - `submitResults` error paths: callerNotAdmin, callerNotFound, dailyNotFound, invalidStatus, invalidTeamIds
+  - `submitResults` success: verifies MatchDTOs returned with correct scores
+  - `finalizeDaily` error paths: callerNotAdmin, callerNotFound, dailyNotFound, invalidStatus, noMatches, invalidPuskasWinner
+  - `finalizeDaily` success: verifies daily marked FINISHED, Ranking+Stats saved
+- Files changed: DailyResultsService.java (new), DailyService.java, DailyServiceTest.java, DailyResultsServiceTest.java (new), prd.json, progress.txt
+- **Learnings for future iterations:**
+  - `finalizeDaily` and `populateFromMessage` return void in DailyResultsService to avoid circular dependency; DailyService delegation stubs call `getDailyDetail` after the sub-service returns
+  - `clearResults` consolidates the results-teardown logic from `deleteDaily` — US-006 should replace `deleteDaily`'s inline deletion code with a call to `dailyResultsService.clearResults(daily, pelada)` + team/attendance teardown
+  - `DailyResultsService` takes all 12 repositories in its constructor (in declaration order); when writing tests, pass them in the same order as the field declarations
+  - `distributeStats` is a stateful private method (uses Collections.shuffle); tests for `populateFromMessage` would require mocking randomness — unit tests for the paths suffice, `distributeStats` logic is well-isolated
+  - Java is not installed in this environment — cannot run ./mvnw compile; correctness verified by manual review
+---

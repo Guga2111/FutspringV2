@@ -29,6 +29,7 @@ class DailyServiceTest {
     @Mock UserAuthenticationHelper userAuthHelper;
     @Mock DailyAttendanceService dailyAttendanceService;
     @Mock DailyTeamManagementService dailyTeamManagementService;
+    @Mock DailyResultsService dailyResultsService;
     @Mock DailyDTOMapper dailyDTOMapper;
     @Mock DailyRepository dailyRepository;
     @Mock PeladaRepository peladaRepository;
@@ -54,7 +55,7 @@ class DailyServiceTest {
     void setUp() {
         dailyService = new DailyService(
                 fileUploadService, userAuthHelper, dailyAttendanceService,
-                dailyTeamManagementService, dailyDTOMapper,
+                dailyTeamManagementService, dailyResultsService, dailyDTOMapper,
                 dailyRepository, peladaRepository, userRepository, teamRepository,
                 matchRepository, playerMatchStatRepository, userDailyStatsRepository,
                 leagueTableEntryRepository, dailyAwardRepository, statsRepository, rankingRepository);
@@ -433,5 +434,88 @@ class DailyServiceTest {
         assertThatThrownBy(() -> dailyService.swapPlayers(100L, 1L, 2L, "admin@example.com"))
                 .isInstanceOf(AppException.class)
                 .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.BAD_REQUEST));
+    }
+
+    // --- submitResults (delegation) ---
+
+    @Test
+    void submitResults_delegatesToResultsService() {
+        List<DailyDetailDTO.MatchDTO> expected = List.of();
+        when(dailyResultsService.submitResults(100L, List.of(), "admin@example.com")).thenReturn(expected);
+
+        List<DailyDetailDTO.MatchDTO> result = dailyService.submitResults(100L, List.of(), "admin@example.com");
+
+        verify(dailyResultsService).submitResults(100L, List.of(), "admin@example.com");
+        assertThat(result).isEqualTo(expected);
+    }
+
+    @Test
+    void submitResults_propagatesException() {
+        when(dailyResultsService.submitResults(100L, List.of(), "admin@example.com"))
+                .thenThrow(new AppException(HttpStatus.FORBIDDEN, "Only admins can submit results"));
+
+        assertThatThrownBy(() -> dailyService.submitResults(100L, List.of(), "admin@example.com"))
+                .isInstanceOf(AppException.class)
+                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.FORBIDDEN));
+    }
+
+    // --- finalizeDaily (delegation) ---
+
+    @Test
+    void finalizeDaily_delegatesToResultsServiceThenCallsGetDetail() {
+        doNothing().when(dailyResultsService).finalizeDaily(100L, List.of(), List.of(), "admin@example.com");
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
+        when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
+        when(teamRepository.findByDaily(scheduledDaily)).thenReturn(Collections.emptyList());
+        when(matchRepository.findByDaily(scheduledDaily)).thenReturn(Collections.emptyList());
+        when(userDailyStatsRepository.findByDaily(scheduledDaily)).thenReturn(Collections.emptyList());
+        when(leagueTableEntryRepository.findByDailyOrderByPositionAsc(scheduledDaily)).thenReturn(Collections.emptyList());
+        when(dailyAwardRepository.findByDaily(scheduledDaily)).thenReturn(Optional.empty());
+
+        DailyDetailDTO result = dailyService.finalizeDaily(100L, List.of(), List.of(), "admin@example.com");
+
+        verify(dailyResultsService).finalizeDaily(100L, List.of(), List.of(), "admin@example.com");
+        assertThat(result).isNotNull();
+    }
+
+    @Test
+    void finalizeDaily_propagatesException() {
+        doThrow(new AppException(HttpStatus.BAD_REQUEST, "No matches to finalize"))
+                .when(dailyResultsService).finalizeDaily(100L, List.of(), List.of(), "admin@example.com");
+
+        assertThatThrownBy(() -> dailyService.finalizeDaily(100L, List.of(), List.of(), "admin@example.com"))
+                .isInstanceOf(AppException.class)
+                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.BAD_REQUEST));
+    }
+
+    // --- populateFromMessage (delegation) ---
+
+    @Test
+    void populateFromMessage_delegatesToResultsServiceThenCallsGetDetail() {
+        com.futspring.backend.dto.PopulateDailyRequestDTO request = new com.futspring.backend.dto.PopulateDailyRequestDTO();
+        doNothing().when(dailyResultsService).populateFromMessage(100L, request, "admin@example.com");
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
+        when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
+        when(teamRepository.findByDaily(scheduledDaily)).thenReturn(Collections.emptyList());
+        when(matchRepository.findByDaily(scheduledDaily)).thenReturn(Collections.emptyList());
+        when(userDailyStatsRepository.findByDaily(scheduledDaily)).thenReturn(Collections.emptyList());
+        when(leagueTableEntryRepository.findByDailyOrderByPositionAsc(scheduledDaily)).thenReturn(Collections.emptyList());
+        when(dailyAwardRepository.findByDaily(scheduledDaily)).thenReturn(Optional.empty());
+
+        DailyDetailDTO result = dailyService.populateFromMessage(100L, request, "admin@example.com");
+
+        verify(dailyResultsService).populateFromMessage(100L, request, "admin@example.com");
+        assertThat(result).isNotNull();
+    }
+
+    @Test
+    void populateFromMessage_propagatesException() {
+        com.futspring.backend.dto.PopulateDailyRequestDTO request = new com.futspring.backend.dto.PopulateDailyRequestDTO();
+        doThrow(new AppException(HttpStatus.FORBIDDEN, "Only admins can populate"))
+                .when(dailyResultsService).populateFromMessage(100L, request, "member@example.com");
+
+        assertThatThrownBy(() -> dailyService.populateFromMessage(100L, request, "member@example.com"))
+                .isInstanceOf(AppException.class)
+                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.FORBIDDEN));
     }
 }
