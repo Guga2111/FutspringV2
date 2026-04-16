@@ -6,8 +6,10 @@ import type { PeladaDetail } from "@/types/pelada"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
-const DAYS_OF_WEEK = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+const DAYS_OF_WEEK = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sabado", "Domingo"]
 
 interface EditPeladaModalProps {
   pelada: PeladaDetail
@@ -63,12 +65,12 @@ export default function EditPeladaModal({ pelada, onClose, onUpdated }: EditPela
     const file = e.target.files?.[0]
     if (!file) return
     if (file.size > 5 * 1024 * 1024) {
-      toast.error("Image must be under 5MB")
+      toast.error("Imagens devem ter no máximo 5MB")
       e.target.value = ""
       return
     }
     if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
-      toast.error("Only JPEG, PNG, or WebP images are allowed")
+      toast.error("Somente JPEG, PNG, ou WebP são permitidos")
       e.target.value = ""
       return
     }
@@ -83,11 +85,11 @@ export default function EditPeladaModal({ pelada, onClose, onUpdated }: EditPela
       if (imageFile) {
         await uploadPeladaImage(pelada.id, imageFile)
       }
-      toast.success("Pelada updated!")
+      toast.success("Pelada atualizada!")
       onUpdated()
       onClose()
     } catch (err: unknown) {
-      const message = extractErrorMessage(err) ?? "Failed to update pelada"
+      const message = extractErrorMessage(err) ?? "Falha ao atualizar pelada"
       toast.error(message)
     } finally {
       setLoading(false)
@@ -101,7 +103,7 @@ export default function EditPeladaModal({ pelada, onClose, onUpdated }: EditPela
     >
       <div className="bg-background rounded-lg shadow-lg w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-4 border-b">
-          <h2 className="text-lg font-semibold">Edit Pelada</h2>
+          <h2 className="text-lg font-semibold">Editar Pelada</h2>
           <button
             onClick={onClose}
             className="text-muted-foreground hover:text-foreground transition-colors"
@@ -113,36 +115,37 @@ export default function EditPeladaModal({ pelada, onClose, onUpdated }: EditPela
 
         <form onSubmit={handleSubmit} className="p-4 space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="ep-name">Name *</Label>
+            <Label htmlFor="ep-name">Nome *</Label>
             <Input
               id="ep-name"
               name="name"
               type="text"
               required
-              placeholder="Friday Night Football"
+              placeholder="Jogasse Onde?"
               value={form.name ?? ""}
               onChange={handleChange}
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="ep-dayOfWeek">Day of Week *</Label>
-            <select
-              id="ep-dayOfWeek"
-              name="dayOfWeek"
-              required
-              value={form.dayOfWeek ?? "Monday"}
-              onChange={handleChange}
-              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            <Label htmlFor="ep-dayOfWeek">Dia da Semana *</Label>
+            <Select
+              value={form.dayOfWeek ?? "Segunda"}
+              onValueChange={(value) => setForm((prev) => ({ ...prev, dayOfWeek: value }))}
             >
-              {DAYS_OF_WEEK.map((day) => (
-                <option key={day} value={day}>{day}</option>
-              ))}
-            </select>
+              <SelectTrigger id="ep-dayOfWeek">
+                <SelectValue placeholder="Selecione um dia" />
+              </SelectTrigger>
+              <SelectContent>
+                {DAYS_OF_WEEK.map((day) => (
+                  <SelectItem key={day} value={day}>{day}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="ep-timeOfDay">Time *</Label>
+            <Label htmlFor="ep-timeOfDay">Horário *</Label>
             <Input
               id="ep-timeOfDay"
               name="timeOfDay"
@@ -150,11 +153,12 @@ export default function EditPeladaModal({ pelada, onClose, onUpdated }: EditPela
               required
               value={form.timeOfDay ?? ""}
               onChange={handleChange}
+              className="[&::-webkit-calendar-picker-indicator]:opacity-70"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="ep-duration">Duration (hours) *</Label>
+            <Label htmlFor="ep-duration">Duração (hora) *</Label>
             <Input
               id="ep-duration"
               name="duration"
@@ -169,62 +173,61 @@ export default function EditPeladaModal({ pelada, onClose, onUpdated }: EditPela
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="ep-address">Address</Label>
+            <Label htmlFor="ep-address">Endereço</Label>
             <Input
               id="ep-address"
               name="address"
               type="text"
-              placeholder="Rua das Flores, 123"
+              placeholder="Av Agamenon Magalhães"
               value={form.address ?? ""}
               onChange={handleChange}
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="ep-reference">Reference</Label>
+            <Label htmlFor="ep-reference">Referência</Label>
             <Input
               id="ep-reference"
               name="reference"
               type="text"
-              placeholder="Near the park"
+              placeholder="Ilha do Retiro"
               value={form.reference ?? ""}
               onChange={handleChange}
             />
           </div>
 
           <div className="flex items-center gap-3">
-            <input
+            <Checkbox
               id="ep-autoCreate"
-              name="autoCreateDailyEnabled"
-              type="checkbox"
               checked={form.autoCreateDailyEnabled ?? false}
-              onChange={handleChange}
-              className="h-4 w-4 rounded border-input"
+              onCheckedChange={(checked) =>
+                setForm((prev) => ({ ...prev, autoCreateDailyEnabled: checked === true }))
+              }
             />
             <Label htmlFor="ep-autoCreate" className="cursor-pointer">
-              Auto-create daily sessions
+              Auto-criar diárias
             </Label>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="ep-image">Replace Image (optional)</Label>
+            <Label htmlFor="ep-image">Recolocar imagem (opcional)</Label>
             <Input
               id="ep-image"
               ref={fileInputRef}
               type="file"
               accept="image/jpeg,image/png,image/webp"
               onChange={handleFileChange}
-              className="cursor-pointer"
+              className="cursor-pointer file:text-primary"
             />
-            <p className="text-xs text-muted-foreground">JPEG, PNG, or WebP · max 5MB</p>
+            <p className="text-xs text-muted-foreground">JPEG, PNG, ou WebP · max 5MB</p>
           </div>
 
           <div className="flex gap-3 pt-2">
             <Button type="button" variant="outline" className="flex-1" onClick={onClose} disabled={loading}>
-              Cancel
+              Cancelar
             </Button>
-            <Button type="submit" className="flex-1" disabled={loading}>
-              {loading ? "Saving..." : "Save Changes"}
+            <Button variant="gradient" type="submit" className="flex-1" disabled={loading}>
+              {loading ? "Salvando..." : "Salvar Mudanças"}
             </Button>
           </div>
         </form>

@@ -6,8 +6,12 @@ import type { CreatePeladaData } from "@/api/peladas"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { MapPin } from "lucide-react"
 
-const DAYS_OF_WEEK = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+const DAYS_OF_WEEK = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sabado", "Domingo"]
 
 interface CreatePeladaModalProps {
   onClose: () => void
@@ -38,22 +42,26 @@ export default function CreatePeladaModal({ onClose, onCreated }: CreatePeladaMo
 
   const [form, setForm] = useState<CreatePeladaData>({
     name: "",
-    dayOfWeek: "Monday",
+    dayOfWeek: "Segunda",
     timeOfDay: "",
     duration: 1,
     address: "",
     reference: "",
     autoCreateDailyEnabled: false,
+    numberOfTeams: 2,
+    playersPerTeam: 5,
   })
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [loading, setLoading] = useState(false)
 
-  function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
+  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     const { name, value, type } = e.target
     if (type === "checkbox") {
       setForm((prev) => ({ ...prev, [name]: (e.target as HTMLInputElement).checked }))
     } else if (name === "duration") {
       setForm((prev) => ({ ...prev, duration: parseFloat(value) || 0 }))
+    } else if (name === "numberOfTeams" || name === "playersPerTeam") {
+      setForm((prev) => ({ ...prev, [name]: parseInt(value) || 2 }))
     } else {
       setForm((prev) => ({ ...prev, [name]: value }))
     }
@@ -63,12 +71,12 @@ export default function CreatePeladaModal({ onClose, onCreated }: CreatePeladaMo
     const file = e.target.files?.[0]
     if (!file) return
     if (file.size > 5 * 1024 * 1024) {
-      toast.error("Image must be under 5MB")
+      toast.error("A imagem deve ter menos de 5MB")
       e.target.value = ""
       return
     }
     if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
-      toast.error("Only JPEG, PNG, or WebP images are allowed")
+      toast.error("Somente imagens JPEG, PNG ou WebP são permitidas")
       e.target.value = ""
       return
     }
@@ -83,11 +91,11 @@ export default function CreatePeladaModal({ onClose, onCreated }: CreatePeladaMo
       if (imageFile) {
         await uploadPeladaImage(pelada.id, imageFile)
       }
-      toast.success("Pelada created!")
+      toast.success("Pelada criada!")
       onCreated()
       navigate(`/pelada/${pelada.id}`)
     } catch (err: unknown) {
-      const message = extractErrorMessage(err) ?? "Failed to create pelada"
+      const message = extractErrorMessage(err) ?? "Falha ao criar pelada"
       toast.error(message)
     } finally {
       setLoading(false)
@@ -95,66 +103,67 @@ export default function CreatePeladaModal({ onClose, onCreated }: CreatePeladaMo
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-      onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
-    >
-      <div className="bg-background rounded-lg shadow-lg w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between p-4 border-b">
-          <h2 className="text-lg font-semibold">Create Pelada</h2>
-          <button
-            onClick={onClose}
-            className="text-muted-foreground hover:text-foreground transition-colors"
-            aria-label="Close"
-          >
-            ✕
-          </button>
-        </div>
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-md rounded-2xl p-0 gap-0 overflow-hidden">
+        <DialogHeader className="px-6 pt-6 pb-4">
+          <DialogTitle className="text-xl font-semibold">Criar Pelada</DialogTitle>
+          <DialogDescription className="text-sm text-muted-foreground">
+            Preencha em detalhes para criar seus jogos semanais.
+          </DialogDescription>
+        </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="p-4 space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="cp-name">Name *</Label>
+        <form onSubmit={handleSubmit} className="px-6 pb-6 space-y-5">
+          {/* Name */}
+          <div className="space-y-1.5">
+            <Label htmlFor="cp-name">Nome *</Label>
             <Input
               id="cp-name"
               name="name"
               type="text"
               required
-              placeholder="Friday Night Football"
+              placeholder="Jogasse Onde?"
               value={form.name}
               onChange={handleChange}
+              className="focus-visible:ring-green-500"
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="cp-dayOfWeek">Day of Week *</Label>
-            <select
-              id="cp-dayOfWeek"
-              name="dayOfWeek"
-              required
-              value={form.dayOfWeek}
-              onChange={handleChange}
-              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-            >
-              {DAYS_OF_WEEK.map((day) => (
-                <option key={day} value={day}>{day}</option>
-              ))}
-            </select>
+          {/* Day + Time — 2-column */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="cp-dayOfWeek">Dia Da Semana *</Label>
+              <Select
+                value={form.dayOfWeek}
+                onValueChange={(v) => setForm((prev) => ({ ...prev, dayOfWeek: v }))}
+              >
+                <SelectTrigger id="cp-dayOfWeek" className="focus-visible:ring-green-500 focus:ring-green-500">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {DAYS_OF_WEEK.map((day) => (
+                    <SelectItem key={day} value={day}>{day}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="cp-timeOfDay">Horário *</Label>
+              <Input
+                id="cp-timeOfDay"
+                name="timeOfDay"
+                type="time"
+                required
+                value={form.timeOfDay}
+                onChange={handleChange}
+                className="focus-visible:ring-green-500"
+              />
+            </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="cp-timeOfDay">Time *</Label>
-            <Input
-              id="cp-timeOfDay"
-              name="timeOfDay"
-              type="time"
-              required
-              value={form.timeOfDay}
-              onChange={handleChange}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="cp-duration">Duration (hours) *</Label>
+          {/* Duration */}
+          <div className="space-y-1.5">
+            <Label htmlFor="cp-duration">Duração (hora) *</Label>
             <Input
               id="cp-duration"
               name="duration"
@@ -165,70 +174,107 @@ export default function CreatePeladaModal({ onClose, onCreated }: CreatePeladaMo
               placeholder="1.5"
               value={form.duration}
               onChange={handleChange}
+              className="focus-visible:ring-green-500"
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="cp-address">Address</Label>
+          {/* Teams + Players per team — 2-column */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="cp-numberOfTeams">Numero de times *</Label>
+              <Input
+                id="cp-numberOfTeams"
+                name="numberOfTeams"
+                type="number"
+                required
+                min="2"
+                step="1"
+                value={form.numberOfTeams}
+                onChange={handleChange}
+                className="focus-visible:ring-green-500"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="cp-playersPerTeam">Jogadores por time *</Label>
+              <Input
+                id="cp-playersPerTeam"
+                name="playersPerTeam"
+                type="number"
+                required
+                min="2"
+                step="1"
+                value={form.playersPerTeam}
+                onChange={handleChange}
+                className="focus-visible:ring-green-500"
+              />
+            </div>
+          </div>
+
+          {/* Address */}
+          <div className="space-y-1.5">
+            <Label htmlFor="cp-address" className="flex items-center gap-1.5"><MapPin className="size-3.5" />Endereço</Label>
             <Input
               id="cp-address"
               name="address"
               type="text"
-              placeholder="Rua das Flores, 123"
+              placeholder="Rua da Estrela"
               value={form.address}
               onChange={handleChange}
+              className="focus-visible:ring-green-500"
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="cp-reference">Reference</Label>
+          {/* Reference */}
+          <div className="space-y-1.5">
+            <Label htmlFor="cp-reference">Referencia (Opcional)</Label>
             <Input
               id="cp-reference"
               name="reference"
               type="text"
-              placeholder="Near the park"
+              placeholder="Ilha do Retiro"
               value={form.reference}
               onChange={handleChange}
+              className="focus-visible:ring-green-500"
             />
           </div>
 
+          {/* Auto-create checkbox */}
           <div className="flex items-center gap-3">
-            <input
+            <Checkbox
               id="cp-autoCreate"
-              name="autoCreateDailyEnabled"
-              type="checkbox"
               checked={form.autoCreateDailyEnabled}
-              onChange={handleChange}
-              className="h-4 w-4 rounded border-input"
+              onCheckedChange={(checked) =>
+                setForm((prev) => ({ ...prev, autoCreateDailyEnabled: !!checked }))
+              }
+              className="data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600"
             />
-            <Label htmlFor="cp-autoCreate" className="cursor-pointer">
-              Auto-create daily sessions
+            <Label htmlFor="cp-autoCreate" className="cursor-pointer font-normal">
+              Permita auto criar sessões semanais.
             </Label>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="cp-image">Image (optional)</Label>
+          {/* Image */}
+          <div className="space-y-1.5">
+            <Label htmlFor="cp-image">Imagem (Opcional)</Label>
             <Input
               id="cp-image"
               ref={fileInputRef}
               type="file"
               accept="image/jpeg,image/png,image/webp"
               onChange={handleFileChange}
-              className="cursor-pointer"
+              className="cursor-pointer focus-visible:ring-green-500"
             />
-            <p className="text-xs text-muted-foreground">JPEG, PNG, or WebP · max 5MB</p>
+            <p className="text-xs text-muted-foreground">JPEG, PNG, ou WebP · max 5MB</p>
           </div>
 
-          <div className="flex gap-3 pt-2">
-            <Button type="button" variant="outline" className="flex-1" onClick={onClose} disabled={loading}>
-              Cancel
-            </Button>
-            <Button type="submit" variant="gradient" className="flex-1" disabled={loading}>
-              {loading ? "Creating..." : "Create Pelada"}
+          {/* Footer */}
+          <div className="flex justify-end pt-2">
+            <Button type="submit" variant="gradient" className="px-8" disabled={loading}>
+              {loading ? "Criando..." : "Criar Pelada"}
             </Button>
           </div>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   )
 }

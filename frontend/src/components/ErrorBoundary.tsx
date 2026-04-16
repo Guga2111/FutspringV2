@@ -24,12 +24,12 @@ class ErrorBoundary extends Component<Props, State> {
     if (this.state.hasError) {
       return (
         <div className="flex flex-col items-center justify-center min-h-screen gap-4">
-          <p className="text-lg font-semibold">Something went wrong</p>
+          <p className="text-lg font-semibold">Algo ocorreu errado</p>
           <button
-            className="px-4 py-2 rounded bg-primary text-primary-foreground hover:opacity-90"
+            className="px-4 py-2 rounded-full bg-primary text-primary-foreground hover:opacity-90"
             onClick={() => window.location.reload()}
           >
-            Reload
+            Recarregue
           </button>
         </div>
       )

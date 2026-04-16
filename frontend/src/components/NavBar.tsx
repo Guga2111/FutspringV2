@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { Trophy, Sun, Moon, Menu } from 'lucide-react'
+import { Sun, Moon, Menu } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { Button } from './ui/button'
@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from './ui/dropdown-menu'
 import { Avatar, AvatarImage, AvatarFallback } from './ui/avatar'
+import { getFileUrl } from '../lib/utils'
 import {
   Sheet,
   SheetContent,
@@ -58,21 +59,21 @@ export default function NavBar() {
     <nav className="sticky top-0 z-50 flex items-center justify-between px-6 py-3 border-b backdrop-blur-sm bg-background/80">
       {/* Left: logo */}
       <Link to="/home" className="flex items-center gap-2 font-bold text-lg">
-        <Trophy className="h-5 w-5 text-green-500" />
-        FutSpring
+        <img src="/gerrard.png" alt="FutSpring" className="h-7 w-7 rounded-full object-cover" />
+        <span className="text-gradient-primary">FutSpring</span>
       </Link>
 
       {/* Center: nav links (desktop only) */}
       <div className="hidden sm:flex items-center gap-6">
         <Link
           to="/home"
-          className={`text-sm font-medium transition-colors hover:text-green-500 ${
+          className={`text-sm transition-colors hover:text-foreground ${
             isHomeActive
-              ? 'text-green-600 border-b-2 border-green-500 pb-0.5'
-              : 'text-muted-foreground'
+              ? 'font-bold underline'
+              : 'font-medium text-muted-foreground'
           }`}
         >
-          Home
+          Início
         </Link>
       </div>
 
@@ -98,7 +99,7 @@ export default function NavBar() {
               >
                 <Avatar className="h-8 w-8 cursor-pointer">
                   {user?.image && (
-                    <AvatarImage src={user.image} alt={user.username} />
+                    <AvatarImage src={getFileUrl(user.image)} alt={user.username} />
                   )}
                   <AvatarFallback>{initials}</AvatarFallback>
                 </Avatar>
@@ -114,7 +115,7 @@ export default function NavBar() {
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
                 <Link to={`/profile/${user?.id}`} className="cursor-pointer w-full">
-                  View Profile
+                  Ver Perfil
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
@@ -122,7 +123,7 @@ export default function NavBar() {
                 className="cursor-pointer text-destructive focus:text-destructive"
                 onClick={handleLogout}
               >
-                Logout
+                Sair
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -145,11 +146,13 @@ export default function NavBar() {
             <SheetClose asChild>
               <Link
                 to="/home"
-                className={`text-base font-medium transition-colors hover:text-green-500 ${
-                  isHomeActive ? 'text-green-600' : 'text-foreground'
+                className={`text-base transition-colors hover:text-foreground ${
+                  isHomeActive
+                    ? 'font-bold underline'
+                    : 'font-medium text-muted-foreground'
                 }`}
               >
-                Home
+                Início
               </Link>
             </SheetClose>
 
@@ -160,7 +163,7 @@ export default function NavBar() {
               aria-label="Toggle dark mode"
             >
               {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-              {isDark ? 'Light Mode' : 'Dark Mode'}
+              {isDark ? 'Modo Claro' : 'Modo Escuro'}
             </button>
 
             {/* View Profile */}
@@ -169,7 +172,7 @@ export default function NavBar() {
                 to={`/profile/${user?.id}`}
                 className="text-base font-medium text-foreground hover:text-green-500 transition-colors"
               >
-                View Profile
+                Ver Perfil
               </Link>
             </SheetClose>
 
@@ -178,7 +181,7 @@ export default function NavBar() {
               className="text-left text-base font-medium text-destructive hover:opacity-80 transition-opacity"
               onClick={() => { setSheetOpen(false); handleLogout() }}
             >
-              Logout
+              Sair
             </button>
           </SheetContent>
         </Sheet>
