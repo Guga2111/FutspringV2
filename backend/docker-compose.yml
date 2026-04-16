@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  futspring-api-dev:
+    build: . # Constrói a imagem a partir do Dockerfile na pasta atual
+    container_name: futspring_api_dev
+    ports:
+      - "8080:8080"
+    restart: always
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      DB_USERNAME: futspringuser
+      DB_PASSWORD: futspringpassword
+      JWT_SECRET: dev-local-secret-change-me-in-production
+    volumes:
+      - ./uploads:/app/uploads
+    depends_on:
+      - futspring-postgres-dev
+
+  futspring-postgres-dev:
+    image: postgres:15-alpine
+    container_name: futspring_postgres_dev
+    ports:
+      - "5432:5432" # Expõe a porta para o DBeaver, etc.
+    environment:
+      POSTGRES_DB: futspringdb
+      POSTGRES_USER: futspringuser
+      POSTGRES_PASSWORD: futspringpassword
+    volumes:
+      - postgres_data_dev:/var/lib/postgresql/data
+
+volumes:
+  postgres_data_dev:

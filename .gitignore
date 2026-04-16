@@ -1,0 +1,41 @@
+# Secrets & environment
+.env
+.env.local
+*.env
+
+# Shell deploy scripts (may contain credentials)
+*.sh
+
+# Documentation files
+*.md
+
+# macOS system files
+.DS_Store
+**/.DS_Store
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# Java build output
+target/
+*.class
+*.jar
+
+# Node
+node_modules/
+dist/
+.next/
+
+# Database files
+*.db
+
+# Uploads (user-generated content)
+uploads/
+
+# Logs
+*.log
+
+# Claude local state
+.claude/

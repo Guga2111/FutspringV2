@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  futspring-api:
+    build: .
+    container_name: futspring_api
+    ports:
+      - "8080:8080"
+    restart: always
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      DB_URL: ${DB_URL}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS:-604800000}
+      DDL_AUTO: ${DDL_AUTO:-update}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}
+    volumes:
+      - ./uploads:/app/uploads
