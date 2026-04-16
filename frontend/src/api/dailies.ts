@@ -1,5 +1,5 @@
 import apiClient from "./client"
-import type { DailyListItem, DailyDetail, MatchDTO } from "../types/daily"
+import type { DailyListItem, DailyDetail, MatchDTO, TeamDTO } from "../types/daily"
 
 export interface CreateDailyData {
   dailyDate: string
@@ -46,6 +46,16 @@ export async function disconfirmAttendance(id: number): Promise<DailyListItem> {
   return response.data
 }
 
+export async function adminConfirmAttendance(id: number, userId: number): Promise<DailyListItem> {
+  const response = await apiClient.post<DailyListItem>(`/api/v1/dailies/${id}/confirm/${userId}`)
+  return response.data
+}
+
+export async function adminDisconfirmAttendance(id: number, userId: number): Promise<DailyListItem> {
+  const response = await apiClient.delete<DailyListItem>(`/api/v1/dailies/${id}/confirm/${userId}`)
+  return response.data
+}
+
 export async function sortTeams(id: number): Promise<DailyDetail> {
   const response = await apiClient.post<DailyDetail>(`/api/v1/dailies/${id}/sort-teams`)
   return response.data
@@ -66,12 +76,55 @@ export async function submitResults(id: number, results: MatchResultInput[]): Pr
   return response.data
 }
 
-export async function finalizeDaily(id: number, puskasWinnerId: number, wiltballWinnerId: number): Promise<DailyDetail> {
+export async function finalizeDaily(id: number, puskasWinnerIds: number[], wiltballWinnerIds: number[]): Promise<DailyDetail> {
   const response = await apiClient.post<DailyDetail>(`/api/v1/dailies/${id}/finalize`, {
-    puskasWinnerId,
-    wiltballWinnerId,
+    puskasWinnerIds,
+    wiltballWinnerIds,
   })
   return response.data
+}
+
+export async function updateTeamName(dailyId: number, teamId: number, name: string): Promise<TeamDTO> {
+  const response = await apiClient.patch<TeamDTO>(`/api/v1/dailies/${dailyId}/teams/${teamId}/name`, { name })
+  return response.data
+}
+
+export async function updateTeamColor(dailyId: number, teamId: number, color: string): Promise<TeamDTO> {
+  const response = await apiClient.patch<TeamDTO>(`/api/v1/dailies/${dailyId}/teams/${teamId}/color`, { color })
+  return response.data
+}
+
+export interface PopulatePlayerInput {
+  userId: number
+  totalGoals: number
+  totalAssists: number
+}
+
+export interface PopulateTeamInput {
+  colorName: string
+  colorHex: string
+  players: PopulatePlayerInput[]
+}
+
+export interface PopulateMatchInput {
+  team1ColorName: string
+  team1Score: number
+  team2ColorName: string
+  team2Score: number
+}
+
+export interface PopulateDailyInput {
+  teams: PopulateTeamInput[]
+  matches: PopulateMatchInput[]
+}
+
+export async function populateFromMessage(id: number, data: PopulateDailyInput): Promise<DailyDetail> {
+  const response = await apiClient.post<DailyDetail>(`/api/v1/dailies/${id}/populate`, data)
+  return response.data
+}
+
+export async function deleteDaily(id: number): Promise<void> {
+  await apiClient.delete(`/api/v1/dailies/${id}`)
 }
 
 export async function uploadChampionImage(id: number, file: File): Promise<DailyListItem> {

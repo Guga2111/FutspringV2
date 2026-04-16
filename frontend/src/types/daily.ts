@@ -10,6 +10,8 @@ export interface TeamDTO {
   id: number
   name: string
   totalStars: number
+  averageStars: number
+  color: string | null
   players: PlayerDTO[]
 }
 
@@ -22,6 +24,7 @@ export interface MatchDTO {
   team1Score: number | null
   team2Score: number | null
   winnerId: number | null
+  playerStats: { userId: number; goals: number; assists: number }[]
 }
 
 export interface UserDailyStatsDTO {
@@ -47,10 +50,14 @@ export interface LeagueTableEntryDTO {
 }
 
 export interface AwardDTO {
-  puskasWinnerId: number | null
-  puskasWinnerName: string | null
-  wiltballWinnerId: number | null
-  wiltballWinnerName: string | null
+  puskasWinnerIds: number[]
+  puskasWinnerNames: string[]
+  wiltballWinnerIds: number[]
+  wiltballWinnerNames: string[]
+  artilheiroWinnerIds: number[]
+  artilheiroWinnerNames: string[]
+  garcomWinnerIds: number[]
+  garcomWinnerNames: string[]
 }
 
 export interface RankingDTO {
@@ -87,5 +94,8 @@ export interface DailyDetail {
   award: AwardDTO | null
   peladaId: number
   peladaName: string
+  numberOfTeams: number
+  playersPerTeam: number
   isAdmin: boolean
+  peladaMembers: PlayerDTO[] | null
 }

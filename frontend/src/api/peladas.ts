@@ -1,5 +1,5 @@
 import apiClient from "./client"
-import type { PeladaResponse, PeladaDetail } from "../types/pelada"
+import type { PeladaResponse, PeladaDetail, PeladaAwards } from "../types/pelada"
 import type { UserResponseDTO } from "../types/auth"
 import type { RankingDTO } from "../types/daily"
 
@@ -11,6 +11,8 @@ export interface CreatePeladaData {
   address?: string
   reference?: string
   autoCreateDailyEnabled?: boolean
+  numberOfTeams?: number
+  playersPerTeam?: number
 }
 
 export interface UpdatePeladaData {
@@ -62,9 +64,7 @@ export async function setAdmin(peladaId: number, userId: number, isAdmin: boolea
 export async function uploadPeladaImage(peladaId: number, file: File): Promise<PeladaResponse> {
   const formData = new FormData()
   formData.append("file", file)
-  const response = await apiClient.post<PeladaResponse>(`/api/v1/peladas/${peladaId}/image`, formData, {
-    headers: { "Content-Type": "multipart/form-data" },
-  })
+  const response = await apiClient.post<PeladaResponse>(`/api/v1/peladas/${peladaId}/image`, formData)
   return response.data
 }
 
@@ -76,4 +76,9 @@ export async function searchUsers(q: string): Promise<UserResponseDTO[]> {
 export async function getRanking(peladaId: number): Promise<RankingDTO[]> {
   const response = await apiClient.get<RankingDTO[]>(`/api/v1/peladas/${peladaId}/ranking`)
   return response.data
+}
+
+export async function getPeladaAwards(peladaId: number): Promise<PeladaAwards> {
+  const r = await apiClient.get<PeladaAwards>(`/api/v1/peladas/${peladaId}/awards`)
+  return r.data
 }

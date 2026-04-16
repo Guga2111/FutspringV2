@@ -5,6 +5,11 @@ export interface StatsDTO {
   assists: number
   matchesPlayed: number
   wins: number
+  sessionsPlayed: number
+  matchWins: number
+  wiltballWins: number
+  artilheiroWins: number
+  garcomWins: number
   puskasDates: string[]
 }
 
