@@ -6,6 +6,7 @@ import com.futspring.backend.dto.UserStatsTimelineDTO;
 import com.futspring.backend.entity.User;
 import com.futspring.backend.entity.UserDailyStats;
 import com.futspring.backend.exception.AppException;
+import com.futspring.backend.repository.DailyAwardRepository;
 import com.futspring.backend.repository.StatsRepository;
 import com.futspring.backend.repository.UserDailyStatsRepository;
 import com.futspring.backend.repository.UserRepository;
@@ -25,15 +26,20 @@ public class StatsService {
     private final UserRepository userRepository;
     private final StatsRepository statsRepository;
     private final UserDailyStatsRepository userDailyStatsRepository;
+    private final DailyAwardRepository dailyAwardRepository;
 
     @Transactional(readOnly = true)
     public StatsDTO getStats(Long userId, String callerEmail) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "User not found"));
 
-        return statsRepository.findByUser(user)
+        StatsDTO dto = statsRepository.findByUser(user)
                 .map(StatsDTO::fromStats)
                 .orElse(StatsDTO.fromUser(user));
+        dto.setWiltballWins((int) dailyAwardRepository.countByWiltballWinnersContaining(user));
+        dto.setArtilheiroWins((int) dailyAwardRepository.countByArtilheiroWinnersContaining(user));
+        dto.setGarcomWins((int) dailyAwardRepository.countByGarcomWinnersContaining(user));
+        return dto;
     }
 
     @Transactional(readOnly = true)
@@ -70,12 +76,12 @@ public class StatsService {
                     int wins = uds.getWins();
                     int matchesPlayed = uds.getMatchesPlayed();
                     String result;
-                    if (wins > 0) {
-                        result = "W";
-                    } else if (matchesPlayed > 0) {
-                        result = "L";
-                    } else {
+                    if (matchesPlayed == 0) {
                         result = "—";
+                    } else if (uds.isWonSession()) {
+                        result = "W";
+                    } else {
+                        result = "L";
                     }
                     return UserMatchHistoryDTO.MatchRow.builder()
                             .dailyId(uds.getDaily().getId())

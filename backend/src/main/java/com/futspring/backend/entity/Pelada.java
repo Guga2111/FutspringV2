@@ -42,6 +42,14 @@ public class Pelada {
     @Builder.Default
     private boolean autoCreateDailyEnabled = false;
 
+    @Column(nullable = false)
+    @Builder.Default
+    private int numberOfTeams = 2;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private int playersPerTeam = 5;
+
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;

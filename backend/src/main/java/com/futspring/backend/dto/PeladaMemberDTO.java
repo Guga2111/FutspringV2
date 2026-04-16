@@ -1,5 +1,6 @@
 package com.futspring.backend.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.futspring.backend.entity.User;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -17,6 +18,7 @@ public class PeladaMemberDTO {
     private String image;
     private int stars;
     private String position;
+    @JsonProperty("isAdmin")
     private boolean isAdmin;
 
     public static PeladaMemberDTO from(User user, boolean isAdmin) {

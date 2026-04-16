@@ -26,7 +26,16 @@ public class FileController {
     @GetMapping("/{filename:.+}")
     public ResponseEntity<Resource> serveFile(@PathVariable String filename) {
         try {
-            Path filePath = Paths.get(uploadsDir).resolve(filename).normalize();
+            // Null-byte guard (must come first)
+            if (filename.contains("\0")) {
+                throw new AppException(HttpStatus.BAD_REQUEST, "Invalid filename: " + filename);
+            }
+            Path uploadPath = Paths.get(uploadsDir).toAbsolutePath().normalize();
+            Path filePath = uploadPath.resolve(filename).normalize();
+            // Containment check — reject paths that escape the uploads directory
+            if (!filePath.startsWith(uploadPath)) {
+                throw new AppException(HttpStatus.BAD_REQUEST, "Invalid filename: " + filename);
+            }
             Resource resource = new UrlResource(filePath.toUri());
 
             if (!resource.exists() || !resource.isReadable()) {

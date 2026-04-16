@@ -1,5 +1,6 @@
 package com.futspring.backend.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -18,6 +19,7 @@ public class DailyDetailDTO {
     private LocalDate dailyDate;
     private String dailyTime;
     private String status;
+    @JsonProperty("isFinished")
     private boolean isFinished;
     private String championImage;
     private List<PlayerDTO> confirmedPlayers;
@@ -28,7 +30,11 @@ public class DailyDetailDTO {
     private AwardDTO award;
     private Long peladaId;
     private String peladaName;
+    private int numberOfTeams;
+    private int playersPerTeam;
+    @JsonProperty("isAdmin")
     private boolean isAdmin;
+    private List<PlayerDTO> peladaMembers;
 
     @Data
     @NoArgsConstructor
@@ -50,7 +56,19 @@ public class DailyDetailDTO {
         private Long id;
         private String name;
         private int totalStars;
+        private double averageStars;
+        private String color;
         private List<PlayerDTO> players;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    public static class PlayerStatDTO {
+        private Long userId;
+        private int goals;
+        private int assists;
     }
 
     @Data
@@ -66,6 +84,7 @@ public class DailyDetailDTO {
         private Integer team1Score;
         private Integer team2Score;
         private Long winnerId;
+        private List<PlayerStatDTO> playerStats;
     }
 
     @Data
@@ -103,9 +122,13 @@ public class DailyDetailDTO {
     @AllArgsConstructor
     @Builder
     public static class AwardDTO {
-        private Long puskasWinnerId;
-        private String puskasWinnerName;
-        private Long wiltballWinnerId;
-        private String wiltballWinnerName;
+        private List<Long> puskasWinnerIds;
+        private List<String> puskasWinnerNames;
+        private List<Long> wiltballWinnerIds;
+        private List<String> wiltballWinnerNames;
+        private List<Long> artilheiroWinnerIds;
+        private List<String> artilheiroWinnerNames;
+        private List<Long> garcomWinnerIds;
+        private List<String> garcomWinnerNames;
     }
 }

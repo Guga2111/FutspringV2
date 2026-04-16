@@ -23,6 +23,11 @@ public class StatsDTO {
     private int assists;
     private int matchesPlayed;
     private int wins;
+    private int sessionsPlayed;
+    private int matchWins;
+    private int wiltballWins;
+    private int artilheiroWins;
+    private int garcomWins;
     private List<LocalDate> puskasDates;
 
     public static StatsDTO fromStats(Stats stats) {
@@ -34,6 +39,11 @@ public class StatsDTO {
                 .assists(stats.getAssists())
                 .matchesPlayed(stats.getMatchesPlayed())
                 .wins(stats.getWins())
+                .sessionsPlayed(stats.getSessionsPlayed())
+                .matchWins(stats.getMatchWins())
+                .wiltballWins(0)
+                .artilheiroWins(0)
+                .garcomWins(0)
                 .puskasDates(stats.getPuskasDates())
                 .build();
     }
@@ -46,6 +56,11 @@ public class StatsDTO {
                 .assists(0)
                 .matchesPlayed(0)
                 .wins(0)
+                .sessionsPlayed(0)
+                .matchWins(0)
+                .wiltballWins(0)
+                .artilheiroWins(0)
+                .garcomWins(0)
                 .puskasDates(new ArrayList<>())
                 .build();
     }

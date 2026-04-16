@@ -25,6 +25,9 @@ public class Team {
     @Column(nullable = false)
     private String name;
 
+    @Column(nullable = true)
+    private String color;
+
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
             name = "team_players",

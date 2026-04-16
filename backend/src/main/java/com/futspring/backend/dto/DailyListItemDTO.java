@@ -1,5 +1,6 @@
 package com.futspring.backend.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.futspring.backend.entity.Daily;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -19,6 +20,7 @@ public class DailyListItemDTO {
     private String dailyTime;
     private String status;
     private int confirmedPlayerCount;
+    @JsonProperty("isFinished")
     private boolean isFinished;
 
     public static DailyListItemDTO from(Daily daily) {

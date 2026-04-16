@@ -38,4 +38,8 @@ public class UserDailyStats {
     @Column(nullable = false)
     @Builder.Default
     private int wins = 0;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean wonSession = false;
 }

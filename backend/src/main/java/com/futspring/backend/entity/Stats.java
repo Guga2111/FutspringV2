@@ -39,6 +39,14 @@ public class Stats {
     @Builder.Default
     private int wins = 0;
 
+    @Column(nullable = false)
+    @Builder.Default
+    private int sessionsPlayed = 0;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private int matchWins = 0;
+
     @ElementCollection
     @CollectionTable(name = "stats_puskas_dates", joinColumns = @JoinColumn(name = "stats_id"))
     @Column(name = "puskas_date")

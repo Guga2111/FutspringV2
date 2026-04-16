@@ -3,11 +3,13 @@ package com.futspring.backend.controller;
 import com.futspring.backend.dto.AddPlayerRequestDTO;
 import com.futspring.backend.dto.CreatePeladaRequestDTO;
 import com.futspring.backend.dto.MessageDTO;
+import com.futspring.backend.dto.PeladaAwardsDTO;
 import com.futspring.backend.dto.PeladaDetailResponseDTO;
 import com.futspring.backend.dto.PeladaResponseDTO;
 import com.futspring.backend.dto.RankingDTO;
 import com.futspring.backend.dto.SetAdminRequestDTO;
 import com.futspring.backend.dto.UpdatePeladaRequestDTO;
+import com.futspring.backend.service.AwardsService;
 import com.futspring.backend.service.ChatService;
 import com.futspring.backend.service.PeladaService;
 import com.futspring.backend.service.RankingService;
@@ -29,6 +31,7 @@ public class PeladaController {
     private final PeladaService peladaService;
     private final RankingService rankingService;
     private final ChatService chatService;
+    private final AwardsService awardsService;
 
     @PostMapping
     public ResponseEntity<PeladaResponseDTO> createPelada(
@@ -115,6 +118,15 @@ public class PeladaController {
     ) {
         String email = (String) authentication.getPrincipal();
         return ResponseEntity.ok(rankingService.getRanking(id, email));
+    }
+
+    @GetMapping("/{id}/awards")
+    public ResponseEntity<PeladaAwardsDTO> getAwards(
+            @PathVariable Long id,
+            Authentication authentication
+    ) {
+        String email = (String) authentication.getPrincipal();
+        return ResponseEntity.ok(awardsService.getAwards(id, email));
     }
 
     @GetMapping("/{id}/messages")
