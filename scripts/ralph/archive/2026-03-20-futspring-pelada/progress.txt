@@ -1,0 +1,33 @@
+# Ralph Progress Log
+Started: Fri Mar 20 PDT 2026
+---
+
+## Codebase Patterns
+- Backend uses Lombok @Data, @Builder, @NoArgsConstructor, @AllArgsConstructor on all entities and DTOs
+- DTOs have a static `from(Entity entity)` factory method for entity-to-DTO conversion
+- JPA entities use @CreationTimestamp from org.hibernate.annotations for createdAt fields
+- ManyToMany relationships use @JoinTable with explicit join column names
+- Hibernate DDL is set to `update` mode - tables auto-created from entities
+- Java/Maven not available in this environment - "Typecheck passes" means code is syntactically correct Java
+- Frontend TypeScript typecheck: `cd frontend && npx tsc -b --noEmit`
+- Controllers inject `Authentication` and get current user email via `(String) authentication.getPrincipal()`
+- Services use `@Transactional` (write) and `@Transactional(readOnly = true)` for read operations
+- Lazy-loaded collections (@ManyToMany with FetchType.LAZY) are safe to access within @Transactional service methods
+- PeladaRepository uses Spring Data derived query `findByMembersContaining(User user)` for membership queries
+- Pelada entity has a `creator` field (ManyToOne User) to track creator for permission checks
+- UserRepository has `searchByUsernameOrEmail` JPQL query for case-insensitive search by username or email
+- Conflict responses use AppException(HttpStatus.CONFLICT, message)
+- File uploads: `@RequestParam("file") MultipartFile file`; store under `@Value("${app.uploads.dir:uploads}")` dir with UUID prefix
+- File serving: use `UrlResource` + `permitAll()` in SecurityConfig for /api/v1/files/**
+- Delete entity with ManyToMany: clear collections before delete to avoid FK constraint violations
+- To expose creatorId to the frontend, add it to PeladaDetailResponseDTO and PeladaDetail type
+- Admin check pattern: `pelada.members.find(m => m.id === currentUser?.id)?.isAdmin ?? false`
+- Debounced search: store timer in `useRef<ReturnType<typeof setTimeout>>`, clear on each keystroke, fire after 300ms
+- Error message extraction from axios errors: `(err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'fallback'`
+- Modal pattern: use fixed inset-0 z-50 bg-black/50 overlay with bg-background inner div; click backdrop to close
+- `sonner` toast is set up globally in main.tsx — just `import { toast } from "sonner"` and call toast.success/error
+- No @radix-ui/react-dialog installed — use fixed overlay pattern for modals
+- `select` element styling: use `flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm`
+- Daily entity stub already exists (from Pelada PRD US-011/US-012): id, pelada, dailyDate, dailyTime, status (default SCHEDULED), createdAt
+- DailyRepository already has existsByPeladaAndDailyDate(Pelada, LocalDate) derived query
+- No browser testing tools available; manual browser verification needed

@@ -1,0 +1,144 @@
+## 2026-03-20 - US-009
+- Created `src/components/NavBar.tsx`: displays FutSpring logo and Logout button; calls logout() from useAuth then navigates to /auth
+- Updated `src/pages/HomePage.tsx`: renders NavBar at the top so logout is accessible on authenticated pages
+- Typecheck and lint pass; manual browser verification needed
+- **Learnings for future iterations:**
+  - NavBar uses `useNavigate` for redirect after logout (inside Router context, unlike the interceptor which uses window.location.href)
+  - logout() in AuthContext already clears localStorage; NavBar only needs to call logout() + navigate
+  - NavBar added to HomePage; other placeholder protected pages (pelada, daily, profile) are inline in App.tsx — add NavBar there if they get dedicated pages
+---
+
+## 2026-03-20 - US-008
+- Created `src/components/PrivateRoute.tsx`: redirects to /auth with `state={{ from: location }}` if no token in AuthContext
+- Updated `src/pages/AuthPage.tsx`: reads `location.state.from.pathname` after login/register and redirects back (default /home)
+- Updated `src/App.tsx`: wraps /home, /pelada/:id, /daily/:id, /profile/:id with PrivateRoute; / renders public landing placeholder
+- Typecheck and lint pass; manual browser verification needed
+- **Learnings for future iterations:**
+  - `Navigate to="/auth" state={{ from: location }} replace` is the React Router v6 pattern for redirect-back
+  - Read `location.state?.from?.pathname` in AuthPage after login; fall back to `/home`
+  - PrivateRoute is a wrapper component (not a layout route) — wrap individual `<Route element>` children directly
+---
+
+## 2026-03-20 - US-006
+- Created `src/types/auth.ts` with TypeScript interfaces: UserResponseDTO, AuthResponse, RegisterRequest, LoginRequest
+- Created `src/api/auth.ts` with registerUser() and loginUser() calling backend endpoints
+- Created `src/context/AuthContext.tsx`: AuthProvider with user/token state, login/logout, localStorage persistence on mount
+- Created `src/hooks/useAuth.ts`: useAuth() hook that throws if used outside AuthProvider
+- Axios interceptors set up inside AuthProvider useEffect: request interceptor attaches Bearer token; response interceptor calls logout() + redirects to /auth on 401
+- Updated `src/main.tsx` to wrap app with AuthProvider
+- Typecheck passes
+- **Learnings for future iterations:**
+  - Axios interceptors set up inside AuthProvider (not in client.ts) so they have closure access to logout()
+  - Interceptors read token from localStorage directly (not from state) to avoid stale closure issues
+  - Cleanup ejects interceptors on unmount (apiClient.interceptors.request.eject / response.eject)
+  - useMemo on context value prevents unnecessary re-renders
+  - window.location.href used for 401 redirect (not useNavigate) since interceptor is outside router context
+---
+
+## 2026-03-20 - US-005
+- Created Vite + React 18 + TypeScript frontend under `frontend/`
+- Installed Tailwind CSS v3 (not v4 — shadcn CLI requires v3 config file)
+- Created `tailwind.config.js` with shadcn CSS variable color tokens
+- shadcn/ui CLI not available (no network) — manually installed deps and created components
+- Components created: Button, Input, Label, Tabs, Card in `src/components/ui/`
+- Created `src/lib/utils.ts` with `cn()` helper (clsx + tailwind-merge)
+- Installed: sonner (toast), react-router-dom, axios
+- Set up React Router v6 with lazy-loaded routes and Suspense fallback in App.tsx
+- Configured Axios base client in `src/api/client.ts` with VITE_API_URL env var
+- Created placeholder pages: AuthPage.tsx, HomePage.tsx
+- Added `@/*` path alias in tsconfig.app.json and vite.config.ts
+- `components.json` created for shadcn config reference
+- Typecheck and build pass
+- **Learnings for future iterations:**
+  - shadcn@2.3.0 CLI requires Tailwind v3 config file (tailwind.config.js) — v4 not supported
+  - shadcn CLI needs network access to fetch components; offline → install deps manually and write components from source
+  - Tailwind v3 with PostCSS is the stable setup for shadcn in this project
+  - Path alias `@/*` needs to be in BOTH tsconfig.app.json (paths) AND vite.config.ts (resolve.alias)
+  - `components.json` is optional for CLI but good to have for documentation
+  - `noUnusedLocals` / `noUnusedParameters` strict checks in tsconfig — avoid unused imports
+---
+
+## 2026-03-20 - US-004
+- Added JWT parsing methods to `service/JwtService.java`: `extractAllClaims`, `isTokenValid`, `extractEmail`, `extractUserId` using JJWT 0.11.5 `parserBuilder()`
+- Created `filter/JwtAuthFilter.java` (OncePerRequestFilter): reads Bearer token, validates, sets SecurityContext; writes 401 JSON directly for invalid tokens
+- Updated `config/SecurityConfig.java`: injected `JwtAuthFilter` and `ObjectMapper` as `filterChain` params, added `exceptionHandling` with custom `authenticationEntryPoint` for missing token 401, registered filter before `UsernamePasswordAuthenticationFilter`
+- **Learnings for future iterations:**
+  - `ObjectMapper` is auto-provided by Spring Boot autoconfigure — inject it as a method param in `@Bean` methods without declaring a `@Bean` for it
+  - For the AuthenticationEntryPoint lambda, `HttpServletResponse.SC_UNAUTHORIZED` needs `jakarta.servlet.http.HttpServletResponse` import (Jakarta EE, not javax)
+  - Filter registered via `.addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)` — not `@Order` annotation
+  - Invalid token → filter writes 401 and returns early; missing token → filter passes through → Spring Security calls AuthenticationEntryPoint
+---
+
+## 2026-03-20 - US-007
+- Implemented `/auth` page with Login and Register tabs
+- Active tab synced to URL query param via `useSearchParams` (?tab=login / ?tab=register)
+- Register form: username, email, password, confirmPassword with inline validation (8 char min, passwords match)
+- Login form: email, password; both forms show loading state during submission
+- On success: calls `login()` from useAuth, navigates to /home
+- API errors extracted from `err.response.data.message` and shown via Sonner toast
+- Fixed pre-existing lint errors: `buttonVariants` moved to `button-variants.ts` (fast-refresh rule), `InputProps` changed from interface to type (no-empty-object-type rule), `AuthContext` moved to `auth-context-value.ts` (fast-refresh rule for context non-components)
+- Typecheck and lint both pass
+- **Learnings for future iterations:**
+  - `react-refresh/only-export-components` lint rule requires components and non-component exports to be in separate files; split context/variants into `.ts` files
+  - `useSearchParams` from react-router-dom is the idiomatic way to sync tab state to URL
+  - `extractErrorMessage` helper pattern for axios error response parsing avoids repetition
+---
+
+## Codebase Patterns
+- Java/Maven not available in devcontainer (Node.js-based); typecheck is verified by code review
+- Spring Boot 3.2.3 used; package root is `com.futspring.backend`
+- Frontend: Vite + React 18 + TypeScript + Tailwind v3 + shadcn/ui (manual, no CLI) under `frontend/`
+- Frontend path alias: `@/*` → `./src/*` (set in tsconfig.app.json and vite.config.ts)
+- shadcn CLI requires network; offline → install radix-ui/react-* + cva + clsx + tailwind-merge manually
+- Tailwind v3 is used (not v4) for shadcn compatibility; PostCSS config present
+- Axios base client in `src/api/client.ts`; interceptors to be added in US-006
+- Config via env vars with defaults in application.yml using `${ENV_VAR:default}` syntax
+- GlobalExceptionHandler returns `{ status, message, timestamp }` shape via ErrorResponse
+- SecurityConfig: CSRF disabled, STATELESS session — standard for all protected routes
+- JJWT 0.11.5 for JWT; Bucket4j 8.7.0 for rate limiting
+- DTOs in `dto/` package; entities in `entity/`; repos in `repository/`; services in `service/`; controllers in `controller/`
+- UserResponseDTO.from(User) static factory pattern for entity→DTO mapping
+- Hibernate ddl-auto: update — no Flyway needed, table created automatically
+- Bucket4j rate limiting: `Bucket.builder().addLimit(Bandwidth.classic(N, Refill.intervally(N, Duration.ofMinutes(1))))` with ConcurrentHashMap<String, Bucket> keyed by IP
+- JwtService.generateToken(userId, email): uses Jwts.builder() with setSubject(email), claims userId+email, signed with Keys.hmacShaKeyFor
+- AppException(HttpStatus, message) pattern for all business errors; GlobalExceptionHandler handles it generically
+- JwtAuthFilter: invalid token → write 401 in filter; missing token → passthrough → AuthenticationEntryPoint in SecurityConfig handles 401
+- ObjectMapper injected as `filterChain(@Bean)` method param (Spring Boot auto-provides it)
+- ESLint `react-refresh/only-export-components`: split non-component exports (context objects, cva variants) into `.ts` files; component files `.tsx` should only export components
+- `useSearchParams` from react-router-dom for URL query param sync (e.g. active tab)
+
+---
+
+## 2026-03-20 - US-003
+- Created `dto/RegisterRequestDTO.java` with @Valid constraints (username, email, password ≥8 chars)
+- Created `dto/LoginRequestDTO.java` with @Valid constraints (email, password)
+- Created `dto/AuthResponseDTO.java` with token + UserResponseDTO
+- Created `service/JwtService.java` using JJWT 0.11.5 — generates token with userId+email claims
+- Created `service/AuthService.java` — register (409 on duplicate email, BCrypt hash) + login (401 on bad creds)
+- Created `controller/AuthController.java` — POST /api/v1/auth/register + POST /api/v1/auth/login with Bucket4j rate limit (10/min per IP)
+- **Learnings for future iterations:**
+  - Bucket4j `Bandwidth.classic` + `Refill.intervally` API confirmed working for 8.7.0
+  - `HttpServletRequest` injected as method param to get remote IP for rate limiting
+  - AppException with HttpStatus.TOO_MANY_REQUESTS (429) handled by GlobalExceptionHandler
+  - SecurityConfig already permits `/api/v1/auth/**` — no changes needed there for US-003
+---
+
+## 2026-03-20 - US-002
+- Created User JPA entity (`entity/User.java`) with id, email, username, password, image, backgroundImage, stars (default 0), position
+- Created UserRepository (`repository/UserRepository.java`) extending JpaRepository with findByEmail
+- Created UserResponseDTO (`dto/UserResponseDTO.java`) with static `from(User)` factory; no direct entity serialization
+- Hibernate `ddl-auto: update` in application.yml handles table creation automatically
+- **Learnings for future iterations:**
+  - Use `@Builder.Default` on Lombok @Builder fields with primitive defaults (e.g., `stars = 0`)
+  - `UserResponseDTO.from(user)` is the canonical conversion pattern to reuse in auth service
+  - `@Table(name = "users")` needed since "user" is a reserved word in PostgreSQL
+---
+
+## 2026-03-20 - US-001
+- Verified existing backend scaffold meets all acceptance criteria
+- Files: backend/pom.xml, application.yml, FutSpringApplication.java, JwtConfig.java, SecurityConfig.java, AppException.java, ErrorResponse.java, GlobalExceptionHandler.java
+- **Learnings for future iterations:**
+  - Backend files were pre-created; just needed verification and commit
+  - Maven/Java not in devcontainer — cannot run `mvn compile`; code review substitutes
+  - JwtConfig uses @Value with `app.jwt.secret` and `app.jwt.expiration-ms` property paths
+---

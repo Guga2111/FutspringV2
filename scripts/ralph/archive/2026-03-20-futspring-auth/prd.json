@@ -1,0 +1,171 @@
+{
+  "project": "FutSpring",
+  "branchName": "ralph/futspring-pelada",
+  "description": "FutSpring Pelada Management — create and manage recurring football groups, player membership, admin actions, and home page",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Backend Pelada entity and database schema",
+      "description": "As a developer, I need the Pelada JPA entity and database tables so that pelada data can be stored and retrieved.",
+      "acceptanceCriteria": [
+        "Pelada entity with fields: id (Long, auto), name (required), dayOfWeek (String, required), timeOfDay (String, required), duration (Float, required), address (String, nullable), reference (String, nullable), image (String, nullable), autoCreateDailyEnabled (boolean, default false), createdAt",
+        "Many-to-many relationship: Pelada has a Set<User> members and Set<User> admins (separate join tables: pelada_members, pelada_admins)",
+        "PeladaRepository extends JpaRepository",
+        "PeladaResponseDTO with fields: id, name, dayOfWeek, timeOfDay, duration, address, reference, image, autoCreateDailyEnabled, memberCount",
+        "Hibernate DDL auto creates the tables",
+        "Typecheck passes"
+      ],
+      "priority": 1,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-002",
+      "title": "Backend Pelada CRUD endpoints: create, list my peladas, get detail",
+      "description": "As a developer, I need REST endpoints to create a pelada, list the current user's peladas, and fetch pelada detail so the frontend can display them.",
+      "acceptanceCriteria": [
+        "POST /api/v1/peladas — creates pelada; authenticated user becomes creator and first admin and member; returns PeladaResponseDTO",
+        "GET /api/v1/peladas/my — returns list of all peladas the current user belongs to",
+        "GET /api/v1/peladas/:id — returns pelada detail including members list (id, username, image, stars, position, isAdmin); only accessible to members (403 for non-members)",
+        "PeladaDetailResponseDTO includes: pelada fields + members list with isAdmin flag",
+        "Request body uses @Valid with required field validation; returns 400 on missing required fields",
+        "Typecheck passes"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-003",
+      "title": "Backend player management endpoints and user search",
+      "description": "As a developer, I need endpoints to add/remove players and toggle admin status so admins can manage pelada membership.",
+      "acceptanceCriteria": [
+        "POST /api/v1/peladas/:id/players — body: { userId }; adds user as member; admin only; 404 if user not found; 409 if already a member",
+        "DELETE /api/v1/peladas/:id/players/:userId — removes player from pelada; admin only; 403 if trying to remove the creator",
+        "PUT /api/v1/peladas/:id/players/:userId/admin — body: { isAdmin: boolean }; toggles admin status; admin only; 403 if trying to demote creator",
+        "GET /api/v1/users/search?q= — case-insensitive search by username or email; returns max 10 results as list of UserResponseDTO; authenticated users only",
+        "All endpoints return 403 if caller is not an admin (except search)",
+        "Typecheck passes"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-004",
+      "title": "Backend pelada edit, delete, and image upload",
+      "description": "As a developer, I need endpoints to update pelada settings, delete a pelada, and upload a pelada image so admins can manage pelada info.",
+      "acceptanceCriteria": [
+        "PUT /api/v1/peladas/:id — updates pelada fields (name, dayOfWeek, timeOfDay, duration, address, reference, autoCreateDailyEnabled); admin only; returns updated PeladaResponseDTO",
+        "DELETE /api/v1/peladas/:id — deletes pelada; creator only (403 for non-creator admins); cascades deletion to all related data (members, admins associations)",
+        "POST /api/v1/peladas/:id/image — multipart/form-data; stores file under uploads/ with UUID prefix; updates pelada image field; admin only; max 5MB; JPEG/PNG/WebP only",
+        "GET /api/v1/files/:filename — serves uploaded files from uploads/ directory (reuse or extend existing file serving if already set up from auth)",
+        "Typecheck passes"
+      ],
+      "priority": 4,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-005",
+      "title": "Frontend API layer for peladas",
+      "description": "As a developer, I need TypeScript types and API functions for pelada endpoints so frontend pages can call the backend.",
+      "acceptanceCriteria": [
+        "Create src/types/pelada.ts with interfaces: PeladaMember (id, username, image, stars, position, isAdmin), PeladaResponse (id, name, dayOfWeek, timeOfDay, duration, address, reference, image, autoCreateDailyEnabled, memberCount), PeladaDetail (extends PeladaResponse + members: PeladaMember[])",
+        "Create src/api/peladas.ts with functions: getMyPeladas(), getPelada(id), createPelada(data), updatePelada(id, data), deletePelada(id), addPlayer(peladaId, userId), removePlayer(peladaId, userId), setAdmin(peladaId, userId, isAdmin), uploadPeladaImage(peladaId, file), searchUsers(q)",
+        "All functions use the existing Axios client (src/api/client.ts) which attaches the Bearer token",
+        "Typecheck passes"
+      ],
+      "priority": 5,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-006",
+      "title": "Frontend Home page — My Peladas grid",
+      "description": "As a user, I want to see all my peladas on the home page so I can quickly navigate to one.",
+      "acceptanceCriteria": [
+        "Replace the /home placeholder with a real page that fetches and displays pelada cards using getMyPeladas()",
+        "Each card shows: pelada image (or placeholder), name, dayOfWeek, timeOfDay",
+        "Cards link to /pelada/:id",
+        "Skeleton loading state while fetching (3–4 skeleton cards)",
+        "Empty state message if user has no peladas: 'No peladas yet. Create one to get started!'",
+        "NavBar is present at the top (reuse existing NavBar component)",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 6,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-007",
+      "title": "Frontend Create Pelada modal",
+      "description": "As a user, I want to create a pelada from the home page so I can organize football sessions.",
+      "acceptanceCriteria": [
+        "'Create Pelada' button on the home page opens a modal/dialog",
+        "Form fields: name (required text), dayOfWeek (required select: Monday–Sunday), timeOfDay (required time input), duration (required number, hours), address (optional text), reference (optional text), autoCreateDailyEnabled (boolean toggle, default false)",
+        "Optional image file upload field (JPEG/PNG/WebP, max 5MB); if provided, uploads image after pelada creation using uploadPeladaImage()",
+        "On success: close modal, show success toast, navigate to /pelada/:id",
+        "On error: show error toast, keep modal open",
+        "Submit button shows loading state during API call",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-008",
+      "title": "Frontend Pelada detail page — info and player list",
+      "description": "As a member, I want to view the pelada's details and player list so I know when, where, and with whom I'm playing.",
+      "acceptanceCriteria": [
+        "Create /pelada/:id page that fetches pelada detail using getPelada(id)",
+        "Header section shows: pelada image (or placeholder banner), name, dayOfWeek + timeOfDay, duration, address, reference",
+        "Members section shows a list of players: avatar (or initials placeholder), username, position badge, stars (filled star icons), admin badge if isAdmin",
+        "Non-member accessing the route sees an 'Access Denied' message (not a crash) — detect 403 from API",
+        "Skeleton loading state while fetching",
+        "NavBar present at top",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 8,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-009",
+      "title": "Frontend admin player management UI",
+      "description": "As an admin, I want to add, remove, and promote players directly from the pelada page.",
+      "acceptanceCriteria": [
+        "'Add Player' button visible only to admins; opens a search dialog with a text input that calls searchUsers(q) on change (debounced); selecting a user calls addPlayer() and refetches members",
+        "Each player row shows a 'Remove' action (admin only, hidden for non-admins); clicking shows a confirmation dialog; on confirm calls removePlayer() and refetches; creator cannot be removed (hide action for creator)",
+        "Each player row shows 'Make Admin' / 'Remove Admin' toggle (admin only); clicking calls setAdmin() and refetches; creator's admin status cannot be changed (hide action for creator)",
+        "All admin actions show success/error toast",
+        "Non-admin users do not see any of these actions (hidden, not disabled)",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 9,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-010",
+      "title": "Frontend Edit Pelada settings and Delete Pelada",
+      "description": "As an admin, I want to edit pelada settings; as the creator, I want to delete the pelada.",
+      "acceptanceCriteria": [
+        "'Edit' button visible only to admins; opens a modal/form pre-filled with current values; all creation fields are editable; on save calls updatePelada() and refetches pelada detail; toast on success/error",
+        "Optional image re-upload in edit form; if a new image is selected, calls uploadPeladaImage() after updatePelada()",
+        "'Delete Pelada' option visible only to the creator (compare JWT userId with creator); shows a confirmation dialog with warning text; on confirm calls deletePelada() then navigates to /home; toast on success",
+        "Submit/Delete buttons show loading state during API calls",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 10,
+      "passes": false,
+      "notes": ""
+    }
+  ]
+}

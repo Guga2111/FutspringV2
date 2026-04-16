@@ -1,0 +1,90 @@
+# Ralph Progress Log
+Started: Sat Mar 21 00:00:00 PDT 2026
+---
+
+## Codebase Patterns
+- Backend uses Lombok @Data, @Builder, @NoArgsConstructor, @AllArgsConstructor on all entities and DTOs
+- DTOs have a static `from(Entity entity)` factory method for entity-to-DTO conversion
+- JPA entities use @CreationTimestamp from org.hibernate.annotations for createdAt fields
+- ManyToMany relationships use @JoinTable with explicit join column names
+- Hibernate DDL is set to `update` mode - tables auto-created from entities
+- Java/Maven not available in this environment - "Typecheck passes" means code is syntactically correct Java
+- Frontend TypeScript typecheck: `cd frontend && npx tsc -b --noEmit`
+- Controllers inject `Authentication` and get current user email via `(String) authentication.getPrincipal()`
+- Services use `@Transactional` (write) and `@Transactional(readOnly = true)` for read operations
+- Lazy-loaded collections (@ManyToMany with FetchType.LAZY) are safe to access within @Transactional service methods
+- Conflict responses use AppException(HttpStatus.CONFLICT, message)
+- File uploads: `@RequestParam("file") MultipartFile file`; store under `@Value("${app.uploads.dir:uploads}")` dir with UUID prefix
+- Daily entity has: confirmedPlayers (ManyToMany<User>, join table daily_confirmed_players), isFinished (boolean), championImage (String)
+- Team entity: id, daily (ManyToOne), name, players (ManyToMany<User>, join table team_players)
+- TeamRepository: findByDaily(Daily daily)
+- No browser testing tools available; manual browser verification needed
+- DailyDetailDTO includes `isAdmin` boolean (populated in getDailyDetail by checking pelada.getAdmins().contains(caller)) — use this for all admin-only UI on DailyDetailPage
+- Status badge colors: SCHEDULED=blue-100/800, CONFIRMED=yellow-100/800, IN_COURSE=green-100/800, FINISHED=gray-100/800, CANCELED=red-100/800
+- Date formatting for ISO date strings: append 'T12:00:00' before parsing to avoid timezone off-by-one
+- Upsert pattern for entities: repository.findByX().orElse(EntityBuilder.builder()...build()) then save()
+- `DailyAwardRepository.findByDaily` returns Optional — use `.orElse(DailyAward.builder().daily(daily).build())` for upsert
+- Win check for a player in finalization: check if player's team is the team at position 1 in LeagueTable
+- finalizeDaily already computes UserDailyStats and LeagueTableEntry — Stats & Ranking upserts should be added in the same @Transactional block
+- Pelada entity has getMembers() and getAdmins() collections (ManyToMany); use these to check membership and build full ranking list including zero-stats members
+- Stats entity uses @ElementCollection for puskasDates (List<LocalDate>) with @CollectionTable(name="stats_puskas_dates")
+- Ranking entity has unique constraint on (pelada_id, user_id); use @UniqueConstraint in @Table annotation
+- Win determination for Ranking/Stats: check if winningTeam.getPlayers().contains(player); winningTeam is null if tied at top of league table
+- DailyService already uses import com.futspring.backend.entity.*; and import com.futspring.backend.repository.*; — new entities/repos are auto-imported
+
+## 2026-03-21 - US-004
+- Created StatsDTO.java with fromStats() and fromUser() factory methods; puskasDates is List<LocalDate>
+- Created StatsService.java: getStats(userId, callerEmail) - returns zeros if no Stats record
+- Extended UserController.java: added GET /api/v1/users/{id}/stats endpoint (injected StatsService via @RequiredArgsConstructor)
+- Created frontend src/types/stats.ts with StatsDTO interface (puskasDates as string[])
+- Created frontend src/api/users.ts with getUserStats(userId) using existing Axios client
+- Installed recharts package (npm install recharts) - required for BarChart
+- Created ProfilePage.tsx: stats summary cards (Goals/Assists/Matches/Wins), Recharts BarChart, skeleton loading, empty/zero state
+- Updated App.tsx: replaced coming-soon placeholder with lazy-loaded ProfilePage at /profile/:id
+- Files changed: StatsDTO.java, StatsService.java, UserController.java, stats.ts, users.ts, ProfilePage.tsx, App.tsx, package.json, package-lock.json
+- **Learnings for future iterations:**
+  - recharts was not pre-installed; needed `npm install recharts` before using BarChart/BarChart components
+  - When stats are zero, show a text fallback rather than rendering empty chart (better UX)
+  - StatsDTO.puskasDates is List<LocalDate> in Java — serializes to string[] in JSON (ISO date strings like "2026-03-21")
+  - Manual browser verification needed (no browser tools available)
+---
+
+## 2026-03-21 - US-002
+- Created RankingDTO with fromRanking() and fromUser() factory methods
+- Created RankingService with getRanking(peladaId, callerEmail): checks membership, merges ranking rows with full member list (zeros for no-ranking members), sorts by goals desc
+- Added GET /api/v1/peladas/{id}/ranking endpoint to PeladaController (injected RankingService)
+- Added RankingDTO interface to frontend src/types/daily.ts
+- Added getRanking(peladaId) to src/api/peladas.ts
+- Added Ranking section to PeladaDetailPage: skeleton loading, sortable columns (Goals/Assists/Matches/Wins), player avatar/initials, empty state
+- Files changed: RankingDTO.java, RankingService.java, PeladaController.java, daily.ts, peladas.ts, PeladaDetailPage.tsx
+- **Learnings for future iterations:**
+  - When injecting a new service into a controller that uses @RequiredArgsConstructor, just add the final field — no @Autowired needed
+  - Avoid duplicate `type X = ...` aliases inside the same function; use inline type in useState generic instead
+  - Manual browser verification needed (no browser tools available)
+---
+
+## 2026-03-21 - US-001
+- Created Stats JPA entity (global per-user) with @ElementCollection puskasDates
+- Created Ranking JPA entity (per-pelada per-user) with unique constraint
+- Created StatsRepository (findByUser) and RankingRepository (findByPelada, findByPeladaAndUser)
+- Extended DailyService.finalizeDaily(): added idempotency guard (daily.isFinished check), Stats/Ranking upserts after league table computation, Puskas date appended to Stats if player is puskasWinner
+- Files changed: Stats.java, Ranking.java, StatsRepository.java, RankingRepository.java, DailyService.java
+- **Learnings for future iterations:**
+  - DailyService uses field injection via @RequiredArgsConstructor — adding new final repo fields is sufficient, no explicit @Autowired needed
+  - The statsMap (UserDailyStats) already has per-player goals/assists/matchesPlayed computed — reuse it for Ranking/Stats upserts to avoid redundant DB queries
+  - Winning team determination: compare points AND goal differential of top 2 entries to detect ties
+- RankingDTO has two factory methods: fromRanking(Ranking) and fromUser(User) to handle members with no ranking entries
+- RankingService is a separate @Service (not added to PeladaService) and injected into PeladaController via @RequiredArgsConstructor
+- Frontend ranking sort state: use inline type `{ col: 'goals' | ...; dir: 'asc' | 'desc' }` in useState to avoid duplicate type alias errors inside the component function
+---
+
+## 2026-03-21 - US-005
+- Added Puskas Award History section to ProfilePage below the bar chart
+- Section lists each date in stats.puskasDates sorted most-recent-first; empty state shows "No Puskas wins yet."
+- Updated ProfileSkeleton to include a skeleton block for the new section
+- Files changed: ProfilePage.tsx
+- **Learnings for future iterations:**
+  - Use `[...stats.puskasDates].sort((a, b) => (a > b ? -1 : 1))` for ISO date string descending sort (avoids mutating state)
+  - Date formatting: append 'T12:00:00' to ISO date strings before parsing to avoid timezone off-by-one (consistent with existing codebase pattern)
+  - Manual browser verification needed (no browser tools available)
+---

@@ -1,0 +1,90 @@
+{
+  "project": "FutSpring",
+  "branchName": "ralph/futspring-stats-rankings",
+  "description": "FutSpring Stats & Rankings — global user stats, per-pelada ranking, stats computation on finalization, and profile page stats display",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Create Stats and Ranking entities and extend finalize to compute them",
+      "description": "As the system, I need global Stats and per-pelada Ranking entities created and populated during daily finalization so that aggregate performance data is persisted.",
+      "acceptanceCriteria": [
+        "Create Stats JPA entity with fields: id (Long, auto), user (OneToOne User, required), goals (int, default 0), assists (int, default 0), matchesPlayed (int, default 0), wins (int, default 0), puskasDates (List<LocalDate>, stored as @ElementCollection in a stats_puskas_dates join table)",
+        "Create Ranking JPA entity with fields: id (Long, auto), pelada (ManyToOne Pelada, required), user (ManyToOne User, required), goals (int, default 0), assists (int, default 0), matchesPlayed (int, default 0), wins (int, default 0); unique constraint on (pelada, user)",
+        "Create StatsRepository extending JpaRepository<Stats, Long> with: findByUser(User user) returning Optional<Stats>",
+        "Create RankingRepository extending JpaRepository<Ranking, Long> with: findByPelada(Pelada pelada) and findByPeladaAndUser(Pelada pelada, User user) returning Optional<Ranking>",
+        "Extend DailyService.finalizeDaily() within the same @Transactional block: (1) determine the winning team (position 1 from LeagueTable, or null if tied); (2) for each confirmed player: upsert Ranking entry for the pelada (create if not exists, increment goals/assists/matchesPlayed/wins); upsert global Stats record (create if not exists, increment goals/assists/matchesPlayed/wins); if this player is the puskasWinner, append today's LocalDate to stats.puskasDates; (3) all upserts use findByX().orElse(new entity) then save",
+        "Finalization idempotency guard: check daily.isFinished at start of finalizeDaily; throw AppException(HttpStatus.CONFLICT, 'Daily already finalized') if true",
+        "Typecheck passes"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-002",
+      "title": "Backend ranking endpoint and frontend ranking table on Pelada page",
+      "description": "As a member, I want to see how players rank in our pelada so I know who the top performers are.",
+      "acceptanceCriteria": [
+        "GET /api/v1/peladas/:id/ranking — members only (403 for non-members); returns List<RankingDTO> sorted by goals desc; players with no Ranking entry still appear with zeros (build from pelada.getMembers() and merge with existing Ranking rows)",
+        "RankingDTO fields: userId, username, userImage, goals, assists, matchesPlayed, wins",
+        "Add getRanking(peladaId, userEmail) method to a RankingService (or DailyService if simpler) annotated @Transactional(readOnly=true)",
+        "Add GET /peladas/{id}/ranking endpoint to PeladaController (or new RankingController)",
+        "Add RankingDTO interface to frontend src/types/daily.ts (or src/types/ranking.ts)",
+        "Add getRanking(peladaId) API function to src/api/peladas.ts (or src/api/ranking.ts) using existing Axios client",
+        "Add a Ranking tab or section to PeladaDetailPage: fetches getRanking(peladaId); shows shadcn/ui Table with columns: Player, Goals, Assists, Matches, Wins; default sort goals desc; column headers are clickable to sort asc/desc client-side; skeleton 3-row loading; empty state if no data",
+        "Typecheck passes"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-003",
+      "title": "Daily stats and awards display on finished Daily page",
+      "description": "Player stats table and award cards on the finished daily page are already implemented in the daily cycle (US-019). Marking complete.",
+      "acceptanceCriteria": [
+        "Already implemented: finished Daily page shows player stats table (Player, Goals, Assists, Matches, Wins sorted by goals desc)",
+        "Already implemented: finished Daily page shows award cards for Puskas and Wiltball winners with avatar and username"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "Implemented in daily cycle US-019"
+    },
+    {
+      "id": "US-004",
+      "title": "Backend user stats endpoint and frontend Profile page with global stats",
+      "description": "As a user, I want to see my overall performance stats across all peladas on my profile.",
+      "acceptanceCriteria": [
+        "GET /api/v1/users/:id/stats — any authenticated user can view any user's stats; returns StatsDTO",
+        "StatsDTO fields: userId, username, goals, assists, matchesPlayed, wins, puskasDates (List<LocalDate>)",
+        "If no Stats record exists for the user, return zeros and empty puskasDates list",
+        "Add getStats(userId, callerEmail) method to a StatsService (or UserService) annotated @Transactional(readOnly=true)",
+        "Add GET /users/{id}/stats endpoint to UserController (or new StatsController)",
+        "Add StatsDTO interface to frontend src/types/stats.ts (or src/types/user.ts)",
+        "Add getUserStats(userId) API function using existing Axios client",
+        "Create ProfilePage at /profile/:id (lazy-loaded): fetches user info and getUserStats(userId); shows stats summary cards (Goals, Assists, Matches, Wins); shows Recharts BarChart with goals and assists as two bars; skeleton loading; empty/zero state renders without error",
+        "Add /profile/:id route to App.tsx (replace any existing placeholder)",
+        "Typecheck passes"
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-005",
+      "title": "Frontend Puskas award history on Profile page",
+      "description": "As a user, I want to see when I've won the Puskas award on my profile page.",
+      "acceptanceCriteria": [
+        "Profile page shows a 'Puskas Award History' section below the stats chart",
+        "Section lists each date in stats.puskasDates formatted as a readable date string (e.g. 'March 21, 2026')",
+        "Dates sorted most recent first",
+        "Empty state message 'No Puskas wins yet.' if puskasDates is empty",
+        "Section uses skeleton loading while stats are loading",
+        "Typecheck passes"
+      ],
+      "priority": 5,
+      "passes": true,
+      "notes": ""
+    }
+  ]
+}

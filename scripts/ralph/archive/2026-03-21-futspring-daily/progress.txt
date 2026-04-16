@@ -1,0 +1,172 @@
+# Ralph Progress Log
+Started: Fri Mar 20 10:34:34 PDT 2026
+---
+
+## 2026-03-21 - US-019
+- Added finished daily view sections to DailyDetailPage (shown only when daily.status === 'FINISHED')
+- Match Results section: each match card shows team1 vs team2 with scores; winning team name is bold; draw shows "Draw" label
+- League Table section: table with Position, Team, W, D, L, GF, GA, GD, Points; position 1 row highlighted yellow; GD prefixed with + for positive values
+- Player Stats section: table with Player, Goals, Assists, Matches, Wins; sorted by goals desc then assists desc (client-side sort via [...spread].sort())
+- Awards section: grid of Puskas and Wiltball award cards, each showing player avatar (looked up from confirmedPlayers) + award label + name
+- Champion Image section: shows image if set; admin gets Upload/Replace button; hidden file input triggered via ref; uploadChampionImage API call then fetchDaily() to refetch
+- Added `useRef` import, `uploadChampionImage` import, `uploadLoading` state, `fileInputRef`, and `handleChampionUpload` handler
+- Files changed: frontend/src/pages/DailyDetailPage.tsx
+- **Learnings for future iterations:**
+  - When AwardDTO only has winner IDs/names (no image), look up the player from `daily.confirmedPlayers` to render PlayerAvatar
+  - uploadChampionImage returns DailyListItem (not DailyDetail) — use fetchDaily() to refetch the full detail after upload
+  - File input reset after upload: `if (fileInputRef.current) fileInputRef.current.value = ''` — prevents duplicate upload on same file selection
+  - Client-side sort: `[...daily.playerStats].sort(...)` — spread to avoid mutating the original array
+---
+
+## 2026-03-21 - US-018
+- Added admin-only 'Finalize Daily' button on DailyDetailPage when status is IN_COURSE and daily.matches is non-empty
+- Opens FinalizeModal with two selects: Puskas Award and Wiltball Award, both populated from confirmedPlayers
+- Submit button disabled until both selects have a value; loading state during API call
+- On success: closes modal, shows success toast, updates daily state (page transitions to FINISHED)
+- Error toast on failure; modal stays open on error
+- Enter Results and Finalize Daily buttons now grouped in a flex row when IN_COURSE
+- Files changed: frontend/src/pages/DailyDetailPage.tsx
+- **Learnings for future iterations:**
+  - FinalizeModal uses local string state for select values ('' = unset); canSubmit = both non-empty before converting to Number
+  - finalizeDaily is imported directly (not dynamic import) since ResultsModal already handles getDailyDetail dynamic import for its own refetch
+  - Finalize button only shows when daily.matches.length > 0 — checked inline in JSX
+---
+
+## 2026-03-20 - US-017
+- Added admin-only 'Enter Results' button on DailyDetailPage when status is IN_COURSE
+- Opens ResultsModal with one match row per team pair (or pre-filled from existing matches)
+- Each match row: team1/team2 selects, score inputs (number, min 0)
+- Expandable player stats section per match — all confirmed players with goals/assists inputs (default 0)
+- 'Add Match' button adds additional rows; 'Remove' button on extra rows
+- Pre-fills scores from daily.matches if they exist; player stats default to 0 (per-match breakdown not in MatchDTO)
+- On submit: calls submitResults, re-fetches getDailyDetail, updates page state, closes modal; toast on success/error
+- Files changed: frontend/src/pages/DailyDetailPage.tsx
+- **Learnings for future iterations:**
+  - ResultsModal uses dynamic import for getDailyDetail (`await import('../api/dailies')`) to re-fetch after submit without prop-drilling refetch
+  - `initMatchRows` initializes from daily.matches (if any) or default 1-match from first 2 teams
+  - Player stats are per-match inputs (all confirmed players); scores are input as strings and parsed on submit
+  - The scrollable modal uses `overflow-y-auto py-8` on the backdrop container
+---
+
+## 2026-03-20 - US-016
+- Added admin-only status action bar to DailyDetailPage
+- SCHEDULED → "Confirm Daily" + "Cancel Daily" buttons; CONFIRMED → "Start Session" + "Cancel Daily" buttons; IN_COURSE/later → bar hidden
+- Each button opens an inline confirmation dialog with descriptive text; on confirm calls updateDailyStatus and updates daily state immediately
+- Status badge updates without page reload; dialog closes on success; action bar disappears after cancel (status = CANCELED)
+- Files changed: frontend/src/pages/DailyDetailPage.tsx
+- **Learnings for future iterations:**
+  - `setDaily((prev) => prev ? { ...prev, status: updated.status, isFinished: updated.isFinished } : prev)` — partial update avoids refetch while keeping teams/players in sync
+  - Confirmation dialog is a fixed overlay (z-50 bg-black/50) — no external library needed; `statusDialog` state holds `{ targetStatus, description }`
+  - Status action bar conditioned on `daily.isAdmin && (status === 'SCHEDULED' || status === 'CONFIRMED')` — IN_COURSE and beyond show no buttons
+---
+
+## 2026-03-20 - US-015
+- Added admin team management to DailyDetailPage (sort teams + swap players)
+- Added `isAdmin` field to DailyDetailDTO (backend) and populated it in getDailyDetail by checking pelada.getAdmins().contains(caller)
+- TeamsSection component shows team cards with player avatars, names, stars, and Move buttons
+- Sort Teams button visible when admin + status SCHEDULED/CONFIRMED + confirmedPlayerCount >= 2; Re-sort Teams label when teams exist
+- Player selection state: click Move → select player; click Move on same player → cancel; click Move on player in different team → swap
+- swapPlayers returns DailyDetail (full detail); setDaily(updated) refreshes without full page reload
+- Files changed: backend/DailyDetailDTO.java, backend/DailyService.java, frontend/src/types/daily.ts, frontend/src/pages/DailyDetailPage.tsx
+- **Learnings for future iterations:**
+  - `isAdmin` must come from backend (DailyDetailDTO) since DailyDetailPage doesn't have access to pelada members list; added to getDailyDetail service method
+  - Teams section is hidden entirely when no teams exist and user is not admin (nothing to show)
+  - Two-step swap UX: first click selects player (stored in state), second click in different team triggers swapPlayers API
+---
+
+## Codebase Patterns
+- Backend uses Lombok @Data, @Builder, @NoArgsConstructor, @AllArgsConstructor on all entities and DTOs
+- DTOs have a static `from(Entity entity)` factory method for entity-to-DTO conversion
+- JPA entities use @CreationTimestamp from org.hibernate.annotations for createdAt fields
+- ManyToMany relationships use @JoinTable with explicit join column names
+- Hibernate DDL is set to `update` mode - tables auto-created from entities
+- Java/Maven not available in this environment - "Typecheck passes" means code is syntactically correct Java
+- Frontend TypeScript typecheck: `cd frontend && npx tsc -b --noEmit`
+- Controllers inject `Authentication` and get current user email via `(String) authentication.getPrincipal()`
+- Services use `@Transactional` (write) and `@Transactional(readOnly = true)` for read operations
+- Lazy-loaded collections (@ManyToMany with FetchType.LAZY) are safe to access within @Transactional service methods
+- Conflict responses use AppException(HttpStatus.CONFLICT, message)
+- File uploads: `@RequestParam("file") MultipartFile file`; store under `@Value("${app.uploads.dir:uploads}")` dir with UUID prefix
+- Daily entity has: confirmedPlayers (ManyToMany<User>, join table daily_confirmed_players), isFinished (boolean), championImage (String)
+- Team entity: id, daily (ManyToOne), name, players (ManyToMany<User>, join table team_players)
+- TeamRepository: findByDaily(Daily daily)
+- No browser testing tools available; manual browser verification needed
+- DailyDetailDTO includes `isAdmin` boolean (populated in getDailyDetail by checking pelada.getAdmins().contains(caller)) — use this for all admin-only UI on DailyDetailPage
+
+## 2026-03-20 - US-014
+- Replaced DailyDetailPage placeholder with full implementation
+- Header: pelada name (link to /pelada/:id), formatted date, time, status badge
+- Confirmed Players section: player avatars/names/stars/position, count in heading, empty state
+- Skeleton loading (3 rows) while fetching
+- 403 response → 'Access Denied' screen (no crash)
+- 'Confirm Attendance' button shown when status is SCHEDULED/CONFIRMED and user not in confirmedPlayers
+- 'Disconfirm Attendance' button shown when status is SCHEDULED/CONFIRMED and user is in confirmedPlayers
+- Both buttons hidden when status is IN_COURSE, FINISHED, or CANCELED
+- refetch after confirm/disconfirm; toast on success and error
+- Files changed: frontend/src/pages/DailyDetailPage.tsx
+- **Learnings for future iterations:**
+  - useAuth().user has id; match against confirmedPlayers[].id to check if current user confirmed
+  - fetchDaily is a useCallback with [dailyId] dep; both confirm/disconfirm call fetchDaily() after API success
+  - confirmLoading single bool covers both confirm and disconfirm buttons
+---
+
+## 2026-03-20 - US-013
+- Added Sessions section to PeladaDetailPage below members list
+- Sessions section: fetches getDailiesForPelada on load; 3-row skeleton; empty state; colored status badges; each row links to /daily/:id
+- Admin-only 'Create Session' button opens CreateSessionDialog modal (dailyDate + dailyTime inputs, loading state, toast on success/error)
+- Created DailyDetailPage placeholder (NavBar + "coming soon" message)
+- Updated App.tsx: replaced inline /daily/:id placeholder with lazy-loaded DailyDetailPage
+- Files changed: frontend/src/pages/PeladaDetailPage.tsx, frontend/src/pages/DailyDetailPage.tsx (new), frontend/src/App.tsx
+- **Learnings for future iterations:**
+  - Status badge colors: SCHEDULED=blue-100/800, CONFIRMED=yellow-100/800, IN_COURSE=green-100/800, FINISHED=gray-100/800, CANCELED=red-100/800
+  - Date formatting for ISO date strings: append 'T12:00:00' before parsing to avoid timezone off-by-one (e.g., `new Date(daily.dailyDate + 'T12:00:00')`)
+  - react-router-dom Link component used for row navigation (imported from 'react-router-dom')
+  - fetchDailies is a separate useCallback/useEffect from fetchPelada — both run independently on mount
+---
+
+## 2026-03-20 - US-012
+- Created `src/types/daily.ts` with all TypeScript interfaces: PlayerDTO, TeamDTO, MatchDTO, UserDailyStatsDTO, LeagueTableEntryDTO, AwardDTO, DailyListItem, DailyDetail
+- Created `src/api/dailies.ts` with all API functions: getDailiesForPelada, getDailyDetail, createDaily, confirmAttendance, disconfirmAttendance, sortTeams, swapPlayers, updateDailyStatus, submitResults, finalizeDaily, uploadChampionImage
+- All functions use existing Axios client (src/api/client.ts)
+- Files changed: frontend/src/types/daily.ts (new), frontend/src/api/dailies.ts (new)
+- **Learnings for future iterations:**
+  - `disconfirmAttendance` uses `apiClient.delete` with generic return type — axios delete supports typed responses
+  - `uploadChampionImage` uses PUT (not POST) with multipart/form-data, same pattern as pelada image upload but PUT method
+  - `swapPlayers` returns DailyDetail (full detail with updated teams); `sortTeams` also returns DailyDetail
+---
+
+## 2026-03-20 - US-011
+- Implemented `uploadChampionImage` endpoint: PUT /api/v1/dailies/:id/champion-image (multipart/form-data)
+- Admin-only; validates daily is FINISHED (400 otherwise); max 5MB; JPEG/PNG/WebP only
+- Stores file under uploads/ with UUID prefix (same pattern as pelada image upload)
+- Updates daily.championImage and returns DailyListItemDTO
+- Files changed: service/DailyService.java, controller/DailyController.java
+- **Learnings for future iterations:**
+  - File upload pattern in DailyService is identical to PeladaService.uploadPeladaImage — copy the @Value, imports (MultipartFile, IOException, Files, Path, Paths, UUID), and storage logic
+  - DailyListItemDTO.from() does not include championImage field — it only has id, dailyDate, dailyTime, status, confirmedPlayerCount, isFinished
+---
+
+## 2026-03-20 - US-010
+- Implemented `finalizeDaily` endpoint: POST /api/v1/dailies/:id/finalize
+- Validates admin access, IN_COURSE status, at least one match result, and award winners are confirmed players
+- Computes UserDailyStats per confirmed player (goals, assists, matchesPlayed, wins) by aggregating PlayerMatchStat records
+- Computes LeagueTableEntry per team (W/D/L/GF/GA/points) from match results; sorted by points desc then GD desc with position set
+- Creates or updates DailyAward with puskasWinner and wiltballWinner
+- Sets daily.status = FINISHED and daily.isFinished = true
+- Returns full DailyDetailDTO via getDailyDetail
+- Files changed: controller/DailyController.java, service/DailyService.java, dto/FinalizeDailyRequestDTO.java
+- **Learnings for future iterations:**
+  - `DailyAwardRepository.findByDaily` returns Optional — use `.orElse(DailyAward.builder().daily(daily).build())` for upsert
+  - Win check for a player: `match.getWinner().getPlayers().contains(stat.getUser())` — works within @Transactional since players collection is LAZY but loaded in same session
+  - League table sort: chain `.reversed()` calls on Comparator — `.comparingInt(...).reversed().thenComparingInt(...).reversed()` correctly applies descending on both fields
+---
+
+## 2026-03-20 - US-001
+- Extended Daily entity with confirmedPlayers (ManyToMany), isFinished (boolean, default false), championImage (String nullable)
+- Created Team entity with id, daily, name, players (ManyToMany<User>)
+- Created TeamRepository with findByDaily(Daily daily) method
+- Files changed: entity/Daily.java, entity/Team.java, repository/TeamRepository.java
+- **Learnings for future iterations:**
+  - Daily entity now has confirmedPlayers set and isFinished flag needed for attendance/lifecycle endpoints
+  - Team entity uses same ManyToMany pattern as Pelada members/admins
+---
