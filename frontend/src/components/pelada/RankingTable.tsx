@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { Trophy, ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
 import { Skeleton } from "../ui/skeleton";
 import { Avatar, AvatarImage, AvatarFallback } from "../ui/avatar";
@@ -107,7 +108,12 @@ export function RankingTable({
                           {initials}
                         </AvatarFallback>
                       </Avatar>
-                      <span className="font-medium">{row.username}</span>
+                      <Link
+                        to={`/profile/${row.userId}`}
+                        className="font-medium hover:underline"
+                      >
+                        {row.username}
+                      </Link>
                     </div>
                   </TableCell>
                   <TableCell className="py-2 px-2 text-center">{row.matchesPlayed}</TableCell>
