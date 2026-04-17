@@ -12,7 +12,7 @@ import type { PeladaResponse } from '../types/pelada'
 import type { TimelinePoint, MatchHistoryRow } from '../types/stats'
 import { Skeleton } from '../components/ui/skeleton'
 import { Separator } from '../components/ui/separator'
-import { Target, Handshake, CalendarDays, Trophy, TrendingUp, Medal, Star, Swords, Award } from 'lucide-react'
+import { Target, Handshake, CalendarDays, Trophy, TrendingUp, Medal, Star, Swords, Award, Zap } from 'lucide-react'
 import KpiCard from '../components/profile/KpiCard'
 import ProfilePieChart from '../components/profile/ProfilePieChart'
 import StatsOverTimeChart from '../components/profile/StatsOverTimeChart'
@@ -188,19 +188,37 @@ export default function ProfilePage() {
         <section className="mb-10">
           <h2 className="text-xl font-semibold mb-4">Desempenho</h2>
           <Separator className="mb-6" />
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-4">
-            <KpiCard label="Gols" value={stats.goals} icon={<Target className="w-5 h-5 text-green-500" />} />
-            <KpiCard label="Assistências" value={stats.assists} icon={<Handshake className="w-5 h-5 text-blue-400" />} />
-            <KpiCard label="Partidas" value={stats.matchesPlayed} icon={<CalendarDays className="w-5 h-5 text-orange-400" />} />
-            <KpiCard label="Vitória" value={stats.matchWins ?? 0} icon={<Swords className="w-5 h-5 text-red-400" />} />
-            <KpiCard label="Campeão" value={stats.wins} icon={<Trophy className="w-5 h-5 text-yellow-400" />} />
-            <KpiCard label="Sessões" value={stats.sessionsPlayed ?? 0} icon={<Star className="w-5 h-5 text-purple-400" />} />
-            <KpiCard
-              label="Aproveitamento"
-              value={`${(stats.sessionsPlayed ?? 0) > 0 ? Math.round((stats.wins / (stats.sessionsPlayed ?? 0)) * 100) : 0}%`}
-              icon={<TrendingUp className="w-5 h-5 text-green-400" />}
-            />
-          </div>
+          {(() => {
+            const sessions = stats.sessionsPlayed ?? 0
+            const wins = stats.matchWins ?? 0
+            const matches = stats.matchesPlayed ?? 0
+            const contributions = stats.goals + stats.assists
+            const winPct = matches > 0 ? `${Math.round((wins / matches) * 100)}%` : '0%'
+            const champPct = sessions > 0 ? `${Math.round((stats.wins / sessions) * 100)}%` : '0%'
+            const goalsPer = sessions > 0 ? (stats.goals / sessions).toFixed(1) : '0.0'
+            const assistsPer = sessions > 0 ? (stats.assists / sessions).toFixed(1) : '0.0'
+            const contribPer = sessions > 0 ? (contributions / sessions).toFixed(1) : '0.0'
+            return (
+              <>
+                <div className="grid grid-cols-3 lg:grid-cols-6 gap-4 mb-4">
+                  <KpiCard label="Vitórias" value={wins} icon={<Swords className="w-5 h-5 text-red-400" />} />
+                  <KpiCard label="Partidas" value={matches} icon={<CalendarDays className="w-5 h-5 text-orange-400" />} />
+                  <KpiCard label="% Vitória" value={winPct} icon={<TrendingUp className="w-5 h-5 text-green-500" />} />
+                  <KpiCard label="Campeão" value={stats.wins} icon={<Trophy className="w-5 h-5 text-yellow-400" />} />
+                  <KpiCard label="Sessões" value={sessions} icon={<Star className="w-5 h-5 text-purple-400" />} />
+                  <KpiCard label="Aproveitamento" value={champPct} icon={<TrendingUp className="w-5 h-5 text-green-400" />} />
+                </div>
+                <div className="grid grid-cols-3 lg:grid-cols-6 gap-4">
+                  <KpiCard label="Gols" value={stats.goals} icon={<Target className="w-5 h-5 text-green-500" />} />
+                  <KpiCard label="Gols/Sessão" value={goalsPer} icon={<Target className="w-5 h-5 text-green-400" />} />
+                  <KpiCard label="Assistências" value={stats.assists} icon={<Handshake className="w-5 h-5 text-blue-400" />} />
+                  <KpiCard label="Assists/Sessão" value={assistsPer} icon={<Handshake className="w-5 h-5 text-blue-300" />} />
+                  <KpiCard label="Contribuições" value={contributions} icon={<Zap className="w-5 h-5 text-amber-400" />} />
+                  <KpiCard label="Contrib/Sessão" value={contribPer} icon={<Zap className="w-5 h-5 text-amber-300" />} />
+                </div>
+              </>
+            )
+          })()}
         </section>
 
         {/* Awards section */}
