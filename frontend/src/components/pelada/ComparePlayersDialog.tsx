@@ -13,7 +13,8 @@ import {
   SelectValue,
 } from "../ui/select";
 import { Skeleton } from "../ui/skeleton";
-import { getUser, getUserStats } from "@/api/users";
+import { getUser } from "@/api/users";
+import { getPlayerPeladaStats } from "@/api/peladas";
 import {
   ComparablePlayerStatsCard,
   type PlayerCompareData,
@@ -23,6 +24,7 @@ import type { PeladaMember } from "@/types/pelada";
 interface ComparePlayersDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  peladaId: number;
   members: PeladaMember[];
   getFileUrl: (path: string | null | undefined) => string | undefined;
 }
@@ -30,6 +32,7 @@ interface ComparePlayersDialogProps {
 export function ComparePlayersDialog({
   open,
   onOpenChange,
+  peladaId,
   members,
   getFileUrl,
 }: ComparePlayersDialogProps) {
@@ -60,9 +63,9 @@ export function ComparePlayersDialog({
 
     Promise.all([
       getUser(playerAId),
-      getUserStats(playerAId),
+      getPlayerPeladaStats(peladaId, playerAId),
       getUser(playerBId),
-      getUserStats(playerBId),
+      getPlayerPeladaStats(peladaId, playerBId),
     ])
       .then(([profileA, statsA, profileB, statsB]) => {
         if (cancelled) return;
@@ -79,7 +82,7 @@ export function ComparePlayersDialog({
     return () => {
       cancelled = true;
     };
-  }, [playerAId, playerBId]);
+  }, [playerAId, playerBId, peladaId]);
 
   const membersForA = members.filter((m) => m.id !== playerBId);
   const membersForB = members.filter((m) => m.id !== playerAId);

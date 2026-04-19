@@ -2,11 +2,11 @@ import { Avatar, AvatarImage, AvatarFallback } from "../ui/avatar";
 import { Badge } from "../ui/badge";
 import { getPeladaGradient } from "@/lib/utils";
 import type { ProfileDTO } from "@/types/user";
-import type { StatsDTO } from "@/types/stats";
+import type { PlayerPeladaStatsDTO } from "@/types/pelada";
 
 export interface PlayerCompareData {
   profile: ProfileDTO;
-  stats: StatsDTO;
+  stats: PlayerPeladaStatsDTO;
 }
 
 interface ComparablePlayerStatsCardProps {
@@ -79,7 +79,7 @@ function PlayerColumn({
   side,
 }: {
   data: PlayerCompareData;
-  stats: StatsDTO;
+  stats: PlayerPeladaStatsDTO;
   getFileUrl: (path: string | null | undefined) => string | undefined;
   side: "A" | "B";
 }) {
@@ -133,10 +133,10 @@ export function ComparablePlayerStatsCard({
       valueA: playerA.stats.goals + playerA.stats.assists,
       valueB: playerB.stats.goals + playerB.stats.assists,
     },
-    { label: "Campeão", valueA: playerA.stats.wins, valueB: playerB.stats.wins },
-    { label: "Vitórias", valueA: playerA.stats.matchWins, valueB: playerB.stats.matchWins },
+    { label: "Vitórias", valueA: playerA.stats.wins, valueB: playerB.stats.wins },
     { label: "Artilheiro", valueA: playerA.stats.artilheiroWins, valueB: playerB.stats.artilheiroWins },
     { label: "Garçom", valueA: playerA.stats.garcomWins, valueB: playerB.stats.garcomWins },
+    { label: "Puskás", valueA: playerA.stats.puskasWins, valueB: playerB.stats.puskasWins },
   ];
 
   return (

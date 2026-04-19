@@ -1,13 +1,18 @@
 package com.futspring.backend.service;
 
+import com.futspring.backend.dto.PlayerPeladaStatsDTO;
 import com.futspring.backend.dto.RankingDTO;
+import com.futspring.backend.entity.Daily;
+import com.futspring.backend.entity.DailyAward;
 import com.futspring.backend.entity.Pelada;
 import com.futspring.backend.entity.Ranking;
 import com.futspring.backend.entity.User;
 import com.futspring.backend.exception.AppException;
 import com.futspring.backend.helper.UserAuthenticationHelper;
+import com.futspring.backend.repository.DailyAwardRepository;
 import com.futspring.backend.repository.PeladaRepository;
 import com.futspring.backend.repository.RankingRepository;
+import com.futspring.backend.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -15,6 +20,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 
+import java.time.LocalDate;
 import java.util.*;
 
 import static org.assertj.core.api.Assertions.*;
@@ -29,6 +35,10 @@ class RankingServiceTest {
     UserAuthenticationHelper userAuthHelper;
     @Mock
     RankingRepository rankingRepository;
+    @Mock
+    DailyAwardRepository dailyAwardRepository;
+    @Mock
+    UserRepository userRepository;
 
     RankingService rankingService;
 
@@ -39,7 +49,7 @@ class RankingServiceTest {
 
     @BeforeEach
     void setUp() {
-        rankingService = new RankingService(peladaRepository, userAuthHelper, rankingRepository);
+        rankingService = new RankingService(peladaRepository, userAuthHelper, rankingRepository, dailyAwardRepository, userRepository);
 
         admin = User.builder().id(1L).email("admin@example.com").username("admin").password("hash").stars(4).build();
         player = User.builder().id(2L).email("player@example.com").username("player").password("hash").stars(3).build();
@@ -169,5 +179,120 @@ class RankingServiceTest {
 
         assertThat(result.get(0).getAssists()).isEqualTo(5);
         assertThat(result.get(1).getAssists()).isEqualTo(2);
+    }
+
+    // ── getPlayerPeladaStats tests ──────────────────────────────────────────────
+
+    @Test
+    void getPlayerPeladaStats_withRankingAndAwards_returnsCorrectValues() {
+        Ranking ranking = Ranking.builder().id(1L).pelada(pelada).user(player).goals(7).assists(3).matchesPlayed(10).wins(4).build();
+        Daily daily = Daily.builder().id(1L).pelada(pelada).dailyDate(LocalDate.now()).dailyTime("18:00").build();
+        DailyAward award = DailyAward.builder().id(1L).daily(daily)
+                .artilheiroWinners(List.of(player))
+                .garcomWinners(List.of(player))
+                .puskasWinners(Collections.emptyList())
+                .wiltballWinners(Collections.emptyList())
+                .build();
+
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
+        when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
+        when(userRepository.findById(2L)).thenReturn(Optional.of(player));
+        when(rankingRepository.findByPeladaAndUser(pelada, player)).thenReturn(Optional.of(ranking));
+        when(dailyAwardRepository.findAllByPelada(pelada)).thenReturn(List.of(award));
+
+        PlayerPeladaStatsDTO result = rankingService.getPlayerPeladaStats(10L, 2L, "admin@example.com");
+
+        assertThat(result.getUserId()).isEqualTo(2L);
+        assertThat(result.getGoals()).isEqualTo(7);
+        assertThat(result.getAssists()).isEqualTo(3);
+        assertThat(result.getMatchesPlayed()).isEqualTo(10);
+        assertThat(result.getWins()).isEqualTo(4);
+        assertThat(result.getArtilheiroWins()).isEqualTo(1);
+        assertThat(result.getGarcomWins()).isEqualTo(1);
+        assertThat(result.getPuskasWins()).isEqualTo(0);
+        assertThat(result.getBolaMurchaWins()).isEqualTo(0);
+    }
+
+    @Test
+    void getPlayerPeladaStats_noRankingRecord_returnsZeroStats() {
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
+        when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
+        when(userRepository.findById(2L)).thenReturn(Optional.of(player));
+        when(rankingRepository.findByPeladaAndUser(pelada, player)).thenReturn(Optional.empty());
+        when(dailyAwardRepository.findAllByPelada(pelada)).thenReturn(Collections.emptyList());
+
+        PlayerPeladaStatsDTO result = rankingService.getPlayerPeladaStats(10L, 2L, "admin@example.com");
+
+        assertThat(result.getGoals()).isEqualTo(0);
+        assertThat(result.getAssists()).isEqualTo(0);
+        assertThat(result.getMatchesPlayed()).isEqualTo(0);
+        assertThat(result.getWins()).isEqualTo(0);
+        assertThat(result.getArtilheiroWins()).isEqualTo(0);
+        assertThat(result.getGarcomWins()).isEqualTo(0);
+        assertThat(result.getPuskasWins()).isEqualTo(0);
+        assertThat(result.getBolaMurchaWins()).isEqualTo(0);
+    }
+
+    @Test
+    void getPlayerPeladaStats_countsMultipleAwardWins() {
+        Daily d1 = Daily.builder().id(1L).pelada(pelada).dailyDate(LocalDate.now()).dailyTime("18:00").build();
+        Daily d2 = Daily.builder().id(2L).pelada(pelada).dailyDate(LocalDate.now().minusDays(7)).dailyTime("18:00").build();
+        DailyAward award1 = DailyAward.builder().id(1L).daily(d1)
+                .puskasWinners(List.of(player)).artilheiroWinners(Collections.emptyList())
+                .garcomWinners(Collections.emptyList()).wiltballWinners(Collections.emptyList()).build();
+        DailyAward award2 = DailyAward.builder().id(2L).daily(d2)
+                .puskasWinners(List.of(player)).artilheiroWinners(Collections.emptyList())
+                .garcomWinners(Collections.emptyList()).wiltballWinners(List.of(player)).build();
+
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
+        when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
+        when(userRepository.findById(2L)).thenReturn(Optional.of(player));
+        when(rankingRepository.findByPeladaAndUser(pelada, player)).thenReturn(Optional.empty());
+        when(dailyAwardRepository.findAllByPelada(pelada)).thenReturn(List.of(award1, award2));
+
+        PlayerPeladaStatsDTO result = rankingService.getPlayerPeladaStats(10L, 2L, "admin@example.com");
+
+        assertThat(result.getPuskasWins()).isEqualTo(2);
+        assertThat(result.getBolaMurchaWins()).isEqualTo(1);
+    }
+
+    @Test
+    void getPlayerPeladaStats_callerNotFound_throwsNotFound() {
+        when(userAuthHelper.getAuthenticatedUser("ghost@example.com")).thenThrow(new AppException(HttpStatus.NOT_FOUND, "User not found"));
+
+        assertThatThrownBy(() -> rankingService.getPlayerPeladaStats(10L, 2L, "ghost@example.com"))
+                .isInstanceOf(AppException.class)
+                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.NOT_FOUND));
+    }
+
+    @Test
+    void getPlayerPeladaStats_peladaNotFound_throwsNotFound() {
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
+        when(peladaRepository.findById(999L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> rankingService.getPlayerPeladaStats(999L, 2L, "admin@example.com"))
+                .isInstanceOf(AppException.class)
+                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.NOT_FOUND));
+    }
+
+    @Test
+    void getPlayerPeladaStats_callerNotMember_throwsForbidden() {
+        when(userAuthHelper.getAuthenticatedUser("out@example.com")).thenReturn(outsider);
+        when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
+
+        assertThatThrownBy(() -> rankingService.getPlayerPeladaStats(10L, 2L, "out@example.com"))
+                .isInstanceOf(AppException.class)
+                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.FORBIDDEN));
+    }
+
+    @Test
+    void getPlayerPeladaStats_targetUserNotFound_throwsNotFound() {
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
+        when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
+        when(userRepository.findById(999L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> rankingService.getPlayerPeladaStats(10L, 999L, "admin@example.com"))
+                .isInstanceOf(AppException.class)
+                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.NOT_FOUND));
     }
 }

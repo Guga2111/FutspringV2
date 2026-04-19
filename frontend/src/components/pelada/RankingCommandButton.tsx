@@ -16,11 +16,12 @@ import { ComparePlayersDialog } from "./ComparePlayersDialog";
 import type { PeladaMember } from "@/types/pelada";
 
 interface RankingCommandButtonProps {
+  peladaId: number;
   members: PeladaMember[];
   getFileUrl: (path: string | null | undefined) => string | undefined;
 }
 
-export function RankingCommandButton({ members, getFileUrl }: RankingCommandButtonProps) {
+export function RankingCommandButton({ peladaId, members, getFileUrl }: RankingCommandButtonProps) {
   const [popoverOpen, setPopoverOpen] = useState(false);
   const [compareOpen, setCompareOpen] = useState(false);
 
@@ -67,6 +68,7 @@ export function RankingCommandButton({ members, getFileUrl }: RankingCommandButt
       <ComparePlayersDialog
         open={compareOpen}
         onOpenChange={setCompareOpen}
+        peladaId={peladaId}
         members={members}
         getFileUrl={getFileUrl}
       />
