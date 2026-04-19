@@ -254,7 +254,7 @@ export default function PeladaDetailPage() {
             {/* end flex-1 main content */}
 
             {/* Chat sidebar — desktop only */}
-            <div className="hidden lg:block w-80 flex-shrink-0">
+            <div className="hidden lg:block w-80 flex-shrink-0 sticky top-4 self-start h-[calc(100vh-6rem)]">
               <ChatSidebar
                 peladaId={pelada.id}
                 currentUserId={currentUser?.id ?? null}
