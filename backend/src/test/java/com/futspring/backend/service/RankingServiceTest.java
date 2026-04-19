@@ -2,8 +2,6 @@ package com.futspring.backend.service;
 
 import com.futspring.backend.dto.PlayerPeladaStatsDTO;
 import com.futspring.backend.dto.RankingDTO;
-import com.futspring.backend.entity.Daily;
-import com.futspring.backend.entity.DailyAward;
 import com.futspring.backend.entity.Pelada;
 import com.futspring.backend.entity.Ranking;
 import com.futspring.backend.entity.User;
@@ -20,7 +18,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 
-import java.time.LocalDate;
 import java.util.*;
 
 import static org.assertj.core.api.Assertions.*;
@@ -186,19 +183,15 @@ class RankingServiceTest {
     @Test
     void getPlayerPeladaStats_withRankingAndAwards_returnsCorrectValues() {
         Ranking ranking = Ranking.builder().id(1L).pelada(pelada).user(player).goals(7).assists(3).matchesPlayed(10).wins(4).build();
-        Daily daily = Daily.builder().id(1L).pelada(pelada).dailyDate(LocalDate.now()).dailyTime("18:00").build();
-        DailyAward award = DailyAward.builder().id(1L).daily(daily)
-                .artilheiroWinners(List.of(player))
-                .garcomWinners(List.of(player))
-                .puskasWinners(Collections.emptyList())
-                .wiltballWinners(Collections.emptyList())
-                .build();
 
         when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
         when(userRepository.findById(2L)).thenReturn(Optional.of(player));
         when(rankingRepository.findByPeladaAndUser(pelada, player)).thenReturn(Optional.of(ranking));
-        when(dailyAwardRepository.findAllByPelada(pelada)).thenReturn(List.of(award));
+        when(dailyAwardRepository.countArtilheiroWinsByUserAndPelada(player, pelada)).thenReturn(1L);
+        when(dailyAwardRepository.countGarcomWinsByUserAndPelada(player, pelada)).thenReturn(1L);
+        when(dailyAwardRepository.countPuskasWinsByUserAndPelada(player, pelada)).thenReturn(0L);
+        when(dailyAwardRepository.countWiltballWinsByUserAndPelada(player, pelada)).thenReturn(0L);
 
         PlayerPeladaStatsDTO result = rankingService.getPlayerPeladaStats(10L, 2L, "admin@example.com");
 
@@ -219,7 +212,10 @@ class RankingServiceTest {
         when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
         when(userRepository.findById(2L)).thenReturn(Optional.of(player));
         when(rankingRepository.findByPeladaAndUser(pelada, player)).thenReturn(Optional.empty());
-        when(dailyAwardRepository.findAllByPelada(pelada)).thenReturn(Collections.emptyList());
+        when(dailyAwardRepository.countArtilheiroWinsByUserAndPelada(player, pelada)).thenReturn(0L);
+        when(dailyAwardRepository.countGarcomWinsByUserAndPelada(player, pelada)).thenReturn(0L);
+        when(dailyAwardRepository.countPuskasWinsByUserAndPelada(player, pelada)).thenReturn(0L);
+        when(dailyAwardRepository.countWiltballWinsByUserAndPelada(player, pelada)).thenReturn(0L);
 
         PlayerPeladaStatsDTO result = rankingService.getPlayerPeladaStats(10L, 2L, "admin@example.com");
 
@@ -235,20 +231,14 @@ class RankingServiceTest {
 
     @Test
     void getPlayerPeladaStats_countsMultipleAwardWins() {
-        Daily d1 = Daily.builder().id(1L).pelada(pelada).dailyDate(LocalDate.now()).dailyTime("18:00").build();
-        Daily d2 = Daily.builder().id(2L).pelada(pelada).dailyDate(LocalDate.now().minusDays(7)).dailyTime("18:00").build();
-        DailyAward award1 = DailyAward.builder().id(1L).daily(d1)
-                .puskasWinners(List.of(player)).artilheiroWinners(Collections.emptyList())
-                .garcomWinners(Collections.emptyList()).wiltballWinners(Collections.emptyList()).build();
-        DailyAward award2 = DailyAward.builder().id(2L).daily(d2)
-                .puskasWinners(List.of(player)).artilheiroWinners(Collections.emptyList())
-                .garcomWinners(Collections.emptyList()).wiltballWinners(List.of(player)).build();
-
         when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
         when(userRepository.findById(2L)).thenReturn(Optional.of(player));
         when(rankingRepository.findByPeladaAndUser(pelada, player)).thenReturn(Optional.empty());
-        when(dailyAwardRepository.findAllByPelada(pelada)).thenReturn(List.of(award1, award2));
+        when(dailyAwardRepository.countArtilheiroWinsByUserAndPelada(player, pelada)).thenReturn(0L);
+        when(dailyAwardRepository.countGarcomWinsByUserAndPelada(player, pelada)).thenReturn(0L);
+        when(dailyAwardRepository.countPuskasWinsByUserAndPelada(player, pelada)).thenReturn(2L);
+        when(dailyAwardRepository.countWiltballWinsByUserAndPelada(player, pelada)).thenReturn(1L);
 
         PlayerPeladaStatsDTO result = rankingService.getPlayerPeladaStats(10L, 2L, "admin@example.com");
 

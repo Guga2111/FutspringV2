@@ -2,7 +2,6 @@ package com.futspring.backend.service;
 
 import com.futspring.backend.dto.PlayerPeladaStatsDTO;
 import com.futspring.backend.dto.RankingDTO;
-import com.futspring.backend.entity.DailyAward;
 import com.futspring.backend.entity.Pelada;
 import com.futspring.backend.entity.Ranking;
 import com.futspring.backend.entity.User;
@@ -20,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+
 
 @Service
 @RequiredArgsConstructor
@@ -79,27 +79,10 @@ public class RankingService {
         int matchesPlayed = ranking != null ? ranking.getMatchesPlayed() : 0;
         int wins = ranking != null ? ranking.getWins() : 0;
 
-        List<DailyAward> awards = dailyAwardRepository.findAllByPelada(pelada);
-
-        int artilheiroWins = 0;
-        int garcomWins = 0;
-        int puskasWins = 0;
-        int bolaMurchaWins = 0;
-
-        for (DailyAward award : awards) {
-            for (User u : award.getArtilheiroWinners()) {
-                if (u.getId().equals(userId)) artilheiroWins++;
-            }
-            for (User u : award.getGarcomWinners()) {
-                if (u.getId().equals(userId)) garcomWins++;
-            }
-            for (User u : award.getPuskasWinners()) {
-                if (u.getId().equals(userId)) puskasWins++;
-            }
-            for (User u : award.getWiltballWinners()) {
-                if (u.getId().equals(userId)) bolaMurchaWins++;
-            }
-        }
+        int artilheiroWins = (int) dailyAwardRepository.countArtilheiroWinsByUserAndPelada(targetUser, pelada);
+        int garcomWins     = (int) dailyAwardRepository.countGarcomWinsByUserAndPelada(targetUser, pelada);
+        int puskasWins     = (int) dailyAwardRepository.countPuskasWinsByUserAndPelada(targetUser, pelada);
+        int bolaMurchaWins = (int) dailyAwardRepository.countWiltballWinsByUserAndPelada(targetUser, pelada);
 
         return PlayerPeladaStatsDTO.builder()
                 .userId(userId)
