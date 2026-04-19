@@ -1,8 +1,10 @@
 package com.futspring.backend.config;
 
 import com.futspring.backend.entity.Daily;
+import com.futspring.backend.entity.DailyAward;
 import com.futspring.backend.entity.Pelada;
 import com.futspring.backend.entity.User;
+import com.futspring.backend.repository.DailyAwardRepository;
 import com.futspring.backend.repository.DailyRepository;
 import com.futspring.backend.repository.PeladaRepository;
 import com.futspring.backend.repository.UserRepository;
@@ -26,6 +28,7 @@ public class DataInitializer implements CommandLineRunner {
     private final UserRepository userRepository;
     private final PeladaRepository peladaRepository;
     private final DailyRepository dailyRepository;
+    private final DailyAwardRepository dailyAwardRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Override
@@ -90,6 +93,81 @@ public class DataInitializer implements CommandLineRunner {
 
         log.info("DataInitializer: pelada '{}' criada com {} membros.", pelada.getName(), savedUsers.size());
 
+        // Finished dailies with awards (spread over past weeks for realistic history)
+        // Players by index: 0=Leal,1=Souto,2=Ferraz,3=Lui,4=Tuca,5=Gone,6=Thiago,7=Tão,
+        //                   8=Lobo,9=Dudu,10=Miguel,11=Neto,12=Vuzzi,13=27,14=Nando,
+        //                   15=Abreu,16=Leudo,17=Diego,18=Pirro,19=André
+        record AwardData(List<User> artilheiros, List<User> garcons, List<User> puskas, List<User> wiltball) {}
+
+        record DailySpec(LocalDate date, AwardData awards) {}
+
+        List<DailySpec> specs = List.of(
+            new DailySpec(LocalDate.now().minusWeeks(7), new AwardData(
+                List.of(u(savedUsers,0), u(savedUsers,5)),
+                List.of(u(savedUsers,3), u(savedUsers,6)),
+                List.of(u(savedUsers,1)),
+                List.of(u(savedUsers,14))
+            )),
+            new DailySpec(LocalDate.now().minusWeeks(6), new AwardData(
+                List.of(u(savedUsers,5), u(savedUsers,17)),
+                List.of(u(savedUsers,9), u(savedUsers,3)),
+                List.of(u(savedUsers,0)),
+                List.of(u(savedUsers,13))
+            )),
+            new DailySpec(LocalDate.now().minusWeeks(5), new AwardData(
+                List.of(u(savedUsers,1), u(savedUsers,4)),
+                List.of(u(savedUsers,7), u(savedUsers,16)),
+                List.of(u(savedUsers,17)),
+                List.of(u(savedUsers,2))
+            )),
+            new DailySpec(LocalDate.now().minusWeeks(4), new AwardData(
+                List.of(u(savedUsers,0), u(savedUsers,12)),
+                List.of(u(savedUsers,3), u(savedUsers,9)),
+                List.of(u(savedUsers,5)),
+                List.of(u(savedUsers,11))
+            )),
+            new DailySpec(LocalDate.now().minusWeeks(3), new AwardData(
+                List.of(u(savedUsers,5), u(savedUsers,19)),
+                List.of(u(savedUsers,6), u(savedUsers,4)),
+                List.of(u(savedUsers,12)),
+                List.of(u(savedUsers,8))
+            )),
+            new DailySpec(LocalDate.now().minusWeeks(2), new AwardData(
+                List.of(u(savedUsers,17), u(savedUsers,0)),
+                List.of(u(savedUsers,3), u(savedUsers,18)),
+                List.of(u(savedUsers,1)),
+                List.of(u(savedUsers,13))
+            )),
+            new DailySpec(LocalDate.now().minusWeeks(1), new AwardData(
+                List.of(u(savedUsers,1), u(savedUsers,5)),
+                List.of(u(savedUsers,9), u(savedUsers,6)),
+                List.of(u(savedUsers,19)),
+                List.of(u(savedUsers,14))
+            ))
+        );
+
+        for (DailySpec spec : specs) {
+            Daily daily = Daily.builder()
+                    .pelada(pelada)
+                    .dailyDate(spec.date())
+                    .dailyTime("08:00")
+                    .status("FINISHED")
+                    .isFinished(true)
+                    .confirmedPlayers(new HashSet<>(savedUsers))
+                    .build();
+            daily = dailyRepository.save(daily);
+
+            DailyAward award = DailyAward.builder()
+                    .daily(daily)
+                    .artilheiroWinners(new java.util.ArrayList<>(spec.awards().artilheiros()))
+                    .garcomWinners(new java.util.ArrayList<>(spec.awards().garcons()))
+                    .puskasWinners(new java.util.ArrayList<>(spec.awards().puskas()))
+                    .wiltballWinners(new java.util.ArrayList<>(spec.awards().wiltball()))
+                    .build();
+            dailyAwardRepository.save(award);
+        }
+
+        // Today's daily — still scheduled
         Daily daily = Daily.builder()
                 .pelada(pelada)
                 .dailyDate(LocalDate.now())
@@ -100,7 +178,7 @@ public class DataInitializer implements CommandLineRunner {
 
         dailyRepository.save(daily);
 
-        log.info("DataInitializer: daily criado para hoje com {} jogadores confirmados.", savedUsers.size());
+        log.info("DataInitializer: 7 dailies finalizados + 1 agendado criados com prêmios.");
     }
 
     private User buildUser(String email, String username, String password, String position, int stars) {
@@ -113,5 +191,7 @@ public class DataInitializer implements CommandLineRunner {
                 .build();
     }
 
-
+    private static User u(List<User> users, int index) {
+        return users.get(index);
+    }
 }
