@@ -232,6 +232,7 @@ export default function PeladaDetailPage() {
                       Top jogadores · {sortedRanking.length} classificados
                     </span>
                     <RankingCommandButton
+                      peladaId={pelada.id}
                       members={pelada.members}
                       getFileUrl={getFileUrl}
                     />

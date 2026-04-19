@@ -1,5 +1,5 @@
 import apiClient from "./client"
-import type { PeladaResponse, PeladaDetail, PeladaAwards } from "../types/pelada"
+import type { PeladaResponse, PeladaDetail, PeladaAwards, PlayerPeladaStatsDTO } from "../types/pelada"
 import type { UserResponseDTO } from "../types/auth"
 import type { RankingDTO } from "../types/daily"
 
@@ -80,5 +80,10 @@ export async function getRanking(peladaId: number): Promise<RankingDTO[]> {
 
 export async function getPeladaAwards(peladaId: number): Promise<PeladaAwards> {
   const r = await apiClient.get<PeladaAwards>(`/api/v1/peladas/${peladaId}/awards`)
+  return r.data
+}
+
+export async function getPlayerPeladaStats(peladaId: number, userId: number): Promise<PlayerPeladaStatsDTO> {
+  const r = await apiClient.get<PlayerPeladaStatsDTO>(`/api/v1/peladas/${peladaId}/members/${userId}/stats`)
   return r.data
 }
