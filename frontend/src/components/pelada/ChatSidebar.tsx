@@ -57,10 +57,13 @@ export function ChatSidebar({
       .finally(() => setLoading(false));
   }, [peladaId]);
 
-  // Scroll to bottom after initial load
+  // Scroll to bottom after initial load (within the chat container only)
   useEffect(() => {
     if (!loading) {
-      bottomRef.current?.scrollIntoView();
+      const container = scrollContainerRef.current;
+      if (container) {
+        container.scrollTop = container.scrollHeight;
+      }
     }
   }, [loading]);
 
