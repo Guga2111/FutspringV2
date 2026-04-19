@@ -40,26 +40,30 @@ public class DataInitializer implements CommandLineRunner {
         String encodedPassword = passwordEncoder.encode("senha123");
 
         List<User> users = List.of(
-            buildUser("ronaldo@futspring.com",    "Ronaldo",      encodedPassword, "Atacante",  5),
-            buildUser("zidane@futspring.com",     "Zidane",       encodedPassword, "Meia",      5),
-            buildUser("pele@futspring.com",       "Pelé",         encodedPassword, "Atacante",  5),
-            buildUser("maldini@futspring.com",    "Maldini",      encodedPassword, "Defensor",  5),
-            buildUser("xavi@futspring.com",       "Xavi",         encodedPassword, "Meia",      4),
-            buildUser("iniesta@futspring.com",    "Iniesta",      encodedPassword, "Meia",      4),
-            buildUser("neymar@futspring.com",     "Neymar",       encodedPassword, "Atacante",  4),
-            buildUser("casillas@futspring.com",   "Casillas",     encodedPassword, "Goleiro",   4),
-            buildUser("cafu@futspring.com",       "Cafu",         encodedPassword, "Defensor",  3),
-            buildUser("roberto@futspring.com",    "Roberto Carlos", encodedPassword, "Defensor", 3),
-            buildUser("rivaldo@futspring.com",    "Rivaldo",      encodedPassword, "Atacante",  3),
-            buildUser("ronaldinho@futspring.com", "Ronaldinho",   encodedPassword, "Meia",      3),
-            buildUser("beckham@futspring.com",    "Beckham",      encodedPassword, "Meia",      2),
-            buildUser("henry@futspring.com",      "Henry",        encodedPassword, "Atacante",  2),
-            buildUser("lampard@futspring.com",    "Lampard",      encodedPassword, "Meia",      2),
-            buildUser("gerrard@futspring.com",    "Gerrard",      encodedPassword, "Meia",      2),
-            buildUser("drogba@futspring.com",     "Drogba",       encodedPassword, "Atacante",  1),
-            buildUser("sneijder@futspring.com",   "Sneijder",     encodedPassword, "Meia",      1),
-            buildUser("etoo@futspring.com",       "Eto'o",        encodedPassword, "Atacante",  1),
-            buildUser("buffon@futspring.com",     "Buffon",       encodedPassword, "Goleiro",   1)
+            // VERMELHO — 5G+2A, 6G+2A, 0G+1A, 2G+5A, 3G+1A
+            buildUser("leal@futspring.com",    "Leal",    encodedPassword, "Atacante",  5),
+            buildUser("souto@futspring.com",   "Souto",   encodedPassword, "Atacante",  5),
+            buildUser("ferraz@futspring.com",  "Ferraz",  encodedPassword, "Defensor",  1),
+            buildUser("lui@futspring.com",     "Lui",     encodedPassword, "Meia",      5),
+            buildUser("tuca@futspring.com",    "Tuca",    encodedPassword, "Atacante",  4),
+            // BRANCO — 6G+1A, 2G+4A, 2G+1A, 1G+1A, 3G+2A
+            buildUser("gone@futspring.com",    "Gone",    encodedPassword, "Atacante",  5),
+            buildUser("thiago@futspring.com",  "Thiago",  encodedPassword, "Meia",      4),
+            buildUser("tao@futspring.com",     "Tão",     encodedPassword, "Meia",      3),
+            buildUser("lobo@futspring.com",    "Lobo",    encodedPassword, "Meia",      2),
+            buildUser("dudu@futspring.com",    "Dudu",    encodedPassword, "Atacante",  4),
+            // PRETO — 1G+1A, 1G, 2G+1A, 1G+1A, 0
+            buildUser("miguel@futspring.com",  "Miguel",  encodedPassword, "Meia",      2),
+            buildUser("neto@futspring.com",    "Neto",    encodedPassword, "Atacante",  2),
+            buildUser("vuzzi@futspring.com",   "Vuzzi",   encodedPassword, "Atacante",  3),
+            buildUser("27@futspring.com",      "27",      encodedPassword, "Meia",      2),
+            buildUser("nando@futspring.com",   "Nando",   encodedPassword, "Goleiro",   1),
+            // AZUL — 1G, 1G+1A, 2G+1A, 1G+2A, 3G+1A
+            buildUser("abreu@futspring.com",   "Abreu",   encodedPassword, "Atacante",  1),
+            buildUser("leudo@futspring.com",   "Leudo",   encodedPassword, "Meia",      2),
+            buildUser("diego@futspring.com",   "Diego",   encodedPassword, "Atacante",  3),
+            buildUser("pirro@futspring.com",   "Pirro",   encodedPassword, "Meia",      3),
+            buildUser("andre@futspring.com",   "André",   encodedPassword, "Atacante",  4)
         );
 
         List<User> savedUsers = userRepository.saveAll(users);
