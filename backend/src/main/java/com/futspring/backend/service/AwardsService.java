@@ -107,13 +107,12 @@ public class AwardsService {
                     .build());
         }
         winners.sort(Comparator.comparingInt(AwardWinnerDTO::getCount).reversed());
-        List<AwardWinnerDTO> top3 = winners.size() > 3 ? winners.subList(0, 3) : winners;
 
         return AwardCategoryDTO.builder()
                 .type(type)
                 .name(name)
                 .description(description)
-                .topWinners(new ArrayList<>(top3))
+                .topWinners(winners)
                 .build();
     }
 }
