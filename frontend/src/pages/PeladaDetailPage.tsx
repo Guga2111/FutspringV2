@@ -36,6 +36,7 @@ import { AddPlayerDialog } from "@/components/pelada/AddPlayerDialog";
 import { ConfirmRemoveDialog } from "@/components/pelada/ConfirmRemoveDialog";
 import { CreateSessionDialog } from "@/components/pelada/CreateSessionDialog";
 import { DeletePeladaDialog } from "@/components/pelada/DeletePeladaDialog";
+import { RankingCommandButton } from "@/components/pelada/RankingCommandButton";
 
 export default function PeladaDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -226,6 +227,15 @@ export default function PeladaDetailPage() {
 
                 {/* Ranking tab */}
                 <TabsContent value="ranking">
+                  <div className="flex items-center justify-between mb-3 mt-2">
+                    <span className="text-sm text-muted-foreground">
+                      Top jogadores · {pelada.members.length} classificados
+                    </span>
+                    <RankingCommandButton
+                      members={pelada.members}
+                      getFileUrl={getFileUrl}
+                    />
+                  </div>
                   <RankingTable
                     ranking={sortedRanking}
                     isLoading={rankingLoading}
