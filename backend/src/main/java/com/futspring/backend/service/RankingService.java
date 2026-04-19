@@ -10,6 +10,7 @@ import com.futspring.backend.helper.UserAuthenticationHelper;
 import com.futspring.backend.repository.DailyAwardRepository;
 import com.futspring.backend.repository.PeladaRepository;
 import com.futspring.backend.repository.RankingRepository;
+import com.futspring.backend.repository.UserDailyStatsRepository;
 import com.futspring.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -30,6 +31,7 @@ public class RankingService {
     private final RankingRepository rankingRepository;
     private final DailyAwardRepository dailyAwardRepository;
     private final UserRepository userRepository;
+    private final UserDailyStatsRepository userDailyStatsRepository;
 
     @Transactional(readOnly = true)
     public List<RankingDTO> getRanking(Long peladaId, String callerEmail) {
@@ -79,6 +81,7 @@ public class RankingService {
         int matchesPlayed = ranking != null ? ranking.getMatchesPlayed() : 0;
         int wins = ranking != null ? ranking.getWins() : 0;
 
+        int matchWins      = userDailyStatsRepository.sumMatchWinsByUserAndPelada(targetUser, pelada);
         int artilheiroWins = (int) dailyAwardRepository.countArtilheiroWinsByUserAndPelada(targetUser, pelada);
         int garcomWins     = (int) dailyAwardRepository.countGarcomWinsByUserAndPelada(targetUser, pelada);
         int puskasWins     = (int) dailyAwardRepository.countPuskasWinsByUserAndPelada(targetUser, pelada);
@@ -90,6 +93,7 @@ public class RankingService {
                 .assists(assists)
                 .matchesPlayed(matchesPlayed)
                 .wins(wins)
+                .matchWins(matchWins)
                 .artilheiroWins(artilheiroWins)
                 .garcomWins(garcomWins)
                 .puskasWins(puskasWins)

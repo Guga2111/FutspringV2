@@ -10,6 +10,7 @@ import com.futspring.backend.helper.UserAuthenticationHelper;
 import com.futspring.backend.repository.DailyAwardRepository;
 import com.futspring.backend.repository.PeladaRepository;
 import com.futspring.backend.repository.RankingRepository;
+import com.futspring.backend.repository.UserDailyStatsRepository;
 import com.futspring.backend.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -36,6 +37,8 @@ class RankingServiceTest {
     DailyAwardRepository dailyAwardRepository;
     @Mock
     UserRepository userRepository;
+    @Mock
+    UserDailyStatsRepository userDailyStatsRepository;
 
     RankingService rankingService;
 
@@ -46,7 +49,7 @@ class RankingServiceTest {
 
     @BeforeEach
     void setUp() {
-        rankingService = new RankingService(peladaRepository, userAuthHelper, rankingRepository, dailyAwardRepository, userRepository);
+        rankingService = new RankingService(peladaRepository, userAuthHelper, rankingRepository, dailyAwardRepository, userRepository, userDailyStatsRepository);
 
         admin = User.builder().id(1L).email("admin@example.com").username("admin").password("hash").stars(4).build();
         player = User.builder().id(2L).email("player@example.com").username("player").password("hash").stars(3).build();
@@ -188,6 +191,7 @@ class RankingServiceTest {
         when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
         when(userRepository.findById(2L)).thenReturn(Optional.of(player));
         when(rankingRepository.findByPeladaAndUser(pelada, player)).thenReturn(Optional.of(ranking));
+        when(userDailyStatsRepository.sumMatchWinsByUserAndPelada(player, pelada)).thenReturn(6);
         when(dailyAwardRepository.countArtilheiroWinsByUserAndPelada(player, pelada)).thenReturn(1L);
         when(dailyAwardRepository.countGarcomWinsByUserAndPelada(player, pelada)).thenReturn(1L);
         when(dailyAwardRepository.countPuskasWinsByUserAndPelada(player, pelada)).thenReturn(0L);
@@ -200,6 +204,7 @@ class RankingServiceTest {
         assertThat(result.getAssists()).isEqualTo(3);
         assertThat(result.getMatchesPlayed()).isEqualTo(10);
         assertThat(result.getWins()).isEqualTo(4);
+        assertThat(result.getMatchWins()).isEqualTo(6);
         assertThat(result.getArtilheiroWins()).isEqualTo(1);
         assertThat(result.getGarcomWins()).isEqualTo(1);
         assertThat(result.getPuskasWins()).isEqualTo(0);
@@ -212,6 +217,7 @@ class RankingServiceTest {
         when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
         when(userRepository.findById(2L)).thenReturn(Optional.of(player));
         when(rankingRepository.findByPeladaAndUser(pelada, player)).thenReturn(Optional.empty());
+        when(userDailyStatsRepository.sumMatchWinsByUserAndPelada(player, pelada)).thenReturn(0);
         when(dailyAwardRepository.countArtilheiroWinsByUserAndPelada(player, pelada)).thenReturn(0L);
         when(dailyAwardRepository.countGarcomWinsByUserAndPelada(player, pelada)).thenReturn(0L);
         when(dailyAwardRepository.countPuskasWinsByUserAndPelada(player, pelada)).thenReturn(0L);
@@ -223,6 +229,7 @@ class RankingServiceTest {
         assertThat(result.getAssists()).isEqualTo(0);
         assertThat(result.getMatchesPlayed()).isEqualTo(0);
         assertThat(result.getWins()).isEqualTo(0);
+        assertThat(result.getMatchWins()).isEqualTo(0);
         assertThat(result.getArtilheiroWins()).isEqualTo(0);
         assertThat(result.getGarcomWins()).isEqualTo(0);
         assertThat(result.getPuskasWins()).isEqualTo(0);
@@ -235,6 +242,7 @@ class RankingServiceTest {
         when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
         when(userRepository.findById(2L)).thenReturn(Optional.of(player));
         when(rankingRepository.findByPeladaAndUser(pelada, player)).thenReturn(Optional.empty());
+        when(userDailyStatsRepository.sumMatchWinsByUserAndPelada(player, pelada)).thenReturn(0);
         when(dailyAwardRepository.countArtilheiroWinsByUserAndPelada(player, pelada)).thenReturn(0L);
         when(dailyAwardRepository.countGarcomWinsByUserAndPelada(player, pelada)).thenReturn(0L);
         when(dailyAwardRepository.countPuskasWinsByUserAndPelada(player, pelada)).thenReturn(2L);

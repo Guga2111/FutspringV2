@@ -16,6 +16,7 @@ public class PlayerPeladaStatsDTO {
     private int assists;
     private int matchesPlayed;
     private int wins;
+    private int matchWins;
     private int artilheiroWins;
     private int garcomWins;
     private int puskasWins;

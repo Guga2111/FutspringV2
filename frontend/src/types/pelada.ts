@@ -53,6 +53,7 @@ export interface PlayerPeladaStatsDTO {
   assists: number
   matchesPlayed: number
   wins: number
+  matchWins: number
   artilheiroWins: number
   garcomWins: number
   puskasWins: number
