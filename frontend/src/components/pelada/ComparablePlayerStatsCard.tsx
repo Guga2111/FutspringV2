@@ -15,25 +15,6 @@ interface ComparablePlayerStatsCardProps {
   getFileUrl: (path: string | null | undefined) => string | undefined;
 }
 
-const POSITION_COLORS: Record<string, string> = {
-  Goleiro: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
-  Zagueiro: "bg-blue-500/20 text-blue-400 border-blue-500/30",
-  "Lateral-Direito": "bg-cyan-500/20 text-cyan-400 border-cyan-500/30",
-  "Lateral-Esquerdo": "bg-cyan-500/20 text-cyan-400 border-cyan-500/30",
-  Volante: "bg-purple-500/20 text-purple-400 border-purple-500/30",
-  Meia: "bg-indigo-500/20 text-indigo-400 border-indigo-500/30",
-  "Meia-Atacante": "bg-orange-500/20 text-orange-400 border-orange-500/30",
-  Atacante: "bg-red-500/20 text-red-400 border-red-500/30",
-  Ponta: "bg-pink-500/20 text-pink-400 border-pink-500/30",
-};
-
-function getPositionColor(position: string | null): string {
-  if (!position) return "bg-zinc-500/20 text-zinc-400 border-zinc-500/30";
-  return (
-    POSITION_COLORS[position] ?? "bg-zinc-500/20 text-zinc-400 border-zinc-500/30"
-  );
-}
-
 function Stars({ count }: { count: number }) {
   const clamped = Math.min(Math.max(Math.round(count), 0), 5);
   return (
@@ -59,7 +40,7 @@ function StatBar({ valueA, valueB, label }: StatRow) {
     <div className="grid grid-cols-[1fr_auto_1fr] gap-x-3 items-center py-1.5">
       {/* Player A value + bar */}
       <div className="flex items-center justify-end gap-2">
-        <span className={`font-mono text-sm font-bold ${valueA >= valueB ? "text-green-400" : "text-zinc-400"}`}>
+        <span className={`text-sm font-semibold tabular-nums ${valueA >= valueB ? "text-green-400" : "text-zinc-400"}`}>
           {valueA}
         </span>
         <div className="h-1.5 w-20 bg-zinc-800 rounded-full overflow-hidden flex justify-end">
@@ -71,7 +52,7 @@ function StatBar({ valueA, valueB, label }: StatRow) {
       </div>
 
       {/* Center label */}
-      <span className="text-[10px] font-medium text-zinc-500 uppercase tracking-widest text-center whitespace-nowrap">
+      <span className="text-[10px] font-medium text-zinc-500 uppercase tracking-widest whitespace-nowrap text-center">
         {label}
       </span>
 
@@ -83,7 +64,7 @@ function StatBar({ valueA, valueB, label }: StatRow) {
             style={{ width: `${pctB}%` }}
           />
         </div>
-        <span className={`font-mono text-sm font-bold ${valueB >= valueA ? "text-amber-400" : "text-zinc-400"}`}>
+        <span className={`text-sm font-semibold tabular-nums ${valueB >= valueA ? "text-amber-400" : "text-zinc-400"}`}>
           {valueB}
         </span>
       </div>
@@ -93,15 +74,16 @@ function StatBar({ valueA, valueB, label }: StatRow) {
 
 function PlayerColumn({
   data,
+  stats,
   getFileUrl,
   side,
 }: {
   data: PlayerCompareData;
+  stats: StatsDTO;
   getFileUrl: (path: string | null | undefined) => string | undefined;
   side: "A" | "B";
 }) {
   const initials = data.profile.username.slice(0, 2).toUpperCase();
-  const positionColor = getPositionColor(data.profile.position);
   const ringColor = side === "A" ? "ring-green-500/40" : "ring-amber-500/40";
 
   return (
@@ -125,14 +107,14 @@ function PlayerColumn({
           {data.profile.username}
         </span>
         {data.profile.position && (
-          <Badge
-            variant="outline"
-            className={`text-[10px] px-1.5 py-0 border ${positionColor}`}
-          >
+          <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
             {data.profile.position}
           </Badge>
         )}
         <Stars count={data.profile.stars} />
+        <span className="text-[10px] text-zinc-500 tabular-nums">
+          {stats.matchesPlayed} jogos
+        </span>
       </div>
     </div>
   );
@@ -153,21 +135,21 @@ export function ComparablePlayerStatsCard({
     },
     { label: "Vitórias", valueA: playerA.stats.wins, valueB: playerB.stats.wins },
     { label: "Campeão", valueA: playerA.stats.matchWins, valueB: playerB.stats.matchWins },
-    { label: "Artilheiro 🏅", valueA: playerA.stats.artilheiroWins, valueB: playerB.stats.artilheiroWins },
-    { label: "Garçom 🍽️", valueA: playerA.stats.garcomWins, valueB: playerB.stats.garcomWins },
+    { label: "Artilheiro", valueA: playerA.stats.artilheiroWins, valueB: playerB.stats.artilheiroWins },
+    { label: "Garçom", valueA: playerA.stats.garcomWins, valueB: playerB.stats.garcomWins },
   ];
 
   return (
     <div className="rounded-xl bg-zinc-900 border border-zinc-800 p-4 space-y-4">
       {/* Player headers */}
       <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4">
-        <PlayerColumn data={playerA} getFileUrl={getFileUrl} side="A" />
+        <PlayerColumn data={playerA} stats={playerA.stats} getFileUrl={getFileUrl} side="A" />
 
-        <div className="flex flex-col items-center gap-0.5">
-          <span className="font-mono text-xl font-black text-zinc-500 tracking-tighter">VS</span>
+        <div className="flex flex-col items-center">
+          <span className="text-xl font-black text-zinc-600 tracking-tight">VS</span>
         </div>
 
-        <PlayerColumn data={playerB} getFileUrl={getFileUrl} side="B" />
+        <PlayerColumn data={playerB} stats={playerB.stats} getFileUrl={getFileUrl} side="B" />
       </div>
 
       {/* Divider */}

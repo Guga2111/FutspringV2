@@ -25,10 +25,6 @@ export function RankingTable({
 }: RankingTabProps) {
   return (
     <div className="mt-2">
-      <p className="text-xs text-muted-foreground mb-3">
-        Top jogadores · {ranking.length} classificados
-      </p>
-
       {isLoading ? (
         <div className="space-y-2">
           {[0, 1, 2].map((i) => (

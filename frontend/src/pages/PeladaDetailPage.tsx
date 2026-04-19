@@ -229,7 +229,7 @@ export default function PeladaDetailPage() {
                 <TabsContent value="ranking">
                   <div className="flex items-center justify-between mb-3 mt-2">
                     <span className="text-sm text-muted-foreground">
-                      Top jogadores · {pelada.members.length} classificados
+                      Top jogadores · {sortedRanking.length} classificados
                     </span>
                     <RankingCommandButton
                       members={pelada.members}
