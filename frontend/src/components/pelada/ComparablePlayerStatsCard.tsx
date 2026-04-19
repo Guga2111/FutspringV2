@@ -133,8 +133,8 @@ export function ComparablePlayerStatsCard({
       valueA: playerA.stats.goals + playerA.stats.assists,
       valueB: playerB.stats.goals + playerB.stats.assists,
     },
-    { label: "Vitórias", valueA: playerA.stats.wins, valueB: playerB.stats.wins },
-    { label: "Campeão", valueA: playerA.stats.matchWins, valueB: playerB.stats.matchWins },
+    { label: "Campeão", valueA: playerA.stats.wins, valueB: playerB.stats.wins },
+    { label: "Vitórias", valueA: playerA.stats.matchWins, valueB: playerB.stats.matchWins },
     { label: "Artilheiro", valueA: playerA.stats.artilheiroWins, valueB: playerB.stats.artilheiroWins },
     { label: "Garçom", valueA: playerA.stats.garcomWins, valueB: playerB.stats.garcomWins },
   ];
