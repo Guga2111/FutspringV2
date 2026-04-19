@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Users } from "lucide-react";
 import { Button } from "../ui/button";
 import {
@@ -23,6 +23,17 @@ interface RankingCommandButtonProps {
 export function RankingCommandButton({ members, getFileUrl }: RankingCommandButtonProps) {
   const [popoverOpen, setPopoverOpen] = useState(false);
   const [compareOpen, setCompareOpen] = useState(false);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        setPopoverOpen((v) => !v);
+      }
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, []);
 
   return (
     <>
