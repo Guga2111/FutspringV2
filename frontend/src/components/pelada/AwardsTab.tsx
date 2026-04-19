@@ -2,7 +2,7 @@ import { useState } from "react"
 import { Target, HandHelping, Brush, ThumbsDown, Trophy, ChevronDown, ChevronUp } from "lucide-react"
 import { Card, CardHeader, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { Skeleton } from "@/components/ui/skeleton"
 import { getFileUrl } from "@/lib/utils"
@@ -45,10 +45,11 @@ function WinnerRow({ winner, place }: { winner: AwardWinner; place: number }) {
 }
 
 function CategoryCard({ category }: { category: AwardCategory }) {
-  const [expanded, setExpanded] = useState(false)
+  const [open, setOpen] = useState(false)
   const Icon = ICON_MAP[category.type] ?? Trophy
-  const displayed = expanded ? category.topWinners : category.topWinners.slice(0, 3)
-  const hasMore = category.topWinners.length > 3
+  const top3 = category.topWinners.slice(0, 3)
+  const rest = category.topWinners.slice(3)
+  const hasMore = rest.length > 0
 
   return (
     <Card className="relative overflow-hidden">
@@ -65,27 +66,31 @@ function CategoryCard({ category }: { category: AwardCategory }) {
         {category.topWinners.length === 0 ? (
           <p className="text-sm text-muted-foreground py-2">Sem dados ainda.</p>
         ) : (
-          <>
+          <Collapsible open={open} onOpenChange={setOpen}>
             <div className="divide-y divide-border/50">
-              {displayed.map((winner, idx) => (
+              {top3.map((winner, idx) => (
                 <WinnerRow key={winner.userId} winner={winner} place={idx} />
               ))}
             </div>
             {hasMore && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setExpanded(!expanded)}
-                className="mt-1 w-full text-xs text-muted-foreground"
-              >
-                {expanded ? (
-                  <><ChevronUp className="h-3 w-3 mr-1" /> Ver menos</>
-                ) : (
-                  <><ChevronDown className="h-3 w-3 mr-1" /> Ver todos ({category.topWinners.length})</>
-                )}
-              </Button>
+              <>
+                <CollapsibleContent>
+                  <div className="divide-y divide-border/50">
+                    {rest.map((winner, idx) => (
+                      <WinnerRow key={winner.userId} winner={winner} place={idx + 3} />
+                    ))}
+                  </div>
+                </CollapsibleContent>
+                <CollapsibleTrigger className="mt-1 w-full flex items-center justify-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors py-1">
+                  {open ? (
+                    <><ChevronUp className="h-3 w-3" /> Ver menos</>
+                  ) : (
+                    <><ChevronDown className="h-3 w-3" /> Ver todos ({category.topWinners.length})</>
+                  )}
+                </CollapsibleTrigger>
+              </>
             )}
-          </>
+          </Collapsible>
         )}
       </CardContent>
       {/* Faded trophy watermark */}
