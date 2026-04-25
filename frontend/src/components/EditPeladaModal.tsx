@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from "@/components/ui/sheet"
 
 const DAYS_OF_WEEK = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sabado", "Domingo"]
 
@@ -97,141 +98,136 @@ export default function EditPeladaModal({ pelada, onClose, onUpdated }: EditPela
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-      onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
-    >
-      <div className="bg-background rounded-lg shadow-lg w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between p-4 border-b">
-          <h2 className="text-lg font-semibold">Editar Pelada</h2>
-          <button
-            onClick={onClose}
-            className="text-muted-foreground hover:text-foreground transition-colors"
-            aria-label="Close"
-          >
-            ✕
-          </button>
-        </div>
+    <Sheet open onOpenChange={(open) => !open && onClose()}>
+      <SheetContent side="right" className="flex flex-col p-0 gap-0 w-full sm:max-w-md">
+        <SheetHeader className="px-6 pt-6 pb-4">
+          <SheetTitle className="text-xl font-semibold">Editar Pelada</SheetTitle>
+          <SheetDescription className="text-sm text-muted-foreground">
+            Atualize os detalhes da sua pelada.
+          </SheetDescription>
+        </SheetHeader>
 
-        <form onSubmit={handleSubmit} className="p-4 space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="ep-name">Nome *</Label>
-            <Input
-              id="ep-name"
-              name="name"
-              type="text"
-              required
-              placeholder="Jogasse Onde?"
-              value={form.name ?? ""}
-              onChange={handleChange}
-            />
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+          <div className="flex-1 overflow-y-auto px-6 space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="ep-name">Nome *</Label>
+              <Input
+                id="ep-name"
+                name="name"
+                type="text"
+                required
+                placeholder="Jogasse Onde?"
+                value={form.name ?? ""}
+                onChange={handleChange}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="ep-dayOfWeek">Dia da Semana *</Label>
+              <Select
+                value={form.dayOfWeek ?? "Segunda"}
+                onValueChange={(value) => setForm((prev) => ({ ...prev, dayOfWeek: value }))}
+              >
+                <SelectTrigger id="ep-dayOfWeek">
+                  <SelectValue placeholder="Selecione um dia" />
+                </SelectTrigger>
+                <SelectContent>
+                  {DAYS_OF_WEEK.map((day) => (
+                    <SelectItem key={day} value={day}>{day}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="ep-timeOfDay">Horário *</Label>
+              <Input
+                id="ep-timeOfDay"
+                name="timeOfDay"
+                type="time"
+                required
+                value={form.timeOfDay ?? ""}
+                onChange={handleChange}
+                className="[&::-webkit-calendar-picker-indicator]:opacity-70"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="ep-duration">Duração (hora) *</Label>
+              <Input
+                id="ep-duration"
+                name="duration"
+                type="number"
+                required
+                min="0.5"
+                step="0.5"
+                placeholder="1.5"
+                value={form.duration ?? ""}
+                onChange={handleChange}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="ep-address">Endereço</Label>
+              <Input
+                id="ep-address"
+                name="address"
+                type="text"
+                placeholder="Av Agamenon Magalhães"
+                value={form.address ?? ""}
+                onChange={handleChange}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="ep-reference">Referência</Label>
+              <Input
+                id="ep-reference"
+                name="reference"
+                type="text"
+                placeholder="Ilha do Retiro"
+                value={form.reference ?? ""}
+                onChange={handleChange}
+              />
+            </div>
+
+            <div className="flex items-center gap-3">
+              <Checkbox
+                id="ep-autoCreate"
+                checked={form.autoCreateDailyEnabled ?? false}
+                onCheckedChange={(checked) =>
+                  setForm((prev) => ({ ...prev, autoCreateDailyEnabled: checked === true }))
+                }
+              />
+              <Label htmlFor="ep-autoCreate" className="cursor-pointer">
+                Auto-criar diárias
+              </Label>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="ep-image">Recolocar imagem (opcional)</Label>
+              <Input
+                id="ep-image"
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={handleFileChange}
+                className="cursor-pointer file:text-primary"
+              />
+              <p className="text-xs text-muted-foreground">JPEG, PNG, ou WebP · max 5MB</p>
+            </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="ep-dayOfWeek">Dia da Semana *</Label>
-            <Select
-              value={form.dayOfWeek ?? "Segunda"}
-              onValueChange={(value) => setForm((prev) => ({ ...prev, dayOfWeek: value }))}
-            >
-              <SelectTrigger id="ep-dayOfWeek">
-                <SelectValue placeholder="Selecione um dia" />
-              </SelectTrigger>
-              <SelectContent>
-                {DAYS_OF_WEEK.map((day) => (
-                  <SelectItem key={day} value={day}>{day}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="ep-timeOfDay">Horário *</Label>
-            <Input
-              id="ep-timeOfDay"
-              name="timeOfDay"
-              type="time"
-              required
-              value={form.timeOfDay ?? ""}
-              onChange={handleChange}
-              className="[&::-webkit-calendar-picker-indicator]:opacity-70"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="ep-duration">Duração (hora) *</Label>
-            <Input
-              id="ep-duration"
-              name="duration"
-              type="number"
-              required
-              min="0.5"
-              step="0.5"
-              placeholder="1.5"
-              value={form.duration ?? ""}
-              onChange={handleChange}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="ep-address">Endereço</Label>
-            <Input
-              id="ep-address"
-              name="address"
-              type="text"
-              placeholder="Av Agamenon Magalhães"
-              value={form.address ?? ""}
-              onChange={handleChange}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="ep-reference">Referência</Label>
-            <Input
-              id="ep-reference"
-              name="reference"
-              type="text"
-              placeholder="Ilha do Retiro"
-              value={form.reference ?? ""}
-              onChange={handleChange}
-            />
-          </div>
-
-          <div className="flex items-center gap-3">
-            <Checkbox
-              id="ep-autoCreate"
-              checked={form.autoCreateDailyEnabled ?? false}
-              onCheckedChange={(checked) =>
-                setForm((prev) => ({ ...prev, autoCreateDailyEnabled: checked === true }))
-              }
-            />
-            <Label htmlFor="ep-autoCreate" className="cursor-pointer">
-              Auto-criar diárias
-            </Label>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="ep-image">Recolocar imagem (opcional)</Label>
-            <Input
-              id="ep-image"
-              ref={fileInputRef}
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              onChange={handleFileChange}
-              className="cursor-pointer file:text-primary"
-            />
-            <p className="text-xs text-muted-foreground">JPEG, PNG, ou WebP · max 5MB</p>
-          </div>
-
-          <div className="flex gap-3 pt-2">
+          <SheetFooter className="px-6 py-4 border-t gap-3">
             <Button type="button" variant="outline" className="flex-1" onClick={onClose} disabled={loading}>
               Cancelar
             </Button>
             <Button variant="gradient" type="submit" className="flex-1" disabled={loading}>
               {loading ? "Salvando..." : "Salvar Mudanças"}
             </Button>
-          </div>
+          </SheetFooter>
         </form>
-      </div>
-    </div>
+      </SheetContent>
+    </Sheet>
   )
 }

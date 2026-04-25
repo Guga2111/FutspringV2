@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from "@/components/ui/sheet"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { MapPin } from "lucide-react"
 
@@ -103,178 +103,179 @@ export default function CreatePeladaModal({ onClose, onCreated }: CreatePeladaMo
   }
 
   return (
-    <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-md rounded-2xl p-0 gap-0 overflow-hidden">
-        <DialogHeader className="px-6 pt-6 pb-4">
-          <DialogTitle className="text-xl font-semibold">Criar Pelada</DialogTitle>
-          <DialogDescription className="text-sm text-muted-foreground">
+    <Sheet open onOpenChange={(open) => !open && onClose()}>
+      <SheetContent side="right" className="flex flex-col p-0 gap-0 w-full sm:max-w-md">
+        <SheetHeader className="px-6 pt-6 pb-4">
+          <SheetTitle className="text-xl font-semibold">Criar Pelada</SheetTitle>
+          <SheetDescription className="text-sm text-muted-foreground">
             Preencha em detalhes para criar seus jogos semanais.
-          </DialogDescription>
-        </DialogHeader>
+          </SheetDescription>
+        </SheetHeader>
 
-        <form onSubmit={handleSubmit} className="px-6 pb-6 space-y-5">
-          {/* Name */}
-          <div className="space-y-1.5">
-            <Label htmlFor="cp-name">Nome *</Label>
-            <Input
-              id="cp-name"
-              name="name"
-              type="text"
-              required
-              placeholder="Jogasse Onde?"
-              value={form.name}
-              onChange={handleChange}
-              className="focus-visible:ring-green-500"
-            />
-          </div>
-
-          {/* Day + Time — 2-column */}
-          <div className="grid grid-cols-2 gap-4">
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+          <div className="flex-1 overflow-y-auto px-6 space-y-5">
+            {/* Name */}
             <div className="space-y-1.5">
-              <Label htmlFor="cp-dayOfWeek">Dia Da Semana *</Label>
-              <Select
-                value={form.dayOfWeek}
-                onValueChange={(v) => setForm((prev) => ({ ...prev, dayOfWeek: v }))}
-              >
-                <SelectTrigger id="cp-dayOfWeek" className="focus-visible:ring-green-500 focus:ring-green-500">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {DAYS_OF_WEEK.map((day) => (
-                    <SelectItem key={day} value={day}>{day}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="cp-timeOfDay">Horário *</Label>
+              <Label htmlFor="cp-name">Nome *</Label>
               <Input
-                id="cp-timeOfDay"
-                name="timeOfDay"
-                type="time"
+                id="cp-name"
+                name="name"
+                type="text"
                 required
-                value={form.timeOfDay}
+                placeholder="Jogasse Onde?"
+                value={form.name}
                 onChange={handleChange}
                 className="focus-visible:ring-green-500"
               />
             </div>
-          </div>
 
-          {/* Duration */}
-          <div className="space-y-1.5">
-            <Label htmlFor="cp-duration">Duração (hora) *</Label>
-            <Input
-              id="cp-duration"
-              name="duration"
-              type="number"
-              required
-              min="0.5"
-              step="0.5"
-              placeholder="1.5"
-              value={form.duration}
-              onChange={handleChange}
-              className="focus-visible:ring-green-500"
-            />
-          </div>
+            {/* Day + Time — 2-column */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="cp-dayOfWeek">Dia Da Semana *</Label>
+                <Select
+                  value={form.dayOfWeek}
+                  onValueChange={(v) => setForm((prev) => ({ ...prev, dayOfWeek: v }))}
+                >
+                  <SelectTrigger id="cp-dayOfWeek" className="focus-visible:ring-green-500 focus:ring-green-500">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {DAYS_OF_WEEK.map((day) => (
+                      <SelectItem key={day} value={day}>{day}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-          {/* Teams + Players per team — 2-column */}
-          <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="cp-timeOfDay">Horário *</Label>
+                <Input
+                  id="cp-timeOfDay"
+                  name="timeOfDay"
+                  type="time"
+                  required
+                  value={form.timeOfDay}
+                  onChange={handleChange}
+                  className="focus-visible:ring-green-500"
+                />
+              </div>
+            </div>
+
+            {/* Duration */}
             <div className="space-y-1.5">
-              <Label htmlFor="cp-numberOfTeams">Numero de times *</Label>
+              <Label htmlFor="cp-duration">Duração (hora) *</Label>
               <Input
-                id="cp-numberOfTeams"
-                name="numberOfTeams"
+                id="cp-duration"
+                name="duration"
                 type="number"
                 required
-                min="2"
-                step="1"
-                value={form.numberOfTeams}
+                min="0.5"
+                step="0.5"
+                placeholder="1.5"
+                value={form.duration}
                 onChange={handleChange}
                 className="focus-visible:ring-green-500"
               />
             </div>
+
+            {/* Teams + Players per team — 2-column */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="cp-numberOfTeams">Numero de times *</Label>
+                <Input
+                  id="cp-numberOfTeams"
+                  name="numberOfTeams"
+                  type="number"
+                  required
+                  min="2"
+                  step="1"
+                  value={form.numberOfTeams}
+                  onChange={handleChange}
+                  className="focus-visible:ring-green-500"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="cp-playersPerTeam">Jogadores por time *</Label>
+                <Input
+                  id="cp-playersPerTeam"
+                  name="playersPerTeam"
+                  type="number"
+                  required
+                  min="2"
+                  step="1"
+                  value={form.playersPerTeam}
+                  onChange={handleChange}
+                  className="focus-visible:ring-green-500"
+                />
+              </div>
+            </div>
+
+            {/* Address */}
             <div className="space-y-1.5">
-              <Label htmlFor="cp-playersPerTeam">Jogadores por time *</Label>
+              <Label htmlFor="cp-address" className="flex items-center gap-1.5"><MapPin className="size-3.5" />Endereço</Label>
               <Input
-                id="cp-playersPerTeam"
-                name="playersPerTeam"
-                type="number"
-                required
-                min="2"
-                step="1"
-                value={form.playersPerTeam}
+                id="cp-address"
+                name="address"
+                type="text"
+                placeholder="Rua da Estrela"
+                value={form.address}
                 onChange={handleChange}
                 className="focus-visible:ring-green-500"
               />
             </div>
+
+            {/* Reference */}
+            <div className="space-y-1.5">
+              <Label htmlFor="cp-reference">Referencia (Opcional)</Label>
+              <Input
+                id="cp-reference"
+                name="reference"
+                type="text"
+                placeholder="Ilha do Retiro"
+                value={form.reference}
+                onChange={handleChange}
+                className="focus-visible:ring-green-500"
+              />
+            </div>
+
+            {/* Auto-create checkbox */}
+            <div className="flex items-center gap-3">
+              <Checkbox
+                id="cp-autoCreate"
+                checked={form.autoCreateDailyEnabled}
+                onCheckedChange={(checked) =>
+                  setForm((prev) => ({ ...prev, autoCreateDailyEnabled: !!checked }))
+                }
+                className="data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600"
+              />
+              <Label htmlFor="cp-autoCreate" className="cursor-pointer font-normal">
+                Permita auto criar sessões semanais.
+              </Label>
+            </div>
+
+            {/* Image */}
+            <div className="space-y-1.5">
+              <Label htmlFor="cp-image">Imagem (Opcional)</Label>
+              <Input
+                id="cp-image"
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={handleFileChange}
+                className="cursor-pointer focus-visible:ring-green-500"
+              />
+              <p className="text-xs text-muted-foreground">JPEG, PNG, ou WebP · max 5MB</p>
+            </div>
           </div>
 
-          {/* Address */}
-          <div className="space-y-1.5">
-            <Label htmlFor="cp-address" className="flex items-center gap-1.5"><MapPin className="size-3.5" />Endereço</Label>
-            <Input
-              id="cp-address"
-              name="address"
-              type="text"
-              placeholder="Rua da Estrela"
-              value={form.address}
-              onChange={handleChange}
-              className="focus-visible:ring-green-500"
-            />
-          </div>
-
-          {/* Reference */}
-          <div className="space-y-1.5">
-            <Label htmlFor="cp-reference">Referencia (Opcional)</Label>
-            <Input
-              id="cp-reference"
-              name="reference"
-              type="text"
-              placeholder="Ilha do Retiro"
-              value={form.reference}
-              onChange={handleChange}
-              className="focus-visible:ring-green-500"
-            />
-          </div>
-
-          {/* Auto-create checkbox */}
-          <div className="flex items-center gap-3">
-            <Checkbox
-              id="cp-autoCreate"
-              checked={form.autoCreateDailyEnabled}
-              onCheckedChange={(checked) =>
-                setForm((prev) => ({ ...prev, autoCreateDailyEnabled: !!checked }))
-              }
-              className="data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600"
-            />
-            <Label htmlFor="cp-autoCreate" className="cursor-pointer font-normal">
-              Permita auto criar sessões semanais.
-            </Label>
-          </div>
-
-          {/* Image */}
-          <div className="space-y-1.5">
-            <Label htmlFor="cp-image">Imagem (Opcional)</Label>
-            <Input
-              id="cp-image"
-              ref={fileInputRef}
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              onChange={handleFileChange}
-              className="cursor-pointer focus-visible:ring-green-500"
-            />
-            <p className="text-xs text-muted-foreground">JPEG, PNG, ou WebP · max 5MB</p>
-          </div>
-
-          {/* Footer */}
-          <div className="flex justify-end pt-2">
-            <Button type="submit" variant="gradient" className="px-8" disabled={loading}>
+          <SheetFooter className="px-6 py-4 border-t">
+            <Button type="submit" variant="gradient" className="w-full" disabled={loading}>
               {loading ? "Criando..." : "Criar Pelada"}
             </Button>
-          </div>
+          </SheetFooter>
         </form>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   )
 }
