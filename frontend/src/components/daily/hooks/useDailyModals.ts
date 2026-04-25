@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 
-type StatusDialog = { targetStatus: string; description: string }
+type StatusDialog = { targetStatus: string; description: string; title: string; variant?: 'destructive' | 'default' | 'gradient' }
 
 export function useDailyModals() {
   const [resultsOpen, setResultsOpen] = useState(false)

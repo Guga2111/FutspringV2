@@ -8,6 +8,55 @@ import { Calendar } from "../ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { cn } from "../../lib/utils";
 
+function TimeSegment({
+  value,
+  min,
+  max,
+  onChange,
+}: {
+  value: string;
+  min: number;
+  max: number;
+  onChange: (v: string) => void;
+}) {
+  const pad = (n: number) => String(n).padStart(2, "0");
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    const num = parseInt(value, 10) || 0;
+    if (e.key === "ArrowUp") {
+      e.preventDefault();
+      onChange(pad(num >= max ? min : num + 1));
+    } else if (e.key === "ArrowDown") {
+      e.preventDefault();
+      onChange(pad(num <= min ? max : num - 1));
+    }
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value.replace(/\D/g, "").slice(-2);
+    onChange(raw);
+  };
+
+  const handleBlur = () => {
+    const num = Math.min(max, Math.max(min, parseInt(value, 10) || 0));
+    onChange(pad(num));
+  };
+
+  return (
+    <input
+      type="text"
+      inputMode="numeric"
+      maxLength={2}
+      value={value}
+      onChange={handleChange}
+      onKeyDown={handleKeyDown}
+      onBlur={handleBlur}
+      onFocus={(e) => e.target.select()}
+      className="w-8 text-center bg-transparent text-sm font-medium focus:outline-none tabular-nums"
+    />
+  );
+}
+
 export function CreateSessionDialog({
   peladaId,
   onClose,
@@ -19,7 +68,9 @@ export function CreateSessionDialog({
 }) {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [calendarOpen, setCalendarOpen] = useState(false);
-  const [dailyTime, setDailyTime] = useState("");
+  const [hour, setHour] = useState("08");
+  const [minute, setMinute] = useState("00");
+  const dailyTime = `${hour}:${minute}`;
   const [submitting, setSubmitting] = useState(false);
 
   const dailyDate = selectedDate ? format(selectedDate, "yyyy-MM-dd") : "";
@@ -85,20 +136,12 @@ export function CreateSessionDialog({
 
           {/* Time */}
           <div>
-            <label
-              className="block text-sm font-medium mb-1"
-              htmlFor="session-time"
-            >
-              Horário
-            </label>
-            <input
-              id="session-time"
-              type="time"
-              required
-              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
-              value={dailyTime}
-              onChange={(e) => setDailyTime(e.target.value)}
-            />
+            <label className="block text-sm font-medium mb-1">Horário</label>
+            <div className="flex items-center h-9 w-full rounded-md border border-input bg-transparent px-3 gap-0.5 focus-within:ring-1 focus-within:ring-ring shadow-sm">
+              <TimeSegment value={hour} min={0} max={23} onChange={setHour} />
+              <span className="text-muted-foreground text-sm select-none">:</span>
+              <TimeSegment value={minute} min={0} max={59} onChange={setMinute} />
+            </div>
           </div>
 
           <div className="flex gap-3 justify-end pt-2">
@@ -114,7 +157,7 @@ export function CreateSessionDialog({
               type="submit"
               className="rounded-full"
               variant="gradient"
-              disabled={submitting || !selectedDate || !dailyTime}
+              disabled={submitting || !selectedDate}
             >
               {submitting ? "Criando..." : "Criar"}
             </Button>
