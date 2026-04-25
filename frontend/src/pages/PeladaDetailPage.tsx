@@ -235,6 +235,10 @@ export default function PeladaDetailPage() {
                       peladaId={pelada.id}
                       members={pelada.members}
                       getFileUrl={getFileUrl}
+                      isAdmin={isCurrentUserAdmin}
+                      onCreateSession={() => setShowCreateSession(true)}
+                      onAddPlayer={() => setShowAddPlayer(true)}
+                      onRemovePlayer={setConfirmRemoveMember}
                     />
                   </div>
                   <RankingTable

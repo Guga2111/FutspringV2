@@ -37,7 +37,7 @@ function StatBar({ valueA, valueB, label }: StatRow) {
   const pctB = total === 0 ? 50 : (valueB / total) * 100;
 
   return (
-    <div className="grid grid-cols-[1fr_auto_1fr] gap-x-3 items-center py-1.5">
+    <div className="grid grid-cols-[1fr_120px_1fr] gap-x-3 items-center py-1.5">
       {/* Player A value + bar */}
       <div className="flex items-center justify-end gap-2">
         <span className={`text-sm font-semibold tabular-nums ${valueA >= valueB ? "text-green-400" : "text-zinc-400"}`}>
