@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { Sun, Moon, Menu } from 'lucide-react'
+import { Sun, Moon, Menu, User, Bell, LogOut } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { Button } from './ui/button'
@@ -107,22 +107,36 @@ export default function NavBar() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuLabel className="font-normal">
-                <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-semibold leading-none">{user?.username}</p>
-                  <p className="text-xs leading-none text-muted-foreground">{user?.email}</p>
+                <div className="flex items-center gap-3">
+                  <Avatar className="h-9 w-9">
+                    {user?.image && (
+                      <AvatarImage src={getFileUrl(user.image)} alt={user.username} />
+                    )}
+                    <AvatarFallback>{initials}</AvatarFallback>
+                  </Avatar>
+                  <div className="flex flex-col space-y-1">
+                    <p className="text-sm font-semibold leading-none">{user?.username}</p>
+                    <p className="text-xs leading-none text-muted-foreground">{user?.email}</p>
+                  </div>
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
-                <Link to={`/profile/${user?.id}`} className="cursor-pointer w-full">
-                  Ver Perfil
+                <Link to={`/profile/${user?.id}`} className="cursor-pointer w-full flex items-center gap-2">
+                  <User className="h-4 w-4" />
+                  Perfil
                 </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem className="cursor-pointer flex items-center gap-2">
+                <Bell className="h-4 w-4" />
+                Notificações
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
-                className="cursor-pointer text-destructive focus:text-destructive"
+                className="cursor-pointer text-destructive focus:text-destructive flex items-center gap-2"
                 onClick={handleLogout}
               >
+                <LogOut className="h-4 w-4" />
                 Sair
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -170,17 +184,25 @@ export default function NavBar() {
             <SheetClose asChild>
               <Link
                 to={`/profile/${user?.id}`}
-                className="text-base font-medium text-foreground hover:text-green-500 transition-colors"
+                className="flex items-center gap-2 text-base font-medium text-foreground hover:text-green-500 transition-colors"
               >
-                Ver Perfil
+                <User className="h-4 w-4" />
+                Perfil
               </Link>
             </SheetClose>
 
+            {/* Notifications */}
+            <button className="flex items-center gap-2 text-base font-medium text-foreground hover:text-green-500 transition-colors">
+              <Bell className="h-4 w-4" />
+              Notificações
+            </button>
+
             {/* Logout */}
             <button
-              className="text-left text-base font-medium text-destructive hover:opacity-80 transition-opacity"
+              className="flex items-center gap-2 text-left text-base font-medium text-destructive hover:opacity-80 transition-opacity"
               onClick={() => { setSheetOpen(false); handleLogout() }}
             >
+              <LogOut className="h-4 w-4" />
               Sair
             </button>
           </SheetContent>
