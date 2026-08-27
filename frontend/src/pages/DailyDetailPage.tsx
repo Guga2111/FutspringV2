@@ -295,18 +295,22 @@ export default function DailyDetailPage() {
             onConfirmDaily={() =>
               setStatusDialog({
                 targetStatus: 'CONFIRMED',
+                title: 'Confirmar Diária',
                 description: 'Isso vai marcar diária como confirmado, e isso vai bloquear outras ações.',
+                variant: 'gradient',
               })
             }
             onStartSession={() =>
               setStatusDialog({
                 targetStatus: 'IN_COURSE',
+                title: 'Iniciar Sessão',
                 description: 'Isso vai marcar sessão como durante. Essa diária está agora ao vivo.',
               })
             }
             onCancelDaily={() =>
               setStatusDialog({
                 targetStatus: 'CANCELED',
+                title: 'Cancelar Diária',
                 description: 'Isso vai cancelar a sessão atual. Essa ação nao pode ser desfeita.',
               })
             }
@@ -351,7 +355,9 @@ export default function DailyDetailPage() {
           {/* Confirmation dialog */}
           {statusDialog && (
             <StatusConfirmDialog
+              title={statusDialog.title}
               description={statusDialog.description}
+              variant={statusDialog.variant}
               loading={statusLoading}
               onConfirm={handleStatusConfirm}
               onClose={() => setStatusDialog(null)}

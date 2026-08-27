@@ -53,6 +53,9 @@ public interface UserDailyStatsRepository extends JpaRepository<UserDailyStats, 
     @Query("SELECT COUNT(uds) FROM UserDailyStats uds WHERE uds.user = :user AND uds.wonSession = true AND uds.daily.pelada = :pelada")
     long countSessionWinsByUserAndPelada(@Param("user") User user, @Param("pelada") Pelada pelada);
 
+    @Query("SELECT COALESCE(SUM(uds.wins), 0) FROM UserDailyStats uds WHERE uds.user = :user AND uds.daily.pelada = :pelada")
+    int sumMatchWinsByUserAndPelada(@Param("user") User user, @Param("pelada") Pelada pelada);
+
     // Batch aggregate for Ranking rebuild (pelada-scoped)
     @Query("""
         SELECT uds.user.id,

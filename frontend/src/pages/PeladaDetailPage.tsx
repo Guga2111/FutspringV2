@@ -36,6 +36,7 @@ import { AddPlayerDialog } from "@/components/pelada/AddPlayerDialog";
 import { ConfirmRemoveDialog } from "@/components/pelada/ConfirmRemoveDialog";
 import { CreateSessionDialog } from "@/components/pelada/CreateSessionDialog";
 import { DeletePeladaDialog } from "@/components/pelada/DeletePeladaDialog";
+import { RankingCommandButton } from "@/components/pelada/RankingCommandButton";
 
 export default function PeladaDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -226,6 +227,20 @@ export default function PeladaDetailPage() {
 
                 {/* Ranking tab */}
                 <TabsContent value="ranking">
+                  <div className="flex items-center justify-between mb-3 mt-2">
+                    <span className="text-sm text-muted-foreground">
+                      Top jogadores · {sortedRanking.length} classificados
+                    </span>
+                    <RankingCommandButton
+                      peladaId={pelada.id}
+                      members={pelada.members}
+                      getFileUrl={getFileUrl}
+                      isAdmin={isCurrentUserAdmin}
+                      onCreateSession={() => setShowCreateSession(true)}
+                      onAddPlayer={() => setShowAddPlayer(true)}
+                      onRemovePlayer={setConfirmRemoveMember}
+                    />
+                  </div>
                   <RankingTable
                     ranking={sortedRanking}
                     isLoading={rankingLoading}
@@ -244,7 +259,7 @@ export default function PeladaDetailPage() {
             {/* end flex-1 main content */}
 
             {/* Chat sidebar — desktop only */}
-            <div className="hidden lg:block w-80 flex-shrink-0">
+            <div className="hidden lg:block w-80 flex-shrink-0 sticky top-4 self-start h-[calc(100vh-6rem)]">
               <ChatSidebar
                 peladaId={pelada.id}
                 currentUserId={currentUser?.id ?? null}

@@ -46,3 +46,16 @@ export interface PeladaAwards {
   totalAwardsDistributed: number
   categories: AwardCategory[]
 }
+
+export interface PlayerPeladaStatsDTO {
+  userId: number
+  goals: number
+  assists: number
+  matchesPlayed: number
+  wins: number
+  matchWins: number
+  artilheiroWins: number
+  garcomWins: number
+  puskasWins: number
+  bolaMurchaWins: number
+}
