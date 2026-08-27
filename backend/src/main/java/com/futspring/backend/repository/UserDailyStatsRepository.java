@@ -83,4 +83,10 @@ public interface UserDailyStatsRepository extends JpaRepository<UserDailyStats, 
         GROUP BY uds.user.id
         """)
     List<Object[]> aggregateStatsByUsers(@Param("users") Collection<User> users);
+
+    @Query("SELECT usd FROM UserDailyStats
+     uds WHERE usd.user.id = :userId
+      AND uds.daily.pelada.id = :peladaId
+       ORDER BY uds.daily.dailyDate DESC")
+    List<UserDailyStats> findHistoryByUserAndPelada(@Param("userId") Long userId, @Param("peladaId") Long peladaId);
 }
