@@ -27,7 +27,9 @@ export default {
   			},
   			destructive: {
   				DEFAULT: 'hsl(var(--destructive))',
-  				foreground: 'hsl(var(--destructive-foreground))'
+  				foreground: 'hsl(var(--destructive-foreground))',
+  				soft: 'hsl(var(--destructive-soft))',
+  				muted: 'hsl(var(--destructive-muted))'
   			},
   			muted: {
   				DEFAULT: 'hsl(var(--muted))',
@@ -45,7 +47,54 @@ export default {
   				DEFAULT: 'hsl(var(--card))',
   				foreground: 'hsl(var(--card-foreground))'
   			},
-  			gold: 'hsl(var(--gold))',
+  			'card-elevated': 'hsl(var(--card-elevated))',
+  			'row-hover': 'hsl(var(--row-hover))',
+  			'subtle-foreground': 'hsl(var(--subtle-foreground))',
+  			'faint-foreground': 'hsl(var(--faint-foreground))',
+  			'team-dot-border': 'hsl(var(--team-dot-border))',
+  			avatar: {
+  				fallback: 'hsl(var(--avatar-fallback))',
+  				'1': 'hsl(var(--avatar-1))',
+  				'2': 'hsl(var(--avatar-2))',
+  				'3': 'hsl(var(--avatar-3))',
+  				'4': 'hsl(var(--avatar-4))',
+  				'5': 'hsl(var(--avatar-5))',
+  				'6': 'hsl(var(--avatar-6))'
+  			},
+  			gold: {
+  				DEFAULT: 'hsl(var(--gold))',
+  				muted: 'hsl(var(--gold-muted))'
+  			},
+  			silver: 'hsl(var(--silver))',
+  			bronze: 'hsl(var(--bronze))',
+  			success: {
+  				DEFAULT: 'hsl(var(--success))',
+  				strong: 'hsl(var(--success-strong))',
+  				soft: 'hsl(var(--success-soft))',
+  				muted: 'hsl(var(--success-muted))',
+  				border: 'hsl(var(--success-border))'
+  			},
+  			warning: 'hsl(var(--warning))',
+  			info: {
+  				DEFAULT: 'hsl(var(--info))',
+  				muted: 'hsl(var(--info-muted))'
+  			},
+  			status: {
+  				scheduled: {
+  					DEFAULT: 'hsl(var(--status-scheduled))',
+  					foreground: 'hsl(var(--status-scheduled-foreground))',
+  					dot: 'hsl(var(--status-scheduled-dot))'
+  				},
+  				live: {
+  					DEFAULT: 'hsl(var(--status-live))',
+  					foreground: 'hsl(var(--status-live-foreground))',
+  					dot: 'hsl(var(--status-live-dot))'
+  				}
+  			},
+  			live: {
+  				foreground: 'hsl(var(--live-foreground))',
+  				border: 'hsl(var(--live-border))'
+  			},
   			chart: {
   				'1': 'hsl(var(--chart-1))',
   				'2': 'hsl(var(--chart-2))'
@@ -54,7 +103,15 @@ export default {
   		borderRadius: {
   			lg: 'var(--radius)',
   			md: 'calc(var(--radius) - 2px)',
-  			sm: 'calc(var(--radius) - 4px)'
+  			sm: 'calc(var(--radius) - 4px)',
+  			tile: '14px',
+  			hero: '18px'
+  		},
+  		boxShadow: {
+  			menu: '0 10px 30px rgb(0 0 0 / 0.45)',
+  			panel: '0 20px 50px rgb(0 0 0 / 0.55)',
+  			dialog: '0 24px 60px rgb(0 0 0 / 0.6)',
+  			fab: '0 8px 24px rgb(0 0 0 / 0.45)'
   		},
   		keyframes: {
   			'accordion-down': {

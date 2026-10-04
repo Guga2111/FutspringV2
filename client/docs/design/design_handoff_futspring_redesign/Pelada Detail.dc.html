@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0;background:#1a1a1a;color:#fafafa;font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
+a{color:#22c55e;text-decoration:none}a:hover{color:#4ade80}
+*{box-sizing:border-box}
+</style>
+</helmet>
+<div style="width:{{ frameW }};height:{{ frameH }};overflow-y:{{ frameOverflow }};transform:{{ frameTransform }};margin:0 auto;border-left:{{ frameBorder }};border-right:{{ frameBorder }};background:#1a1a1a">
+<div style="display:flex;flex-direction:{{ rootDir }};min-height:100%;background:#1a1a1a">
+
+  <sc-if value="{{ isMobile }}" hint-placeholder-val="{{ false }}">
+    <header style="position:sticky;top:0;z-index:30;height:56px;flex-shrink:0;display:flex;align-items:center;gap:10px;padding:0 12px 0 16px;background:#151515;border-bottom:1px solid #2a2a2a">
+      <div style="width:28px;height:28px;border-radius:999px;background:#2e2e2e;flex-shrink:0"></div>
+      <span style="font-weight:700;font-size:17px;background:linear-gradient(90deg,#15803d,#16a34a);-webkit-background-clip:text;color:transparent;flex:1">FutSpring</span>
+      <button onClick="{{ openMobileMenu }}" aria-label="Abrir menu" style="width:40px;height:40px;border-radius:10px;border:none;background:transparent;color:#fafafa;cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="background:#262626">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"></path></svg>
+      </button>
+    </header>
+  </sc-if>
+  <sc-if value="{{ mobileMenuOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeMobileMenu }}" style="position:fixed;inset:0;z-index:55;background:rgba(0,0,0,.6)"></div>
+  </sc-if>
+
+  <aside style="width:{{ sidebarW }};flex-shrink:0;position:{{ asidePos }};top:0;left:0;z-index:{{ asideZ }};transform:{{ asideTransform }};height:100vh;display:flex;flex-direction:column;border-right:1px solid #2a2a2a;background:#151515;transition:width .2s, transform .25s">
+    <div style="display:flex;align-items:center;justify-content:{{ justify }};gap:10px;padding:16px 14px;height:60px">
+      <sc-if value="{{ expanded }}" hint-placeholder-val="{{ true }}">
+        <div style="width:30px;height:30px;border-radius:999px;background:#2e2e2e;flex-shrink:0"></div>
+        <span style="font-weight:700;font-size:17px;background:linear-gradient(90deg,#15803d,#16a34a);-webkit-background-clip:text;color:transparent;flex:1">FutSpring</span>
+      </sc-if>
+      <button onClick="{{ toggleSidebar }}" aria-label="{{ toggleLabel }}" style="width:28px;height:28px;border-radius:8px;border:none;background:transparent;color:#a3a3a3;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0" style-hover="background:#262626;color:#fafafa">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"></rect><path d="M9 3v18"></path></svg>
+      </button>
+    </div>
+
+    <nav style="padding:4px 10px;display:flex;flex-direction:column;gap:2px">
+      <a href="#" style="display:flex;align-items:center;justify-content:{{ justify }};gap:10px;padding:8px 10px;border-radius:8px;color:#a3a3a3;font-size:14px;font-weight:500" style-hover="background:#222;color:#fafafa">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M3 10.5 12 3l9 7.5V21H3z"></path><path d="M9 21v-7h6v7"></path></svg>
+        <sc-if value="{{ expanded }}" hint-placeholder-val="{{ true }}"><span>Início</span></sc-if>
+      </a>
+    </nav>
+
+    <div style="padding:16px 10px 6px;display:flex;align-items:center;justify-content:space-between;min-height:42px">
+      <sc-if value="{{ expanded }}" hint-placeholder-val="{{ true }}">
+        <span style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#737373;padding-left:10px">Minhas peladas</span>
+      </sc-if>
+      <button aria-label="Nova pelada" style="width:26px;height:26px;border-radius:999px;border:1px solid #2e2e2e;background:transparent;color:#a3a3a3;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin:{{ plusMargin }}" style-hover="background:#262626;color:#fafafa">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>
+      </button>
+    </div>
+
+    <div style="flex:1;overflow-y:auto;padding:0 10px;display:flex;flex-direction:column;gap:2px">
+      <sc-for list="{{ peladaItems }}" as="p" hint-placeholder-count="4">
+        <button onClick="{{ p.select }}" title="{{ p.name }}" style="display:flex;align-items:center;justify-content:{{ justify }};gap:10px;padding:{{ itemPad }};border-radius:10px;border:none;width:100%;text-align:left;cursor:pointer;background:{{ p.bg }};color:#fafafa;font-family:inherit" style-hover="background:#222">
+          <div style="width:34px;height:34px;border-radius:9px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;background:{{ p.gradient }}">{{ p.avatarText }}</div>
+          <sc-if value="{{ expanded }}" hint-placeholder-val="{{ true }}">
+            <div style="min-width:0;display:flex;flex-direction:column;gap:2px">
+              <span style="font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ p.name }}</span>
+              <span style="font-size:12px;color:#8a8a8a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ p.next }}</span>
+            </div>
+          </sc-if>
+        </button>
+      </sc-for>
+    </div>
+
+    <div style="position:relative;padding:8px">
+      <sc-if value="{{ menuOpen }}" hint-placeholder-val="{{ false }}">
+        <div onClick="{{ closeMenu }}" style="position:fixed;inset:0;z-index:40"></div>
+        <div style="position:absolute;left:{{ menuLeft }};bottom:{{ menuBottom }};z-index:50;width:240px;background:#1c1c1c;border:1px solid #2e2e2e;border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.45);padding:4px;display:flex;flex-direction:column">
+          <div style="display:flex;align-items:center;gap:10px;padding:8px">
+            <div style="width:32px;height:32px;border-radius:8px;background:#2e2e2e;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;flex-shrink:0">GO</div>
+            <div style="min-width:0;display:flex;flex-direction:column">
+              <span style="font-size:14px;font-weight:600">Gone</span>
+              <span style="font-size:12px;color:#a3a3a3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">gone@futspring.com</span>
+            </div>
+          </div>
+          <div style="height:1px;background:#2a2a2a;margin:4px -4px"></div>
+          <button onClick="{{ closeMenu }}" style="display:flex;align-items:center;gap:10px;padding:7px 8px;border:none;border-radius:6px;background:transparent;color:#fafafa;font-size:14px;font-family:inherit;cursor:pointer;text-align:left" style-hover="background:#262626">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#a3a3a3" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"></circle><path d="M4 21a8 8 0 0 1 16 0"></path></svg>Perfil
+          </button>
+          <button onClick="{{ closeMenu }}" style="display:flex;align-items:center;gap:10px;padding:7px 8px;border:none;border-radius:6px;background:transparent;color:#fafafa;font-size:14px;font-family:inherit;cursor:pointer;text-align:left" style-hover="background:#262626">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#a3a3a3" stroke-width="2" stroke-linecap="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"></path></svg>Notificações
+          </button>
+          <button onClick="{{ closeMenu }}" style="display:flex;align-items:center;gap:10px;padding:7px 8px;border:none;border-radius:6px;background:transparent;color:#fafafa;font-size:14px;font-family:inherit;cursor:pointer;text-align:left" style-hover="background:#262626">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#a3a3a3" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg>Tema claro
+          </button>
+          <div style="height:1px;background:#2a2a2a;margin:4px -4px"></div>
+          <button onClick="{{ closeMenu }}" style="display:flex;align-items:center;gap:10px;padding:7px 8px;border:none;border-radius:6px;background:transparent;color:#ef4444;font-size:14px;font-family:inherit;cursor:pointer;text-align:left" style-hover="background:#2a1a1a">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><path d="M16 17l5-5-5-5M21 12H9"></path></svg>Sair
+          </button>
+        </div>
+      </sc-if>
+      <button onClick="{{ toggleMenu }}" aria-label="Menu do usuário" style="width:100%;display:flex;align-items:center;justify-content:{{ justify }};gap:10px;padding:{{ itemPad }};border:none;border-radius:10px;background:{{ menuBg }};color:#fafafa;cursor:pointer;font-family:inherit;text-align:left" style-hover="background:#262626">
+        <div style="width:32px;height:32px;border-radius:8px;background:#2e2e2e;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;flex-shrink:0">GO</div>
+        <sc-if value="{{ expanded }}" hint-placeholder-val="{{ true }}">
+          <div style="flex:1;min-width:0;display:flex;flex-direction:column">
+            <span style="font-size:14px;font-weight:600">Gone</span>
+            <span style="font-size:12px;color:#a3a3a3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">gone@futspring.com</span>
+          </div>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#a3a3a3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M7 15l5 5 5-5M7 9l5-5 5 5"></path></svg>
+        </sc-if>
+      </button>
+    </div>
+  </aside>
+
+  <main style="flex:1;min-width:0;padding:{{ mainPad }};display:flex;flex-direction:column;gap:{{ mainGap }}">
+    <section style="position:relative;border-radius:14px;overflow:hidden;min-height:{{ bannerH }};background:{{ bannerGradient }};display:flex;flex-direction:column;justify-content:flex-end">
+      <sc-if value="{{ isAdminView }}" hint-placeholder-val="{{ true }}">
+        <div style="position:absolute;top:12px;right:12px;z-index:2;display:flex;gap:8px">
+          <button aria-label="Editar pelada" style="width:34px;height:34px;border-radius:999px;border:none;background:rgba(0,0,0,.35);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="background:rgba(0,0,0,.55)">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z"></path></svg>
+          </button>
+          <button aria-label="Excluir pelada" style="width:34px;height:34px;border-radius:999px;border:none;background:rgba(0,0,0,.35);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="background:rgba(127,29,29,.8)">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"></path></svg>
+          </button>
+        </div>
+      </sc-if>
+      <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,0) 30%,rgba(0,0,0,.7) 100%)"></div>
+      <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:56px;font-weight:800;color:rgba(255,255,255,.55);letter-spacing:.02em;padding-bottom:40px">{{ bannerInitials }}</div>
+      <div style="position:relative;padding:20px 22px;display:flex;flex-direction:column;gap:8px">
+        <h1 style="margin:0;font-size:24px;font-weight:700">{{ current.name }}</h1>
+        <div style="display:flex;flex-wrap:wrap;gap:16px;font-size:13px;color:#e5e5e5">
+          <span style="display:flex;align-items:center;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"></rect><path d="M16 2v4M8 2v4M3 10h18"></path></svg>{{ current.day }}</span>
+          <span style="display:flex;align-items:center;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path></svg>{{ current.time }}</span>
+          <span style="display:flex;align-items:center;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>{{ current.address }}</span>
+          <span style="display:flex;align-items:center;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>{{ current.reference }}</span>
+        </div>
+      </div>
+    </section>
+
+    <div style="display:grid;grid-template-columns:{{ gridCols }};gap:24px;align-items:start">
+      <section style="min-width:0;display:flex;flex-direction:column;gap:20px">
+        <div style="display:flex;overflow-x:{{ tabOverflow }}">
+          <div style="display:{{ tabDisplay }};width:{{ tabWidth }};gap:4px;padding:4px;border-radius:999px;background:#262626;flex-shrink:0">
+            <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="4">
+              <button onClick="{{ t.select }}" style="flex:{{ tabFlex }};min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border:none;cursor:pointer;padding:{{ tabPad }};border-radius:999px;font-size:{{ tabFont }};font-weight:500;font-family:inherit;background:{{ t.bg }};color:{{ t.fg }}">{{ t.label }}</button>
+            </sc-for>
+          </div>
+        </div>
+
+        <sc-if value="{{ isRanking }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+            <span style="font-size:14px;color:#a3a3a3">Top jogadores · 20 classificados</span>
+            <button style="display:flex;align-items:center;gap:6px;padding:7px 14px;border-radius:999px;border:1px solid #2e2e2e;background:transparent;color:#fafafa;font-size:14px;font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap" style-hover="background:#262626">⌘ Ações</button>
+          </div>
+          <div style="border:1px solid #2a2a2a;border-radius:12px;overflow-x:auto">
+            <div style="min-width:{{ rankMinW }}">
+            <div style="display:grid;grid-template-columns:{{ rankCols }};align-items:center;padding:{{ rankPad }};font-size:12px;color:#8a8a8a;border-bottom:1px solid #2a2a2a;background:#1e1e1e">
+              <span style="text-align:center">#</span><span>Jogador</span><span></span>
+              <span style="text-align:center">J</span><span style="text-align:center">V</span><span style="text-align:center;color:#fafafa">Gols ↓</span><span style="text-align:center">Assist.</span>
+            </div>
+            <sc-for list="{{ ranking }}" as="r" hint-placeholder-count="10">
+              <div style="display:grid;grid-template-columns:{{ rankCols }};align-items:center;padding:{{ rankPad }};font-size:14px;border-bottom:1px solid #242424" style-hover="background:#202020">
+                <span style="text-align:center;color:{{ r.rankColor }};font-weight:{{ r.rankWeight }}">{{ r.rankLabel }}</span>
+                <span style="display:flex;align-items:center;gap:10px;min-width:0">
+                  <span style="width:28px;height:28px;border-radius:999px;background:#2e2e2e;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0">{{ r.initials }}</span>
+                  <span style="font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.name }}</span>
+                </span>
+                <button aria-label="Histórico do jogador" style="width:28px;height:28px;border:none;background:transparent;color:#8a8a8a;border-radius:999px;cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="background:#2a2a2a;color:#fafafa">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"></path><path d="M3 3v5h5M12 7v5l4 2"></path></svg>
+                </button>
+                <span style="text-align:center">{{ r.j }}</span>
+                <span style="text-align:center">{{ r.v }}</span>
+                <span style="text-align:center;font-weight:600">{{ r.g }}</span>
+                <span style="text-align:center">{{ r.a }}</span>
+              </div>
+            </sc-for>
+            </div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ isMembers }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-wrap:wrap;align-items:center;gap:12px">
+            <div style="position:relative;flex:1;min-width:200px;max-width:320px">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#8a8a8a" stroke-width="2" stroke-linecap="round" style="position:absolute;left:12px;top:11px"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
+              <input value="{{ memberQuery }}" onChange="{{ setQuery }}" placeholder="Buscar membro" style="width:100%;height:38px;border-radius:999px;border:1px solid #2e2e2e;background:#1e1e1e;color:#fafafa;padding:0 14px 0 34px;font-size:14px;font-family:inherit;outline:none"></input>
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:6px">
+              <sc-for list="{{ posFilters }}" as="f" hint-placeholder-count="5">
+                <button onClick="{{ f.select }}" style="display:flex;align-items:center;gap:6px;height:32px;padding:0 12px;border-radius:999px;border:1px solid {{ f.border }};background:{{ f.bg }};color:{{ f.fg }};font-size:13px;font-weight:500;font-family:inherit;cursor:pointer;white-space:nowrap">{{ f.label }}<span style="font-size:12px;color:#8a8a8a">{{ f.count }}</span></button>
+              </sc-for>
+            </div>
+            <sc-if value="{{ isDesktop }}" hint-placeholder-val="{{ true }}">
+            <button style="margin-left:auto;display:flex;align-items:center;gap:6px;height:36px;padding:0 16px;border-radius:999px;border:none;background:linear-gradient(90deg,#15803d,#16a34a);color:#fff;font-size:14px;font-weight:600;font-family:inherit;cursor:pointer;white-space:nowrap">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>Adicionar jogador
+            </button>
+            </sc-if>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:40px">
+            <span style="font-size:13px;color:#8a8a8a">{{ memberSummary }}</span>
+            <sc-if value="{{ isMobile }}" hint-placeholder-val="{{ false }}">
+              <button aria-label="Adicionar jogador" style="width:40px;height:40px;border-radius:999px;border:none;background:linear-gradient(135deg,#15803d,#16a34a);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>
+              </button>
+            </sc-if>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px">
+            <sc-for list="{{ memberCards }}" as="m" hint-placeholder-count="6">
+              <div style="border:1px solid #2a2a2a;border-radius:12px;background:#1e1e1e;padding:14px;display:flex;flex-direction:column;gap:12px;cursor:pointer" style-hover="border-color:#3a3a3a;background:#212121">
+                <div style="display:flex;align-items:center;gap:12px">
+                  <div style="width:42px;height:42px;border-radius:999px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;background:{{ m.color }}">{{ m.initials }}</div>
+                  <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px">
+                    <div style="display:flex;align-items:center;gap:6px;min-width:0">
+                      <span style="font-size:15px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ m.name }}</span>
+                      <sc-if value="{{ m.isAdmin }}" hint-placeholder-val="{{ false }}">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#eab308" stroke-width="2" stroke-linejoin="round" style="flex-shrink:0"><path d="m2 7 5 5 5-8 5 8 5-5-2 12H4z"></path></svg>
+                      </sc-if>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:8px">
+                      <span style="font-size:11px;font-weight:600;letter-spacing:.03em;padding:2px 8px;border-radius:999px;background:#2a2a2a;color:#d4d4d4">{{ m.posLabel }}</span>
+                      <span style="font-size:12px;letter-spacing:1px"><span style="color:#eab308">{{ m.starsOn }}</span><span style="color:#3a3a3a">{{ m.starsOff }}</span></span>
+                    </div>
+                  </div>
+                  <button aria-label="Ações do membro" style="width:28px;height:28px;border:none;border-radius:999px;background:transparent;color:#8a8a8a;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;align-self:flex-start" style-hover="background:#2a2a2a;color:#fafafa">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"></circle><circle cx="12" cy="12" r="1.8"></circle><circle cx="19" cy="12" r="1.8"></circle></svg>
+                  </button>
+                </div>
+                <div style="display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid #2a2a2a;padding-top:10px">
+                  <div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:16px;font-weight:600">{{ m.j }}</span><span style="font-size:11px;color:#8a8a8a">Jogos</span></div>
+                  <div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:16px;font-weight:600">{{ m.g }}</span><span style="font-size:11px;color:#8a8a8a">Gols</span></div>
+                  <div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:16px;font-weight:600">{{ m.a }}</span><span style="font-size:11px;color:#8a8a8a">Assist.</span></div>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+          <sc-if value="{{ noMembers }}" hint-placeholder-val="{{ false }}">
+            <div style="border:1px dashed #2e2e2e;border-radius:12px;padding:40px;text-align:center;color:#8a8a8a;font-size:14px">Nenhum membro encontrado.</div>
+          </sc-if>
+        </sc-if>
+
+        <sc-if value="{{ isSessions }}" hint-placeholder-val="{{ false }}">
+          <sc-if value="{{ noNext }}" hint-placeholder-val="{{ false }}">
+            <div style="border:1px dashed #333;border-radius:14px;padding:18px;display:flex;flex-wrap:wrap;align-items:center;gap:20px">
+              <div style="width:72px;height:80px;border-radius:12px;border:1px dashed #3a3a3a;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#737373">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"></rect><path d="M16 2v4M8 2v4M3 10h18M10 14l4 4M14 14l-4 4"></path></svg>
+              </div>
+              <div style="flex:1;min-width:220px;display:flex;flex-direction:column;gap:6px">
+                <span style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#8a8a8a">Próxima sessão</span>
+                <span style="font-size:17px;font-weight:600">Nenhuma sessão agendada</span>
+                <span style="font-size:13px;color:#a3a3a3;text-wrap:pretty">{{ noNextHint }}</span>
+              </div>
+
+            </div>
+          </sc-if>
+          <sc-if value="{{ hasNext }}" hint-placeholder-val="{{ true }}">
+          <div style="border:1px solid #2a2a2a;border-radius:14px;background:#1e1e1e;padding:18px;display:flex;flex-wrap:wrap;align-items:center;gap:20px">
+            <div style="width:72px;height:80px;border-radius:12px;background:linear-gradient(180deg,#15803d,#14532d);display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0">
+              <span style="font-size:11px;font-weight:700;letter-spacing:.08em;color:#bbf7d0">DOM</span>
+              <span style="font-size:28px;font-weight:800;line-height:1.1">04</span>
+              <span style="font-size:11px;font-weight:600;color:#bbf7d0">OUT</span>
+            </div>
+            <div style="flex:1;min-width:220px;display:flex;flex-direction:column;gap:8px">
+              <div style="display:flex;align-items:center;gap:8px">
+                <span style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#8a8a8a">Próxima sessão</span>
+                <span style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:500;padding:2px 8px;border-radius:999px;background:#1e293b;color:#93c5fd"><span style="width:6px;height:6px;border-radius:999px;background:#3b82f6"></span>Agendada</span>
+              </div>
+              <span style="font-size:18px;font-weight:600">Hoje, domingo · 08:00</span>
+              <div style="display:flex;align-items:center;gap:10px">
+                <div style="flex:1;max-width:260px;height:6px;border-radius:999px;background:#2a2a2a;overflow:hidden"><div style="width:70%;height:100%;background:linear-gradient(90deg,#15803d,#16a34a)"></div></div>
+                <span style="font-size:13px;color:#a3a3a3"><span style="color:#fafafa;font-weight:600">14</span> de 20 confirmados</span>
+              </div>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button style="height:38px;padding:0 16px;border-radius:999px;border:1px solid #2e2e2e;background:transparent;color:#fafafa;font-size:14px;font-weight:500;font-family:inherit;cursor:pointer;white-space:nowrap" style-hover="background:#262626">Ver sessão</button>
+              <button style="height:38px;padding:0 18px;border-radius:999px;border:none;background:linear-gradient(90deg,#15803d,#16a34a);color:#fff;font-size:14px;font-weight:600;font-family:inherit;cursor:pointer;white-space:nowrap">Confirmar presença</button>
+            </div>
+          </div>
+          </sc-if>
+
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+            <span style="font-size:15px;font-weight:600">Histórico <span style="font-size:13px;font-weight:400;color:#8a8a8a">· 7 sessões finalizadas</span></span>
+            <button style="display:flex;align-items:center;gap:6px;height:34px;padding:0 14px;border-radius:999px;border:1px solid #2e2e2e;background:transparent;color:#fafafa;font-size:14px;font-weight:500;font-family:inherit;cursor:pointer;white-space:nowrap" style-hover="background:#262626">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>Nova sessão
+            </button>
+          </div>
+
+          <sc-for list="{{ sessionMonths }}" as="mo" hint-placeholder-count="2">
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <span style="font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#737373">{{ mo.label }}</span>
+              <div style="border:1px solid #2a2a2a;border-radius:12px;overflow:hidden">
+                <sc-for list="{{ mo.items }}" as="s" hint-placeholder-count="3">
+                  <div style="display:flex;align-items:center;gap:14px;padding:12px 14px;border-bottom:1px solid #242424;cursor:pointer" style-hover="background:#202020">
+                    <div style="width:44px;flex-shrink:0;display:flex;flex-direction:column;align-items:center">
+                      <span style="font-size:20px;font-weight:700;line-height:1.1">{{ s.day }}</span>
+                      <span style="font-size:11px;font-weight:600;color:#8a8a8a;text-transform:uppercase">{{ s.wd }}</span>
+                    </div>
+                    <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px">
+                      <span style="font-size:14px;font-weight:500">{{ s.title }}</span>
+                      <span style="font-size:12px;color:#8a8a8a">{{ s.meta }}</span>
+                    </div>
+                    <span style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:500;padding:2px 8px;border-radius:999px;background:#2a2a2a;color:#d4d4d4;white-space:nowrap"><span style="width:6px;height:6px;border-radius:999px;background:#a3a3a3"></span>Finalizada</span>
+                    <sc-if value="{{ isDesktop }}" hint-placeholder-val="{{ true }}">
+                    <span style="display:flex;align-items:center;gap:5px;font-size:13px;color:#a3a3a3;width:44px;justify-content:flex-end">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="8" r="4"></circle><path d="M2 21a7 7 0 0 1 14 0M16 3.5a4 4 0 0 1 0 9M22 21a7 7 0 0 0-4-6.3"></path></svg>{{ s.players }}
+                    </span>
+                    <sc-if value="{{ s.hasPhoto }}" hint-placeholder-val="{{ true }}">
+                      <div title="Foto do campeão" style="width:40px;height:40px;border-radius:8px;flex-shrink:0;border:1px solid #2e2e2e;background:{{ s.photoBg }};display:flex;align-items:center;justify-content:center;font-family:ui-monospace,monospace;font-size:8px;color:#737373">{{ s.photoText }}</div>
+                    </sc-if>
+                    <sc-if value="{{ s.noPhoto }}" hint-placeholder-val="{{ false }}">
+                      <div title="Sem foto do campeão" style="width:40px;height:40px;border-radius:8px;flex-shrink:0;border:1px dashed #2e2e2e"></div>
+                    </sc-if>
+                    </sc-if>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#737373" stroke-width="2" stroke-linecap="round" style="flex-shrink:0"><path d="m9 18 6-6-6-6"></path></svg>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </sc-for>
+        </sc-if>
+
+        <sc-if value="{{ isAwards }}" hint-placeholder-val="{{ false }}">
+          <span style="font-size:13px;color:#8a8a8a">4 categorias · {{ awardsTotal }} prêmios distribuídos</span>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px">
+            <sc-for list="{{ awardCats }}" as="c" hint-placeholder-count="4">
+              <div style="position:relative;overflow:hidden;border:1px solid #2a2a2a;border-radius:12px;background:#1e1e1e;padding:16px 16px 10px;display:flex;flex-direction:column;gap:10px">
+                <div style="position:absolute;right:14px;bottom:10px;opacity:.07;pointer-events:none"><svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#fafafa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4"></path></svg></div>
+                <div style="display:flex;align-items:flex-start;gap:10px">
+                  <span style="font-size:17px;line-height:22px;color:#e5e5e5;width:20px;text-align:center">{{ c.glyph }}</span>
+                  <div style="display:flex;flex-direction:column;gap:1px">
+                    <span style="font-size:16px;font-weight:600">{{ c.title }}</span>
+                    <span style="font-size:12px;color:#8a8a8a">{{ c.sub }}</span>
+                  </div>
+                </div>
+                <div style="display:flex;flex-direction:column">
+                  <div style="display:flex;align-items:center;gap:12px;padding:10px 10px;margin:2px -6px 4px;border-radius:10px;background:linear-gradient(90deg,rgba(234,179,8,.14),rgba(234,179,8,.03));border:1px solid rgba(234,179,8,.22)">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#eab308" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4"></path></svg>
+                    <span style="width:38px;height:38px;border-radius:999px;background:#2e2e2e;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;box-shadow:0 0 0 2px #eab308">{{ c.leader.initials }}</span>
+                    <div style="flex:1;min-width:0;display:flex;flex-direction:column">
+                      <span style="font-size:16px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ c.leader.name }}</span>
+                      <span style="font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:#eab308">Líder</span>
+                    </div>
+                    <span style="font-size:14px;font-weight:700;padding:3px 10px;border-radius:999px;background:#eab308;color:#1a1a1a">{{ c.leader.n }}x</span>
+                  </div>
+                  <sc-for list="{{ c.rest }}" as="r" hint-placeholder-count="2">
+                    <div style="display:flex;align-items:center;gap:12px;padding:9px 4px;border-bottom:1px solid #262626">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="{{ r.rankColor }}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4"></path></svg>
+                      <span style="width:28px;height:28px;border-radius:999px;background:#2e2e2e;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0">{{ r.initials }}</span>
+                      <span style="flex:1;min-width:0;font-size:14px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.name }}</span>
+                      <span style="font-size:12px;font-weight:600;padding:2px 8px;border-radius:999px;background:#2a2a2a">{{ r.n }}x</span>
+                    </div>
+                  </sc-for>
+                </div>
+                <button onClick="{{ c.toggle }}" style="position:relative;align-self:center;display:flex;align-items:center;gap:6px;height:28px;padding:0 12px;border-radius:999px;border:none;background:transparent;color:#a3a3a3;font-size:12px;font-family:inherit;cursor:pointer" style-hover="background:#262626;color:#fafafa">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="transform:{{ c.chev }}"><path d="m6 9 6 6 6-6"></path></svg>{{ c.toggleLabel }}
+                </button>
+              </div>
+            </sc-for>
+                </div>
+                <button onClick="{{ c.toggle }}" style="align-self:center;display:flex;align-items:center;gap:6px;height:30px;padding:0 12px;border-radius:999px;border:none;background:transparent;color:#a3a3a3;font-size:13px;font-family:inherit;cursor:pointer" style-hover="background:#262626;color:#fafafa">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="transform:{{ c.chev }}"><path d="m6 9 6 6 6-6"></path></svg>{{ c.toggleLabel }}
+                </button>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+      </section>
+
+      <sc-if value="{{ showChat }}" hint-placeholder-val="{{ true }}">
+        <aside style="position:sticky;top:24px;height:calc(100vh - 48px);border:1px solid #2a2a2a;border-radius:12px;background:#1e1e1e;display:flex;flex-direction:column">
+          <div style="padding:14px 16px;border-bottom:1px solid #2a2a2a;font-size:14px;font-weight:600">Chat</div>
+          <div style="flex:1;display:flex;align-items:center;justify-content:center;font-size:14px;color:#8a8a8a">Nenhuma mensagem ainda.</div>
+          <div style="padding:12px;border-top:1px solid #2a2a2a;display:flex;gap:8px">
+            <input placeholder="Escreva uma mensagem…" style="flex:1;min-width:0;height:36px;border-radius:8px;border:1px solid #2e2e2e;background:#1a1a1a;color:#fafafa;padding:0 12px;font-size:14px;font-family:inherit;outline:none"></input>
+            <button style="height:36px;padding:0 14px;border-radius:999px;border:none;background:linear-gradient(90deg,#15803d,#16a34a);color:#fff;font-weight:600;font-size:14px;cursor:pointer;font-family:inherit">Enviar</button>
+          </div>
+        </aside>
+      </sc-if>
+    </div>
+  </main>
+
+  <sc-if value="{{ showChatFab }}" hint-placeholder-val="{{ false }}">
+    <button onClick="{{ toggleChat }}" aria-label="Abrir chat" style="position:fixed;right:16px;bottom:16px;z-index:40;width:54px;height:54px;border-radius:999px;border:none;background:linear-gradient(135deg,#15803d,#16a34a);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(0,0,0,.45)">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22z"></path></svg>
+    </button>
+  </sc-if>
+  <sc-if value="{{ chatPanelOpen }}" hint-placeholder-val="{{ false }}">
+    <div role="dialog" aria-label="Chat da pelada" style="position:fixed;right:24px;top:72px;bottom:86px;width:360px;max-width:calc(100% - 48px);z-index:45;background:#1e1e1e;border:1px solid #2e2e2e;border-radius:14px;box-shadow:0 20px 50px rgba(0,0,0,.55);display:flex;flex-direction:column;overflow:hidden">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 8px 10px 16px;border-bottom:1px solid #2a2a2a">
+        <div style="display:flex;flex-direction:column">
+          <span style="font-size:15px;font-weight:600">Chat</span>
+          <span style="font-size:12px;color:#8a8a8a">{{ current.name }} · 20 membros</span>
+        </div>
+        <button onClick="{{ closeChat }}" aria-label="Fechar chat" style="width:34px;height:34px;border:none;border-radius:999px;background:transparent;color:#a3a3a3;cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="background:#262626;color:#fafafa">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"></path></svg>
+        </button>
+      </div>
+      <div style="flex:1;display:flex;align-items:center;justify-content:center;font-size:14px;color:#8a8a8a">Nenhuma mensagem ainda.</div>
+      <div style="padding:12px;border-top:1px solid #2a2a2a;display:flex;gap:8px">
+        <input placeholder="Escreva uma mensagem…" style="flex:1;min-width:0;height:38px;border-radius:8px;border:1px solid #2e2e2e;background:#1a1a1a;color:#fafafa;padding:0 12px;font-size:14px;font-family:inherit;outline:none"></input>
+        <button style="height:38px;padding:0 14px;border-radius:999px;border:none;background:linear-gradient(90deg,#15803d,#16a34a);color:#fff;font-weight:600;font-size:14px;cursor:pointer;font-family:inherit">Enviar</button>
+      </div>
+    </div>
+  </sc-if>
+  <sc-if value="{{ chatOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeChat }}" style="position:fixed;inset:0;z-index:55;background:rgba(0,0,0,.6)"></div>
+    <div style="position:fixed;left:0;right:0;bottom:0;z-index:60;height:78%;background:#1e1e1e;border-top:1px solid #2e2e2e;border-radius:16px 16px 0 0;display:flex;flex-direction:column">
+      <div style="display:flex;justify-content:center;padding:8px 0 0"><div style="width:40px;height:4px;border-radius:999px;background:#3a3a3a"></div></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 8px 10px 16px;border-bottom:1px solid #2a2a2a">
+        <span style="font-size:15px;font-weight:600">Chat</span>
+        <button onClick="{{ closeChat }}" aria-label="Fechar chat" style="width:36px;height:36px;border:none;border-radius:999px;background:transparent;color:#a3a3a3;cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="background:#262626">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"></path></svg>
+        </button>
+      </div>
+      <div style="flex:1;display:flex;align-items:center;justify-content:center;font-size:14px;color:#8a8a8a">Nenhuma mensagem ainda.</div>
+      <div style="padding:12px;border-top:1px solid #2a2a2a;display:flex;gap:8px">
+        <input placeholder="Escreva uma mensagem…" style="flex:1;min-width:0;height:44px;border-radius:10px;border:1px solid #2e2e2e;background:#1a1a1a;color:#fafafa;padding:0 12px;font-size:16px;font-family:inherit;outline:none"></input>
+        <button style="height:44px;padding:0 16px;border-radius:999px;border:none;background:linear-gradient(90deg,#15803d,#16a34a);color:#fff;font-weight:600;font-size:14px;cursor:pointer;font-family:inherit">Enviar</button>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;viewport&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;auto&quot;,&quot;mobile&quot;],&quot;default&quot;:&quot;auto&quot;,&quot;tsType&quot;:&quot;\&quot;auto\&quot; | \&quot;mobile\&quot;&quot;},&quot;sidebarCollapsed&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;},&quot;showChat&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;},&quot;hasNextSession&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;},&quot;isAdmin&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;}}">
+class Component extends DCLogic {
+  state = { active: 0, tab: "Membros", collapsed: null };
+  peladas = [
+    { name: "Jogasse onde", initials: "JO", img: "assets/jogasse-onde.jpg", day: "Sábado", time: "08:00 · 2h", address: "Rua das Chuteiras, 123", reference: "Campo Society da esquina", next: "Sáb, 11/10 · 08:00", g: "linear-gradient(180deg,#06b6d4,#0e5a6b)" },
+    { name: "Fut de Quinta", initials: "FQ", day: "Quinta", time: "20:00 · 1.5h", address: "Av. Paulista, 900", reference: "Quadra 3", next: "Qui, 08/10 · 20:00", g: "linear-gradient(180deg,#8b5cf6,#3b2a6b)" },
+    { name: "Racha do Escritório", initials: "RE", day: "Terça", time: "19:00 · 1h", address: "Rua Augusta, 410", reference: "Arena Augusta", next: "Sem sessão agendada", g: "linear-gradient(180deg,#f59e0b,#6b4a0e)" },
+    { name: "Várzea FC", initials: "VF", day: "Domingo", time: "09:00 · 2h", address: "Parque do Ibirapuera", reference: "Campo 2", next: "Dom, 11/10 · 09:00", g: "linear-gradient(180deg,#22c55e,#14532d)" }
+  ];
+  rows = [["Tuca",23,1,17,2],["Souto",23,2,16,2],["Pirro",23,2,14,9],["Dudu",23,1,12,4],["27",19,4,10,6],["Thiago",23,2,9,0],["Diego",23,3,8,6],["Lui",19,2,8,6],["Tão",23,2,8,4],["Vuzzi",21,3,7,3]];
+  members = [["Leal","ATACANTE",5],["Souto","ATACANTE",5],["Ferraz","ZAGUEIRO",1],["Lui","MEIO",5],["Tuca","ATACANTE",4],["Gone","ATACANTE",5],["Thiago","MEIO",4],["Tão","MEIO",3],["Lobo","MEIO",2],["Dudu","ATACANTE",4],["Miguel","MEIO",2],["Neto","ATACANTE",2],["Vuzzi","ATACANTE",3],["27","MEIO",2],["Nando","GOLEIRO",1],["Abreu","ATACANTE",1],["Leudo","MEIO",2],["Diego","ATACANTE",3],["Pirro","MEIO",3],["André","ATACANTE",4]];
+  posLabels = { GOLEIRO: "Goleiro", ZAGUEIRO: "Zagueiro", MEIO: "Meio", ATACANTE: "Atacante" };
+  membersVals() {
+    const q = (this.state.q || "").toLowerCase();
+    const pos = this.state.pos || "ALL";
+    const hues = [160, 45, 300, 265, 15, 200];
+    const all = this.members.map(([name, p, s], i) => {
+      const r = this.rows.find(x => x[0] === name);
+      return { name, pos: p, posLabel: this.posLabels[p].toUpperCase(), initials: name.slice(0, 2).toUpperCase(), color: `oklch(0.58 0.14 ${hues[i % hues.length]})`, starsOn: "★".repeat(s), starsOff: "★".repeat(5 - s), isAdmin: i === 0, j: r ? r[1] : 23 - (i % 3) * 2, g: r ? r[3] : (i * 3) % 7, a: r ? r[4] : (i * 5) % 6 };
+    });
+    const list = all.filter(m => (pos === "ALL" || m.pos === pos) && m.name.toLowerCase().includes(q));
+    const f = (key, label) => ({ label, count: key === "ALL" ? all.length : all.filter(m => m.pos === key).length, bg: pos === key ? "#fafafa" : "transparent", fg: pos === key ? "#171717" : "#d4d4d4", border: pos === key ? "#fafafa" : "#2e2e2e", select: () => this.setState({ pos: key }) });
+    return {
+      memberQuery: this.state.q || "",
+      setQuery: e => this.setState({ q: e.target.value }),
+      posFilters: [f("ALL", "Todos"), f("GOLEIRO", "Goleiro"), f("ZAGUEIRO", "Zagueiro"), f("MEIO", "Meio"), f("ATACANTE", "Atacante")],
+      memberCards: list,
+      noMembers: list.length === 0,
+      memberSummary: `${list.length} de ${all.length} membros · 1 admin`
+    };
+  }
+  sessionsVals() {
+    const data = [["Setembro 2026", [[27, 20, 4, true, "assets/campeao-27-09.jpeg"], [20, 20, 4, true], [13, 15, 3, false], [6, 20, 4, true]], "setembro"], ["Agosto 2026", [[30, 20, 4, true], [23, 15, 3, true], [16, 20, 4, false]], "agosto"]];
+    return data.map(([label, items, mes]) => ({ label, items: items.map(([d, pl, t, ph, src]) => ({ photoBg: src ? `url("${src}") center 55% / cover no-repeat` : "repeating-linear-gradient(135deg,#262626 0 6px,#2c2c2c 6px 12px)", photoText: src ? "" : "foto", day: String(d).padStart(2, "0"), wd: "Dom", title: `Domingo, ${d} de ${mes}`, meta: `08:00 · ${t} times · 6 partidas`, players: pl, hasPhoto: ph, noPhoto: !ph })) }));
+  }
+  awardsVals() {
+    const open = this.state.awOpen || {};
+    const extra = ["Thiago", "Dudu", "Tuca", "Pirro", "André", "Neto", "Lobo", "Vuzzi", "27", "Diego", "Lui", "Tão", "Abreu", "Nando"];
+    const C = [
+      ["art", "Artilheiro", "Mais gols na sessão", "◎", "#22c55e", "#14301d", [["Leal", 13], ["Gone", 9], ["👎🖐", 4]], 17],
+      ["gar", "Garçom", "Mais assistências na sessão", "↗", "#38bdf8", "#0f2a38", [["Diegotze", 9], ["Guibarros", 7], ["Miguel", 6]], 18],
+      ["pus", "Puskás", "Gol mais bonito", "✦", "#eab308", "#33290a", [["Leal", 7], ["Gone", 6], ["Guibarros", 6]], 15],
+      ["bol", "Bola Murcha", "Pior desempenho da sessão", "↓", "#f87171", "#3a1515", [["Lucas Scavuzzi", 4], ["Guibarros", 3], ["Souto", 3]], 15]
+    ];
+    const medal = ["#eab308", "#a3a3a3", "#c2410c"];
+    const ini = n => (n.replace(/[^\p{L}\d]/gu, "").slice(0, 2) || n.slice(0, 2)).toUpperCase();
+    const cats = C.map(([k, title, sub, glyph, color, tint, top, count]) => {
+      let list = top.slice();
+      let last = top[2][1];
+      for (let i = 0; list.length < count; i++) { last = Math.max(1, last - (i % 3 === 0 ? 1 : 0)); list.push([extra[i % extra.length], last]); }
+      const max = list[0][1];
+      const isOpen = !!open[k];
+      const rest = list.slice(1, isOpen ? list.length : 3).map(([name, n], i) => ({ name, n, initials: ini(name), rank: (i + 2) + "º", rankColor: medal[i + 1] || "#525252", pct: Math.round(n / max * 100) + "%" }));
+      return { title, sub, glyph, color, tint, leadBg: "linear-gradient(90deg," + tint + ", #1e1e1e)", total: list.reduce((a, x) => a + x[1], 0),
+        leader: { name: list[0][0], n: list[0][1], initials: ini(list[0][0]) }, rest,
+        chev: isOpen ? "rotate(180deg)" : "none", toggleLabel: isOpen ? "Mostrar menos" : "Ver todos (" + count + ")",
+        toggle: () => this.setState(st => ({ awOpen: { ...(st.awOpen || {}), [k]: !(st.awOpen || {})[k] } })) };
+    });
+    return { awardCats: cats, awardsTotal: cats.reduce((a, x) => a + x.total, 0) };
+  }
+  componentDidMount() {
+    this.onResize = () => this.setState({ w: window.innerWidth });
+    window.addEventListener("resize", this.onResize);
+    this.onResize();
+  }
+  componentWillUnmount() { window.removeEventListener("resize", this.onResize); }
+  renderVals() {
+    const w = this.state.w ?? 1440;
+    const forced = (this.props.viewport ?? "auto") === "mobile";
+    const isMobile = forced || w < 768;
+    const expanded = isMobile ? true : (this.state.collapsed === null ? !(this.props.sidebarCollapsed ?? false) : !this.state.collapsed);
+    const cur = this.peladas[this.state.active];
+    const medals = ["#eab308", "#a3a3a3", "#c2410c"];
+    const chatOn = this.props.showChat ?? false;
+    const showChat = !isMobile && chatOn && w - (expanded ? 264 : 64) - 48 >= 1000;
+    const mm = !!this.state.mobileMenu;
+    return {
+      expanded,
+      isMobile,
+      isDesktop: !isMobile,
+      tabOverflow: isMobile ? "visible" : "auto", tabDisplay: isMobile ? "flex" : "inline-flex", tabWidth: isMobile ? "100%" : "auto",
+      tabFlex: isMobile ? "1 1 0" : "none", tabPad: isMobile ? "7px 6px" : "6px 14px", tabFont: isMobile ? "13px" : "14px",
+      frameW: forced ? "390px" : "100%",
+      frameH: forced ? "100vh" : "auto",
+      frameOverflow: forced ? "auto" : "visible",
+      frameTransform: forced ? "translateZ(0)" : "none",
+      frameBorder: forced ? "1px solid #2a2a2a" : "none",
+      rootDir: isMobile ? "column" : "row",
+      asidePos: isMobile ? "fixed" : "sticky",
+      asideZ: isMobile ? 60 : 1,
+      asideTransform: isMobile && !mm ? "translateX(-105%)" : "none",
+      mobileMenuOpen: isMobile && mm,
+      openMobileMenu: () => this.setState({ mobileMenu: true }),
+      closeMobileMenu: () => this.setState({ mobileMenu: false, menuOpen: false }),
+      toggleLabel: isMobile ? "Fechar menu" : "Recolher menu",
+      menuLeft: isMobile ? "8px" : "calc(100% + 8px)",
+      menuBottom: isMobile ? "calc(100% + 4px)" : "8px",
+      rankCols: isMobile ? "26px minmax(0,1fr) 28px 30px 26px 40px 44px" : "44px minmax(0,1fr) 40px 64px 64px 64px 64px",
+      rankPad: isMobile ? "10px 6px" : "10px 12px",
+      rankMinW: isMobile ? "0" : "520px",
+      mainPad: isMobile ? "16px" : "24px",
+      mainGap: isMobile ? "20px" : "24px",
+      bannerH: isMobile ? "190px" : "230px",
+      showChatFab: !showChat && !(isMobile && this.state.chatOpen),
+      chatOpen: isMobile && !!this.state.chatOpen,
+      chatPanelOpen: !isMobile && !showChat && !!this.state.chatOpen,
+      toggleChat: () => this.setState(s => ({ chatOpen: !s.chatOpen })),
+      closeChat: () => this.setState({ chatOpen: false }),
+      justify: expanded ? "flex-start" : "center",
+      itemPad: expanded ? "8px" : "4px",
+      plusMargin: expanded ? "0 4px 0 auto" : "0 auto",
+      menuOpen: !!this.state.menuOpen,
+      menuBg: this.state.menuOpen ? "#262626" : "transparent",
+      toggleMenu: () => this.setState(s => ({ menuOpen: !s.menuOpen })),
+      closeMenu: () => this.setState({ menuOpen: false }),
+      sidebarW: expanded ? "264px" : "64px",
+      toggleSidebar: () => isMobile ? this.setState({ mobileMenu: false, menuOpen: false }) : this.setState({ collapsed: expanded }),
+      peladaItems: this.peladas.map((p, i) => ({ ...p, gradient: p.img ? `url(${p.img}) center 18% / cover no-repeat` : p.g, avatarText: p.img ? "" : p.initials, bg: i === this.state.active ? "#262626" : "transparent", select: () => this.setState({ active: i, mobileMenu: false }) })),
+      current: cur,
+      bannerGradient: cur.img ? `url(${cur.img}) center 22% / cover no-repeat` : cur.g,
+      bannerInitials: cur.img ? "" : cur.initials,
+      tabs: ["Membros", "Sessões", "Ranking", "Prêmios"].map(l => ({ label: l, bg: l === this.state.tab ? "#1a1a1a" : "transparent", fg: l === this.state.tab ? "#fafafa" : "#a3a3a3", select: () => this.setState({ tab: l }) })),
+      isRanking: this.state.tab === "Ranking",
+      isMembers: this.state.tab === "Membros",
+      isSessions: this.state.tab === "Sessões",
+      isAwards: this.state.tab === "Prêmios",
+      ...this.membersVals(),
+      sessionMonths: this.sessionsVals(),
+      hasNext: (this.props.hasNextSession ?? true) && cur.next !== "Sem sessão agendada",
+      noNext: !((this.props.hasNextSession ?? true) && cur.next !== "Sem sessão agendada"),
+      isAdminView: this.props.isAdmin ?? true,
+      noNextHint: (this.props.isAdmin ?? true) ? "Crie a próxima sessão ou ative a criação automática nas configurações da pelada." : "Quando um admin agendar a próxima sessão, ela aparece aqui.",
+      tabLabel: this.state.tab,
+      showChat,
+      gridCols: showChat ? "minmax(0,1fr) 320px" : "minmax(0,1fr)",
+      ranking: this.rows.map(([name, j, v, g, a], i) => ({ name, j, v, g, a, initials: name.slice(0, 2).toUpperCase(), rankLabel: i < 3 ? "🏆".slice(0,0) + ["1º","2º","3º"][i] : String(i + 1), rankColor: i < 3 ? medals[i] : "#8a8a8a", rankWeight: i < 3 ? 700 : 400 })),
+      ...this.awardsVals()
+    };
+  }
+}
+</script>
+</body>
+</html>
