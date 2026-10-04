@@ -46,3 +46,9 @@ export function filterMembers(members: PeladaMember[], query: string, position: 
     )
     .sort((a, b) => a.username.localeCompare(b.username, "pt-BR", { sensitivity: "base" }))
 }
+
+// Short pt-BR label of any position value ("MIDFIELDER" -> "Meio"), or null
+export function positionShortLabel(position: string | null): string | null {
+  const normalized = normalizePosition(position)
+  return POSITION_FILTERS.find((f) => f.value === normalized)?.label ?? null
+}

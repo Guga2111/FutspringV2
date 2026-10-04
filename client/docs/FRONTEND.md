@@ -58,7 +58,7 @@ client/
     │   ├── ConfirmActionDialog.tsx   shared AlertDialog for confirmations
     │   ├── pelada/       pelada detail feature (PeladaBanner, MembersGrid + MemberCard, NextSessionCard, SessionHistoryList, RankingTable, AwardsTab, PeladaChat + ChatPanel, dialogs…)
     │   │   └── hooks/    usePeladaDetail, usePeladaActions, usePeladaChat, usePlayerPeladaHistory, useComparePlayers, useUserSearch
-    │   ├── daily/        session detail feature (AdminActionBar, TeamsSection, MatchResultsSection, LeagueTableSection, DailyStatusBadge, modals…)
+    │   ├── daily/        session detail feature (DailyHeader with the admin actions, AttendanceSummaryCard, AttendanceList, TeamsSection + TeamCard/TeamColorDot, MatchResultsSection, LeagueTableSection, DailyStatusBadge, modals…)
     │   │   └── hooks/    useDailyDetail, useDailyActions, useDailyModals, useMatchResults, usePlayerSelection
     │   ├── profile/      profile feature (KpiCard, charts, MatchHistoryTable, EditProfileModal…) + index.ts barrel
     │   │   └── hooks/    useProfile
@@ -94,7 +94,7 @@ Where new code goes:
 | `/auth` (`?tab=login\|register`) | `AuthPage` — returns to `location.state.from` after login | public |
 | `/home` | `HomePage` — the user's peladas and next sessions | private |
 | `/pelada/:id` | `PeladaDetailPage` — banner card, pill tabs (members grid with search and position chips, stats from the ranking already loaded; sessions: next-session card with confirm/withdraw + history grouped by month; ranking; awards with the leader highlighted), chat from a floating button (Popover panel on desktop, Drawer on mobile). Ranking rows have a history button and the ⌘K menu has "Histórico do Jogador" (⌘I); both open `PlayerHistoryDialog` (lazy-loaded: summary, goals/assists chart, sessions linking to `/daily/:id`) | private |
-| `/daily/:id` | `DailyDetailPage` — attendance, teams, results, league table, stats, awards, champion photo, admin actions | private |
+| `/daily/:id` | `DailyDetailPage` — header (back link, date, status, metadata, admin actions + ⋯ menu); before the session: attendance card (confirm / withdraw), collapsible attendance list (confirmed / pending, admin confirm/remove/confirm all) and teams (sort, swap, rename, color); live and finished states: results, league table, stats, awards, champion photo | private |
 | `/profile/:id` | `ProfilePage` — KPIs, charts, match history, peladas in common, edit profile (own). Another user's profile is only visible when you share a pelada (403 → message) | private |
 | `*` | `NotFoundPage` | public |
 
@@ -141,7 +141,7 @@ Data flows **api → hook → page/component**. A hook owns the request state; t
 - `useProfile(userId)` — profile page data keyed by user id; `status` is `loading | ready | forbidden | notFound | error`.
 - `useDailyDetail(id)` — loads the daily detail; exposes `setDaily` to merge a mutation's response and `refetch` (returns a promise, doesn't show the skeleton again).
 - `useDailyActions({ daily, setDaily, refetch })` — every mutation of the session page with its pending flag.
-- `useDailyModals` — open/close state of the daily page's dialogs.
+- `useDailyModals` — open/close state of the daily page's dialogs, plus `attendanceOpen` (null = open until the teams are sorted; the page sets it to false after a successful sort).
 - `useMatchResults` — the results form rows and submit. It always sends every row: the backend treats the list as the session's full set of matches and deletes saved matches that were removed.
 - `usePlayerSelection` — shared multi-select of players (finalize and results modals).
 - `usePlayerPeladaHistory(peladaId, userId | null, limit | null)` — loads `getPlayerPeladaHistory` (`?limit=`, server-side) for the player history dialog; returns `{ rows, totalSessions, loading, fetching, error, retry }` (rows newest first). `loading` is only true until the first response for that player; changing the limit keeps the previous rows on screen with `fetching` (the dialog dims them). The dialog's period selector (last 5 / 10 / 20 / all, default 5) sets the limit, and the summary tiles, chart and table are derived from the returned rows. Results are keyed by request (no `setState` in the effect body), so switching player never shows the previous player's data. Reference for new fetch hooks under the `react-hooks/set-state-in-effect` lint rule.
@@ -383,7 +383,7 @@ Reference: `components/CreatePeladaModal.tsx`, `components/EditPeladaModal.tsx`.
 
 ### 6. Server-provided permissions
 
-Render admin actions from `daily.isAdmin` (reference: `components/daily/AdminActionBar.tsx`); the server stays the authority.
+Render admin actions from `daily.isAdmin` (reference: `components/daily/DailyHeader.tsx`); the server stays the authority.
 
 ### 7. Pure logic in `utils/` with tests
 

@@ -1,15 +1,12 @@
-import { CalendarCheck, CalendarX } from 'lucide-react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import ImportFromMessageModal from '@/components/daily/ImportFromMessageModal'
 import { useAuth } from '@/hooks/useAuth'
-import { Button } from '@/components/ui/button'
-import { DailyStatusBadge } from '@/components/daily/DailyStatusBadge'
+import { Input } from '@/components/ui/input'
 import DetailSkeleton from '@/components/daily/DetailSkeleton'
 import TeamsSection from '@/components/daily/TeamsSection'
 import ResultsModal from '@/components/daily/ResultsModal'
 import FinalizeModal from '@/components/daily/FinalizeModal'
-import ConfirmedPlayersSection from '@/components/daily/ConfirmedPlayersSection'
-import AdminActionBar from '@/components/daily/AdminActionBar'
+import DeleteDailyDialog from '@/components/daily/DeleteDailyDialog'
 import StatusConfirmDialog from '@/components/daily/StatusConfirmDialog'
 import LiveSessionCard from '@/components/daily/LiveSessionCard'
 import MatchResultsSection from '@/components/daily/MatchResultsSection'
@@ -17,9 +14,13 @@ import LeagueTableSection from '@/components/daily/LeagueTableSection'
 import PlayerStatsSection from '@/components/daily/PlayerStatsSection'
 import AwardsSection from '@/components/daily/AwardsSection'
 import ChampionPhotoSection from '@/components/daily/ChampionPhotoSection'
+import { DailyHeader } from '@/components/daily/DailyHeader'
+import { AttendanceSummaryCard } from '@/components/daily/AttendanceSummaryCard'
+import { AttendanceList } from '@/components/daily/AttendanceList'
 import { useDailyDetail } from '@/components/daily/hooks/useDailyDetail'
 import { useDailyModals } from '@/components/daily/hooks/useDailyModals'
 import { useDailyActions } from '@/components/daily/hooks/useDailyActions'
+import { IMAGE_ACCEPT } from '@/schemas/upload'
 import { isDailyOpen } from '@/types/daily'
 
 export default function DailyDetailPage() {
@@ -27,13 +28,15 @@ export default function DailyDetailPage() {
   const dailyId = Number(id)
   const { user } = useAuth()
 
-  const { daily, setDaily, loading, accessDenied, formattedDate, refetch } = useDailyDetail(dailyId)
+  const { daily, setDaily, loading, accessDenied, refetch } = useDailyDetail(dailyId)
 
   const {
     resultsOpen, openResults, closeResults,
     finalizeOpen, openFinalize, closeFinalize,
     importOpen, openImport, closeImport,
     statusDialog, setStatusDialog,
+    deleteOpen, setDeleteOpen,
+    attendanceOpen, setAttendanceOpen,
     fileInputRef,
   } = useDailyModals()
 
@@ -44,222 +47,187 @@ export default function DailyDetailPage() {
     if (await actions.changeStatus(statusDialog.targetStatus)) setStatusDialog(null)
   }
 
+  async function handleSortTeams() {
+    // the attendance list collapses once the teams are drawn
+    if (await actions.handleSortTeams()) setAttendanceOpen(false)
+  }
+
   function handleChampionUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (file) void actions.uploadChampion(file)
     e.target.value = ''
   }
 
-  const isCurrentUserConfirmed =
-    user != null && daily != null && daily.confirmedPlayers.some((p) => p.id === user.id)
+  if (loading) return <DetailSkeleton />
 
-  const canToggleAttendance = daily != null && isDailyOpen(daily.status)
+  if (accessDenied) {
+    return (
+      <div className="flex items-center justify-center py-24 text-center">
+        <div>
+          <h2 className="mb-2 text-2xl font-bold">Acesso negado</h2>
+          <p className="text-muted-foreground">Você não faz parte desta pelada.</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (daily == null) return null
+
+  const isCurrentUserConfirmed = user != null && daily.confirmedPlayers.some((p) => p.id === user.id)
+  const open = isDailyOpen(daily.status)
+  const preStart = open || daily.status === 'CANCELED'
 
   return (
     <div className="page-enter flex flex-1 flex-col">
-      {loading ? (
-        <DetailSkeleton />
-      ) : accessDenied ? (
-        <div className="flex items-center justify-center py-24">
-          <div className="text-center">
-            <h2 className="text-2xl font-bold mb-2">Acesso negado</h2>
-            <p className="text-muted-foreground">Você não faz parte desta pelada.</p>
-          </div>
-        </div>
-      ) : daily == null ? null : (
-        <main className={`container max-w-4xl mx-auto px-4 py-6${daily.isAdmin ? ' pb-24' : ''}`}>
-          {/* Header */}
-          <div className="mb-6 flex items-start justify-between gap-4">
-            <div className="min-w-0">
-              <Link
-                to={`/pelada/${daily.peladaId}`}
-                className="text-sm text-muted-foreground hover:underline"
-              >
-                ← {daily.peladaName}
-              </Link>
-              <div className="flex items-center gap-3 mt-1 flex-wrap">
-                <h1 className="text-2xl font-bold tracking-tight">
-                  {formattedDate}
-                </h1>
-                <DailyStatusBadge status={daily.status} />
-                {daily.status === 'IN_COURSE' && (
-                  <span className="flex items-center gap-1.5 text-sm font-medium text-chart-1">
-                    <span className="inline-block size-2 animate-pulse rounded-full bg-chart-1" />
-                    Ao vivo
-                  </span>
-                )}
-              </div>
-              <p className="text-sm text-muted-foreground mt-1">{daily.dailyTime}</p>
-            </div>
+      <main className="mx-auto flex w-full max-w-[1120px] flex-col gap-7 p-4 md:px-8 md:py-7">
+        <DailyHeader
+          daily={daily}
+          onImportFromMessage={openImport}
+          onConfirmDaily={() =>
+            setStatusDialog({
+              targetStatus: 'CONFIRMED',
+              title: 'Confirmar sessão',
+              description: 'A sessão passa a confirmada. A lista de presença continua aberta até a sessão começar.',
+              variant: 'gradient',
+            })
+          }
+          onStartSession={() =>
+            setStatusDialog({
+              targetStatus: 'IN_COURSE',
+              title: 'Iniciar sessão',
+              description: 'A sessão fica ao vivo e a presença e os times não podem mais mudar.',
+            })
+          }
+          onCancelDaily={() =>
+            setStatusDialog({
+              targetStatus: 'CANCELED',
+              title: 'Cancelar sessão',
+              description: 'A sessão será cancelada. Essa ação não pode ser desfeita.',
+            })
+          }
+          onEnterResults={openResults}
+          onFinalizeDaily={openFinalize}
+          onChangeChampionPhoto={() => fileInputRef.current?.click()}
+          onDeleteDaily={() => setDeleteOpen(true)}
+        />
 
-            {/* Attendance action */}
-            {canToggleAttendance && (
-              <div className="flex flex-col items-center sm:items-end gap-1 shrink-0 mt-4">
-                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Presença</span>
-                {isCurrentUserConfirmed ? (
-                  <Button
-                    variant="outline"
-                    className="text-destructive sm:rounded-full rounded-full sm:w-auto sm:h-auto w-10 h-10 p-0 sm:px-4 sm:py-2"
-                    disabled={actions.confirmLoading}
-                    onClick={() => actions.toggleAttendance(true)}
-                  >
-                    <CalendarX className="h-4 w-4 text-destructive" />
-                    <span className="hidden sm:inline">{actions.confirmLoading ? 'Atualizando...' : 'Cancelar presença'}</span>
-                  </Button>
-                ) : (
-                  <Button
-                    variant="gradient"
-                    className="rounded-full sm:w-auto sm:h-auto w-10 h-10 p-0 sm:px-4 sm:py-2"
-                    disabled={actions.confirmLoading}
-                    onClick={() => actions.toggleAttendance(false)}
-                  >
-                    <CalendarCheck className="h-4 w-4" />
-                    <span className="hidden sm:inline">{actions.confirmLoading ? 'Atualizando...' : 'Confirmar presença'}</span>
-                  </Button>
-                )}
-              </div>
+        {preStart && (
+          <>
+            {open && (
+              <AttendanceSummaryCard
+                daily={daily}
+                isConfirmed={isCurrentUserConfirmed}
+                pending={actions.confirmLoading}
+                onToggle={() => actions.toggleAttendance(isCurrentUserConfirmed)}
+              />
             )}
-          </div>
-
-          {/* Admin action bar */}
-          <AdminActionBar
-            daily={daily}
-            onConfirmDaily={() =>
-              setStatusDialog({
-                targetStatus: 'CONFIRMED',
-                title: 'Confirmar sessão',
-                description: 'A sessão passa a confirmada. A lista de presença continua aberta até a sessão começar.',
-                variant: 'gradient',
-              })
-            }
-            onStartSession={() =>
-              setStatusDialog({
-                targetStatus: 'IN_COURSE',
-                title: 'Iniciar sessão',
-                description: 'A sessão fica ao vivo e a presença e os times não podem mais mudar.',
-              })
-            }
-            onCancelDaily={() =>
-              setStatusDialog({
-                targetStatus: 'CANCELED',
-                title: 'Cancelar sessão',
-                description: 'A sessão será cancelada. Essa ação não pode ser desfeita.',
-              })
-            }
-            onEnterResults={openResults}
-            onFinalizeDaily={openFinalize}
-            onImportFromMessage={openImport}
-          />
-
-          {/* Results modal */}
-          {resultsOpen && (
-            <ResultsModal
+            <AttendanceList
               daily={daily}
-              onClose={closeResults}
-              onSuccess={(updated) => {
-                setDaily(updated)
-                closeResults()
-              }}
+              open={attendanceOpen ?? daily.teams.length === 0}
+              onOpenChange={setAttendanceOpen}
+              canManage={daily.isAdmin && open}
+              togglingId={actions.adminToggleLoading}
+              confirmAllPending={actions.confirmAllLoading}
+              onConfirm={(userId) => actions.adminToggle(userId, true)}
+              onUnconfirm={(userId) => actions.adminToggle(userId, false)}
+              onConfirmAll={actions.confirmAll}
             />
-          )}
-
-          {/* Finalize modal */}
-          {finalizeOpen && (
-            <FinalizeModal
-              daily={daily}
-              onClose={closeFinalize}
-              onSuccess={(updated) => {
-                setDaily(updated)
-                closeFinalize()
-              }}
-            />
-          )}
-
-          {/* Import from message modal */}
-          {importOpen && daily && (
-            <ImportFromMessageModal
-              daily={daily}
-              onClose={closeImport}
-              onSuccess={(updated) => { setDaily(updated); closeImport() }}
-            />
-          )}
-
-          {/* Confirmation dialog */}
-          {statusDialog && (
-            <StatusConfirmDialog
-              title={statusDialog.title}
-              description={statusDialog.description}
-              variant={statusDialog.variant}
-              loading={actions.statusLoading}
-              onConfirm={handleStatusConfirm}
-              onClose={() => setStatusDialog(null)}
-            />
-          )}
-
-          {/* Confirmed Players */}
-          {daily.status !== 'FINISHED' && (
-            <ConfirmedPlayersSection
-              daily={daily}
-              adminToggleLoading={actions.adminToggleLoading}
-              onAdminConfirm={(userId) => actions.adminToggle(userId, true)}
-              onAdminDisconfirm={(userId) => actions.adminToggle(userId, false)}
-            />
-          )}
-
-          {/* Teams (non-FINISHED) */}
-          {daily.status !== 'FINISHED' && (
             <TeamsSection
               daily={daily}
               sortLoading={actions.sortLoading}
               swapLoading={actions.swapLoading}
               selectedPlayer={actions.selectedPlayer}
-              onSortTeams={actions.handleSortTeams}
+              onSortTeams={handleSortTeams}
               onPlayerClick={actions.handlePlayerClick}
               currentUserId={user?.id ?? null}
               onTeamNameChange={actions.changeTeamName}
               onTeamColorChange={actions.changeTeamColor}
             />
-          )}
+          </>
+        )}
 
-          {/* IN_COURSE CTA card */}
-          <LiveSessionCard daily={daily} onEnterResults={openResults} />
+        {daily.status === 'IN_COURSE' && (
+          <>
+            <LiveSessionCard daily={daily} onEnterResults={openResults} />
+            <LeagueTableSection daily={daily} />
+            <MatchResultsSection daily={daily} />
+          </>
+        )}
 
-          {/* Live results during IN_COURSE */}
-          {daily.status === 'IN_COURSE' && (
-            <>
-              <LeagueTableSection daily={daily} />
-              <MatchResultsSection daily={daily} />
-            </>
-          )}
+        {daily.status === 'FINISHED' && (
+          <>
+            <ChampionPhotoSection
+              daily={daily}
+              fileInputRef={fileInputRef}
+              uploadLoading={actions.uploadLoading}
+              onUploadClick={() => fileInputRef.current?.click()}
+              onChange={handleChampionUpload}
+            />
+            <AwardsSection daily={daily} />
+            <LeagueTableSection daily={daily} />
+            <MatchResultsSection daily={daily} />
+            <PlayerStatsSection stats={daily.playerStats} />
+          </>
+        )}
+      </main>
 
-          {/* Finished sections */}
-          {daily.status === 'FINISHED' && (
-            <>
-              <ChampionPhotoSection
-                daily={daily}
-                fileInputRef={fileInputRef}
-                uploadLoading={actions.uploadLoading}
-                onUploadClick={() => fileInputRef.current?.click()}
-                onChange={handleChampionUpload}
-              />
-              <AwardsSection daily={daily} />
-              <LeagueTableSection daily={daily} />
-              <MatchResultsSection daily={daily} />
-              <PlayerStatsSection stats={daily.playerStats} />
-              <TeamsSection
-                daily={daily}
-                sortLoading={actions.sortLoading}
-                swapLoading={actions.swapLoading}
-                selectedPlayer={actions.selectedPlayer}
-                onSortTeams={actions.handleSortTeams}
-                onPlayerClick={actions.handlePlayerClick}
-                currentUserId={user?.id ?? null}
-                onTeamNameChange={actions.changeTeamName}
-                onTeamColorChange={actions.changeTeamColor}
-              />
-            </>
-          )}
-        </main>
+      {/* Champion photo picker, opened from the header menu */}
+      {daily.status === 'FINISHED' && daily.isAdmin && (
+        <Input ref={fileInputRef} type="file" accept={IMAGE_ACCEPT} className="hidden" onChange={handleChampionUpload} />
+      )}
+
+      {resultsOpen && (
+        <ResultsModal
+          daily={daily}
+          onClose={closeResults}
+          onSuccess={(updated) => {
+            setDaily(updated)
+            closeResults()
+          }}
+        />
+      )}
+
+      {finalizeOpen && (
+        <FinalizeModal
+          daily={daily}
+          onClose={closeFinalize}
+          onSuccess={(updated) => {
+            setDaily(updated)
+            closeFinalize()
+          }}
+        />
+      )}
+
+      {importOpen && (
+        <ImportFromMessageModal
+          daily={daily}
+          onClose={closeImport}
+          onSuccess={(updated) => {
+            setDaily(updated)
+            closeImport()
+          }}
+        />
+      )}
+
+      {statusDialog && (
+        <StatusConfirmDialog
+          title={statusDialog.title}
+          description={statusDialog.description}
+          variant={statusDialog.variant}
+          loading={actions.statusLoading}
+          onConfirm={handleStatusConfirm}
+          onClose={() => setStatusDialog(null)}
+        />
+      )}
+
+      {daily.isAdmin && (
+        <DeleteDailyDialog
+          open={deleteOpen}
+          onOpenChange={setDeleteOpen}
+          dailyId={daily.id}
+          peladaId={daily.peladaId}
+          dailyDate={daily.dailyDate}
+        />
       )}
     </div>
   )

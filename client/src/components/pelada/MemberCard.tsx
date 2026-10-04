@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { PlayerAvatar } from "@/components/PlayerAvatar"
 import { StarRow } from "@/components/StarRow"
-import { normalizePosition, POSITION_FILTERS } from "@/utils/memberFilters"
+import { positionShortLabel } from "@/utils/memberFilters"
 import type { PeladaMember } from "@/types/pelada"
 
 export interface MemberStats {
@@ -31,8 +31,7 @@ interface MemberCardProps {
 
 export function MemberCard({ member, stats, canManage, isToggling, onToggleAdmin, onRemove }: MemberCardProps) {
   const navigate = useNavigate()
-  const normalized = normalizePosition(member.position)
-  const position = POSITION_FILTERS.find((f) => f.value === normalized)?.label ?? null
+  const position = positionShortLabel(member.position)
 
   return (
     <article className="flex flex-col gap-3 rounded-xl border bg-card p-3.5 transition-colors hover:border-input hover:bg-card-elevated">
