@@ -63,12 +63,13 @@ function summarize(rows: PlayerPeladaHistoryRow[]) {
   return rows.reduce(
     (acc, row) => ({
       sessions: acc.sessions + 1,
+      matches: acc.matches + row.matchesPlayed,
       goals: acc.goals + row.goals,
       assists: acc.assists + row.assists,
       matchWins: acc.matchWins + row.wins,
       titles: acc.titles + (row.wonSession ? 1 : 0),
     }),
-    { sessions: 0, goals: 0, assists: 0, matchWins: 0, titles: 0 }
+    { sessions: 0, matches: 0, goals: 0, assists: 0, matchWins: 0, titles: 0 }
   )
 }
 
@@ -233,9 +234,10 @@ function PlayerHistoryContent({
             </Tabs>
           </div>
 
-          {/* Totals of the selected period; Vitórias = partidas vencidas, Títulos = sessões vencidas */}
-          <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
+          {/* Totals of the selected period; Jogos = partidas jogadas, Vitórias = partidas vencidas, Títulos = sessões vencidas */}
+          <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
             <SummaryTile label="Sessões" value={summary.sessions} />
+            <SummaryTile label="Jogos" value={summary.matches} />
             <SummaryTile label="Gols" value={summary.goals} />
             <SummaryTile label="Assistências" value={summary.assists} />
             <SummaryTile label="Vitórias" value={summary.matchWins} />
@@ -348,8 +350,8 @@ function SummaryTile({ label, value }: { label: string; value: number }) {
 function HistorySkeleton() {
   return (
     <div className="flex flex-col gap-4">
-      <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
-        {Array.from({ length: 5 }).map((_, i) => (
+      <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+        {Array.from({ length: 6 }).map((_, i) => (
           <Skeleton key={i} className="h-16 rounded-lg" />
         ))}
       </div>
