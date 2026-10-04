@@ -67,45 +67,50 @@ There is a single `src/main/resources/application.properties`; there are no `app
 
 ## Package layout
 
+Features live under `domain/`, one package per domain (`domain/daily`, `domain/pelada`…). Each domain holds its controller, services, entities and repositories at its root, with request/response classes in `dto/`; the two big domains (`daily`, `stats`) also split `entity/` and `repository/`. Code used by every domain lives in `shared/`; the dev seed in `dev/`.
+
 ```
 com.futspring.backend
 ├── FutSpringApplication        main class, @EnableScheduling
-├── config/
-│   ├── SecurityConfig          filter chain, BCrypt PasswordEncoder
-│   ├── CorsConfig              ALLOWED_ORIGINS list + CorsConfigurationSource (used by SecurityConfig and WebSocketConfig)
-│   ├── JwtConfig               @Value holder for secret + TTL
-│   ├── WebSocketConfig         STOMP endpoint /ws (SockJS), broker /topic, app prefix /app, JwtChannelInterceptor
-│   └── DataInitializer         dev seed (CommandLineRunner, dev profile only)
-├── controller/                 AuthController, PeladaController, DailyController, UserController, FileController, ChatController (STOMP + @MessageExceptionHandler)
-├── dto/                        request/response DTOs (Lombok @Data/@Builder), response DTOs map themselves with static from(entity)
-├── entity/                     12 JPA entities + DailyStatus enum + EntityIdentity (id-based equals/hashCode)
-├── exception/                  AppException (RuntimeException + HttpStatus), ErrorResponse, GlobalExceptionHandler
-├── filter/
-│   ├── JwtAuthFilter           reads Authorization: Bearer, sets the email as principal
-│   └── AuthRateLimitFilter     10/min per IP on login and register (Bucket4j buckets in a Caffeine cache)
-├── helper/
-│   ├── UserAuthenticationHelper   getAuthenticatedUser(email) → User or 404
-│   └── PeladaAccessHelper         isMember/isAdmin/isCreator, requireMember/requireAdmin (exists queries)
-├── repository/                 Spring Data JPA interfaces (JPQL in Award, PlayerMatchStat, Team, UserDailyStats, User)
-├── service/
-│   ├── AuthService             register / login, issues JWT
-│   ├── PeladaService           pelada CRUD, members, admins, user search, image
-│   ├── DailyService            create, list, status transitions, delete, detail aggregation
-│   ├── DailyAttendanceService  confirm / unconfirm (self and by admin)
-│   ├── DailyTeamManagementService  sort teams (star-balanced LPT), swap, rename, color
-│   ├── DailyResultsService     results, live league table, finalize (stats, ranking, awards), champion image, populate, clearResults
-│   ├── AggregateRebuildService rebuilds Ranking (per pelada) and Stats (global) for a set of players, batch queries
-│   ├── DailyDTOMapper          PlayerDTO, TeamDTO, MatchDTO mapping
-│   ├── DailySchedulerService   hourly cron that auto-creates the next daily
-│   ├── RankingService, AwardsService, StatsService   read-side aggregates
-│   ├── ChatService             save message, paged history
-│   ├── FileUploadService       stores/deletes images on local disk (UUID + extension from the content type, delete after commit)
-│   ├── JwtService              generate / validate / extract
-│   └── UserService             profile get/update, avatar, background image
-└── websocket/JwtChannelInterceptor   authenticates STOMP CONNECT
+├── shared/
+│   ├── config/                 SecurityConfig (filter chain, BCrypt), CorsConfig (ALLOWED_ORIGINS + CorsConfigurationSource, used by
+│   │                           SecurityConfig and WebSocketConfig), JwtConfig (@Value secret + TTL), WebSocketConfig (STOMP /ws, SockJS,
+│   │                           broker /topic, app prefix /app, JwtChannelInterceptor)
+│   ├── exception/              AppException (RuntimeException + HttpStatus), ErrorResponse, GlobalExceptionHandler
+│   ├── helper/                 UserAuthenticationHelper (getAuthenticatedUser(email) → User or 404),
+│   │                           PeladaAccessHelper (isMember/isAdmin/isCreator, requireMember/requireAdmin, exists queries)
+│   └── entity/EntityIdentity   id-based equals/hashCode for every entity, safe with Hibernate proxies
+├── domain/                   one package per feature
+│   ├── auth/                       AuthController, AuthService (register / login, issues JWT), JwtService (generate / validate / extract),
+│   │   │                           JwtAuthFilter (Bearer → email principal), AuthRateLimitFilter (10/min per IP on login and register,
+│   │   │                           Bucket4j + Caffeine), JwtChannelInterceptor (authenticates STOMP CONNECT/SUBSCRIBE/SEND)
+│   │   └── dto/                    LoginRequestDTO, RegisterRequestDTO, AuthResponseDTO, UserResponseDTO
+│   ├── user/                       UserController, UserService (profile get/update, avatar, background image), User, UserRepository
+│   │   └── dto/                    ProfileDTO, PublicUserDTO, UpdateProfileRequest
+│   ├── pelada/                     PeladaController, PeladaService (pelada CRUD, members, admins, user search, image), Pelada, PeladaRepository
+│   │   └── dto/                    Create/UpdatePeladaRequestDTO, DayOfWeekPattern, PeladaResponseDTO, PeladaDetailResponseDTO, PeladaMemberDTO…
+│   ├── daily/                      DailyController and the daily services:
+│   │   │                           DailyService (create, list, status transitions, delete, detail aggregation)
+│   │   │                           DailyAttendanceService (confirm / unconfirm, self and by admin)
+│   │   │                           DailyTeamManagementService (sort teams with star-balanced LPT, swap, rename, color)
+│   │   │                           DailyResultsService (results, live league table, finalize, champion image, populate, clearResults)
+│   │   │                           DailySchedulerService (hourly cron that auto-creates the next daily), DailyDTOMapper (Player/Team/MatchDTO)
+│   │   ├── entity/                 Daily, DailyStatus, Team, Match, PlayerMatchStat, LeagueTableEntry
+│   │   ├── repository/             Daily, Team, Match, PlayerMatchStat, LeagueTableEntry repositories
+│   │   └── dto/                    DailyDetailDTO, DailyListItemDTO, MatchResultDTO, Finalize/Populate/Swap/Update* request DTOs
+│   ├── stats/                      RankingService, AwardsService, StatsService (read-side aggregates),
+│   │   │                           AggregateRebuildService (rebuilds Ranking per pelada and global Stats for a set of players, batch queries)
+│   │   ├── entity/                 Ranking, Stats, UserDailyStats, DailyAward
+│   │   ├── repository/             Ranking, Stats, UserDailyStats, DailyAward repositories (grouped/native aggregate queries)
+│   │   └── dto/                    RankingDTO, StatsDTO, PeladaAwardsDTO, PlayerPelada{Stats,History}DTO, UserMatchHistoryDTO, UserStatsTimelineDTO
+│   ├── chat/                       ChatController (STOMP + @MessageExceptionHandler), ChatService (save message, paged history), Message, MessageRepository
+│   │   └── dto/                    MessageDTO, SendMessageRequest
+│   ├── file/                       FileController (public GET /files/{filename}), FileUploadService (stores/deletes images on local disk,
+│   │                               UUID + extension from the content type, delete after commit)
+└── dev/DataInitializer         dev seed (CommandLineRunner, dev profile only)
 ```
 
-New code goes in the matching layer folder. When a service grows past ~300 lines or mixes responsibilities, split it by sub-domain the way the daily services are split (`DailyService` orchestrates, `DailyAttendanceService` / `DailyTeamManagementService` / `DailyResultsService` own one concern each).
+New code goes in the domain it belongs to (a new feature is a new package under `domain/`); cross-domain references are plain imports (entities, services and DTOs are public). Code needed by most domains goes in `shared/`. A new domain starts flat (controller, service, entity, repository at its root, DTOs in `dto/`) and splits `entity/` / `repository/` only when it grows like `daily` did. Response DTOs map themselves with a static `from(entity)`; entities are listed in [Domain model](#domain-model). When a service grows past ~300 lines or mixes responsibilities, split it by sub-domain the way the daily services are split (`DailyService` orchestrates, `DailyAttendanceService` / `DailyTeamManagementService` / `DailyResultsService` own one concern each).
 
 ## Architectural patterns
 
@@ -179,7 +184,7 @@ New status-like fields must be Java enums stored with `@Enumerated(EnumType.STRI
 
 ## Security
 
-### Filter chain (`S/config/SecurityConfig.java`)
+### Filter chain (`S/shared/config/SecurityConfig.java`)
 
 - CSRF disabled, stateless sessions, JSON 401 entry point.
 - Public: `/api/v1/auth/**`, `/api/v1/files/**`, `/ws/**` (the STOMP layer authenticates itself, see WebSocket). Everything else requires a valid token.
@@ -187,7 +192,7 @@ New status-like fields must be Java enums stored with `@Enumerated(EnumType.STRI
 - No roles: authorities are always empty, there is no `@PreAuthorize`/`@EnableMethodSecurity`. **All authorization is done in services** (see [Ownership](#ownership--authorization)).
 - Passwords: BCrypt (strength 10).
 
-### Tokens (`S/service/JwtService.java`)
+### Tokens (`S/domain/auth/JwtService.java`)
 
 - HS256 JWT, claims `sub` = email, `userId`, `email`, `iat`, `exp`; TTL 7 days by default.
 - Returned in the body (`AuthResponseDTO {token, user}`); the frontend keeps it in `localStorage`.
@@ -202,7 +207,7 @@ New status-like fields must be Java enums stored with `@Enumerated(EnumType.STRI
 
 `AuthRateLimitFilter` (in the security chain): 10 requests per minute per client IP on `POST /api/v1/auth/login` and `POST /api/v1/auth/register`, answering 429 with the usual error body. Buckets live in a Caffeine cache (max 100k entries, evicted 10 min after the last access). The IP is `getRemoteAddr()`, which reflects `X-Forwarded-For` because of `server.forward-headers-strategy=framework`. In memory: one API instance only. New rate limits go into a filter like this one.
 
-### WebSocket (`S/websocket/JwtChannelInterceptor.java`)
+### WebSocket (`S/domain/auth/JwtChannelInterceptor.java`)
 
 - `CONNECT` needs `Authorization: Bearer <token>` in the STOMP headers; without a valid token the frame is rejected.
 - `SUBSCRIBE` is allowed only to `/topic/pelada/{id}` when the user is a member of that pelada (`existsByIdAndMembers_Email`), and to the user's own `/user/queue/errors`. Any other destination is rejected.
@@ -269,7 +274,7 @@ Relationships: **creator** (`pelada.creator`), **admin** (`pelada.admins`), **me
 | No unique constraint on `user_daily_stats(daily_id, user_id)` / `player_match_stats(match_id, user_id)` (the code never writes duplicates, but the database doesn't enforce it). Check production for duplicates before adding them | `V1__baseline.sql` |
 | The JWT is valid for 7 days with no revocation, and the filter doesn't check that the user still exists | `JwtAuthFilter`, `JwtService` |
 
-## Error handling (`S/exception/GlobalExceptionHandler.java`)
+## Error handling (`S/shared/exception/GlobalExceptionHandler.java`)
 
 | Exception | Status | Body |
 |-----------|--------|------|
@@ -368,7 +373,7 @@ When an endpoint or DTO changes, update this table, the frontend `src/api/*` + `
 
 ## Testing
 
-Tests live in `src/test/java/com/futspring/backend`, mirroring the main packages.
+Tests live in `src/test/java/com/futspring/backend`, in the same domain packages as the code they test (`domain/daily/DailyServiceTest`, `domain/stats/repository/UserDailyStatsRepositoryTest`…); shared test helpers (`BaseIntegrationTest`, `MembershipStubs`) are in `support/`, migration tests at the root.
 
 - **Service unit tests** — JUnit 5 + Mockito + AssertJ, one class per service (`PeladaServiceTest`, `DailyServiceTest`, `DailyAttendanceServiceTest`…). Mock repositories and `UserAuthenticationHelper`; build a real `PeladaAccessHelper` over the mocked `PeladaRepository` and call `MembershipStubs.stubMembership(peladaRepository, pelada…)` so the exists queries answer from the entities' member/admin sets.
 - **Controller integration tests** — extend `BaseIntegrationTest` (`@SpringBootTest(RANDOM_PORT)`, `@AutoConfigureMockMvc`, `@Transactional`, real JWTs from `JwtService`).

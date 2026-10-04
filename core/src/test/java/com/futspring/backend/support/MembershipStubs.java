@@ -1,9 +1,9 @@
 package com.futspring.backend.support;
 
-import com.futspring.backend.entity.Pelada;
-import com.futspring.backend.entity.User;
-import com.futspring.backend.helper.PeladaAccessHelper;
-import com.futspring.backend.repository.PeladaRepository;
+import com.futspring.backend.domain.pelada.Pelada;
+import com.futspring.backend.domain.pelada.PeladaRepository;
+import com.futspring.backend.shared.helper.PeladaAccessHelper;
+import com.futspring.backend.domain.user.User;
 
 import java.util.Arrays;
 import java.util.List;

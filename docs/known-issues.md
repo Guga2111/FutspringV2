@@ -11,13 +11,15 @@ Problemas críticos encontrados durante a escrita de `core/docs/BACKEND.md` e `c
 
 Ao corrigir um item, mude o status para "Corrigido" com o commit/PR e remova a entrada correspondente das tabelas de antipatterns / "Known gaps" do `BACKEND.md`.
 
+Os caminhos em "Onde" apontam para a organização atual do backend (pacotes por domínio em `domain/`, ver "Package layout" no `BACKEND.md`); os números de linha são do código atual, não do commit em que o problema foi encontrado.
+
 ---
 
 ## 1. O backend não compila no commit atual
 
 > **Corrigido** na branch `lf/user-history-dialog`: a query virou text block com `JOIN FETCH uds.daily`, e o endpoint `GET /api/v1/peladas/{id}/members/{userId}/history` checa se quem chama e o jogador-alvo são membros da pelada.
 
-**Onde:** `backend/src/main/java/com/futspring/backend/repository/UserDailyStatsRepository.java:87-89` (método `findHistoryByUserAndPelada`, introduzido no commit `53efc75`).
+**Onde:** `core/src/main/java/com/futspring/backend/domain/stats/repository/UserDailyStatsRepository.java:97` (método `findHistoryByUserAndPelada`, introduzido no commit `53efc75`).
 
 **Problema:**
 - A string da `@Query` quebra linha com aspas simples `"..."`, o que não compila em Java 17. É preciso usar um text block `"""`.
@@ -75,7 +77,7 @@ Considere usar `JOIN FETCH uds.daily` se o resultado for acessar a daily, para e
 
 > **Corrigido** em `cf31a82`: `submitResults` busca a partida com `matchRepository.findByIdAndDaily(matchId, daily)` e responde 404 "Partida não encontrada nesta sessão" sem alterar nada; o corpo é validado (`List<@Valid MatchResultDTO>`), e estatísticas de jogadores fora da partida são rejeitadas. Testes: `DailyResultsServiceTest.submitResults_matchIdFromAnotherDaily_*`.
 
-**Onde:** `backend/src/main/java/com/futspring/backend/service/DailyResultsService.java:67-68` (`submitResults`), rota `POST /api/v1/dailies/{id}/results`.
+**Onde:** `core/src/main/java/com/futspring/backend/domain/daily/DailyResultsService.java:62` (`submitResults`), rota `POST /api/v1/dailies/{id}/results`.
 
 ```java
 if (result.getMatchId() != null) {
@@ -103,9 +105,9 @@ Isso corrompe resultados, rankings e estatísticas de terceiros.
 > **Corrigido** em `cf31a82`: `CONNECT` exige token válido, `SUBSCRIBE` só em `/topic/pelada/{id}` para membros (e na fila `/user/queue/errors` do próprio usuário), `SEND` exige sessão autenticada, e os erros do `ChatController` voltam ao remetente. Testes: `JwtChannelInterceptorTest`.
 
 **Onde:**
-- `backend/src/main/java/com/futspring/backend/websocket/JwtChannelInterceptor.java`
-- `backend/src/main/java/com/futspring/backend/controller/ChatController.java:28`
-- `backend/src/main/java/com/futspring/backend/config/SecurityConfig.java` (`/ws/**` é `permitAll`)
+- `core/src/main/java/com/futspring/backend/domain/auth/JwtChannelInterceptor.java`
+- `core/src/main/java/com/futspring/backend/domain/chat/ChatController.java:29`
+- `core/src/main/java/com/futspring/backend/shared/config/SecurityConfig.java:45` (`/ws/**` é `permitAll`)
 
 **Problema:**
 - O interceptor só valida o token no frame `CONNECT`, e um `CONNECT` sem token ou com token inválido também é aceito: a sessão só fica sem usuário.
