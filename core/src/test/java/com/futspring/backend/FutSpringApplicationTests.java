@@ -2,12 +2,9 @@ package com.futspring.backend;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.TestPropertySource;
 
+// Uses the H2 datasource from src/test/resources/application.properties
 @SpringBootTest
-@TestPropertySource(properties = {
-    "spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration,org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration"
-})
 class FutSpringApplicationTests {
 
     @Test

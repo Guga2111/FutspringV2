@@ -122,7 +122,6 @@ class DailyTeamManagementServiceTest {
         // need exactly 2 (2 teams x 1), but 0 confirmed
         when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
-        when(teamRepository.findByDaily(scheduledDaily)).thenReturn(Collections.emptyList());
 
         assertThatThrownBy(() -> teamManagementService.sortTeams(100L, "admin@example.com"))
                 .isInstanceOf(AppException.class)
@@ -138,7 +137,6 @@ class DailyTeamManagementServiceTest {
 
         when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
-        when(teamRepository.findByDaily(scheduledDaily)).thenReturn(Collections.emptyList());
 
         assertThatThrownBy(() -> teamManagementService.sortTeams(100L, "admin@example.com"))
                 .isInstanceOf(AppException.class)

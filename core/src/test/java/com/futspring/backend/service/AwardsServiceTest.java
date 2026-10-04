@@ -118,7 +118,7 @@ class AwardsServiceTest {
     }
 
     @Test
-    void getAwards_top3Limit() {
+    void getAwards_returnsEveryWinner() {
         Daily daily = Daily.builder().id(1L).pelada(pelada).dailyDate(java.time.LocalDate.now()).dailyTime("18:00").build();
 
         User u4 = User.builder().id(5L).email("u4@e.com").username("u4").password("h").build();
@@ -140,7 +140,8 @@ class AwardsServiceTest {
         PeladaAwardsDTO.AwardCategoryDTO artilheiro = result.getCategories().stream()
                 .filter(c -> "ARTILHEIRO".equals(c.getType())).findFirst().orElseThrow();
 
-        assertThat(artilheiro.getTopWinners().size()).isLessThanOrEqualTo(3);
+        // the client shows the top 3 and expands to the rest ("Ver todos" in AwardsTab)
+        assertThat(artilheiro.getTopWinners()).hasSize(5);
     }
 
     @Test

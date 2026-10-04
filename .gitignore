@@ -3,9 +3,6 @@
 .env.local
 *.env
 
-# Shell deploy scripts (may contain credentials)
-*.sh
-
 # macOS system files
 .DS_Store
 **/.DS_Store

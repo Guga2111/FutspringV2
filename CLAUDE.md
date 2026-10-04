@@ -4,7 +4,7 @@ Manager for amateur soccer groups ("peladas"): members and admins, match-day ses
 
 - `client/` — React 19 + TypeScript + Vite + Tailwind 3 + shadcn/ui (package manager: **bun**)
 - `core/` — Spring Boot 3.2 + Java 17 + PostgreSQL, REST under `/api/v1` + STOMP chat on `/ws`
-- `deploy.sh` in `/scripts` (gitignored) — builds the frontend and the API image and ships them to the VPS
+- `scripts/deploy.sh` — builds the frontend and the API image and ships them to the VPS; run by the CD workflow on every push to `main` (`.github/workflows/`, see CI/CD in BACKEND.md). Secrets come from GitHub / `.env`, never from the script
 
 ## Required reading
 

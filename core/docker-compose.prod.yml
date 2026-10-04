@@ -1,12 +1,15 @@
-version: '3.8'
+# Production stack on the VPS. deploy.sh copies this file and .env to ~/projects/futspring
+# and loads the futspring-api image built on the runner (no build here).
+name: futspring
 
 services:
   futspring-api:
-    build: .
+    image: futspring-api:latest
     container_name: futspring_api
     ports:
-      - "8080:8080"
-    restart: always
+      # Only reachable through nginx on the host
+      - "127.0.0.1:${API_PORT:-8081}:8080"
+    restart: unless-stopped
     environment:
       SPRING_PROFILES_ACTIVE: prod
       DB_URL: ${DB_URL}
@@ -15,5 +18,11 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS:-604800000}
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}
+      # DDL_AUTO is intentionally absent: Flyway owns the schema, Hibernate validates it
     volumes:
-      - ./uploads:/app/uploads
+      - /opt/futspring-uploads:/app/uploads
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

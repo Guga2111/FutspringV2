@@ -27,9 +27,21 @@ Run from `backend/`:
 docker compose up --build                        # API + postgres:15-alpine (docker-compose.yml, dev)
 ```
 
-There is no CI. Run `./mvnw test` before finishing any backend change.
+CI (`.github/workflows/ci-backend.yml`) runs `./mvnw -B verify` (every test, including `FlywayMigrationTest`) on pushes and PRs to `main`/`dev` that touch `core/`. Run `./mvnw test` before finishing any backend change.
 
-Deploy: `deploy.sh` (repo root, gitignored) builds the frontend and an amd64 Docker image, ships it over `scp` to the VPS and runs it on port 8081 with uploads mounted at `/opt/futspring-uploads`. Production uses `docker-compose.prod.yml` values from the environment.
+### CI/CD
+
+- `.github/workflows/deploy.yml` runs on every push to `main` (and manually): it calls both CI workflows, writes `.env` from the GitHub secrets, runs `scripts/deploy.sh`, then smoke-tests `APP_URL` (200) and `<API_URL>/api/v1/files/__smoke-test__.png` (404 from `FileController`). A protected route can't be used: Spring Security answers 401 on any unknown path, so it wouldn't catch a wrong `API_URL` prefix.
+- `scripts/deploy.sh` (tracked, no secrets) builds the frontend with bun and an amd64 Docker image, rsyncs `client/dist` to `/var/www/futspring`, copies the image, `core/docker-compose.prod.yml` and `.env` to `~/projects/futspring` on the VPS, backs up the database with `pg_dump` (when `PG_DUMP_URL` is set, last 10 kept in `backups/`), starts the stack with `docker compose` (API on `127.0.0.1:${API_PORT:-8081}`, uploads in `/opt/futspring-uploads`) and waits up to 2 min for the 401 that proves Flyway and `validate` passed; otherwise it prints the logs and fails. It refuses a `.env` containing `DDL_AUTO`.
+- Locally: put the production values in `.env` at the repo root (gitignored, keys in `core/.env.example`) and run `VPS_IP=… VITE_API_URL=… ./scripts/deploy.sh`.
+
+| GitHub | Name | Notes |
+|--------|------|-------|
+| secret | `VPS_SSH_KEY`, `VPS_SSH_KNOWN_HOSTS` | deploy key; `ssh-keyscan -H <ip>` (falls back to keyscan when empty) |
+| secret | `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, `JWT_SECRET` | required |
+| secret | `PG_DUMP_URL` | optional; libpq URL on the Supabase session pooler (5432) for the pre-migration backup |
+| variable | `VPS_IP`, `APP_URL` | required |
+| variable | `VPS_USER` (`root`), `API_URL` (baked in as `VITE_API_URL`, defaults to `APP_URL`; production is `https://futspring.luisgosampaio.com/api` because nginx's `location /api/` strips the prefix before proxying to `:8081`), `ALLOWED_ORIGINS` (defaults to `APP_URL`), `API_PORT` (`8081`), `JWT_EXPIRATION_MS` | optional |
 
 ## Configuration & environment
 
@@ -131,7 +143,7 @@ New status-like fields must be Java enums stored with `@Enumerated(EnumType.STRI
 ### How the schema is managed
 
 - **Flyway 9** (`flyway-core`, version managed by Spring Boot 3.2; Postgres support is built into 9.x, so there is no `flyway-database-postgresql`) runs `src/main/resources/db/migration/V*.sql` at startup, before JPA.
-- Hibernate runs with `ddl-auto=${DDL_AUTO:validate}`: it never changes the schema, only checks that the tables match the entities, and the app fails to start if they don't. `DDL_AUTO` is no longer set by `deploy.sh` or the compose files; keep the default.
+- Hibernate runs with `ddl-auto=${DDL_AUTO:validate}`: it never changes the schema, only checks that the tables match the entities, and the app fails to start if they don't. `DDL_AUTO` is not set by `deploy.sh` or the compose files (the deploy fails if `.env` sets it); keep the default.
 - `spring.flyway.baseline-on-migrate=true` + `baseline-version=1`: a database that already has tables but no `flyway_schema_history` (production, an old dev volume) is marked as V1 without running it, and only later versions run. An empty database runs V1 and builds the whole schema.
 - `V1__baseline.sql` is the schema Hibernate generated from the entities on 2026-10-03 (PostgreSQL 15, `pg_dump --schema-only`), not a dump of production. Production's tables were built by `ddl-auto=update` from the same entities. Checked against a copy of production on 2026-10-04: same columns and constraints, except two leftover nullable columns `daily_awards.puskas_winner_id` / `wiltball_winner_id` (all null, FKs to `users`) that no entity maps; `validate` ignores them. Drop them in a later migration.
 - Production runs PostgreSQL 17 (Supabase); Flyway 9.22 logs "PostgreSQL 17 is newer than this version of Flyway" but works. Upgrading means Flyway 10 + `flyway-database-postgresql`.
@@ -351,7 +363,7 @@ Tests live in `src/test/java/com/futspring/backend`, mirroring the main packages
 - **Migration test** — `FlywayMigrationTest` applies every migration to a Postgres container and starts the app with `validate`. A new migration or entity change must keep it green (needs Docker).
 - When adding an endpoint: a controller test (happy path, validation 400, 403 for non-member/non-admin, 404) and service tests for the rules, including the ownership cases listed in [Rules for new code](#rules-for-new-code).
 - Mockito strict stubs are on: remove stubs a test doesn't use (`UnnecessaryStubbingException`).
-- The last recorded run had failures (`FutSpringApplicationTests`, `DailySchedulerServiceTest`, `AwardsServiceTest`, unnecessary stubbings in `DailyResultsServiceTest`/`DailyTeamManagementServiceTest`). Don't add new failures; fix existing ones when touching those services.
+- The suite is green and CI blocks the deploy on any failure; keep it that way.
 
 ## Conventions
 
@@ -426,7 +438,7 @@ Don't introduce these. Some exist already ("Found in"); fix them when the change
 | 2 | Trust a child id from the request without checking it belongs to the route's parent (IDOR) | Scope it: `match.getDaily().getId().equals(dailyId)` or a scoped query | `DailyResultsService.java:68` |
 | 3 | Endpoints that read another user's data with no relationship check, or expose email | Check the relationship; return a public DTO without PII | `StatsService`, `UserResponseDTO`, `ProfileDTO` |
 | 4 | Unauthorized WebSocket subscriptions / anonymous CONNECT | Authorize `SUBSCRIBE` to `/topic/pelada/{id}` for members only; reject CONNECT without a valid token | `JwtChannelInterceptor.java`, `ChatController.java` |
-| 5 | Secrets in tracked or deployable files (DB password, JWT secret, Supabase URL) | Environment variables / `.env` (gitignored); rotate anything that leaked | `deploy.sh` (gitignored but plaintext), `docker-compose.yml` (dev values) |
+| 5 | Secrets in tracked or deployable files (DB password, JWT secret, Supabase URL) | Environment variables / `.env` (gitignored); rotate anything that leaked | `docker-compose.dev.yml` (dev values) |
 | 6 | Multi-line `"..."` string in `@Query` (doesn't compile on Java 17) or mismatched aliases | Text block `"""..."""`, one alias | — |
 | 7 | Catch-all handler that swallows the exception without logging | `log.error` in the catch-all; specific handlers for framework exceptions | `GlobalExceptionHandler.java:41` |
 | 8 | Lombok `@Data` on entities (equals/hashCode over every field and lazy collections; `toString` triggers lazy loads) | `@Getter @Setter`, id-based equals/hashCode, no collection in `toString` | all of `S/entity/` |

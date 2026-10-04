@@ -1,0 +1,42 @@
+name: CI Frontend
+
+on:
+  push:
+    branches: [main, dev]
+    paths: [client/**, .github/workflows/ci-frontend.yml]
+  pull_request:
+    branches: [main, dev]
+    paths: [client/**, .github/workflows/ci-frontend.yml]
+  workflow_call:
+
+concurrency:
+  group: ci-frontend-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: client
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      # TODO: make blocking once the pre-existing react-hooks/set-state-in-effect errors are fixed
+      # (useDailyDetail, usePeladaDetail, ChatSidebar, ComparePlayersDialog, HomePage, ProfilePage, PeladaCard, ui/badge)
+      - name: Lint
+        run: bun run lint
+        continue-on-error: true
+
+      - name: Build (tsc -b + vite build)
+        run: bun run build
+
+      - name: Test
+        run: bun run test

@@ -5,7 +5,7 @@ React single-page app in `frontend/`. UI text is in Portuguese (pt-BR); code ide
 ## Stack
 
 - React 19, TypeScript ~5.9 (strict), Vite 8, Vitest 2
-- **bun** as package manager — never use `npm`/`yarn`. The stray `package-lock.json` must be deleted; `bun.lock` is the only lockfile
+- **bun** as package manager — never use `npm`/`yarn`; `bun.lock` is the only lockfile
 - Tailwind CSS 3.4 (`tailwind.config.js` + `postcss.config.js`, `tailwindcss-animate`), class-based dark mode
 - shadcn/ui (style `default`, base color `slate`, CSS variables) on top of Radix primitives; components in `src/components/ui`
 - Icons: **lucide-react only**
@@ -29,11 +29,11 @@ bun run test         # vitest run
 bunx shadcn@latest add <component>   # add a shadcn component to src/components/ui
 ```
 
-There is no CI. Before finishing a change run `bun run lint && bun run build && bun run test`.
+CI (`.github/workflows/ci-frontend.yml`) runs `bun install --frozen-lockfile`, lint, build and test on pushes and PRs to `main`/`dev` that touch `client/`; the deploy on `main` waits for it (see CI/CD in `BACKEND.md`). Lint is **not blocking yet** (`continue-on-error`) because of pre-existing `react-hooks/set-state-in-effect` / `only-export-components` errors; make it blocking once they are fixed. Before finishing a change run `bun run lint && bun run build && bun run test`.
 
 ## Environment
 
-- `VITE_API_URL` — backend base URL, read at build time (`.env.example`: `https://futspring.luisgosampaio.com`). Falls back to `http://localhost:8080`; the fallback is duplicated in `src/api/client.ts:4` and `src/lib/utils.ts:8` (`API_BASE` for `getFileUrl`). Keep one source if you touch them.
+- `VITE_API_URL` — backend base URL, read at build time (production: `https://futspring.luisgosampaio.com/api` — nginx strips `/api` before proxying, so requests go to `/api/api/v1/...`; locally it is unset). Falls back to `http://localhost:8080`; the fallback is duplicated in `src/api/client.ts:4` and `src/lib/utils.ts:8` (`API_BASE` for `getFileUrl`). Keep one source if you touch them.
 - The chat opens `new SockJS("/ws")` (relative, `components/pelada/ChatSidebar.tsx:94`): it works through the Vite dev proxy (`vite.config.ts`) and in production because the app and the API share an origin behind the reverse proxy.
 - `vite.config.ts` defines `global: 'globalThis'` (needed by sockjs-client).
 - The backend's CORS allows `http://localhost:5173`, so keep the dev server on that port.
@@ -385,6 +385,6 @@ Don't introduce these. Some exist already ("Found in", paths under `src/`); fix 
 | 22 | Placeholder links / fake UI | Real routes, or disabled with "Em breve" | `LandingPage.tsx` GitHub/LinkedIn links, Google sign-in stub in `AuthPage.tsx` |
 | 23 | Dead files and components | Delete them | `App.css`, `components/ui/accordion.tsx` and `input-group.tsx` (unused), `assets/hero.png`, `assets/react.svg`, `assets/vite.svg`, `public/arnold` |
 | 24 | Mixing icon libraries | lucide-react only | — |
-| 25 | `npm install` / a second lockfile | `bun install`; delete `package-lock.json` | `package-lock.json` |
+| 25 | `npm install` / a second lockfile | `bun install`; delete `package-lock.json` | — |
 | 26 | Prop-drilling plain imports | Import the helper where it's used | `getFileUrl` passed as a prop in `PeladaDetailPage.tsx` |
 | 27 | Chart configs that disagree with the data colors | One color source (tokens) for config and data | `profile/ProfilePieChart.tsx` |

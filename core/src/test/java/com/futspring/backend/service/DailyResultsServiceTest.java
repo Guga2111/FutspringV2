@@ -90,7 +90,6 @@ class DailyResultsServiceTest {
         when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(dailyRepository.findById(100L)).thenReturn(Optional.of(inCourseDaily));
         when(teamRepository.findByDaily(inCourseDaily)).thenReturn(List.of(team1, team2));
-        when(matchRepository.findById(anyLong())).thenReturn(Optional.empty());
 
         Match savedMatch = Match.builder().id(50L).daily(inCourseDaily).team1(team1).team2(team2)
                 .team1Score(2).team2Score(1).winner(team1).build();
