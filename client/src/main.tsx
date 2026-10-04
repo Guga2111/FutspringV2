@@ -19,7 +19,8 @@ createRoot(document.getElementById('root')!).render(
     <BrowserRouter>
       <AuthProvider>
         <App />
-        <Toaster />
+        {/* top-center: bottom-right would cover the chat button */}
+        <Toaster position="top-center" />
       </AuthProvider>
     </BrowserRouter>
   </StrictMode>,

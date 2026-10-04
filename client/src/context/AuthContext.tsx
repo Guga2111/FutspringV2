@@ -7,6 +7,16 @@ import { AuthContext } from "./auth-context-value"
 const TOKEN_KEY = "futspring_token"
 const USER_KEY = "futspring_user"
 
+// Registered once when the module loads, not in an effect: child effects (AppLayout's first fetch) run before
+// the provider's own effects, so an effect-registered interceptor would miss the first requests.
+apiClient.interceptors.request.use((config) => {
+  const storedToken = localStorage.getItem(TOKEN_KEY)
+  if (storedToken) {
+    config.headers.Authorization = `Bearer ${storedToken}`
+  }
+  return config
+})
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(() => localStorage.getItem(TOKEN_KEY))
   const [user, setUser] = useState<UserResponseDTO | null>(() => {
@@ -28,16 +38,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem(USER_KEY)
   }, [])
 
-  // Set up Axios interceptors inside the provider so they have access to logout
+  // The 401 interceptor lives inside the provider so it has access to logout
   useEffect(() => {
-    const requestInterceptor = apiClient.interceptors.request.use((config) => {
-      const storedToken = localStorage.getItem(TOKEN_KEY)
-      if (storedToken) {
-        config.headers.Authorization = `Bearer ${storedToken}`
-      }
-      return config
-    })
-
     const responseInterceptor = apiClient.interceptors.response.use(
       (response) => response,
       (error) => {
@@ -52,7 +54,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     )
 
     return () => {
-      apiClient.interceptors.request.eject(requestInterceptor)
       apiClient.interceptors.response.eject(responseInterceptor)
     }
   }, [logout])

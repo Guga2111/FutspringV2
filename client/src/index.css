@@ -24,11 +24,14 @@
     --input: 214.3 31.8% 91.4%;
     --ring: 222.2 84% 4.9%;
     --radius: 0.5rem;
+    /* brand green (#149440): buttons, progress, checkbox, logo text */
+    --brand: 142 76% 33%;
     --chart-1: 142 72% 29%;
     --chart-2: 217 91% 60%;
     /* stars, trophies, crowns */
     --gold: 43 96% 46%;
     --gold-muted: 55 92% 95.3%;
+    --gold-foreground: 0 0% 10.2%;
     --silver: 215 20% 65.1%;
     --bronze: 17 88% 40.4%;
 
@@ -36,6 +39,7 @@
     --card-elevated: 210 40% 96.1%;
     --row-hover: 210 40% 98%;
     --avatar-fallback: 214 32% 91.4%;
+    --star-off: 214 32% 84%;
     --subtle-foreground: 215 16% 46.9%;
     --faint-foreground: 215 20% 65.1%;
     /* ring around team color dots, so white and black teams show on both themes */
@@ -74,6 +78,16 @@
     --avatar-4: 222 55% 56%;
     --avatar-5: 353 46% 53.3%;
     --avatar-6: 184 100% 30.3%;
+
+    /* app shell sidebar (shadcn sidebar) */
+    --sidebar-background: 210 40% 98%;
+    --sidebar-foreground: 222.2 84% 4.9%;
+    --sidebar-primary: 222.2 47.4% 11.2%;
+    --sidebar-primary-foreground: 210 40% 98%;
+    --sidebar-accent: 210 40% 94%;
+    --sidebar-accent-foreground: 222.2 84% 4.9%;
+    --sidebar-border: 214.3 31.8% 91.4%;
+    --sidebar-ring: 222.2 84% 4.9%;
   }
 
   .dark {
@@ -96,16 +110,19 @@
     --border: 0 0% 22%;
     --input: 0 0% 22%;
     --ring: 0 0% 68%;
+    --brand: 142 76% 33%;
     --chart-1: 142 69% 45%;
     --chart-2: 213 94% 68%;
     --gold: 45 93% 58%;
     --gold-muted: 46 32% 10.4%;
+    --gold-foreground: 0 0% 10.2%;
     --silver: 0 0% 63.9%;
     --bronze: 17 88% 40.4%;
 
     --card-elevated: 0 0% 17%;
     --row-hover: 0 0% 14%;
     --avatar-fallback: 0 0% 22%;
+    --star-off: 0 0% 27%;
     --subtle-foreground: 0 0% 54.1%;
     --faint-foreground: 0 0% 45.1%;
     --team-dot-border: 0 0% 29%;
@@ -132,6 +149,15 @@
     --live-to: 132 9% 11.2%;
     --live-foreground: 141 26% 71.4%;
     --live-border: 139 23% 23.5%;
+
+    --sidebar-background: 0 0% 8.2%;
+    --sidebar-foreground: 0 0% 98%;
+    --sidebar-primary: 0 0% 98%;
+    --sidebar-primary-foreground: 0 0% 9%;
+    --sidebar-accent: 0 0% 14.9%;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-border: 0 0% 16.5%;
+    --sidebar-ring: 0 0% 63.9%;
   }
 }
 
@@ -163,16 +189,16 @@
 }
 
 .checkbox-gradient {
-  border: 2px solid #15803d;
+  border: 2px solid hsl(var(--brand));
 }
 
 .checkbox-gradient[data-state=checked] {
-  background: linear-gradient(135deg, #15803d, #16a34a);
+  background: hsl(var(--brand));
   border-color: transparent;
 }
 
 .bg-gradient-primary {
-  background: linear-gradient(135deg, #15803d, #16a34a);
+  background: hsl(var(--brand));
   transition: filter 0.15s ease, transform 0.15s ease;
 }
 
@@ -181,16 +207,22 @@
   transform: scale(1.03);
 }
 
-.text-gradient-primary {
-  background: linear-gradient(135deg, #15803d, #16a34a);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+.bg-brand-translucent {
+  background: rgb(21 128 61 / 0.35);
+  border-color: rgb(74 222 128 / 0.35);
 }
 
-/* Next-session date block (brand green, darker at the bottom) */
+.text-on-brand-muted {
+  color: #bbf7d0;
+}
+
+.text-gradient-primary {
+  color: hsl(var(--brand));
+}
+
+/* Next-session date block (brand green) */
 .bg-gradient-date {
-  background: linear-gradient(180deg, #15803d, #14532d);
+  background: hsl(var(--brand));
 }
 
 /* Live session card */

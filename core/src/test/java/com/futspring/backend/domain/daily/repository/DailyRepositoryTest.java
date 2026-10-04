@@ -1,6 +1,7 @@
 package com.futspring.backend.domain.daily.repository;
 
 import com.futspring.backend.domain.daily.entity.Daily;
+import com.futspring.backend.domain.daily.entity.DailyStatus;
 import com.futspring.backend.domain.pelada.Pelada;
 import com.futspring.backend.domain.pelada.PeladaRepository;
 import com.futspring.backend.domain.user.User;
@@ -13,6 +14,7 @@ import org.springframework.test.context.TestPropertySource;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.*;
 
@@ -133,5 +135,36 @@ class DailyRepositoryTest {
         assertThat(result.get(0).getDailyDate()).isEqualTo(LocalDate.of(2024, 6, 1));
         assertThat(result.get(1).getDailyDate()).isEqualTo(LocalDate.of(2024, 3, 15));
         assertThat(result.get(2).getDailyDate()).isEqualTo(LocalDate.of(2024, 1, 1));
+    }
+
+    // --- findNextDailies / findConfirmedDailyIds ---
+
+    @Test
+    void findNextDailies_returnsEarliestUpcomingSessionPerPelada() {
+        LocalDate today = LocalDate.of(2026, 10, 4);
+        Daily p1Next = dailyRepository.save(Daily.builder().pelada(pelada1).dailyDate(today.plusDays(2)).dailyTime("18:00").build());
+        dailyRepository.save(Daily.builder().pelada(pelada1).dailyDate(today.plusDays(9)).dailyTime("18:00").build());
+        dailyRepository.save(Daily.builder().pelada(pelada1).dailyDate(today.plusDays(1)).dailyTime("18:00")
+                .status(DailyStatus.CANCELED).build());
+        dailyRepository.save(Daily.builder().pelada(pelada1).dailyDate(today.minusDays(1)).dailyTime("18:00").build());
+        Daily p2Next = dailyRepository.save(Daily.builder().pelada(pelada2).dailyDate(today).dailyTime("10:00")
+                .status(DailyStatus.CONFIRMED).build());
+
+        List<Daily> next = dailyRepository.findNextDailies(
+                List.of(pelada1.getId(), pelada2.getId()), Set.of(DailyStatus.SCHEDULED, DailyStatus.CONFIRMED), today);
+
+        assertThat(next).extracting(Daily::getId).containsExactlyInAnyOrder(p1Next.getId(), p2Next.getId());
+    }
+
+    @Test
+    void findConfirmedDailyIds_returnsOnlyDailiesTheUserConfirmed() {
+        User player = userRepository.save(User.builder().email("player@example.com").username("player").password("hash").build());
+        Daily confirmed = Daily.builder().pelada(pelada1).dailyDate(LocalDate.of(2026, 10, 6)).dailyTime("18:00").build();
+        confirmed.getConfirmedPlayers().add(player);
+        confirmed = dailyRepository.save(confirmed);
+        Daily other = dailyRepository.save(Daily.builder().pelada(pelada1).dailyDate(LocalDate.of(2026, 10, 13)).dailyTime("18:00").build());
+
+        assertThat(dailyRepository.findConfirmedDailyIds(List.of(confirmed.getId(), other.getId()), player.getId()))
+                .containsExactly(confirmed.getId());
     }
 }

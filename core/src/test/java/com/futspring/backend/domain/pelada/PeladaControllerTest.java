@@ -106,7 +106,9 @@ class PeladaControllerTest extends BaseIntegrationTest {
     void getPeladaDetail_asMember() throws Exception {
         mockMvc.perform(get("/api/v1/peladas/" + pelada.getId())
                 .header("Authorization", bearerToken(member.getId(), member.getEmail())))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.numberOfTeams").value(pelada.getNumberOfTeams()))
+                .andExpect(jsonPath("$.playersPerTeam").value(pelada.getPlayersPerTeam()));
     }
 
     @Test
@@ -319,7 +321,9 @@ class PeladaControllerTest extends BaseIntegrationTest {
     @Test
     void getMyPeladas_includesNextSessionAndMemberCount() throws Exception {
         dailyRepository.save(Daily.builder().pelada(pelada).dailyDate(LocalDate.now().plusDays(9)).dailyTime("18:00").build());
-        dailyRepository.save(Daily.builder().pelada(pelada).dailyDate(LocalDate.now().plusDays(2)).dailyTime("18:00").build());
+        Daily next = Daily.builder().pelada(pelada).dailyDate(LocalDate.now().plusDays(2)).dailyTime("20:30").build();
+        next.getConfirmedPlayers().add(member);
+        next = dailyRepository.save(next);
         dailyRepository.save(Daily.builder().pelada(pelada).dailyDate(LocalDate.now().plusDays(1)).dailyTime("18:00")
                 .status(DailyStatus.CANCELED).build());
         dailyRepository.save(Daily.builder().pelada(pelada).dailyDate(LocalDate.now().minusDays(7)).dailyTime("18:00").build());
@@ -328,7 +332,29 @@ class PeladaControllerTest extends BaseIntegrationTest {
                 .header("Authorization", bearerToken(member.getId(), member.getEmail())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].memberCount").value(2))
-                .andExpect(jsonPath("$[0].nextDailyDate").value(LocalDate.now().plusDays(2).toString()));
+                .andExpect(jsonPath("$[0].isAdmin").value(false))
+                .andExpect(jsonPath("$[0].nextDaily.id").value(next.getId()))
+                .andExpect(jsonPath("$[0].nextDaily.date").value(LocalDate.now().plusDays(2).toString()))
+                .andExpect(jsonPath("$[0].nextDaily.time").value("20:30"))
+                .andExpect(jsonPath("$[0].nextDaily.status").value("SCHEDULED"))
+                .andExpect(jsonPath("$[0].nextDaily.confirmedCount").value(1))
+                .andExpect(jsonPath("$[0].nextDaily.capacity").value(pelada.getNumberOfTeams() * pelada.getPlayersPerTeam()))
+                .andExpect(jsonPath("$[0].nextDaily.isConfirmed").value(true));
+
+        mockMvc.perform(get("/api/v1/peladas/my")
+                .header("Authorization", bearerToken(admin.getId(), admin.getEmail())))
+                .andExpect(jsonPath("$[0].isAdmin").value(true))
+                .andExpect(jsonPath("$[0].nextDaily.isConfirmed").value(false));
+    }
+
+    @Test
+    void getMyPeladas_withoutUpcomingSession_hasNullNextDaily() throws Exception {
+        dailyRepository.save(Daily.builder().pelada(pelada).dailyDate(LocalDate.now().minusDays(7)).dailyTime("18:00").build());
+
+        mockMvc.perform(get("/api/v1/peladas/my")
+                .header("Authorization", bearerToken(member.getId(), member.getEmail())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].nextDaily").value(org.hamcrest.Matchers.nullValue()));
     }
 
     @Test

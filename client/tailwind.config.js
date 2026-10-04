@@ -52,21 +52,24 @@ export default {
   			'subtle-foreground': 'hsl(var(--subtle-foreground))',
   			'faint-foreground': 'hsl(var(--faint-foreground))',
   			'team-dot-border': 'hsl(var(--team-dot-border))',
+  			'star-off': 'hsl(var(--star-off))',
   			avatar: {
-  				fallback: 'hsl(var(--avatar-fallback))',
   				'1': 'hsl(var(--avatar-1))',
   				'2': 'hsl(var(--avatar-2))',
   				'3': 'hsl(var(--avatar-3))',
   				'4': 'hsl(var(--avatar-4))',
   				'5': 'hsl(var(--avatar-5))',
-  				'6': 'hsl(var(--avatar-6))'
+  				'6': 'hsl(var(--avatar-6))',
+  				fallback: 'hsl(var(--avatar-fallback))'
   			},
   			gold: {
   				DEFAULT: 'hsl(var(--gold))',
-  				muted: 'hsl(var(--gold-muted))'
+  				muted: 'hsl(var(--gold-muted))',
+  				foreground: 'hsl(var(--gold-foreground))'
   			},
   			silver: 'hsl(var(--silver))',
   			bronze: 'hsl(var(--bronze))',
+  			brand: 'hsl(var(--brand))',
   			success: {
   				DEFAULT: 'hsl(var(--success))',
   				strong: 'hsl(var(--success-strong))',
@@ -98,6 +101,16 @@ export default {
   			chart: {
   				'1': 'hsl(var(--chart-1))',
   				'2': 'hsl(var(--chart-2))'
+  			},
+  			sidebar: {
+  				DEFAULT: 'hsl(var(--sidebar-background))',
+  				foreground: 'hsl(var(--sidebar-foreground))',
+  				primary: 'hsl(var(--sidebar-primary))',
+  				'primary-foreground': 'hsl(var(--sidebar-primary-foreground))',
+  				accent: 'hsl(var(--sidebar-accent))',
+  				'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
+  				border: 'hsl(var(--sidebar-border))',
+  				ring: 'hsl(var(--sidebar-ring))'
   			}
   		},
   		borderRadius: {

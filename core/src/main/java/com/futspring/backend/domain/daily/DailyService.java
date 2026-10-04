@@ -52,6 +52,7 @@ public class DailyService {
     private final UserDailyStatsRepository userDailyStatsRepository;
     private final LeagueTableEntryRepository leagueTableEntryRepository;
     private final DailyAwardRepository dailyAwardRepository;
+    private final DailyListItemAssembler dailyListItemAssembler;
 
     @Transactional
     public DailyListItemDTO createDaily(Long peladaId, CreateDailyRequestDTO request, String currentUserEmail) {
@@ -65,7 +66,7 @@ public class DailyService {
                 .dailyTime(request.getDailyTime())
                 .build();
 
-        return DailyListItemDTO.from(dailyRepository.save(daily), 0);
+        return dailyListItemAssembler.toNewListItem(dailyRepository.save(daily));
     }
 
     @Transactional(readOnly = true)
@@ -74,18 +75,7 @@ public class DailyService {
         Pelada pelada = findPelada(peladaId);
         accessHelper.requireMember(pelada, caller);
 
-        List<Daily> dailies = dailyRepository.findByPeladaOrderByDailyDateDesc(pelada);
-        if (dailies.isEmpty()) {
-            return List.of();
-        }
-        // One count query instead of loading confirmedPlayers per daily
-        Map<Long, Integer> confirmedCounts = dailyRepository
-                .countConfirmedByIds(dailies.stream().map(Daily::getId).toList()).stream()
-                .collect(Collectors.toMap(row -> (Long) row[0], row -> ((Number) row[1]).intValue()));
-
-        return dailies.stream()
-                .map(d -> DailyListItemDTO.from(d, confirmedCounts.getOrDefault(d.getId(), 0)))
-                .toList();
+        return dailyListItemAssembler.toListItems(dailyRepository.findByPeladaOrderByDailyDateDesc(pelada), caller);
     }
 
     @Transactional
@@ -101,7 +91,7 @@ public class DailyService {
 
         daily.setStatus(newStatus);
         dailyRepository.save(daily);
-        return DailyListItemDTO.from(daily);
+        return dailyListItemAssembler.toListItem(daily, caller);
     }
 
     @Transactional
@@ -201,13 +191,11 @@ public class DailyService {
                         .build())
                 .orElse(null);
 
-        // Only admins need the member list (admin attendance and import from message)
-        List<PlayerDTO> peladaMembers = isAdmin
-                ? pelada.getMembers().stream()
-                    .sorted(Comparator.comparing(User::getUsername, String.CASE_INSENSITIVE_ORDER))
-                    .map(dailyDTOMapper::toPlayerDTO)
-                    .toList()
-                : null;
+        // Every member sees the attendance list (confirmed and pending); PlayerDTO has public fields only
+        List<PlayerDTO> peladaMembers = pelada.getMembers().stream()
+                .sorted(Comparator.comparing(User::getUsername, String.CASE_INSENSITIVE_ORDER))
+                .map(dailyDTOMapper::toPlayerDTO)
+                .toList();
 
         return DailyDetailDTO.builder()
                 .id(daily.getId())

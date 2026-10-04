@@ -4,6 +4,8 @@ import com.futspring.backend.domain.daily.dto.DailyListItemDTO;
 import com.futspring.backend.domain.daily.entity.Daily;
 import com.futspring.backend.domain.daily.entity.DailyStatus;
 import com.futspring.backend.domain.daily.repository.DailyRepository;
+import com.futspring.backend.domain.daily.repository.MatchRepository;
+import com.futspring.backend.domain.daily.repository.TeamRepository;
 import com.futspring.backend.domain.pelada.Pelada;
 import com.futspring.backend.domain.pelada.PeladaRepository;
 import com.futspring.backend.shared.exception.AppException;
@@ -33,6 +35,8 @@ class DailyAttendanceServiceTest {
     @Mock UserAuthenticationHelper userAuthHelper;
     @Mock DailyRepository dailyRepository;
     @Mock UserRepository userRepository;
+    @Mock TeamRepository teamRepository;
+    @Mock MatchRepository matchRepository;
 
     DailyAttendanceService attendanceService;
 
@@ -44,7 +48,8 @@ class DailyAttendanceServiceTest {
 
     @BeforeEach
     void setUp() {
-        attendanceService = new DailyAttendanceService(userAuthHelper, new PeladaAccessHelper(peladaRepository), dailyRepository, userRepository);
+        attendanceService = new DailyAttendanceService(userAuthHelper, new PeladaAccessHelper(peladaRepository), dailyRepository, userRepository,
+                new DailyListItemAssembler(dailyRepository, teamRepository, matchRepository));
 
         admin = User.builder().id(1L).email("admin@example.com").username("admin").password("hash").stars(4).build();
         member = User.builder().id(2L).email("member@example.com").username("member").password("hash").stars(3).build();

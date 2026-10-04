@@ -1,6 +1,7 @@
 import { useState, type Dispatch, type SetStateAction } from 'react'
 import { toast } from 'sonner'
 import {
+  adminConfirmAllAttendance,
   adminConfirmAttendance,
   adminDisconfirmAttendance,
   confirmAttendance,
@@ -31,6 +32,7 @@ export function useDailyActions({ daily, setDaily, refetch }: Options) {
   const [statusLoading, setStatusLoading] = useState(false)
   const [uploadLoading, setUploadLoading] = useState(false)
   const [adminToggleLoading, setAdminToggleLoading] = useState<number | null>(null)
+  const [confirmAllLoading, setConfirmAllLoading] = useState(false)
   const [selectedPlayer, setSelectedPlayer] = useState<{ id: number; teamId: number } | null>(null)
 
   async function run(action: () => Promise<unknown>, success: string, failure: string, reload = true) {
@@ -67,11 +69,20 @@ export function useDailyActions({ daily, setDaily, refetch }: Options) {
     setAdminToggleLoading(null)
   }
 
-  async function handleSortTeams() {
+  async function confirmAll() {
     if (!daily) return
+    setConfirmAllLoading(true)
+    await run(() => adminConfirmAllAttendance(daily.id), 'Todos os membros confirmados', 'Não foi possível confirmar todos')
+    setConfirmAllLoading(false)
+  }
+
+  // Resolves to whether the sort worked (the page collapses the attendance list after it)
+  async function handleSortTeams(): Promise<boolean> {
+    if (!daily) return false
     setSortLoading(true)
-    await run(() => sortTeams(daily.id), 'Times sorteados', 'Não foi possível sortear os times')
+    const ok = await run(() => sortTeams(daily.id), 'Times sorteados', 'Não foi possível sortear os times')
     setSortLoading(false)
+    return ok
   }
 
   // First click selects a player, a click on a player of another team swaps them
@@ -144,9 +155,11 @@ export function useDailyActions({ daily, setDaily, refetch }: Options) {
     statusLoading,
     uploadLoading,
     adminToggleLoading,
+    confirmAllLoading,
     selectedPlayer,
     toggleAttendance,
     adminToggle,
+    confirmAll,
     handleSortTeams,
     handlePlayerClick,
     changeStatus,

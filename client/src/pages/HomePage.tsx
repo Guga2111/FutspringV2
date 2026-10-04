@@ -1,113 +1,121 @@
-import { useState } from 'react'
-import NavBar from '@/components/NavBar'
-import { Card, CardContent } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Skeleton } from '@/components/ui/skeleton'
-import { Alert, AlertDescription } from '@/components/ui/alert'
-import { useMyPeladas } from '@/components/pelada/hooks/useMyPeladas'
-import CreatePeladaModal from '@/components/CreatePeladaModal'
-import { PeladaCard } from '@/components/pelada/PeladaCard'
+import { useMemo, type ReactNode } from "react"
+import { Link } from "react-router-dom"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Button } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/skeleton"
+import { HomeBanner } from "@/components/home/HomeBanner"
+import { UpcomingSessionCard } from "@/components/home/UpcomingSessionCard"
+import { CreatePeladaCard, MyPeladaCard } from "@/components/home/MyPeladaCard"
+import { useUserStats } from "@/components/home/hooks/useUserStats"
+import { useUpcomingAttendance } from "@/components/home/hooks/useUpcomingAttendance"
+import { useAuth } from "@/hooks/useAuth"
+import { useMyPeladasContext } from "@/hooks/useMyPeladasContext"
+import { statsKpis, upcomingSessions } from "@/utils/home"
 
-function PeladaCardSkeleton() {
+// Mobile: horizontal snap carousel bleeding to the screen edge (~30% of the next card visible); md+: a grid
+const carousel =
+  "-mx-4 grid snap-x snap-mandatory scroll-px-4 auto-cols-[calc((100%-44px)/1.3)] grid-flow-col gap-3 overflow-x-auto px-4 pb-1 scrollbar-none md:mx-0 md:snap-none md:auto-cols-auto md:grid-flow-row md:overflow-visible md:px-0 md:pb-0"
+
+function SectionTitle({ title, extra, action }: { title: string; extra: ReactNode; action?: ReactNode }) {
   return (
-    <Card className="overflow-hidden rounded-xl border shadow-sm">
-      <Skeleton className="h-40 w-full rounded-none" />
-      <CardContent className="p-4">
-        <Skeleton className="h-5 w-3/4 mb-2" />
-        <Skeleton className="h-4 w-1/2 mb-2" />
-        <Skeleton className="h-4 w-1/3" />
-      </CardContent>
-    </Card>
+    <div className="flex items-baseline justify-between gap-2.5">
+      <div className="flex items-baseline gap-2.5">
+        <h2 className="text-[17px] font-semibold">{title}</h2>
+        <span className="text-[13px] text-subtle-foreground">{extra}</span>
+      </div>
+      {action}
+    </div>
   )
 }
 
-
 export default function HomePage() {
-  const { peladas, loading, error, reload } = useMyPeladas()
-  const [showCreateModal, setShowCreateModal] = useState(false)
+  const { user } = useAuth()
+  const { peladas, loading, error, reload, openCreatePelada } = useMyPeladasContext()
+  const { stats, loading: statsLoading, error: statsError } = useUserStats(user?.id ?? null)
+  const { pendingId, toggle } = useUpcomingAttendance()
+
+  const upcoming = useMemo(() => upcomingSessions(peladas), [peladas])
+  const pendingCount = upcoming.filter((p) => !p.nextDaily.isConfirmed).length
 
   return (
-    <div className="page-enter min-h-screen flex flex-col">
-      <NavBar />
-      {showCreateModal && (
-        <CreatePeladaModal
-          onClose={() => setShowCreateModal(false)}
-          onCreated={() => { setShowCreateModal(false); reload() }}
-        />
-      )}
-      <main className="flex-1 container max-w-5xl mx-auto px-4 py-8">
-        {/* Hero Card */}
-        <div
-          className="relative rounded-2xl overflow-hidden mb-8"
-          style={{ minHeight: 200 }}
-        >
-          <img
-            src="/ronaldo.jpg"
-            alt="Hero background"
-            className="absolute inset-0 w-full h-full object-cover object-top blur-[3px]"
-          />
-          <div className="absolute inset-0 bg-black/55" />
-          <div className="relative z-10 flex items-center justify-between px-8 py-8 h-full">
-            <div className="flex flex-col gap-3 max-w-md">
-              <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-white bg-[#1a7a4a]/80 border border-white/20 rounded-full px-3 py-1 w-fit backdrop-blur-sm">
-                ✦ Pronto para jogar
-              </span>
-              <h2 className="text-3xl font-extrabold text-white leading-tight">
-                Organize sua próxima pelada
-              </h2>
-              <p className="text-sm text-white/75">
-                Chame seus amigos, escolha um dia, e nunca mais perca algum jogo novamente.<br />
-                FutSpring faz ser facil organizar seus jogos de futebol semanais.
-              </p>
-              <div className="flex items-center gap-5 mt-2">
-                <div>
-                  <p className="text-2xl font-extrabold text-white">{peladas.length}</p>
-                  <p className="text-xs text-white/60">Peladas Ativas</p>
-                </div>
-                <div className="w-px h-10 bg-white/25" />
-                <div>
-                  <p className="text-2xl font-extrabold text-white">
-                    {peladas.reduce((sum, p) => sum + p.memberCount, 0)}
-                  </p>
-                  <p className="text-xs text-white/60">Total de Jogadores</p>
-                </div>
-              </div>
-            </div>
-            <Button variant="gradient" className="shrink-0" onClick={() => setShowCreateModal(true)}>
-              + Nova Pelada
-            </Button>
-          </div>
-        </div>
+    <div className="page-enter flex flex-1 flex-col">
+      <main className="mx-auto flex w-full max-w-[1120px] flex-col gap-9 px-4 py-5 md:p-8">
+        <HomeBanner username={user?.username ?? ""} pendingCount={pendingCount} onCreatePelada={openCreatePelada} />
 
-        <h1 className="text-xl font-bold tracking-tight mb-6">Minhas Peladas</h1>
-        {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <PeladaCardSkeleton />
-            <PeladaCardSkeleton />
-            <PeladaCardSkeleton />
-          </div>
-        ) : error ? (
+        {error && (
           <Alert variant="destructive" className="flex items-center justify-between gap-4">
             <AlertDescription>Não foi possível carregar suas peladas.</AlertDescription>
-            <Button variant="outline" size="sm" onClick={reload}>Tentar novamente</Button>
+            <Button variant="outline" size="sm" onClick={reload}>
+              Tentar novamente
+            </Button>
           </Alert>
-        ) : peladas.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-24 text-center">
-            <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center shadow-md mb-4">
-              <img src="/gerrard.png" alt="Football" className="w-11 h-11 object-cover rounded-full" />
-            </div>
-            <p className="text-muted-foreground text-lg mb-6">
-              Você ainda não está em nenhuma pelada. Crie uma para começar.
-            </p>
-            <Button variant="gradient" onClick={() => setShowCreateModal(true)}>+ Nova Pelada</Button>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {peladas.map((pelada) => (
-              <PeladaCard key={pelada.id} pelada={pelada} />
-            ))}
-          </div>
         )}
+
+        <section className="flex flex-col gap-3.5">
+          <SectionTitle title="Próximas sessões" extra={loading ? "" : upcoming.length} />
+          {loading ? (
+            <div className={`${carousel} md:grid-cols-[repeat(auto-fill,minmax(300px,1fr))]`}>
+              {[0, 1, 2].map((i) => (
+                <Skeleton key={i} className="h-[248px] rounded-tile" />
+              ))}
+            </div>
+          ) : upcoming.length === 0 ? (
+            <div className="rounded-tile border border-dashed border-input p-8 text-center text-sm text-subtle-foreground">
+              Nenhuma sessão agendada nas suas peladas.
+            </div>
+          ) : (
+            <div className={`${carousel} md:grid-cols-[repeat(auto-fill,minmax(300px,1fr))]`}>
+              {upcoming.map((pelada) => (
+                <UpcomingSessionCard
+                  key={pelada.id}
+                  pelada={pelada}
+                  next={pelada.nextDaily}
+                  pending={pendingId === pelada.nextDaily.id}
+                  onToggle={() => toggle(pelada.id, pelada.nextDaily)}
+                />
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section className="flex flex-col gap-3.5">
+          <SectionTitle
+            title="Seus números"
+            extra="em todas as peladas"
+            action={
+              user && (
+                <Link to={`/profile/${user.id}`} className="text-[13px] text-muted-foreground transition-colors hover:text-foreground">
+                  Ver perfil →
+                </Link>
+              )
+            }
+          />
+          {statsError ? (
+            <p className="text-sm text-subtle-foreground">Não foi possível carregar seus números.</p>
+          ) : (
+            <dl className="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-3">
+              {statsLoading || !stats
+                ? [0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-[94px] rounded-xl" />)
+                : statsKpis(stats).map((kpi) => (
+                    <div key={kpi.label} className="flex flex-col gap-1 rounded-xl border bg-card px-4 py-3.5">
+                      <dt className="text-xs text-muted-foreground">{kpi.label}</dt>
+                      <dd className="text-[26px] font-bold tabular-nums">{kpi.value}</dd>
+                      <dd className="text-xs text-faint-foreground">{kpi.sub}</dd>
+                    </div>
+                  ))}
+            </dl>
+          )}
+        </section>
+
+        <section className="flex flex-col gap-3.5">
+          <SectionTitle title="Minhas peladas" extra={loading ? "" : peladas.length} />
+          <div className={`${carousel} md:grid-cols-[repeat(auto-fill,minmax(240px,1fr))]`}>
+            {loading
+              ? [0, 1, 2].map((i) => <Skeleton key={i} className="h-[214px] rounded-tile" />)
+              : peladas.map((pelada) => <MyPeladaCard key={pelada.id} pelada={pelada} />)}
+            {!loading && <CreatePeladaCard onClick={openCreatePelada} />}
+          </div>
+        </section>
       </main>
     </div>
   )

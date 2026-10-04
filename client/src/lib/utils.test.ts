@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { getFileUrl, getInitials } from "./utils"
+import { getAvatarColor, getFileUrl, getInitials } from "./utils"
 import { dayOfWeekLabel } from "./constants"
 
 describe("getInitials", () => {
@@ -27,5 +27,13 @@ describe("dayOfWeekLabel", () => {
   it("translates API values and keeps unknown ones", () => {
     expect(dayOfWeekLabel("SATURDAY")).toBe("Sábado")
     expect(dayOfWeekLabel("Sabado")).toBe("Sabado")
+  })
+})
+
+describe("getAvatarColor", () => {
+  it("cycles through the six avatar tokens by id", () => {
+    expect(getAvatarColor(1)).toBe("bg-avatar-2")
+    expect(getAvatarColor(6)).toBe("bg-avatar-1")
+    expect(getAvatarColor(7)).toBe(getAvatarColor(1))
   })
 })

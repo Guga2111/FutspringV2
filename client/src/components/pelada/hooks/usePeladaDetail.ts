@@ -108,6 +108,18 @@ export function usePeladaDetail(id: string | undefined) {
     void fetchAwards()
   }, [fetchAwards])
 
+  // Merge a mutation's result (confirm / unconfirm) into the sessions list
+  const mergeDaily = useCallback(
+    (item: DailyListItem) => {
+      setDailies((prev) =>
+        prev && prev.peladaId === peladaId
+          ? { peladaId, data: prev.data.map((d) => (d.id === item.id ? { ...d, ...item } : d)) }
+          : prev,
+      )
+    },
+    [peladaId],
+  )
+
   const refetch = useCallback(async () => {
     await Promise.all([fetchPelada(), fetchDailies(), fetchRanking(), fetchAwards()])
   }, [fetchPelada, fetchDailies, fetchRanking, fetchAwards])
@@ -132,5 +144,6 @@ export function usePeladaDetail(id: string | undefined) {
     refetch,
     refetchPelada: fetchPelada,
     refetchDailies: fetchDailies,
+    mergeDaily,
   }
 }

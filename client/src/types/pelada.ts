@@ -1,3 +1,5 @@
+import type { DailyStatus } from "@/types/daily"
+
 export interface PeladaMember {
   id: number
   username: string
@@ -20,11 +22,27 @@ export interface PeladaResponse {
   memberCount: number
   numberOfTeams: number
   playersPerTeam: number
-  // next SCHEDULED/CONFIRMED session from today; only sent by /peladas/my and /users/{id}/peladas
-  nextDailyDate?: string | null
+  // whether the caller administers the pelada
+  isAdmin: boolean
+  // next SCHEDULED/CONFIRMED session from today; only filled by /peladas/my and /users/{id}/peladas
+  nextDaily: NextDaily | null
 }
 
-export interface PeladaDetail extends PeladaResponse {
+// mirrors PeladaResponseDTO.NextDailyDTO
+export interface NextDaily {
+  id: number
+  date: string
+  time: string
+  status: DailyStatus
+  confirmedCount: number
+  // numberOfTeams × playersPerTeam
+  capacity: number
+  // whether the caller confirmed attendance
+  isConfirmed: boolean
+}
+
+// mirrors PeladaDetailResponseDTO: no caller flags (isAdmin comes from members[]) and no next session
+export interface PeladaDetail extends Omit<PeladaResponse, "isAdmin" | "nextDaily"> {
   creatorId: number | null
   members: PeladaMember[]
 }
