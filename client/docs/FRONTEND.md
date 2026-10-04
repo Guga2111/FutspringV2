@@ -173,7 +173,7 @@ export const dailyStatusLabel: Record<DailyStatus, string> = {
 
 ## Styling & design system
 
-- **Tokens:** CSS variables in `src/index.css` as bare HSL triplets (`--primary: 222.2 47.4% 11.2%`) for `:root` (light, stock slate) and `.dark` (the neutral grays of the redesign handoff in `docs/design/`), exposed through `tailwind.config.js` as `hsl(var(--x))`. Use the semantic classes: `bg-background`, `bg-card`, `text-foreground`, `text-muted-foreground`, `border-border`, `bg-primary`, `text-destructive`, `bg-accent`…
+- **Tokens:** CSS variables in `src/index.css` as bare HSL triplets (`--primary: 222.2 47.4% 11.2%`) for `:root` (light, stock slate) and `.dark` (custom neutral grays; the redesign handoff in `docs/design/` uses slightly darker hex values, which were not adopted for the base tokens), exposed through `tailwind.config.js` as `hsl(var(--x))`. Use the semantic classes: `bg-background`, `bg-card`, `text-foreground`, `text-muted-foreground`, `border-border`, `bg-primary`, `text-destructive`, `bg-accent`…
 - **Redesign tokens** (light + dark, same names):
 
   | Class | Use |

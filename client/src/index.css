@@ -77,35 +77,35 @@
   }
 
   .dark {
-    --background: 0 0% 10.2%;
-    --foreground: 0 0% 98%;
-    --card: 0 0% 11.8%;
-    --card-foreground: 0 0% 98%;
-    --popover: 0 0% 11%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 0 0% 9%;
-    --secondary: 0 0% 16.5%;
-    --secondary-foreground: 0 0% 83.1%;
-    --muted: 0 0% 12.9%;
-    --muted-foreground: 0 0% 63.9%;
-    --accent: 0 0% 14.9%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 84% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 16.5%;
-    --input: 0 0% 18%;
-    --ring: 0 0% 63.9%;
+    --background: 0 0% 12%;
+    --foreground: 0 0% 96%;
+    --card: 0 0% 15%;
+    --card-foreground: 0 0% 96%;
+    --popover: 0 0% 15%;
+    --popover-foreground: 0 0% 96%;
+    --primary: 210 40% 98%;
+    --primary-foreground: 0 0% 11%;
+    --secondary: 0 0% 17%;
+    --secondary-foreground: 0 0% 96%;
+    --muted: 0 0% 17%;
+    --muted-foreground: 0 0% 58%;
+    --accent: 0 0% 17%;
+    --accent-foreground: 0 0% 96%;
+    --destructive: 0 72% 55%;
+    --destructive-foreground: 0 0% 96%;
+    --border: 0 0% 22%;
+    --input: 0 0% 22%;
+    --ring: 0 0% 68%;
     --chart-1: 142 69% 45%;
     --chart-2: 213 94% 68%;
-    --gold: 45 93% 47.5%;
+    --gold: 45 93% 58%;
     --gold-muted: 46 32% 10.4%;
     --silver: 0 0% 63.9%;
     --bronze: 17 88% 40.4%;
 
-    --card-elevated: 0 0% 12.9%;
-    --row-hover: 0 0% 12.5%;
-    --avatar-fallback: 0 0% 18%;
+    --card-elevated: 0 0% 17%;
+    --row-hover: 0 0% 14%;
+    --avatar-fallback: 0 0% 22%;
     --subtle-foreground: 0 0% 54.1%;
     --faint-foreground: 0 0% 45.1%;
     --team-dot-border: 0 0% 29%;
