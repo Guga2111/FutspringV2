@@ -14,7 +14,6 @@ services:
       DB_PASSWORD: ${DB_PASSWORD}
       JWT_SECRET: ${JWT_SECRET}
       JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS:-604800000}
-      DDL_AUTO: ${DDL_AUTO:-update}
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}
     volumes:
       - ./uploads:/app/uploads
