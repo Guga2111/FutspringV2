@@ -36,6 +36,12 @@ class DailySchedulerServiceTest {
         schedulerService = new DailySchedulerService(peladaRepository, dailyRepository);
     }
 
+    // The scheduler creates a daily the day before (next occurrence's midnight 0-24 h ahead), so tests
+    // use tomorrow's pelada; today's only matches between 00:00 and 00:59 and made the suite time-dependent
+    private static LocalDate tomorrow() {
+        return LocalDate.now().plusDays(1);
+    }
+
     private Pelada peladaForDay(DayOfWeek day) {
         return Pelada.builder()
                 .id(1L)
@@ -58,9 +64,8 @@ class DailySchedulerServiceTest {
 
     @Test
     void autoCreateDailies_createsDailyWithCorrectStatus() {
-        LocalDate today = LocalDate.now();
-        DayOfWeek todayDow = today.getDayOfWeek();
-        Pelada pelada = peladaForDay(todayDow);
+        DayOfWeek tomorrowDow = tomorrow().getDayOfWeek();
+        Pelada pelada = peladaForDay(tomorrowDow);
 
         when(peladaRepository.findByAutoCreateDailyEnabledTrue()).thenReturn(List.of(pelada));
         when(dailyRepository.existsByPeladaAndDailyDate(eq(pelada), any())).thenReturn(false);
@@ -75,9 +80,8 @@ class DailySchedulerServiceTest {
 
     @Test
     void autoCreateDailies_createsDailyWithCorrectTimeOfDay() {
-        LocalDate today = LocalDate.now();
-        DayOfWeek todayDow = today.getDayOfWeek();
-        Pelada pelada = peladaForDay(todayDow);
+        DayOfWeek tomorrowDow = tomorrow().getDayOfWeek();
+        Pelada pelada = peladaForDay(tomorrowDow);
 
         when(peladaRepository.findByAutoCreateDailyEnabledTrue()).thenReturn(List.of(pelada));
         when(dailyRepository.existsByPeladaAndDailyDate(eq(pelada), any())).thenReturn(false);
@@ -92,9 +96,8 @@ class DailySchedulerServiceTest {
 
     @Test
     void autoCreateDailies_dailyAlreadyExists_doesNotCreate() {
-        LocalDate today = LocalDate.now();
-        DayOfWeek todayDow = today.getDayOfWeek();
-        Pelada pelada = peladaForDay(todayDow);
+        DayOfWeek tomorrowDow = tomorrow().getDayOfWeek();
+        Pelada pelada = peladaForDay(tomorrowDow);
 
         when(peladaRepository.findByAutoCreateDailyEnabledTrue()).thenReturn(List.of(pelada));
         when(dailyRepository.existsByPeladaAndDailyDate(eq(pelada), any())).thenReturn(true);
@@ -106,12 +109,11 @@ class DailySchedulerServiceTest {
 
     @Test
     void autoCreateDailies_multiplePeladas_processedIndependently() {
-        LocalDate today = LocalDate.now();
-        DayOfWeek todayDow = today.getDayOfWeek();
+        DayOfWeek tomorrowDow = tomorrow().getDayOfWeek();
 
-        Pelada pelada1 = Pelada.builder().id(1L).name("P1").dayOfWeek(todayDow.name())
+        Pelada pelada1 = Pelada.builder().id(1L).name("P1").dayOfWeek(tomorrowDow.name())
                 .timeOfDay("18:00").duration(2f).autoCreateDailyEnabled(true).build();
-        Pelada pelada2 = Pelada.builder().id(2L).name("P2").dayOfWeek(todayDow.name())
+        Pelada pelada2 = Pelada.builder().id(2L).name("P2").dayOfWeek(tomorrowDow.name())
                 .timeOfDay("20:00").duration(1.5f).autoCreateDailyEnabled(true).build();
 
         when(peladaRepository.findByAutoCreateDailyEnabledTrue()).thenReturn(List.of(pelada1, pelada2));
@@ -126,12 +128,11 @@ class DailySchedulerServiceTest {
 
     @Test
     void autoCreateDailies_onePeladaExists_onlyCreatesForOther() {
-        LocalDate today = LocalDate.now();
-        DayOfWeek todayDow = today.getDayOfWeek();
+        DayOfWeek tomorrowDow = tomorrow().getDayOfWeek();
 
-        Pelada pelada1 = Pelada.builder().id(1L).name("P1").dayOfWeek(todayDow.name())
+        Pelada pelada1 = Pelada.builder().id(1L).name("P1").dayOfWeek(tomorrowDow.name())
                 .timeOfDay("18:00").duration(2f).autoCreateDailyEnabled(true).build();
-        Pelada pelada2 = Pelada.builder().id(2L).name("P2").dayOfWeek(todayDow.name())
+        Pelada pelada2 = Pelada.builder().id(2L).name("P2").dayOfWeek(tomorrowDow.name())
                 .timeOfDay("20:00").duration(1.5f).autoCreateDailyEnabled(true).build();
 
         when(peladaRepository.findByAutoCreateDailyEnabledTrue()).thenReturn(List.of(pelada1, pelada2));
@@ -146,9 +147,8 @@ class DailySchedulerServiceTest {
 
     @Test
     void autoCreateDailies_createdDailyBelongsToPelada() {
-        LocalDate today = LocalDate.now();
-        DayOfWeek todayDow = today.getDayOfWeek();
-        Pelada pelada = peladaForDay(todayDow);
+        DayOfWeek tomorrowDow = tomorrow().getDayOfWeek();
+        Pelada pelada = peladaForDay(tomorrowDow);
 
         when(peladaRepository.findByAutoCreateDailyEnabledTrue()).thenReturn(List.of(pelada));
         when(dailyRepository.existsByPeladaAndDailyDate(eq(pelada), any())).thenReturn(false);
@@ -159,5 +159,6 @@ class DailySchedulerServiceTest {
         ArgumentCaptor<Daily> captor = ArgumentCaptor.forClass(Daily.class);
         verify(dailyRepository).save(captor.capture());
         assertThat(captor.getValue().getPelada()).isEqualTo(pelada);
+        assertThat(captor.getValue().getDailyDate()).isEqualTo(tomorrow());
     }
 }
