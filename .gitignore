@@ -33,3 +33,6 @@ uploads/
 
 # Logs
 *.log
+
+# Private docs
+docs/analise-de-mercado.md
