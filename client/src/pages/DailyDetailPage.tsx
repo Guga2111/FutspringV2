@@ -4,11 +4,14 @@ import { useAuth } from '@/hooks/useAuth'
 import { Input } from '@/components/ui/input'
 import DetailSkeleton from '@/components/daily/DetailSkeleton'
 import TeamsSection from '@/components/daily/TeamsSection'
-import ResultsModal from '@/components/daily/ResultsModal'
+import { ResultsDialog } from '@/components/daily/ResultsDialog'
 import FinalizeModal from '@/components/daily/FinalizeModal'
 import DeleteDailyDialog from '@/components/daily/DeleteDailyDialog'
 import StatusConfirmDialog from '@/components/daily/StatusConfirmDialog'
 import LiveSessionCard from '@/components/daily/LiveSessionCard'
+import { LiveLeagueTable } from '@/components/daily/LiveLeagueTable'
+import { SavedMatchesList } from '@/components/daily/SavedMatchesList'
+import { LiveTeamsSection } from '@/components/daily/LiveTeamsSection'
 import MatchResultsSection from '@/components/daily/MatchResultsSection'
 import LeagueTableSection from '@/components/daily/LeagueTableSection'
 import PlayerStatsSection from '@/components/daily/PlayerStatsSection'
@@ -31,7 +34,7 @@ export default function DailyDetailPage() {
   const { daily, setDaily, loading, accessDenied, refetch } = useDailyDetail(dailyId)
 
   const {
-    resultsOpen, openResults, closeResults,
+    resultsMode, openResults, closeResults,
     finalizeOpen, openFinalize, closeFinalize,
     importOpen, openImport, closeImport,
     statusDialog, setStatusDialog,
@@ -105,7 +108,8 @@ export default function DailyDetailPage() {
               description: 'A sessão será cancelada. Essa ação não pode ser desfeita.',
             })
           }
-          onEnterResults={openResults}
+          onEnterResults={() => openResults('add')}
+          onEditResults={() => openResults('edit')}
           onFinalizeDaily={openFinalize}
           onChangeChampionPhoto={() => fileInputRef.current?.click()}
           onDeleteDaily={() => setDeleteOpen(true)}
@@ -148,9 +152,12 @@ export default function DailyDetailPage() {
 
         {daily.status === 'IN_COURSE' && (
           <>
-            <LiveSessionCard daily={daily} onEnterResults={openResults} />
-            <LeagueTableSection daily={daily} />
-            <MatchResultsSection daily={daily} />
+            <LiveSessionCard daily={daily} onEnterResults={() => openResults('add')} onFinalize={openFinalize} />
+            <section className="grid grid-cols-1 items-start gap-4 min-[1100px]:grid-cols-2">
+              <LiveLeagueTable daily={daily} />
+              <SavedMatchesList daily={daily} />
+            </section>
+            <LiveTeamsSection daily={daily} />
           </>
         )}
 
@@ -176,11 +183,12 @@ export default function DailyDetailPage() {
         <Input ref={fileInputRef} type="file" accept={IMAGE_ACCEPT} className="hidden" onChange={handleChampionUpload} />
       )}
 
-      {resultsOpen && (
-        <ResultsModal
+      {resultsMode && (
+        <ResultsDialog
           daily={daily}
+          mode={resultsMode}
           onClose={closeResults}
-          onSuccess={(updated) => {
+          onSaved={(updated) => {
             setDaily(updated)
             closeResults()
           }}

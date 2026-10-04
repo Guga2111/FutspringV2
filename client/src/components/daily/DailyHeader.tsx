@@ -33,6 +33,7 @@ export interface DailyHeaderActions {
   onStartSession: () => void
   onCancelDaily: () => void
   onEnterResults: () => void
+  onEditResults: () => void
   onFinalizeDaily: () => void
   onChangeChampionPhoto: () => void
   onDeleteDaily: () => void
@@ -121,7 +122,7 @@ export function DailyHeader({ daily, ...actions }: DailyHeaderProps) {
           )}
           {status === "FINISHED" && (
             <>
-              <Button variant="outline" className={outlineAction} onClick={actions.onEnterResults}>
+              <Button variant="outline" className={outlineAction} onClick={actions.onEditResults}>
                 <Pencil />
                 Editar resultados
               </Button>
@@ -143,6 +144,15 @@ export function DailyHeader({ daily, ...actions }: DailyHeaderProps) {
                   <DropdownMenuItem className={menuItem} onSelect={actions.onCancelDaily}>
                     <CircleX />
                     Cancelar diária
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator className="-mx-1 bg-border" />
+                </>
+              )}
+              {status === "IN_COURSE" && daily.matches.length > 0 && (
+                <>
+                  <DropdownMenuItem className={menuItem} onSelect={actions.onEditResults}>
+                    <Pencil />
+                    Editar partidas lançadas
                   </DropdownMenuItem>
                   <DropdownMenuSeparator className="-mx-1 bg-border" />
                 </>

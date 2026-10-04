@@ -12,6 +12,9 @@ export const toggleVariants = cva(
         // filter chips (pill; the selected one is inverted)
         chip:
           "h-8 min-w-0 gap-1.5 whitespace-nowrap rounded-full border border-input bg-transparent px-3 text-[13px] text-secondary-foreground hover:bg-accent hover:text-foreground data-[state=on]:border-primary data-[state=on]:bg-primary data-[state=on]:text-primary-foreground",
+        // team picker chips (results dialog): the selected team gets a stronger border
+        team:
+          "h-8 min-w-0 shrink-0 gap-1.5 whitespace-nowrap rounded-full border border-input bg-transparent px-2.5 text-[13px] text-foreground hover:bg-accent hover:text-foreground disabled:opacity-35 data-[state=on]:border-muted-foreground data-[state=on]:bg-input data-[state=on]:text-foreground",
       },
       size: {
         default: "h-10 px-3 min-w-10",
