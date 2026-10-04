@@ -204,6 +204,11 @@
   transform: scale(1.03);
 }
 
+.bg-brand-translucent {
+  background: rgb(21 128 61 / 0.35);
+  border-color: rgb(74 222 128 / 0.35);
+}
+
 .text-on-brand-muted {
   color: #bbf7d0;
 }
