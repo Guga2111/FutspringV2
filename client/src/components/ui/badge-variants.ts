@@ -13,6 +13,8 @@ export const badgeVariants = cva(
         destructive:
           "border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/80",
         outline: "text-foreground",
+        // colored pills (status, roles): background and text come from className
+        status: "whitespace-nowrap border-transparent font-medium",
       },
     },
     defaultVariants: {

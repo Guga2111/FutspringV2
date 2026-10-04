@@ -22,6 +22,7 @@ public class DailyAttendanceService {
     private final PeladaAccessHelper accessHelper;
     private final DailyRepository dailyRepository;
     private final UserRepository userRepository;
+    private final DailyListItemAssembler dailyListItemAssembler;
 
     @Transactional
     public DailyListItemDTO confirmAttendance(Long id, String currentUserEmail) {
@@ -36,7 +37,7 @@ public class DailyAttendanceService {
 
         daily.getConfirmedPlayers().add(caller);
         dailyRepository.save(daily);
-        return DailyListItemDTO.from(daily);
+        return dailyListItemAssembler.toListItem(daily, caller);
     }
 
     @Transactional
@@ -51,7 +52,7 @@ public class DailyAttendanceService {
 
         daily.getConfirmedPlayers().remove(caller);
         dailyRepository.save(daily);
-        return DailyListItemDTO.from(daily);
+        return dailyListItemAssembler.toListItem(daily, caller);
     }
 
     @Transactional
@@ -69,7 +70,7 @@ public class DailyAttendanceService {
 
         daily.getConfirmedPlayers().add(target);
         dailyRepository.save(daily);
-        return DailyListItemDTO.from(daily);
+        return dailyListItemAssembler.toListItem(daily, caller);
     }
 
     @Transactional
@@ -87,7 +88,21 @@ public class DailyAttendanceService {
 
         daily.getConfirmedPlayers().remove(target);
         dailyRepository.save(daily);
-        return DailyListItemDTO.from(daily);
+        return dailyListItemAssembler.toListItem(daily, caller);
+    }
+
+    /** Confirms every member who hasn't confirmed yet ("Confirmar todos"). */
+    @Transactional
+    public DailyListItemDTO adminConfirmAll(Long dailyId, String callerEmail) {
+        User caller = userAuthHelper.getAuthenticatedUser(callerEmail);
+        Daily daily = findDaily(dailyId);
+        Pelada pelada = daily.getPelada();
+        accessHelper.requireAdmin(pelada, caller);
+        requireUnlocked(daily);
+
+        daily.getConfirmedPlayers().addAll(pelada.getMembers());
+        dailyRepository.save(daily);
+        return dailyListItemAssembler.toListItem(daily, caller);
     }
 
     void clearAttendees(Daily daily) {

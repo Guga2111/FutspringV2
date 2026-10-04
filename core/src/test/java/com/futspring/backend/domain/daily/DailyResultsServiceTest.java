@@ -79,7 +79,8 @@ class DailyResultsServiceTest {
                 new AggregateRebuildService(userDailyStatsRepository, dailyAwardRepository, rankingRepository, statsRepository),
                 dailyTeamManagementService, new DailyDTOMapper(), dailyRepository, userRepository,
                 teamRepository, matchRepository, playerMatchStatRepository,
-                userDailyStatsRepository, leagueTableEntryRepository, dailyAwardRepository);
+                userDailyStatsRepository, leagueTableEntryRepository, dailyAwardRepository,
+                new DailyListItemAssembler(dailyRepository, teamRepository, matchRepository));
 
         admin = User.builder().id(1L).email("admin@example.com").username("admin").password("hash").stars(4).build();
         member = User.builder().id(2L).email("member@example.com").username("member").password("hash").stars(3).build();

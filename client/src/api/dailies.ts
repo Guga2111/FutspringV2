@@ -51,6 +51,12 @@ export async function adminConfirmAttendance(id: number, userId: number): Promis
   return response.data
 }
 
+// Confirms every member who hasn't confirmed yet (admin)
+export async function adminConfirmAllAttendance(id: number): Promise<DailyListItem> {
+  const response = await apiClient.post<DailyListItem>(`/api/v1/dailies/${id}/confirm/all`)
+  return response.data
+}
+
 export async function adminDisconfirmAttendance(id: number, userId: number): Promise<DailyListItem> {
   const response = await apiClient.delete<DailyListItem>(`/api/v1/dailies/${id}/confirm/${userId}`)
   return response.data

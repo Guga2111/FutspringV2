@@ -95,11 +95,10 @@ export function RankingCommandButton({
     <>
       <Button
         variant="outline"
-        size="sm"
-        className="gap-2"
+        className="h-auto gap-1.5 bg-transparent px-3.5 py-[7px] text-sm font-medium hover:bg-accent"
         onClick={() => setPopoverOpen(true)}
       >
-        <span className="text-xs">⌘</span>
+        <span aria-hidden>⌘</span>
         Ações
       </Button>
 

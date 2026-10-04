@@ -26,6 +26,8 @@ public class PeladaDetailResponseDTO {
     private String image;
     private boolean autoCreateDailyEnabled;
     private int memberCount;
+    private int numberOfTeams;
+    private int playersPerTeam;
     private List<PeladaMemberDTO> members;
 
     public static PeladaDetailResponseDTO from(Pelada pelada) {
@@ -45,6 +47,8 @@ public class PeladaDetailResponseDTO {
                 .image(pelada.getImage())
                 .autoCreateDailyEnabled(pelada.isAutoCreateDailyEnabled())
                 .memberCount(pelada.getMembers().size())
+                .numberOfTeams(pelada.getNumberOfTeams())
+                .playersPerTeam(pelada.getPlayersPerTeam())
                 .members(memberDTOs)
                 .build();
     }

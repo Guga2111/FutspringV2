@@ -1,6 +1,8 @@
 package com.futspring.backend.domain.pelada.dto;
 
+import com.futspring.backend.domain.daily.entity.DailyStatus;
 import com.futspring.backend.domain.pelada.Pelada;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -26,14 +28,35 @@ public class PeladaResponseDTO {
     private int memberCount;
     private int numberOfTeams;
     private int playersPerTeam;
+    // whether the caller administers the pelada
+    @JsonProperty("isAdmin")
+    private boolean isAdmin;
     // next SCHEDULED/CONFIRMED session from today on; only filled by GET /peladas/my and /users/{id}/peladas
-    private LocalDate nextDailyDate;
+    private NextDailyDTO nextDaily;
 
-    public static PeladaResponseDTO from(Pelada pelada) {
-        return from(pelada, pelada.getMembers().size(), null);
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    public static class NextDailyDTO {
+        private Long id;
+        private LocalDate date;
+        private String time;
+        private DailyStatus status;
+        private int confirmedCount;
+        // numberOfTeams × playersPerTeam
+        private int capacity;
+        // whether the caller confirmed attendance
+        @JsonProperty("isConfirmed")
+        private boolean isConfirmed;
     }
 
-    public static PeladaResponseDTO from(Pelada pelada, int memberCount, LocalDate nextDailyDate) {
+    /** Create/update responses: the caller is an admin (both routes require it). */
+    public static PeladaResponseDTO forAdmin(Pelada pelada) {
+        return from(pelada, pelada.getMembers().size(), true, null);
+    }
+
+    public static PeladaResponseDTO from(Pelada pelada, int memberCount, boolean isAdmin, NextDailyDTO nextDaily) {
         return PeladaResponseDTO.builder()
                 .id(pelada.getId())
                 .name(pelada.getName())
@@ -47,7 +70,8 @@ public class PeladaResponseDTO {
                 .memberCount(memberCount)
                 .numberOfTeams(pelada.getNumberOfTeams())
                 .playersPerTeam(pelada.getPlayersPerTeam())
-                .nextDailyDate(nextDailyDate)
+                .isAdmin(isAdmin)
+                .nextDaily(nextDaily)
                 .build();
     }
 }

@@ -38,3 +38,17 @@ export function getPeladaGradient(name: string): string {
   }
   return PELADA_GRADIENTS[Math.abs(hash) % PELADA_GRADIENTS.length]
 }
+
+const AVATAR_COLORS = [
+  "bg-avatar-1",
+  "bg-avatar-2",
+  "bg-avatar-3",
+  "bg-avatar-4",
+  "bg-avatar-5",
+  "bg-avatar-6",
+] as const
+
+// Stable background for a player's initials avatar (tokens --avatar-1..6)
+export function getAvatarColor(id: number): string {
+  return AVATAR_COLORS[Math.abs(id) % AVATAR_COLORS.length]
+}

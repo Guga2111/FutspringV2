@@ -1,18 +1,19 @@
-import { lazy, Suspense } from 'react'
-import { Routes, Route } from 'react-router-dom'
-import PrivateRoute from './components/PrivateRoute'
-import ErrorBoundary from './components/ErrorBoundary'
-import ScrollToTop from './components/ScrollToTop'
+import { lazy, Suspense } from "react"
+import { Routes, Route } from "react-router-dom"
+import PrivateRoute from "@/components/PrivateRoute"
+import ErrorBoundary from "@/components/ErrorBoundary"
+import ScrollToTop from "@/components/ScrollToTop"
+import { AppLayout } from "@/components/layout/AppLayout"
 
-const LandingPage = lazy(() => import('./pages/LandingPage'))
-const AuthPage = lazy(() => import('./pages/AuthPage'))
-const HomePage = lazy(() => import('./pages/HomePage'))
-const PeladaDetailPage = lazy(() => import('./pages/PeladaDetailPage'))
-const DailyDetailPage = lazy(() => import('./pages/DailyDetailPage'))
-const ProfilePage = lazy(() => import('./pages/ProfilePage'))
-const NotFoundPage = lazy(() => import('./pages/NotFoundPage'))
+const LandingPage = lazy(() => import("@/pages/LandingPage"))
+const AuthPage = lazy(() => import("@/pages/AuthPage"))
+const HomePage = lazy(() => import("@/pages/HomePage"))
+const PeladaDetailPage = lazy(() => import("@/pages/PeladaDetailPage"))
+const DailyDetailPage = lazy(() => import("@/pages/DailyDetailPage"))
+const ProfilePage = lazy(() => import("@/pages/ProfilePage"))
+const NotFoundPage = lazy(() => import("@/pages/NotFoundPage"))
 
-const fallback = <div className="flex items-center justify-center min-h-screen">Loading...</div>
+const fallback = <div className="flex items-center justify-center min-h-screen">Carregando…</div>
 
 function App() {
   return (
@@ -22,10 +23,13 @@ function App() {
         <Routes>
           <Route path="/" element={<ErrorBoundary><LandingPage /></ErrorBoundary>} />
           <Route path="/auth" element={<ErrorBoundary><AuthPage /></ErrorBoundary>} />
-          <Route path="/home" element={<ErrorBoundary><PrivateRoute><HomePage /></PrivateRoute></ErrorBoundary>} />
-          <Route path="/pelada/:id" element={<ErrorBoundary><PrivateRoute><PeladaDetailPage /></PrivateRoute></ErrorBoundary>} />
-          <Route path="/daily/:id" element={<ErrorBoundary><PrivateRoute><DailyDetailPage /></PrivateRoute></ErrorBoundary>} />
-          <Route path="/profile/:id" element={<ErrorBoundary><PrivateRoute><ProfilePage /></PrivateRoute></ErrorBoundary>} />
+          {/* Private pages share the sidebar shell */}
+          <Route element={<ErrorBoundary><PrivateRoute><AppLayout /></PrivateRoute></ErrorBoundary>}>
+            <Route path="/home" element={<ErrorBoundary><HomePage /></ErrorBoundary>} />
+            <Route path="/pelada/:id" element={<ErrorBoundary><PeladaDetailPage /></ErrorBoundary>} />
+            <Route path="/daily/:id" element={<ErrorBoundary><DailyDetailPage /></ErrorBoundary>} />
+            <Route path="/profile/:id" element={<ErrorBoundary><ProfilePage /></ErrorBoundary>} />
+          </Route>
           <Route path="*" element={<ErrorBoundary><NotFoundPage /></ErrorBoundary>} />
         </Routes>
       </Suspense>

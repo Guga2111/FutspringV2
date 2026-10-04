@@ -1,11 +1,14 @@
-import { useRef, useState } from 'react'
-import { ArrowLeftRight, ChevronDown, ChevronRight } from 'lucide-react'
-import type { DailyDetail, TeamDTO, PlayerDTO } from '@/types/daily'
-import { getFileUrl, getInitials } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
-import StarRating from '@/components/daily/StarRating'
+import { useRef, useState } from "react"
+import { ArrowLeftRight, Shuffle } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { PlayerAvatar } from "@/components/PlayerAvatar"
+import { StarRow } from "@/components/StarRow"
+import { TeamCard, TeamPlayerRow } from "@/components/daily/TeamCard"
+import { TeamColorDot } from "@/components/daily/TeamColorDot"
+import { cn } from "@/lib/utils"
+import { canSortTeams, sortTeamsHint } from "@/utils/attendance"
+import { isDailyOpen, type DailyDetail, type TeamDTO } from "@/types/daily"
 
 interface TeamsSectionProps {
   daily: DailyDetail
@@ -19,6 +22,7 @@ interface TeamsSectionProps {
   onTeamColorChange: (teamId: number, color: string) => void
 }
 
+// Teams before the session starts: sort (admin), swap players (admin), rename (team player), color (team player or admin)
 export default function TeamsSection({
   daily,
   sortLoading,
@@ -30,23 +34,15 @@ export default function TeamsSection({
   onTeamNameChange,
   onTeamColorChange,
 }: TeamsSectionProps) {
-  const [expanded, setExpanded] = useState(false)
   const [editingTeamId, setEditingTeamId] = useState<number | null>(null)
-  const [editingName, setEditingName] = useState('')
+  const [editingName, setEditingName] = useState("")
   const nameInputRef = useRef<HTMLInputElement>(null)
   const colorDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const required = daily.numberOfTeams * daily.playersPerTeam
-  const canSort =
-    daily.isAdmin &&
-    (daily.status === 'SCHEDULED' || daily.status === 'CONFIRMED') &&
-    daily.confirmedPlayers.length === required
-
+  const open = isDailyOpen(daily.status)
+  const isAdminOpen = daily.isAdmin && open
+  const full = canSortTeams(daily.confirmedPlayers.length, daily.numberOfTeams, daily.playersPerTeam)
   const hasTeams = daily.teams.length > 0
-
-  const showSection = canSort || hasTeams ||
-    (daily.isAdmin && (daily.status === 'SCHEDULED' || daily.status === 'CONFIRMED'))
-  if (!showSection) return null
 
   const startEditing = (team: TeamDTO) => {
     setEditingTeamId(team.id)
@@ -56,149 +52,150 @@ export default function TeamsSection({
 
   const commitEdit = (teamId: number, originalName: string) => {
     const trimmed = editingName.trim()
-    if (trimmed && trimmed !== originalName) {
-      onTeamNameChange(teamId, trimmed)
-    }
+    if (trimmed && trimmed !== originalName) onTeamNameChange(teamId, trimmed)
     setEditingTeamId(null)
-    setEditingName('')
+    setEditingName("")
   }
 
   const handleColorChange = (teamId: number, color: string) => {
     if (colorDebounceRef.current) clearTimeout(colorDebounceRef.current)
-    colorDebounceRef.current = setTimeout(() => {
-      onTeamColorChange(teamId, color)
-    }, 400)
+    colorDebounceRef.current = setTimeout(() => onTeamColorChange(teamId, color), 400)
   }
 
   return (
-    <section className="mb-8">
-      <div className="flex items-center justify-between mb-3">
-        <Button variant="ghost" size="sm" className="h-7 gap-1 text-lg font-semibold px-0 hover:bg-transparent" onClick={() => setExpanded((p) => !p)}>
-          {expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-          Times
-        </Button>
-        {daily.isAdmin && (daily.status === 'SCHEDULED' || daily.status === 'CONFIRMED') && (
-          canSort ? (
-            <Button
-              variant="gradient"
-              size="sm"
-              disabled={sortLoading || swapLoading}
-              onClick={onSortTeams}
-            >
-              {sortLoading ? 'Sorteando...' : hasTeams ? 'Re-sorteie os times' : 'Sortear Times'}
-            </Button>
-          ) : (
-            <span className="text-xs text-muted-foreground">
-              É necessário exatamente {required} jogadores ({daily.numberOfTeams}×{daily.playersPerTeam})
-            </span>
-          )
+    <section className="flex flex-col gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-base font-semibold">Times</h2>
+        {isAdminOpen && hasTeams && (
+          <Button
+            variant="outline"
+            disabled={!full || sortLoading || swapLoading}
+            onClick={onSortTeams}
+            className="h-[34px] gap-1.5 bg-transparent px-3.5 hover:bg-accent"
+          >
+            <Shuffle className="size-3.5" />
+            {sortLoading ? "Sorteando…" : "Sortear de novo"}
+          </Button>
         )}
       </div>
-      {expanded && selectedPlayer !== null && (
-        <p className="text-sm text-muted-foreground mb-3">
-          Jogador Selecionado — clique num jogador de time diferente para trocar, ou clicar no mesmo jogador pra cancelar.
-        </p>
-      )}
-      {expanded && (hasTeams ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {daily.teams.map((team: TeamDTO) => {
-            const isOnTeam = currentUserId != null && team.players.some((p) => p.id === currentUserId)
-            const canEditColor = isOnTeam || daily.isAdmin
-            const isEditing = editingTeamId === team.id
 
-            return (
-              <div key={team.id} className="border rounded-lg overflow-hidden">
-                <div className="px-4 py-2 flex items-center justify-between gap-2 bg-muted/50">
-                  <div className="flex items-center gap-2 min-w-0 flex-1">
-                    {canEditColor && (
-                      // shadcn has no color picker: a label around a visually hidden native color input
-                      <label className="cursor-pointer flex-shrink-0" title="Alterar cor do time">
-                        <Input
-                          type="color"
-                          aria-label={`Cor do ${team.name}`}
-                          className="sr-only"
-                          defaultValue={team.color ?? '#6b7280'}
-                          onChange={(e) => handleColorChange(team.id, e.target.value)}
-                        />
-                        <span
-                          className="inline-block h-4 w-4 rounded-full border border-current"
-                          style={{ background: team.color ?? '#6b7280' }}
-                        />
-                      </label>
-                    )}
-                    {isEditing ? (
-                      <Input
-                        ref={nameInputRef}
-                        aria-label="Nome do time"
-                        maxLength={30}
-                        className="h-7 min-w-0 w-full font-semibold"
-                        value={editingName}
-                        onChange={(e) => setEditingName(e.target.value)}
-                        onBlur={() => commitEdit(team.id, team.name)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') e.currentTarget.blur()
-                          if (e.key === 'Escape') {
-                            setEditingTeamId(null)
-                            setEditingName('')
-                          }
-                        }}
-                      />
-                    ) : (
-                      <h3
-                        className={`font-semibold truncate ${isOnTeam ? 'cursor-pointer hover:underline' : ''}`}
-                        onClick={() => isOnTeam && startEditing(team)}
-                      >
-                        {team.name}
-                      </h3>
-                    )}
-                  </div>
-                  <span className="text-xs text-gold flex-shrink-0">
-                    {team.averageStars.toFixed(2)} ★
-                  </span>
-                </div>
-                <div className="p-3 space-y-1">
-                  {team.players.map((player: PlayerDTO) => {
-                    const isSelected = selectedPlayer?.id === player.id
-                    return (
-                      <div
-                        key={player.id}
-                        className={`flex items-center gap-2 p-1.5 rounded ${isSelected ? 'bg-primary/10 ring-1 ring-primary' : 'hover:bg-muted'}`}
-                      >
-                        <Avatar className="h-8 w-8 flex-shrink-0">
-                          {player.image ? (
-                            <AvatarImage src={getFileUrl(player.image)} alt={player.username} />
-                          ) : null}
-                          <AvatarFallback className="text-xs font-semibold">
-                            {getInitials(player.username)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate">{player.username}</p>
-                        </div>
-                        <StarRating stars={player.stars} />
-                        {daily.isAdmin && (
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className={`h-6 w-6 rounded-full border ${isSelected ? 'bg-primary text-primary-foreground border-primary' : 'border-muted-foreground text-muted-foreground'}`}
-                            disabled={swapLoading}
-                            onClick={() => onPlayerClick(player.id, team.id)}
-                            aria-label={isSelected ? 'Cancelar troca' : 'Mover ou trocar jogador'}
-                          >
-                            <ArrowLeftRight className="h-3 w-3" />
-                          </Button>
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-            )
-          })}
+      {!hasTeams ? (
+        <div className="flex flex-col items-center gap-3 rounded-tile border border-dashed border-input px-5 py-7 text-center">
+          <Shuffle className="size-7 text-faint-foreground" strokeWidth={1.8} />
+          <div className="flex flex-col gap-1">
+            <span className="text-[15px] font-semibold">Sem times ainda</span>
+            <span className="max-w-[380px] text-[13px] text-muted-foreground">
+              {sortTeamsHint(daily.confirmedPlayers.length, daily.numberOfTeams, daily.playersPerTeam)}
+            </span>
+          </div>
+          {isAdminOpen && (
+            <Button
+              variant={full ? "gradient" : "secondary"}
+              disabled={!full || sortLoading}
+              onClick={onSortTeams}
+              className={cn("h-[38px] gap-2 px-[18px] font-semibold", !full && "bg-accent text-faint-foreground disabled:opacity-100")}
+            >
+              <Shuffle className="size-[15px]" />
+              {sortLoading ? "Sorteando…" : "Sortear times"}
+            </Button>
+          )}
         </div>
       ) : (
-        <p className="text-sm text-muted-foreground">Sem times ainda. Use "Sorteie Times" para auto-balancear.</p>
-      ))}
+        <>
+          {selectedPlayer !== null && (
+            <p className="text-sm text-muted-foreground">
+              Jogador selecionado: clique num jogador de outro time para trocar, ou no mesmo jogador para cancelar.
+            </p>
+          )}
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(min(260px,100%),1fr))] gap-3">
+            {daily.teams.map((team) => {
+              const isOnTeam = currentUserId != null && team.players.some((p) => p.id === currentUserId)
+              const canEditColor = open && (isOnTeam || daily.isAdmin)
+              const isEditing = editingTeamId === team.id
+              return (
+                <TeamCard
+                  key={team.id}
+                  title={
+                    <>
+                      {canEditColor ? (
+                        // shadcn has no color picker: a label around a visually hidden native color input
+                        <label className="shrink-0 cursor-pointer" title="Alterar cor do time">
+                          <Input
+                            type="color"
+                            aria-label={`Cor do ${team.name}`}
+                            className="sr-only"
+                            defaultValue={team.color ?? "#6b7280"}
+                            onChange={(e) => handleColorChange(team.id, e.target.value)}
+                          />
+                          <TeamColorDot color={team.color} className="size-3" />
+                        </label>
+                      ) : (
+                        <TeamColorDot color={team.color} className="size-3" />
+                      )}
+                      {isEditing ? (
+                        <Input
+                          ref={nameInputRef}
+                          aria-label="Nome do time"
+                          maxLength={30}
+                          className="h-7 w-full min-w-0 font-semibold"
+                          value={editingName}
+                          onChange={(e) => setEditingName(e.target.value)}
+                          onBlur={() => commitEdit(team.id, team.name)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") e.currentTarget.blur()
+                            if (e.key === "Escape") {
+                              setEditingTeamId(null)
+                              setEditingName("")
+                            }
+                          }}
+                        />
+                      ) : isOnTeam && open ? (
+                        <button
+                          type="button"
+                          title="Renomear time"
+                          onClick={() => startEditing(team)}
+                          className="truncate text-left text-[15px] font-semibold hover:underline"
+                        >
+                          {team.name}
+                        </button>
+                      ) : (
+                        <h3 className="truncate text-[15px] font-semibold">{team.name}</h3>
+                      )}
+                    </>
+                  }
+                  aside={<span className="shrink-0 text-xs font-semibold text-gold">{team.averageStars.toFixed(2)} ★</span>}
+                >
+                  {team.players.map((player) => {
+                    const isSelected = selectedPlayer?.id === player.id
+                    return (
+                      <TeamPlayerRow key={player.id} className={cn(isSelected && "-mx-2 rounded-lg bg-accent px-2")}>
+                        <PlayerAvatar username={player.username} image={player.image} />
+                        <span className="min-w-0 flex-1 truncate text-sm font-medium">{player.username}</span>
+                        <StarRow stars={player.stars} />
+                        {isAdminOpen && (
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            disabled={swapLoading}
+                            onClick={() => onPlayerClick(player.id, team.id)}
+                            aria-label={isSelected ? "Cancelar troca" : `Trocar ${player.username}`}
+                            className={cn(
+                              "size-[26px] bg-transparent text-subtle-foreground hover:bg-accent hover:text-foreground [&_svg]:size-3",
+                              isSelected && "border-primary bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground",
+                            )}
+                          >
+                            <ArrowLeftRight />
+                          </Button>
+                        )}
+                      </TeamPlayerRow>
+                    )
+                  })}
+                </TeamCard>
+              )
+            })}
+          </div>
+        </>
+      )}
     </section>
   )
 }

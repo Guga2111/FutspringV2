@@ -1,25 +1,16 @@
-import { Skeleton } from "@/components/ui/skeleton";
+import { Skeleton } from "@/components/ui/skeleton"
 
+// Shaped like the pelada page: banner card, tab bar, member cards
 export function DetailSkeleton() {
   return (
-    <div>
-      <Skeleton className="h-72 w-full rounded-none" />
-      <div className="container max-w-4xl mx-auto px-4 py-6">
-        <Skeleton className="h-8 w-1/2 mb-3" />
-        <Skeleton className="h-4 w-1/3 mb-2" />
-        <Skeleton className="h-4 w-1/4 mb-2" />
-        <Skeleton className="h-4 w-2/5 mb-6" />
-        <Skeleton className="h-6 w-32 mb-4" />
-        {[0, 1, 2].map((i) => (
-          <div key={i} className="flex items-center gap-3 mb-3">
-            <Skeleton className="h-10 w-10 rounded-full flex-shrink-0" />
-            <div className="flex-1">
-              <Skeleton className="h-4 w-32 mb-1" />
-              <Skeleton className="h-3 w-20" />
-            </div>
-          </div>
+    <div className="flex flex-col gap-5 p-4 md:gap-6 md:p-6">
+      <Skeleton className="h-[190px] w-full rounded-tile md:h-[230px]" />
+      <Skeleton className="h-10 w-full rounded-full md:w-[340px]" />
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(230px,1fr))] gap-3">
+        {[0, 1, 2, 3, 4, 5].map((i) => (
+          <Skeleton key={i} className="h-[132px] rounded-xl" />
         ))}
       </div>
     </div>
-  );
+  )
 }

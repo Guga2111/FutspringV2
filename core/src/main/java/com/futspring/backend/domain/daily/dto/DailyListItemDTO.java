@@ -1,6 +1,5 @@
 package com.futspring.backend.domain.daily.dto;
 
-import com.futspring.backend.domain.daily.entity.Daily;
 import com.futspring.backend.domain.daily.entity.DailyStatus;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
@@ -10,6 +9,7 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
 
+// Built by DailyListItemAssembler (counts come from grouped queries, isConfirmed is the caller's attendance)
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -23,19 +23,9 @@ public class DailyListItemDTO {
     private int confirmedPlayerCount;
     @JsonProperty("isFinished")
     private boolean isFinished;
-
-    public static DailyListItemDTO from(Daily daily) {
-        return from(daily, daily.getConfirmedPlayers().size());
-    }
-
-    public static DailyListItemDTO from(Daily daily, int confirmedPlayerCount) {
-        return DailyListItemDTO.builder()
-                .id(daily.getId())
-                .dailyDate(daily.getDailyDate())
-                .dailyTime(daily.getDailyTime())
-                .status(daily.getStatus())
-                .confirmedPlayerCount(confirmedPlayerCount)
-                .isFinished(daily.isFinished())
-                .build();
-    }
+    private int teamCount;
+    private int matchCount;
+    private String championImage;
+    @JsonProperty("isConfirmed")
+    private boolean isConfirmed;
 }

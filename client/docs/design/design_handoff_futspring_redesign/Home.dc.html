@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0;background:#1a1a1a;color:#fafafa;font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
+a{color:#22c55e;text-decoration:none}a:hover{color:#4ade80}
+*{box-sizing:border-box}
+</style>
+</helmet>
+<div style="width:{{ frameW }};height:{{ frameH }};overflow-y:{{ frameOverflow }};transform:{{ frameTransform }};margin:0 auto;border-left:{{ frameBorder }};border-right:{{ frameBorder }};background:#1a1a1a">
+<div style="display:flex;flex-direction:{{ rootDir }};min-height:100%;background:#1a1a1a">
+
+  <sc-if value="{{ isMobile }}" hint-placeholder-val="{{ false }}">
+    <header style="position:sticky;top:0;z-index:30;height:56px;flex-shrink:0;display:flex;align-items:center;gap:10px;padding:0 12px 0 16px;background:#151515;border-bottom:1px solid #2a2a2a">
+      <div style="width:28px;height:28px;border-radius:999px;background:#2e2e2e;flex-shrink:0"></div>
+      <span style="font-weight:700;font-size:17px;background:linear-gradient(90deg,#15803d,#16a34a);-webkit-background-clip:text;color:transparent;flex:1">FutSpring</span>
+      <button onClick="{{ openMobileMenu }}" aria-label="Abrir menu" style="width:40px;height:40px;border-radius:10px;border:none;background:transparent;color:#fafafa;cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="background:#262626">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"></path></svg>
+      </button>
+    </header>
+  </sc-if>
+  <sc-if value="{{ mobileMenuOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeMobileMenu }}" style="position:fixed;inset:0;z-index:55;background:rgba(0,0,0,.6)"></div>
+  </sc-if>
+
+  <aside style="width:{{ sidebarW }};flex-shrink:0;position:{{ asidePos }};top:0;left:0;z-index:{{ asideZ }};transform:{{ asideTransform }};height:100vh;display:flex;flex-direction:column;border-right:1px solid #2a2a2a;background:#151515;transition:width .2s, transform .25s">
+    <div style="display:flex;align-items:center;justify-content:{{ justify }};gap:10px;padding:16px 14px;height:60px">
+      <sc-if value="{{ expanded }}" hint-placeholder-val="{{ true }}">
+        <div style="width:30px;height:30px;border-radius:999px;background:#2e2e2e;flex-shrink:0"></div>
+        <span style="font-weight:700;font-size:17px;background:linear-gradient(90deg,#15803d,#16a34a);-webkit-background-clip:text;color:transparent;flex:1">FutSpring</span>
+      </sc-if>
+      <button onClick="{{ toggleSidebar }}" aria-label="{{ toggleLabel }}" style="width:28px;height:28px;border-radius:8px;border:none;background:transparent;color:#a3a3a3;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0" style-hover="background:#262626;color:#fafafa">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"></rect><path d="M9 3v18"></path></svg>
+      </button>
+    </div>
+
+    <nav style="padding:4px 10px;display:flex;flex-direction:column;gap:2px">
+      <a href="#" style="display:flex;align-items:center;justify-content:{{ justify }};gap:10px;padding:8px 10px;border-radius:8px;background:#262626;color:#fafafa;font-size:14px;font-weight:500" style-hover="background:#222;color:#fafafa">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M3 10.5 12 3l9 7.5V21H3z"></path><path d="M9 21v-7h6v7"></path></svg>
+        <sc-if value="{{ expanded }}" hint-placeholder-val="{{ true }}"><span>Início</span></sc-if>
+      </a>
+    </nav>
+
+    <div style="padding:16px 10px 6px;display:flex;align-items:center;justify-content:space-between;min-height:42px">
+      <sc-if value="{{ expanded }}" hint-placeholder-val="{{ true }}">
+        <span style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#737373;padding-left:10px">Minhas peladas</span>
+      </sc-if>
+      <button aria-label="Nova pelada" style="width:26px;height:26px;border-radius:999px;border:1px solid #2e2e2e;background:transparent;color:#a3a3a3;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin:{{ plusMargin }}" style-hover="background:#262626;color:#fafafa">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>
+      </button>
+    </div>
+
+    <div style="flex:1;overflow-y:auto;padding:0 10px;display:flex;flex-direction:column;gap:2px">
+      <sc-for list="{{ peladaItems }}" as="p" hint-placeholder-count="4">
+        <button onClick="{{ p.select }}" title="{{ p.name }}" style="display:flex;align-items:center;justify-content:{{ justify }};gap:10px;padding:{{ itemPad }};border-radius:10px;border:none;width:100%;text-align:left;cursor:pointer;background:{{ p.bg }};color:#fafafa;font-family:inherit" style-hover="background:#222">
+          <div style="width:34px;height:34px;border-radius:9px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;background:{{ p.gradient }}">{{ p.avatarText }}</div>
+          <sc-if value="{{ expanded }}" hint-placeholder-val="{{ true }}">
+            <div style="min-width:0;display:flex;flex-direction:column;gap:2px">
+              <span style="font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ p.name }}</span>
+              <span style="font-size:12px;color:#8a8a8a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ p.next }}</span>
+            </div>
+          </sc-if>
+        </button>
+      </sc-for>
+    </div>
+
+    <div style="position:relative;padding:8px">
+      <sc-if value="{{ menuOpen }}" hint-placeholder-val="{{ false }}">
+        <div onClick="{{ closeMenu }}" style="position:fixed;inset:0;z-index:40"></div>
+        <div style="position:absolute;left:{{ menuLeft }};bottom:{{ menuBottom }};z-index:50;width:240px;background:#1c1c1c;border:1px solid #2e2e2e;border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.45);padding:4px;display:flex;flex-direction:column">
+          <div style="display:flex;align-items:center;gap:10px;padding:8px">
+            <div style="width:32px;height:32px;border-radius:8px;background:#2e2e2e;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;flex-shrink:0">GO</div>
+            <div style="min-width:0;display:flex;flex-direction:column">
+              <span style="font-size:14px;font-weight:600">Gone</span>
+              <span style="font-size:12px;color:#a3a3a3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">gone@futspring.com</span>
+            </div>
+          </div>
+          <div style="height:1px;background:#2a2a2a;margin:4px -4px"></div>
+          <button onClick="{{ closeMenu }}" style="display:flex;align-items:center;gap:10px;padding:7px 8px;border:none;border-radius:6px;background:transparent;color:#fafafa;font-size:14px;font-family:inherit;cursor:pointer;text-align:left" style-hover="background:#262626">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#a3a3a3" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"></circle><path d="M4 21a8 8 0 0 1 16 0"></path></svg>Perfil
+          </button>
+          <button onClick="{{ closeMenu }}" style="display:flex;align-items:center;gap:10px;padding:7px 8px;border:none;border-radius:6px;background:transparent;color:#fafafa;font-size:14px;font-family:inherit;cursor:pointer;text-align:left" style-hover="background:#262626">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#a3a3a3" stroke-width="2" stroke-linecap="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"></path></svg>Notificações
+          </button>
+          <button onClick="{{ closeMenu }}" style="display:flex;align-items:center;gap:10px;padding:7px 8px;border:none;border-radius:6px;background:transparent;color:#fafafa;font-size:14px;font-family:inherit;cursor:pointer;text-align:left" style-hover="background:#262626">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#a3a3a3" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg>Tema claro
+          </button>
+          <div style="height:1px;background:#2a2a2a;margin:4px -4px"></div>
+          <button onClick="{{ closeMenu }}" style="display:flex;align-items:center;gap:10px;padding:7px 8px;border:none;border-radius:6px;background:transparent;color:#ef4444;font-size:14px;font-family:inherit;cursor:pointer;text-align:left" style-hover="background:#2a1a1a">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><path d="M16 17l5-5-5-5M21 12H9"></path></svg>Sair
+          </button>
+        </div>
+      </sc-if>
+      <button onClick="{{ toggleMenu }}" aria-label="Menu do usuário" style="width:100%;display:flex;align-items:center;justify-content:{{ justify }};gap:10px;padding:{{ itemPad }};border:none;border-radius:10px;background:{{ menuBg }};color:#fafafa;cursor:pointer;font-family:inherit;text-align:left" style-hover="background:#262626">
+        <div style="width:32px;height:32px;border-radius:8px;background:#2e2e2e;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;flex-shrink:0">GO</div>
+        <sc-if value="{{ expanded }}" hint-placeholder-val="{{ true }}">
+          <div style="flex:1;min-width:0;display:flex;flex-direction:column">
+            <span style="font-size:14px;font-weight:600">Gone</span>
+            <span style="font-size:12px;color:#a3a3a3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">gone@futspring.com</span>
+          </div>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#a3a3a3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M7 15l5 5 5-5M7 9l5-5 5 5"></path></svg>
+        </sc-if>
+      </button>
+    </div>
+  </aside>
+
+  <main style="flex:1;min-width:0;padding:{{ mainPad }}">
+   <div style="max-width:1120px;margin:0 auto;display:flex;flex-direction:column;gap:36px">
+
+    <header style="position:relative;border-radius:18px;overflow:hidden;background:#161616;min-height:{{ heroH }}">
+      <div style="position:absolute;inset:0;background:url('assets/ronaldo.jpg') {{ heroPos }} / cover no-repeat;filter:grayscale(1) contrast(1.05);opacity:.55"></div>
+      <div style="position:absolute;inset:0;background:linear-gradient(90deg,rgba(14,14,14,.95) 0%,rgba(14,14,14,.75) 45%,rgba(14,14,14,.25) 100%)"></div>
+      <div style="position:relative;padding:{{ heroPad }};display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:20px;min-height:{{ heroH }}">
+        <div style="display:flex;flex-direction:column;gap:10px;max-width:560px">
+          <span style="align-self:flex-start;display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:4px 10px;border-radius:999px;background:rgba(21,128,61,.35);border:1px solid rgba(74,222,128,.35);color:#bbf7d0">Domingo, 4 de outubro</span>
+          <h1 style="margin:0;font-size:{{ titleSize }};font-weight:800;letter-spacing:-.015em;line-height:1.1">Boa noite, Gone</h1>
+          <span style="font-size:15px;color:#d4d4d4;text-wrap:pretty">{{ greetLine }}</span>
+        </div>
+        <button style="display:flex;align-items:center;gap:8px;height:42px;padding:0 20px;border-radius:999px;border:none;background:linear-gradient(90deg,#15803d,#16a34a);color:#fff;font-size:14px;font-weight:600;font-family:inherit;cursor:pointer;white-space:nowrap">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>Nova pelada
+        </button>
+      </div>
+    </header>
+
+    <section style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:baseline;gap:10px">
+        <h2 style="margin:0;font-size:17px;font-weight:600">Próximas sessões</h2>
+        <span style="font-size:13px;color:#8a8a8a">{{ upcomingCount }}</span>
+      </div>
+      <div style="display:grid;grid-template-columns:{{ upCols }};grid-auto-flow:{{ carFlow }};grid-auto-columns:{{ upAuto }};overflow-x:{{ carOverflow }};scroll-snap-type:{{ carSnap }};scroll-padding:0 16px;margin:{{ carMargin }};padding:{{ carPad }};gap:12px;scrollbar-width:none">
+        <sc-for list="{{ upcoming }}" as="u" hint-placeholder-count="3">
+          <div style="scroll-snap-align:start;border:1px solid {{ u.border }};border-radius:14px;background:#1e1e1e;padding:14px;display:flex;flex-direction:column;gap:14px;min-width:0">
+            <div style="display:flex;align-items:center;gap:8px;min-width:0">
+              <span style="width:24px;height:24px;border-radius:7px;flex-shrink:0;background:{{ u.avatar }}"></span>
+              <span style="flex:1;min-width:0;font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ u.name }}</span>
+              <span style="display:flex;align-items:center;gap:5px;font-size:11px;font-weight:500;padding:2px 7px;border-radius:999px;background:{{ u.badgeBg }};color:{{ u.badgeFg }};white-space:nowrap;flex-shrink:0"><span style="width:5px;height:5px;border-radius:999px;background:{{ u.badgeDot }}"></span>{{ u.badge }}</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:4px;min-width:0">
+              <div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap">
+                <span style="font-size:22px;font-weight:700;letter-spacing:-.01em">{{ u.dateLabel }}</span>
+                <span style="font-size:15px;font-weight:500;color:#a3a3a3">{{ u.time }}</span>
+              </div>
+              <span style="display:flex;align-items:center;gap:6px;font-size:12px;color:#8a8a8a;min-width:0"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"></path><circle cx="12" cy="10" r="3"></circle></svg><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ u.place }}</span></span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:6px">
+              <div style="height:6px;border-radius:999px;background:#2a2a2a;overflow:hidden"><div style="height:100%;width:{{ u.pct }};background:linear-gradient(90deg,#15803d,#16a34a)"></div></div>
+              <span style="font-size:12px;color:#a3a3a3"><span style="color:#fafafa;font-weight:600">{{ u.conf }}</span> de {{ u.total }} confirmados</span>
+            </div>
+            <sc-if value="{{ u.notGoing }}" hint-placeholder-val="{{ true }}">
+              <button onClick="{{ u.toggle }}" style="height:38px;border-radius:999px;border:none;background:linear-gradient(90deg,#15803d,#16a34a);color:#fff;font-size:14px;font-weight:600;font-family:inherit;cursor:pointer;white-space:nowrap">Confirmar presença</button>
+            </sc-if>
+            <sc-if value="{{ u.going }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;height:38px;padding:0 6px 0 12px;border-radius:999px;background:#14301d">
+                <span style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:#4ade80;white-space:nowrap"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="m5 12 5 5L20 7"></path></svg>Você vai</span>
+                <button onClick="{{ u.toggle }}" style="height:28px;padding:0 10px;border-radius:999px;border:none;background:transparent;color:#86efac;font-size:12px;font-family:inherit;cursor:pointer;white-space:nowrap" style-hover="background:#1b3d26">Desistir</button>
+              </div>
+            </sc-if>
+            <a href="Daily Detail.dc.html" style="align-self:center;font-size:13px;color:#a3a3a3;margin-top:-4px" style-hover="color:#fafafa">Ver sessão →</a>
+          </div>
+        </sc-for>
+      </div>
+    </section>
+
+    <section style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px">
+        <div style="display:flex;align-items:baseline;gap:10px">
+          <h2 style="margin:0;font-size:17px;font-weight:600">Seus números</h2>
+          <span style="font-size:13px;color:#8a8a8a">em todas as peladas</span>
+        </div>
+        <a href="#" style="font-size:13px;color:#a3a3a3" style-hover="color:#fafafa">Ver perfil →</a>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px">
+        <sc-for list="{{ kpis }}" as="k" hint-placeholder-count="4">
+          <div style="border:1px solid #2a2a2a;border-radius:12px;background:#1e1e1e;padding:14px 16px;display:flex;flex-direction:column;gap:4px">
+            <span style="font-size:12px;color:#a3a3a3">{{ k.label }}</span>
+            <span style="font-size:26px;font-weight:700;font-variant-numeric:tabular-nums">{{ k.value }}</span>
+            <span style="font-size:12px;color:#737373">{{ k.sub }}</span>
+          </div>
+        </sc-for>
+      </div>
+    </section>
+
+    <section style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:baseline;gap:10px">
+        <h2 style="margin:0;font-size:17px;font-weight:600">Minhas peladas</h2>
+        <span style="font-size:13px;color:#8a8a8a">4</span>
+      </div>
+      <div style="display:grid;grid-template-columns:{{ pelCols }};grid-auto-flow:{{ carFlow }};grid-auto-columns:{{ pelAuto }};overflow-x:{{ carOverflow }};scroll-snap-type:{{ carSnap }};scroll-padding:0 16px;margin:{{ carMargin }};padding:{{ carPad }};gap:12px;scrollbar-width:none">
+        <sc-for list="{{ myPeladas }}" as="p" hint-placeholder-count="4">
+          <a href="Pelada Detail.dc.html" style="scroll-snap-align:start;border:1px solid #2a2a2a;border-radius:14px;background:#1e1e1e;overflow:hidden;display:flex;flex-direction:column;color:#fafafa" style-hover="border-color:#3a3a3a;color:#fafafa">
+            <div style="height:110px;background:{{ p.cover }};display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:800;color:rgba(255,255,255,.6)">{{ p.coverText }}</div>
+            <div style="padding:14px;display:flex;flex-direction:column;gap:6px">
+              <span style="font-size:15px;font-weight:600">{{ p.name }}</span>
+              <span style="font-size:13px;color:#a3a3a3">{{ p.sched }}</span>
+              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding-top:4px">
+                <span style="font-size:12px;font-weight:600;padding:2px 8px;border-radius:999px;background:#2a2a2a">{{ p.members }}</span>
+                <sc-if value="{{ p.isAdmin }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;font-weight:600;padding:2px 8px;border-radius:999px;background:#33290a;color:#fcd34d">Admin</span></sc-if>
+                <span style="font-size:12px;color:#8a8a8a">{{ p.next }}</span>
+              </div>
+            </div>
+          </a>
+        </sc-for>
+        <button style="scroll-snap-align:start;min-height:200px;border:1px dashed #333;border-radius:14px;background:transparent;color:#a3a3a3;font-family:inherit;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px" style-hover="background:#1e1e1e;color:#fafafa;border-color:#444">
+          <span style="width:40px;height:40px;border-radius:999px;border:1px solid #3a3a3a;display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg></span>
+          <span style="font-size:14px;font-weight:500">Criar nova pelada</span>
+        </button>
+      </div>
+    </section>
+   </div>
+  </main>
+
+  <sc-if value="{{ showChatFab }}" hint-placeholder-val="{{ false }}">
+    <button onClick="{{ toggleChat }}" aria-label="Abrir chat" style="position:fixed;right:16px;bottom:16px;z-index:40;width:54px;height:54px;border-radius:999px;border:none;background:linear-gradient(135deg,#15803d,#16a34a);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(0,0,0,.45)">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22z"></path></svg>
+    </button>
+  </sc-if>
+  <sc-if value="{{ chatPanelOpen }}" hint-placeholder-val="{{ false }}">
+    <div role="dialog" aria-label="Chat da pelada" style="position:fixed;right:24px;top:72px;bottom:86px;width:360px;max-width:calc(100% - 48px);z-index:45;background:#1e1e1e;border:1px solid #2e2e2e;border-radius:14px;box-shadow:0 20px 50px rgba(0,0,0,.55);display:flex;flex-direction:column;overflow:hidden">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 8px 10px 16px;border-bottom:1px solid #2a2a2a">
+        <div style="display:flex;flex-direction:column">
+          <span style="font-size:15px;font-weight:600">Chat</span>
+          <span style="font-size:12px;color:#8a8a8a">{{ current.name }} · 20 membros</span>
+        </div>
+        <button onClick="{{ closeChat }}" aria-label="Fechar chat" style="width:34px;height:34px;border:none;border-radius:999px;background:transparent;color:#a3a3a3;cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="background:#262626;color:#fafafa">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"></path></svg>
+        </button>
+      </div>
+      <div style="flex:1;display:flex;align-items:center;justify-content:center;font-size:14px;color:#8a8a8a">Nenhuma mensagem ainda.</div>
+      <div style="padding:12px;border-top:1px solid #2a2a2a;display:flex;gap:8px">
+        <input placeholder="Escreva uma mensagem…" style="flex:1;min-width:0;height:38px;border-radius:8px;border:1px solid #2e2e2e;background:#1a1a1a;color:#fafafa;padding:0 12px;font-size:14px;font-family:inherit;outline:none"></input>
+        <button style="height:38px;padding:0 14px;border-radius:999px;border:none;background:linear-gradient(90deg,#15803d,#16a34a);color:#fff;font-weight:600;font-size:14px;cursor:pointer;font-family:inherit">Enviar</button>
+      </div>
+    </div>
+  </sc-if>
+  <sc-if value="{{ chatOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeChat }}" style="position:fixed;inset:0;z-index:55;background:rgba(0,0,0,.6)"></div>
+    <div style="position:fixed;left:0;right:0;bottom:0;z-index:60;height:78%;background:#1e1e1e;border-top:1px solid #2e2e2e;border-radius:16px 16px 0 0;display:flex;flex-direction:column">
+      <div style="display:flex;justify-content:center;padding:8px 0 0"><div style="width:40px;height:4px;border-radius:999px;background:#3a3a3a"></div></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 8px 10px 16px;border-bottom:1px solid #2a2a2a">
+        <span style="font-size:15px;font-weight:600">Chat</span>
+        <button onClick="{{ closeChat }}" aria-label="Fechar chat" style="width:36px;height:36px;border:none;border-radius:999px;background:transparent;color:#a3a3a3;cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="background:#262626">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"></path></svg>
+        </button>
+      </div>
+      <div style="flex:1;display:flex;align-items:center;justify-content:center;font-size:14px;color:#8a8a8a">Nenhuma mensagem ainda.</div>
+      <div style="padding:12px;border-top:1px solid #2a2a2a;display:flex;gap:8px">
+        <input placeholder="Escreva uma mensagem…" style="flex:1;min-width:0;height:44px;border-radius:10px;border:1px solid #2e2e2e;background:#1a1a1a;color:#fafafa;padding:0 12px;font-size:16px;font-family:inherit;outline:none"></input>
+        <button style="height:44px;padding:0 16px;border-radius:999px;border:none;background:linear-gradient(90deg,#15803d,#16a34a);color:#fff;font-weight:600;font-size:14px;cursor:pointer;font-family:inherit">Enviar</button>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;viewport&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;auto&quot;,&quot;mobile&quot;],&quot;default&quot;:&quot;auto&quot;,&quot;tsType&quot;:&quot;\&quot;auto\&quot; | \&quot;mobile\&quot;&quot;},&quot;sidebarCollapsed&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;}}">
+class Component extends DCLogic {
+  state = { active: 0, tab: "Membros", collapsed: null };
+  peladas = [
+    { name: "Jogasse onde", initials: "JO", img: "assets/jogasse-onde.jpg", day: "Quinta", time: "21:00 · 2h", address: "Rua das Chuteiras, 123", reference: "Campo Society da esquina", next: "Qui, 08/10 · 21:00", g: "linear-gradient(180deg,#06b6d4,#0e5a6b)" },
+    { name: "Fut de Quinta", initials: "FQ", day: "Quinta", time: "20:00 · 1.5h", address: "Av. Paulista, 900", reference: "Quadra 3", next: "Qui, 08/10 · 20:00", g: "linear-gradient(180deg,#8b5cf6,#3b2a6b)" },
+    { name: "Racha do Escritório", initials: "RE", day: "Terça", time: "19:00 · 1h", address: "Rua Augusta, 410", reference: "Arena Augusta", next: "Sem sessão agendada", g: "linear-gradient(180deg,#f59e0b,#6b4a0e)" },
+    { name: "Várzea FC", initials: "VF", day: "Domingo", time: "09:00 · 2h", address: "Parque do Ibirapuera", reference: "Campo 2", next: "Dom, 11/10 · 09:00", g: "linear-gradient(180deg,#22c55e,#14532d)" }
+  ];
+  rows = [["Tuca",23,1,17,2],["Souto",23,2,16,2],["Pirro",23,2,14,9],["Dudu",23,1,12,4],["27",19,4,10,6],["Thiago",23,2,9,0],["Diego",23,3,8,6],["Lui",19,2,8,6],["Tão",23,2,8,4],["Vuzzi",21,3,7,3]];
+  members = [["Leal","ATACANTE",5],["Souto","ATACANTE",5],["Ferraz","ZAGUEIRO",1],["Lui","MEIO",5],["Tuca","ATACANTE",4],["Gone","ATACANTE",5],["Thiago","MEIO",4],["Tão","MEIO",3],["Lobo","MEIO",2],["Dudu","ATACANTE",4],["Miguel","MEIO",2],["Neto","ATACANTE",2],["Vuzzi","ATACANTE",3],["27","MEIO",2],["Nando","GOLEIRO",1],["Abreu","ATACANTE",1],["Leudo","MEIO",2],["Diego","ATACANTE",3],["Pirro","MEIO",3],["André","ATACANTE",4]];
+  posLabels = { GOLEIRO: "Goleiro", ZAGUEIRO: "Zagueiro", MEIO: "Meio", ATACANTE: "Atacante" };
+  membersVals() {
+    const q = (this.state.q || "").toLowerCase();
+    const pos = this.state.pos || "ALL";
+    const hues = [160, 45, 300, 265, 15, 200];
+    const all = this.members.map(([name, p, s], i) => {
+      const r = this.rows.find(x => x[0] === name);
+      return { name, pos: p, posLabel: this.posLabels[p].toUpperCase(), initials: name.slice(0, 2).toUpperCase(), color: `oklch(0.58 0.14 ${hues[i % hues.length]})`, starsOn: "★".repeat(s), starsOff: "★".repeat(5 - s), isAdmin: i === 0, j: r ? r[1] : 23 - (i % 3) * 2, g: r ? r[3] : (i * 3) % 7, a: r ? r[4] : (i * 5) % 6 };
+    });
+    const list = all.filter(m => (pos === "ALL" || m.pos === pos) && m.name.toLowerCase().includes(q));
+    const f = (key, label) => ({ label, count: key === "ALL" ? all.length : all.filter(m => m.pos === key).length, bg: pos === key ? "#fafafa" : "transparent", fg: pos === key ? "#171717" : "#d4d4d4", border: pos === key ? "#fafafa" : "#2e2e2e", select: () => this.setState({ pos: key }) });
+    return {
+      memberQuery: this.state.q || "",
+      setQuery: e => this.setState({ q: e.target.value }),
+      posFilters: [f("ALL", "Todos"), f("GOLEIRO", "Goleiro"), f("ZAGUEIRO", "Zagueiro"), f("MEIO", "Meio"), f("ATACANTE", "Atacante")],
+      memberCards: list,
+      noMembers: list.length === 0,
+      memberSummary: `${list.length} de ${all.length} membros · 1 admin`
+    };
+  }
+  sessionsVals() {
+    const data = [["Setembro 2026", [[27, 20, 4, true, "assets/campeao-27-09.jpeg"], [20, 20, 4, true], [13, 15, 3, false], [6, 20, 4, true]], "setembro"], ["Agosto 2026", [[30, 20, 4, true], [23, 15, 3, true], [16, 20, 4, false]], "agosto"]];
+    return data.map(([label, items, mes]) => ({ label, items: items.map(([d, pl, t, ph, src]) => ({ photoBg: src ? `url("${src}") center 55% / cover no-repeat` : "repeating-linear-gradient(135deg,#262626 0 6px,#2c2c2c 6px 12px)", photoText: src ? "" : "foto", day: String(d).padStart(2, "0"), wd: "Dom", title: `Domingo, ${d} de ${mes}`, meta: `08:00 · ${t} times · 6 partidas`, players: pl, hasPhoto: ph, noPhoto: !ph })) }));
+  }
+  homeVals() {
+    const w = this.state.w ?? 1440;
+    const isMobile = (this.props.viewport ?? "auto") === "mobile" || w < 768;
+    const going = this.state.going || { "Jogasse onde": true };
+    const U = [
+      ["Fut de Quinta", "QUI", "08", "OUT", "Quinta · 20:00 · Av. Paulista, 900", 12, 20, "linear-gradient(180deg,#8b5cf6,#3b2a6b)", "Agendada"],
+      ["Jogasse onde", "QUI", "08", "OUT", "Quinta · 21:00 · Rua das Chuteiras, 123", 17, 20, "url(assets/jogasse-onde.jpg) center 18% / cover", "Confirmada"],
+      ["Várzea FC", "DOM", "11", "OUT", "Domingo · 09:00 · Parque do Ibirapuera", 6, 22, "linear-gradient(180deg,#22c55e,#14532d)", "Agendada"]
+    ];
+    const upcoming = U.map(([name, wd, day, mon, when, c, total, avatar, badge]) => {
+      const g = !!going[name];
+      const conf = c + (g ? 1 : 0);
+      const blue = badge === "Agendada";
+      const parts = when.split(" · ");
+      return { name, wd, day, mon, when, avatar, dateLabel: wd.charAt(0) + wd.slice(1).toLowerCase() + ", " + day + " " + mon.toLowerCase(), time: parts[1], place: parts[2], total, conf, pct: Math.round(conf / total * 100) + "%", going: g, notGoing: !g,
+        border: g ? "#1f4d2e" : "#2a2a2a", badge, badgeBg: blue ? "#1e293b" : "#14301d", badgeFg: blue ? "#93c5fd" : "#86efac", badgeDot: blue ? "#3b82f6" : "#22c55e",
+        toggle: () => this.setState(s => { const o = { ...(s.going || { "Jogasse onde": true }) }; o[name] = !o[name]; return { going: o }; }) };
+    });
+    const pending = upcoming.filter(u => u.notGoing).length;
+    return {
+      mainPad: isMobile ? "20px 16px" : "32px",
+      titleSize: isMobile ? "28px" : "38px",
+      upCols: isMobile ? "none" : "repeat(auto-fill,minmax(300px,1fr))", pelCols: isMobile ? "none" : "repeat(auto-fill,minmax(240px,1fr))",
+      carFlow: isMobile ? "column" : "row", upAuto: isMobile ? "calc((100% - 44px) / 1.3)" : "auto", pelAuto: isMobile ? "calc((100% - 44px) / 1.3)" : "auto",
+      carOverflow: isMobile ? "auto" : "visible", carSnap: isMobile ? "x mandatory" : "none",
+      carMargin: isMobile ? "0 -16px" : "0", carPad: isMobile ? "0 16px 4px" : "0",
+      heroH: isMobile ? "220px" : "240px", heroPad: isMobile ? "22px 20px" : "32px 36px", heroPos: isMobile ? "70% 30%" : "right 30%",
+      showChat: false, showChatFab: false, chatPanelOpen: false, chatOpen: false,
+      peladaItems: this.peladas.map((p, i) => ({ ...p, gradient: p.img ? "url(" + p.img + ") center 18% / cover no-repeat" : p.g, avatarText: p.img ? "" : p.initials, bg: "transparent", select: () => {} })),
+      greetLine: pending ? "Você tem " + pending + (pending > 1 ? " sessões esperando sua confirmação." : " sessão esperando sua confirmação.") : "Presença confirmada em todas as próximas sessões.",
+      upcoming, upcomingCount: upcoming.length,
+      kpis: [
+        { label: "Gols", value: 23, sub: "0,40 por partida" },
+        { label: "Assistências", value: 11, sub: "0,19 por partida" },
+        { label: "Partidas", value: 58, sub: "em 9 sessões" },
+        { label: "Vitórias", value: 31, sub: "53% de aproveitamento" }
+      ],
+      myPeladas: this.peladas.map((p, i) => ({ name: p.name, sched: p.day + " · " + p.time.split(" · ")[0], cover: p.img ? "url(" + p.img + ") center 22% / cover no-repeat" : p.g, coverText: p.img ? "" : p.initials,
+        members: [52, 14, 10, 22][i] + " membros", isAdmin: i === 0 || i === 2, next: p.next === "Sem sessão agendada" ? "Sem sessão marcada" : "Próxima: " + p.next }))
+    };
+  }
+  componentDidMount() {
+    this.onResize = () => this.setState({ w: window.innerWidth });
+    window.addEventListener("resize", this.onResize);
+    this.onResize();
+  }
+  componentWillUnmount() { window.removeEventListener("resize", this.onResize); }
+  renderVals() {
+    const w = this.state.w ?? 1440;
+    const forced = (this.props.viewport ?? "auto") === "mobile";
+    const isMobile = forced || w < 768;
+    const expanded = isMobile ? true : (this.state.collapsed === null ? !(this.props.sidebarCollapsed ?? false) : !this.state.collapsed);
+    const cur = this.peladas[this.state.active];
+    const medals = ["#eab308", "#a3a3a3", "#c2410c"];
+    const chatOn = this.props.showChat ?? true;
+    const showChat = !isMobile && chatOn && w - (expanded ? 264 : 64) - 48 >= 1000;
+    const mm = !!this.state.mobileMenu;
+    return {
+      expanded,
+      isMobile,
+      isDesktop: !isMobile,
+      frameW: forced ? "390px" : "100%",
+      frameH: forced ? "100vh" : "auto",
+      frameOverflow: forced ? "auto" : "visible",
+      frameTransform: forced ? "translateZ(0)" : "none",
+      frameBorder: forced ? "1px solid #2a2a2a" : "none",
+      rootDir: isMobile ? "column" : "row",
+      asidePos: isMobile ? "fixed" : "sticky",
+      asideZ: isMobile ? 60 : 1,
+      asideTransform: isMobile && !mm ? "translateX(-105%)" : "none",
+      mobileMenuOpen: isMobile && mm,
+      openMobileMenu: () => this.setState({ mobileMenu: true }),
+      closeMobileMenu: () => this.setState({ mobileMenu: false, menuOpen: false }),
+      toggleLabel: isMobile ? "Fechar menu" : "Recolher menu",
+      menuLeft: isMobile ? "8px" : "calc(100% + 8px)",
+      menuBottom: isMobile ? "calc(100% + 4px)" : "8px",
+      rankCols: isMobile ? "26px minmax(0,1fr) 28px 30px 26px 40px 44px" : "44px minmax(0,1fr) 40px 64px 64px 64px 64px",
+      rankPad: isMobile ? "10px 6px" : "10px 12px",
+      rankMinW: isMobile ? "0" : "520px",
+      mainPad: isMobile ? "16px" : "24px",
+      mainGap: isMobile ? "20px" : "24px",
+      bannerH: isMobile ? "190px" : "230px",
+      showChatFab: !showChat && !(isMobile && this.state.chatOpen),
+      chatOpen: isMobile && !!this.state.chatOpen,
+      chatPanelOpen: !isMobile && !showChat && !!this.state.chatOpen,
+      toggleChat: () => this.setState(s => ({ chatOpen: !s.chatOpen })),
+      closeChat: () => this.setState({ chatOpen: false }),
+      justify: expanded ? "flex-start" : "center",
+      itemPad: expanded ? "8px" : "4px",
+      plusMargin: expanded ? "0 4px 0 auto" : "0 auto",
+      menuOpen: !!this.state.menuOpen,
+      menuBg: this.state.menuOpen ? "#262626" : "transparent",
+      toggleMenu: () => this.setState(s => ({ menuOpen: !s.menuOpen })),
+      closeMenu: () => this.setState({ menuOpen: false }),
+      sidebarW: expanded ? "264px" : "64px",
+      toggleSidebar: () => isMobile ? this.setState({ mobileMenu: false, menuOpen: false }) : this.setState({ collapsed: expanded }),
+      peladaItems: this.peladas.map((p, i) => ({ ...p, gradient: p.img ? `url(${p.img}) center 18% / cover no-repeat` : p.g, avatarText: p.img ? "" : p.initials, bg: i === this.state.active ? "#262626" : "transparent", select: () => this.setState({ active: i, mobileMenu: false }) })),
+      current: cur,
+      bannerGradient: cur.img ? `url(${cur.img}) center 22% / cover no-repeat` : cur.g,
+      bannerInitials: cur.img ? "" : cur.initials,
+      tabs: ["Membros", "Sessões", "Ranking", "Prêmios"].map(l => ({ label: l, bg: l === this.state.tab ? "#1a1a1a" : "transparent", fg: l === this.state.tab ? "#fafafa" : "#a3a3a3", select: () => this.setState({ tab: l }) })),
+      isRanking: this.state.tab === "Ranking",
+      isMembers: this.state.tab === "Membros",
+      isSessions: this.state.tab === "Sessões",
+      isAwards: this.state.tab === "Prêmios",
+      ...this.membersVals(),
+      sessionMonths: this.sessionsVals(),
+      hasNext: (this.props.hasNextSession ?? true) && cur.next !== "Sem sessão agendada",
+      noNext: !((this.props.hasNextSession ?? true) && cur.next !== "Sem sessão agendada"),
+      isAdminView: this.props.isAdmin ?? true,
+      noNextHint: (this.props.isAdmin ?? true) ? "Crie a próxima sessão ou ative a criação automática nas configurações da pelada." : "Quando um admin agendar a próxima sessão, ela aparece aqui.",
+      tabLabel: this.state.tab,
+      showChat,
+      gridCols: showChat ? "minmax(0,1fr) 320px" : "minmax(0,1fr)",
+      ranking: this.rows.map(([name, j, v, g, a], i) => ({ name, j, v, g, a, initials: name.slice(0, 2).toUpperCase(), rankLabel: i < 3 ? "🏆".slice(0,0) + ["1º","2º","3º"][i] : String(i + 1), rankColor: i < 3 ? medals[i] : "#8a8a8a", rankWeight: i < 3 ? 700 : 400 })),
+      ...this.homeVals()
+    };
+  }
+}
+</script>
+</body>
+</html>

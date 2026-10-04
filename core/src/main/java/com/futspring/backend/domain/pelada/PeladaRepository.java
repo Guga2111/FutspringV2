@@ -40,6 +40,10 @@ public interface PeladaRepository extends JpaRepository<Pelada, Long> {
     List<Long> findIdsByMemberId(@Param("userId") Long userId);
 
     // [peladaId, memberCount] in one query
+    // Ids (among `ids`) of the peladas the user administers
+    @Query("SELECT p.id FROM Pelada p JOIN p.admins a WHERE p.id IN :ids AND a.id = :userId")
+    List<Long> findAdministeredIds(@Param("ids") Collection<Long> ids, @Param("userId") Long userId);
+
     @Query("SELECT p.id, SIZE(p.members) FROM Pelada p WHERE p.id IN :ids")
     List<Object[]> countMembersByIds(@Param("ids") Collection<Long> ids);
 }

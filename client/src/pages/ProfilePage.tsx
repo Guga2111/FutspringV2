@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import NavBar from '@/components/NavBar'
 import { getInitials, getPeladaGradient, getFileUrl } from '@/lib/utils'
 import { useAuth } from '@/hooks/useAuth'
 import { getPositionLabel } from '@/types/user'
@@ -31,12 +30,7 @@ export default function ProfilePage() {
   } = useProfile(userId)
 
   if (status === 'loading') {
-    return (
-      <>
-        <NavBar />
-        <ProfileSkeleton />
-      </>
-    )
+    return <ProfileSkeleton />
   }
 
   if (!profile || !stats) {
@@ -46,12 +40,9 @@ export default function ProfilePage() {
         ? 'Perfil não encontrado.'
         : 'Não foi possível carregar o perfil.'
     return (
-      <>
-        <NavBar />
-        <div className="flex items-center justify-center min-h-[60vh] px-4 text-center">
-          <p className="text-muted-foreground">{message}</p>
-        </div>
-      </>
+      <div className="flex items-center justify-center min-h-[60vh] px-4 text-center">
+        <p className="text-muted-foreground">{message}</p>
+      </div>
     )
   }
 
@@ -61,8 +52,6 @@ export default function ProfilePage() {
 
   return (
     <div className="page-enter">
-      <NavBar />
-
       {/* Background banner */}
       {bgUrl && (
         <div
