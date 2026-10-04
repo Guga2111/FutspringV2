@@ -26,6 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -71,13 +72,13 @@ public class PeladaService {
         pelada.getMembers().add(user);
         pelada.getAdmins().add(user);
 
-        return PeladaResponseDTO.from(peladaRepository.save(pelada), 1, null);
+        return PeladaResponseDTO.forAdmin(peladaRepository.save(pelada));
     }
 
     @Transactional(readOnly = true)
     public List<PeladaResponseDTO> getMyPeladas(String currentUserEmail) {
         User user = userAuthHelper.getAuthenticatedUser(currentUserEmail);
-        return toSummaries(peladaRepository.findByMembersContaining(user));
+        return toSummaries(peladaRepository.findByMembersContaining(user), user);
     }
 
     /** Peladas that both the caller and {@code userId} belong to (profile page). */
@@ -87,22 +88,45 @@ public class PeladaService {
         if (!userRepository.existsById(userId)) {
             throw new AppException(HttpStatus.NOT_FOUND, "Usuário não encontrado");
         }
-        return toSummaries(peladaRepository.findSharedPeladas(caller.getId(), userId));
+        return toSummaries(peladaRepository.findSharedPeladas(caller.getId(), userId), caller);
     }
 
-    // Member counts and next session dates in two grouped queries instead of one per pelada
-    private List<PeladaResponseDTO> toSummaries(List<Pelada> peladas) {
+    // Member counts, admin flags and next sessions in grouped queries instead of one per pelada
+    private List<PeladaResponseDTO> toSummaries(List<Pelada> peladas, User caller) {
         if (peladas.isEmpty()) {
             return List.of();
         }
         List<Long> ids = peladas.stream().map(Pelada::getId).toList();
         Map<Long, Integer> memberCounts = peladaRepository.countMembersByIds(ids).stream()
                 .collect(Collectors.toMap(row -> (Long) row[0], row -> ((Number) row[1]).intValue()));
-        Map<Long, LocalDate> nextDates = dailyRepository.findNextDailyDates(ids, UPCOMING_STATUSES, LocalDate.now()).stream()
-                .collect(Collectors.toMap(row -> (Long) row[0], row -> (LocalDate) row[1]));
+        Set<Long> administered = new HashSet<>(peladaRepository.findAdministeredIds(ids, caller.getId()));
+
+        // Two sessions of a pelada on the same date: keep the oldest one
+        Map<Long, Daily> nextDailies = dailyRepository.findNextDailies(ids, UPCOMING_STATUSES, LocalDate.now()).stream()
+                .collect(Collectors.toMap(d -> d.getPelada().getId(), d -> d,
+                        (a, b) -> a.getId() <= b.getId() ? a : b));
+        List<Long> nextIds = nextDailies.values().stream().map(Daily::getId).toList();
+        Map<Long, Integer> confirmedCounts = nextIds.isEmpty() ? Map.of()
+                : dailyRepository.countConfirmedByIds(nextIds).stream()
+                        .collect(Collectors.toMap(row -> (Long) row[0], row -> ((Number) row[1]).intValue()));
+        Set<Long> confirmedByCaller = nextIds.isEmpty() ? Set.of()
+                : new HashSet<>(dailyRepository.findConfirmedDailyIds(nextIds, caller.getId()));
 
         return peladas.stream()
-                .map(p -> PeladaResponseDTO.from(p, memberCounts.getOrDefault(p.getId(), 0), nextDates.get(p.getId())))
+                .map(p -> {
+                    Daily next = nextDailies.get(p.getId());
+                    PeladaResponseDTO.NextDailyDTO nextDaily = next == null ? null : PeladaResponseDTO.NextDailyDTO.builder()
+                            .id(next.getId())
+                            .date(next.getDailyDate())
+                            .time(next.getDailyTime())
+                            .status(next.getStatus())
+                            .confirmedCount(confirmedCounts.getOrDefault(next.getId(), 0))
+                            .capacity(p.getNumberOfTeams() * p.getPlayersPerTeam())
+                            .isConfirmed(confirmedByCaller.contains(next.getId()))
+                            .build();
+                    return PeladaResponseDTO.from(p, memberCounts.getOrDefault(p.getId(), 0),
+                            administered.contains(p.getId()), nextDaily);
+                })
                 .toList();
     }
 
@@ -191,7 +215,7 @@ public class PeladaService {
         if (request.getReference() != null) pelada.setReference(request.getReference());
         if (request.getAutoCreateDailyEnabled() != null) pelada.setAutoCreateDailyEnabled(request.getAutoCreateDailyEnabled());
 
-        return PeladaResponseDTO.from(peladaRepository.save(pelada));
+        return PeladaResponseDTO.forAdmin(peladaRepository.save(pelada));
     }
 
     /**
@@ -231,7 +255,7 @@ public class PeladaService {
         String filename = fileUploadService.uploadImage(file);
         fileUploadService.deleteImageAfterCommit(pelada.getImage());
         pelada.setImage(filename);
-        return PeladaResponseDTO.from(peladaRepository.save(pelada));
+        return PeladaResponseDTO.forAdmin(peladaRepository.save(pelada));
     }
 
     private Pelada findPelada(Long id) {

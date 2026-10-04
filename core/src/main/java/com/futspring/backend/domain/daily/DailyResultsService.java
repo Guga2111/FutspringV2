@@ -57,6 +57,7 @@ public class DailyResultsService {
     private final UserDailyStatsRepository userDailyStatsRepository;
     private final LeagueTableEntryRepository leagueTableEntryRepository;
     private final DailyAwardRepository dailyAwardRepository;
+    private final DailyListItemAssembler dailyListItemAssembler;
 
     @Transactional
     public List<MatchDTO> submitResults(Long id, List<MatchResultDTO> results, String currentUserEmail) {
@@ -398,7 +399,7 @@ public class DailyResultsService {
         fileUploadService.deleteImageAfterCommit(daily.getChampionImage());
         daily.setChampionImage(filename);
         dailyRepository.save(daily);
-        return DailyListItemDTO.from(daily);
+        return dailyListItemAssembler.toListItem(daily, caller);
     }
 
     @Transactional

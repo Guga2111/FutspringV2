@@ -94,7 +94,8 @@ com.futspring.backend
 │   │   │                           DailyAttendanceService (confirm / unconfirm, self and by admin)
 │   │   │                           DailyTeamManagementService (sort teams with star-balanced LPT, swap, rename, color)
 │   │   │                           DailyResultsService (results, live league table, finalize, champion image, populate, clearResults)
-│   │   │                           DailySchedulerService (hourly cron that auto-creates the next daily), DailyDTOMapper (Player/Team/MatchDTO)
+│   │   │                           DailySchedulerService (hourly cron that auto-creates the next daily), DailyDTOMapper (Player/Team/MatchDTO),
+│   │                           DailyListItemAssembler (DailyListItemDTO with counts and the caller's attendance, grouped queries)
 │   │   ├── entity/                 Daily, DailyStatus, Team, Match, PlayerMatchStat, LeagueTableEntry
 │   │   ├── repository/             Daily, Team, Match, PlayerMatchStat, LeagueTableEntry repositories
 │   │   └── dto/                    DailyDetailDTO, DailyListItemDTO, MatchResultDTO, Finalize/Populate/Swap/Update* request DTOs
@@ -248,7 +249,7 @@ Relationships: **creator** (`pelada.creator`), **admin** (`pelada.admins`), **me
 | Create daily, change status, delete daily, sort/swap teams, submit results, finalize, populate, champion image | admin of the daily's pelada |
 | Confirm attendance (self) | member |
 | Unconfirm (self) | must be confirmed |
-| Confirm/unconfirm another player | admin, target must be a member |
+| Confirm/unconfirm another player, confirm every member | admin, target must be a member |
 | Rename team | member **and** player on that team (team must belong to the daily) |
 | Change team color | member and (team player or admin) |
 | Update profile, avatar, background | self |
@@ -312,7 +313,7 @@ All routes are under `/api/v1`. "Auth" is the relationship checked (see the matr
 | Method | Path | Body | Auth | Response |
 |--------|------|------|------|----------|
 | POST | `/peladas` | `CreatePeladaRequestDTO` (`dayOfWeek` `MONDAY`..`SUNDAY`, `timeOfDay` `HH:mm`, 2–10 teams, 2–20 players per team) | any | 201 `PeladaResponseDTO` |
-| GET | `/peladas/my` | — | self | `List<PeladaResponseDTO>` with `memberCount` and `nextDailyDate` (next `SCHEDULED`/`CONFIRMED` session from today, or null) |
+| GET | `/peladas/my` | — | self | `List<PeladaResponseDTO>` with `memberCount`, `isAdmin` (the caller administers it) and `nextDaily` (`{id, date, time, status, confirmedCount, capacity, isConfirmed}`: the next `SCHEDULED`/`CONFIRMED` session from today, or null; `capacity` = `numberOfTeams × playersPerTeam`, `isConfirmed` is the caller's attendance). Grouped queries, constant count |
 | GET | `/peladas/{id}` | — | member | `PeladaDetailResponseDTO` |
 | PUT | `/peladas/{id}` | `UpdatePeladaRequestDTO` (partial; `dayOfWeek` `MONDAY`..`SUNDAY`, `timeOfDay` `HH:mm`) | admin | `PeladaResponseDTO` |
 | DELETE | `/peladas/{id}` | — | creator | 204; deletes dailies (results, teams, attendance, photos), messages and rankings, then rebuilds the players' global Stats |
@@ -330,9 +331,10 @@ All routes are under `/api/v1`. "Auth" is the relationship checked (see the matr
 | Method | Path | Body | Auth | Response |
 |--------|------|------|------|----------|
 | POST | `/peladas/{peladaId}/dailies` | `CreateDailyRequestDTO` | admin | 201 `DailyListItemDTO` |
-| GET | `/peladas/{peladaId}/dailies` | — | member | `List<DailyListItemDTO>` |
-| GET | `/dailies/{id}` | — | member | `DailyDetailDTO` (includes `isAdmin` for the caller) |
+| GET | `/peladas/{peladaId}/dailies` | — | member | `List<DailyListItemDTO>` (`confirmedPlayerCount`, `teamCount`, `matchCount`, `championImage`, `isConfirmed` = the caller's attendance; grouped queries, constant count) |
+| GET | `/dailies/{id}` | — | member | `DailyDetailDTO` (includes `isAdmin` for the caller and `peladaMembers`, every member's public fields, for the attendance list) |
 | POST / DELETE | `/dailies/{id}/confirm` | — | member / confirmed | `DailyListItemDTO` |
+| POST | `/dailies/{id}/confirm/all` | — | admin | `DailyListItemDTO`; confirms every member who hasn't confirmed (400 when the status is locked) |
 | POST / DELETE | `/dailies/{id}/confirm/{userId}` | — | admin | `DailyListItemDTO` |
 | POST | `/dailies/{id}/sort-teams` | — | admin | `List<TeamDTO>` |
 | PUT | `/dailies/{id}/teams/swap` | `SwapPlayersRequestDTO` | admin | `List<TeamDTO>` |
@@ -350,7 +352,7 @@ All routes are under `/api/v1`. "Auth" is the relationship checked (see the matr
 |--------|------|------|------|----------|
 | GET | `/users/search?q=` | — | any | `List<PublicUserDTO {id, username, image, stars, position}>` (max 10); matches username or email; `q` needs ≥ 3 characters (400) |
 | GET | `/users/{id}` | — | any | `ProfileDTO` (`email` only for self) |
-| GET | `/users/{id}/peladas` | — | any | `List<PeladaResponseDTO>`: peladas the caller and `{id}` both belong to |
+| GET | `/users/{id}/peladas` | — | any | `List<PeladaResponseDTO>`: peladas the caller and `{id}` both belong to (`isAdmin`/`nextDaily.isConfirmed` refer to the caller) |
 | PUT | `/users/{id}` | `UpdateProfileRequest {username 3–30, position, stars 1–5}` | self | `ProfileDTO` |
 | POST | `/users/{id}/image`, `/users/{id}/background-image` | multipart `file` | self | `ProfileDTO` |
 | GET | `/users/{id}/stats` | — | self or shares a pelada | `StatsDTO` |

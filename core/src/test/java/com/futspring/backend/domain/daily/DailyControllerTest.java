@@ -109,6 +109,26 @@ class DailyControllerTest extends BaseIntegrationTest {
     }
 
     @Test
+    void getDailies_includesCountsAndCallerAttendance() throws Exception {
+        daily.getConfirmedPlayers().add(member);
+        dailyRepository.save(daily);
+        teamRepository.save(Team.builder().daily(daily).name("Time 1").build());
+        teamRepository.save(Team.builder().daily(daily).name("Time 2").build());
+
+        mockMvc.perform(get("/api/v1/peladas/" + pelada.getId() + "/dailies")
+                .header("Authorization", bearerToken(member.getId(), member.getEmail())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].confirmedPlayerCount").value(1))
+                .andExpect(jsonPath("$[0].teamCount").value(2))
+                .andExpect(jsonPath("$[0].matchCount").value(0))
+                .andExpect(jsonPath("$[0].isConfirmed").value(true));
+
+        mockMvc.perform(get("/api/v1/peladas/" + pelada.getId() + "/dailies")
+                .header("Authorization", bearerToken(admin.getId(), admin.getEmail())))
+                .andExpect(jsonPath("$[0].isConfirmed").value(false));
+    }
+
+    @Test
     void getDailies_asOutsider() throws Exception {
         mockMvc.perform(get("/api/v1/peladas/" + pelada.getId() + "/dailies")
                 .header("Authorization", bearerToken(outsider.getId(), outsider.getEmail())))
@@ -118,10 +138,13 @@ class DailyControllerTest extends BaseIntegrationTest {
     // --- GET /api/v1/dailies/{id} ---
 
     @Test
-    void getDailyDetail_asMember() throws Exception {
+    void getDailyDetail_asMember_includesPeladaMembers() throws Exception {
         mockMvc.perform(get("/api/v1/dailies/" + daily.getId())
                 .header("Authorization", bearerToken(member.getId(), member.getEmail())))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.isAdmin").value(false))
+                .andExpect(jsonPath("$.peladaMembers.length()").value(2))
+                .andExpect(jsonPath("$.peladaMembers[0].email").doesNotExist());
     }
 
     // --- POST /api/v1/dailies/{id}/confirm ---
@@ -130,7 +153,9 @@ class DailyControllerTest extends BaseIntegrationTest {
     void confirmAttendance_self() throws Exception {
         mockMvc.perform(post("/api/v1/dailies/" + daily.getId() + "/confirm")
                 .header("Authorization", bearerToken(member.getId(), member.getEmail())))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.confirmedPlayerCount").value(1))
+                .andExpect(jsonPath("$.isConfirmed").value(true));
     }
 
     @Test
@@ -158,6 +183,51 @@ class DailyControllerTest extends BaseIntegrationTest {
         mockMvc.perform(post("/api/v1/dailies/" + daily.getId() + "/confirm/" + admin.getId())
                 .header("Authorization", bearerToken(member.getId(), member.getEmail())))
                 .andExpect(status().isForbidden());
+    }
+
+    // --- POST /api/v1/dailies/{id}/confirm/all ---
+
+    @Test
+    void confirmAll_asAdmin_confirmsEveryMember() throws Exception {
+        daily.getConfirmedPlayers().add(member);
+        dailyRepository.save(daily);
+
+        mockMvc.perform(post("/api/v1/dailies/" + daily.getId() + "/confirm/all")
+                .header("Authorization", bearerToken(admin.getId(), admin.getEmail())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.confirmedPlayerCount").value(2))
+                .andExpect(jsonPath("$.isConfirmed").value(true));
+    }
+
+    @Test
+    void confirmAll_asNonAdmin_returnsForbidden() throws Exception {
+        mockMvc.perform(post("/api/v1/dailies/" + daily.getId() + "/confirm/all")
+                .header("Authorization", bearerToken(member.getId(), member.getEmail())))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void confirmAll_asOutsider_returnsForbidden() throws Exception {
+        mockMvc.perform(post("/api/v1/dailies/" + daily.getId() + "/confirm/all")
+                .header("Authorization", bearerToken(outsider.getId(), outsider.getEmail())))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void confirmAll_unknownDaily_returnsNotFound() throws Exception {
+        mockMvc.perform(post("/api/v1/dailies/999999/confirm/all")
+                .header("Authorization", bearerToken(admin.getId(), admin.getEmail())))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void confirmAll_lockedDaily_returnsBadRequest() throws Exception {
+        daily.setStatus(DailyStatus.IN_COURSE);
+        dailyRepository.save(daily);
+
+        mockMvc.perform(post("/api/v1/dailies/" + daily.getId() + "/confirm/all")
+                .header("Authorization", bearerToken(admin.getId(), admin.getEmail())))
+                .andExpect(status().isBadRequest());
     }
 
     // --- PUT /api/v1/dailies/{id}/status ---

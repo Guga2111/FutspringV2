@@ -12,7 +12,7 @@ function formatDateBR(dateStr: string): string {
 }
 
 export function PeladaCard({ pelada }: { pelada: PeladaResponse }) {
-  const nextSession = pelada.nextDailyDate
+  const nextSession = pelada.nextDaily?.date
   return (
     <Link to={`/pelada/${pelada.id}`} className="block hover:opacity-90 transition-opacity">
       <Card className="overflow-hidden rounded-xl border shadow-sm">

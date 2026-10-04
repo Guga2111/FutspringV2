@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react"
 import { getMyPeladas } from "@/api/peladas"
 import type { PeladaResponse } from "@/types/pelada"
 
-// The user's peladas. Each item already carries memberCount and nextDailyDate, so there is one request.
+// The user's peladas. Each item already carries memberCount, isAdmin and nextDaily, so there is one request.
 export function useMyPeladas() {
   const [peladas, setPeladas] = useState<PeladaResponse[]>([])
   const [loading, setLoading] = useState(true)

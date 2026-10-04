@@ -117,7 +117,7 @@ Each module exports typed async functions that return `response.data`, plus the 
 |------|-----------|
 | `auth.ts` | `/api/v1/auth/register`, `/api/v1/auth/login` |
 | `peladas.ts` | `/api/v1/peladas` (my, detail, create, update, delete, image, players, admin, ranking, awards, member stats, member history), `/api/v1/users/search` (`PublicUser`, q ≥ 3 chars) |
-| `dailies.ts` | `/api/v1/peladas/{id}/dailies`, `/api/v1/dailies/{id}` (detail, confirm, admin confirm, sort/swap teams, team name/color, status, results, finalize, populate, champion image, delete) |
+| `dailies.ts` | `/api/v1/peladas/{id}/dailies`, `/api/v1/dailies/{id}` (detail, confirm, admin confirm, confirm all, sort/swap teams, team name/color, status, results, finalize, populate, champion image, delete) |
 | `users.ts` | `/api/v1/users/{id}` (profile, update, image, background, stats, timeline, matches, peladas in common) |
 | `chat.ts` | `/api/v1/peladas/{id}/messages` (paged history) |
 
@@ -130,7 +130,7 @@ Data flows **api → hook → page/component**. A hook owns the request state; t
 - `usePeladaDetail(id)` — loads pelada, dailies, ranking and awards in parallel, each with its own loading flag; exposes `accessDenied` (403), `error`, `refetch*` (each returns its promise). Results are keyed by pelada id and responses for another pelada are dropped, so navigating between peladas shows the skeletons, never the previous pelada's data.
 - `usePeladaActions(pelada, refetchPelada)` — delete pelada, remove member, toggle admin.
 - `usePeladaChat(peladaId, token)` — chat history + STOMP connection with backoff, `send`, error queue toasts.
-- `useMyPeladas()` — the home list (one request; cards use `nextDailyDate`).
+- `useMyPeladas()` — the home list (one request; each item has `isAdmin` and `nextDaily` with the caller's attendance).
 - `useUserSearch(query)` — debounced search, keyed by query, `tooShort` below 3 characters.
 - `useComparePlayers(peladaId, a, b)` — profile + pelada stats of two players, keyed by the pair.
 - `useProfile(userId)` — profile page data keyed by user id; `status` is `loading | ready | forbidden | notFound | error`.

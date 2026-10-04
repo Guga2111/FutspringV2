@@ -102,6 +102,11 @@ export interface DailyListItem {
   status: DailyStatus
   confirmedPlayerCount: number
   isFinished: boolean
+  teamCount: number
+  matchCount: number
+  championImage: string | null
+  // whether the caller confirmed attendance
+  isConfirmed: boolean
 }
 
 export interface DailyDetail {
@@ -122,5 +127,6 @@ export interface DailyDetail {
   numberOfTeams: number
   playersPerTeam: number
   isAdmin: boolean
-  peladaMembers: PlayerDTO[] | null
+  // every member of the pelada, sorted by username
+  peladaMembers: PlayerDTO[]
 }
