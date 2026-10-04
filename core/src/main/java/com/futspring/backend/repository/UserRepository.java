@@ -14,7 +14,10 @@ import java.util.Optional;
 public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByEmail(String email);
 
-    Optional<User> findByUsername(String username);
+    // Usernames aren't unique in the database (production has legacy duplicates), so check with exists, never a single-result find
+    boolean existsByUsernameIgnoreCase(String username);
+
+    boolean existsByUsernameIgnoreCaseAndIdNot(String username, Long id);
 
     // Matches username or email, but callers must only return public fields (PublicUserDTO)
     @Query("""

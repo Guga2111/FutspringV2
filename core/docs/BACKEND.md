@@ -115,7 +115,7 @@ New code goes in the matching layer folder. When a service grows past ~300 lines
 - **Caller resolution.** The principal is the email (`@AuthenticationPrincipal String email` in controllers); services load the user with `UserAuthenticationHelper.getAuthenticatedUser(email)`. Don't repeat `userRepository.findByEmail(...).orElseThrow(...)`.
 - **Relationship checks** go through `PeladaAccessHelper` (exists queries), never `pelada.getMembers().contains(...)`.
 - **Uploads** always go through `FileUploadService` (size and content-type checks, UUID names, extension from the content type). Replaced files are removed with `deleteImageAfterCommit`, so a rollback never loses the old image. Files are served publicly by `FileController` (`GET /api/v1/files/{filename}`, with a path-traversal guard).
-- **Denormalized aggregates.** `Ranking`, `Stats` and `UserDailyStats` are rebuilt from match data on finalize, daily delete and pelada delete, through `AggregateRebuildService.rebuild(pelada, players)`. Any feature that changes match data must call it.
+- **Denormalized aggregates.** `Ranking`, `Stats` and `UserDailyStats` are rebuilt from match data on finalize, results edits on a finalized daily, daily delete and pelada delete, through `AggregateRebuildService.rebuild(pelada, players)`. Any feature that changes match data must call it.
 
 ## Domain model
 
@@ -123,13 +123,13 @@ All entities use IDENTITY ids and **LAZY** fetching, Lombok `@Getter @Setter` (n
 
 | Entity | Table | Fields / relations |
 |--------|-------|--------------------|
-| `User` | `users` | `email` (unique), `username`, `password` (BCrypt), `image`, `backgroundImage`, `stars` (default 3), `position` |
+| `User` | `users` | `email` (unique), `username` (unique case-insensitively in `AuthService`/`UserService`, not in the DB: production has legacy duplicates, so check with `existsByUsernameIgnoreCase…`, never a single-result find), `password` (BCrypt), `image`, `backgroundImage`, `stars` (default 3), `position` |
 | `Pelada` | `peladas` | `name`, `dayOfWeek` (a `java.time.DayOfWeek` name, `MONDAY`..`SUNDAY`, validated on create/update), `timeOfDay`, `duration`, `address`, `reference`, `image`, `autoCreateDailyEnabled`, `numberOfTeams` (2), `playersPerTeam` (5), `createdAt`; `creator` → User; `members` M:N (`pelada_members`); `admins` M:N (`pelada_admins`) |
 | `Daily` | `dailies` | `dailyDate`, `dailyTime`, `status` (`DailyStatus`, default `SCHEDULED`), `isFinished`, `championImage`, `createdAt`; `pelada`; `confirmedPlayers` M:N (`daily_confirmed_players`) |
 | `Team` | `teams` | `name`, `color`; `daily`; `players` M:N (`team_players`) |
 | `Match` | `matches` | `team1Score`, `team2Score`; `daily`, `team1`, `team2`, `winner` |
 | `PlayerMatchStat` | `player_match_stats` | `goals`, `assists`; `match`, `user`. One row per player of the **two teams in that match** (`submitResults` and `populateFromMessage`), so `UserDailyStats.matchesPlayed` counts the matches a player actually played |
-| `UserDailyStats` | `user_daily_stats` | `goals`, `assists`, `matchesPlayed`, `wins`, `wonSession`; `daily`, `user` |
+| `UserDailyStats` | `user_daily_stats` | `goals`, `assists`, `matchesPlayed`, `wins`, `wonSession`; `daily`, `user`. One row per player on the session's teams, written by finalize (and by `submitResults` on a FINISHED daily) |
 | `LeagueTableEntry` | `league_table_entries` | `position`, `wins`, `draws`, `losses`, `goalsFor`, `goalsAgainst`, `points`; `daily`, `team` |
 | `DailyAward` | `daily_awards` | `daily` (unique); `puskasWinners`, `wiltballWinners`, `artilheiroWinners`, `garcomWinners` (M:N `daily_award_*`) |
 | `Ranking` | `rankings` (unique `pelada_id`+`user_id`) | `goals`, `assists`, `matchesPlayed`, `wins`; `pelada`, `user` |
@@ -206,7 +206,7 @@ New status-like fields must be Java enums stored with `@Enumerated(EnumType.STRI
 
 - `CONNECT` needs `Authorization: Bearer <token>` in the STOMP headers; without a valid token the frame is rejected.
 - `SUBSCRIBE` is allowed only to `/topic/pelada/{id}` when the user is a member of that pelada (`existsByIdAndMembers_Email`), and to the user's own `/user/queue/errors`. Any other destination is rejected.
-- `SEND` needs an authenticated session.
+- `SEND` needs an authenticated session and a destination under `/app/`; a frame sent straight to a broker prefix (`/topic`, `/queue`, `/user`) is rejected, so every message goes through `ChatController` → `ChatService`.
 - Clients send to `/app/pelada/{peladaId}/send` (`SendMessageRequest {content}`); the server broadcasts `MessageDTO` to `/topic/pelada/{peladaId}`. Errors (`AppException` from `ChatService`) go back to the sender on `/user/queue/errors` as `{status, message, timestamp}`.
 
 ### Uploads
@@ -334,9 +334,9 @@ All routes are under `/api/v1`. "Auth" is the relationship checked (see the matr
 | PATCH | `/dailies/{dailyId}/teams/{teamId}/name` | `UpdateTeamNameRequestDTO` | team player | `TeamDTO` |
 | PATCH | `/dailies/{dailyId}/teams/{teamId}/color` | `UpdateTeamColorRequestDTO` | team player or admin | `TeamDTO` |
 | PUT | `/dailies/{id}/status` | `UpdateDailyStatusRequestDTO {status: DailyStatus}` | admin | `DailyListItemDTO` |
-| POST | `/dailies/{id}/results` | `List<MatchResultDTO>` (non-empty; a `matchId` must belong to this daily, else 404; stats only for players of the two teams) | admin | `List<MatchDTO>` |
-| POST | `/dailies/{id}/finalize` | `FinalizeDailyRequestDTO {puskasWinnerIds, wiltballWinnerIds}` | admin | `DailyDetailDTO` |
-| POST | `/dailies/{id}/populate` | `PopulateDailyRequestDTO` (unique team colors, each player once, all members) | admin | `DailyDetailDTO` |
+| POST | `/dailies/{id}/results` | `List<MatchResultDTO>` (non-empty; the list is the session's full set of matches: saved matches left out are deleted; a `matchId` must belong to this daily, else 404, and appear once; stats only for players of the two teams) | admin | `List<MatchDTO>`; on a FINISHED daily it also recomputes `UserDailyStats`, Artilheiro/Garçom and Ranking/Stats, keeping the Puskás/Bola Murcha winners |
+| POST | `/dailies/{id}/finalize` | `FinalizeDailyRequestDTO {puskasWinnerIds, wiltballWinnerIds}` (winners must be players on the session's teams) | admin | `DailyDetailDTO`; session stats are built for the players on the teams (not the confirmed list, which can change after the sort), and players of a previous finalize are rebuilt too |
+| POST | `/dailies/{id}/populate` | `PopulateDailyRequestDTO` (unique team colors, each player once, all members, each match between two different teams) | admin | `DailyDetailDTO` |
 | PUT | `/dailies/{id}/champion-image` | multipart `file` | admin | `DailyListItemDTO` |
 | DELETE | `/dailies/{id}` | — | admin | 204; rebuilds Ranking/Stats when the daily was finalized |
 

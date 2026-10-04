@@ -54,19 +54,28 @@ class UserRepositoryTest {
         assertThat(result).isEmpty();
     }
 
-    // --- findByUsername ---
+    // --- existsByUsernameIgnoreCase ---
 
     @Test
-    void findByUsername_existingUsername_returnsUser() {
-        Optional<User> result = userRepository.findByUsername("bob_player");
-        assertThat(result).isPresent();
-        assertThat(result.get().getEmail()).isEqualTo("bob@test.org");
+    void existsByUsernameIgnoreCase_matchesAnyCase() {
+        assertThat(userRepository.existsByUsernameIgnoreCase("bob_player")).isTrue();
+        assertThat(userRepository.existsByUsernameIgnoreCase("BOB_Player")).isTrue();
+        assertThat(userRepository.existsByUsernameIgnoreCase("nobody")).isFalse();
     }
 
     @Test
-    void findByUsername_unknownUsername_returnsEmpty() {
-        Optional<User> result = userRepository.findByUsername("nobody");
-        assertThat(result).isEmpty();
+    void existsByUsernameIgnoreCase_withDuplicateUsernames_doesNotThrow() {
+        userRepository.save(User.builder().username("bob_player").email("bob2@test.org").password("x").build());
+
+        assertThat(userRepository.existsByUsernameIgnoreCase("bob_player")).isTrue();
+    }
+
+    @Test
+    void existsByUsernameIgnoreCaseAndIdNot_ignoresTheGivenUser() {
+        Long bobId = bob.getId();
+
+        assertThat(userRepository.existsByUsernameIgnoreCaseAndIdNot("Bob_Player", bobId)).isFalse();
+        assertThat(userRepository.existsByUsernameIgnoreCaseAndIdNot("Bob_Player", bobId + 1000)).isTrue();
     }
 
     // --- searchByUsernameOrEmail ---

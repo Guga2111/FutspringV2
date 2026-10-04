@@ -84,6 +84,22 @@ class AuthServiceTest {
     }
 
     @Test
+    void register_usernameTakenInAnotherCase_throwsConflict() {
+        RegisterRequestDTO req = new RegisterRequestDTO();
+        req.setUsername(" Alice ");
+        req.setEmail("new@example.com");
+        req.setPassword("password123");
+
+        when(userRepository.findByEmail("new@example.com")).thenReturn(Optional.empty());
+        when(userRepository.existsByUsernameIgnoreCase("Alice")).thenReturn(true);
+
+        assertThatThrownBy(() -> authService.register(req))
+                .isInstanceOf(AppException.class)
+                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.CONFLICT));
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
     void register_passwordIsEncoded_beforePersisting() {
         RegisterRequestDTO req = new RegisterRequestDTO();
         req.setUsername("bob");

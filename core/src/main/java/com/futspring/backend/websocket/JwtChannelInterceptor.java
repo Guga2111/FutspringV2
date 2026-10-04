@@ -21,13 +21,15 @@ import java.util.regex.Pattern;
 /**
  * Authenticates and authorizes STOMP frames:
  * CONNECT needs a valid Bearer token; SUBSCRIBE is only allowed to /topic/pelada/{id} for members of that
- * pelada and to the user's own error queue; SEND needs an authenticated session.
+ * pelada and to the user's own error queue; SEND needs an authenticated session and an /app destination
+ * (a SEND straight to /topic or /queue would reach the broker's subscribers without going through ChatService).
  */
 @Component
 @RequiredArgsConstructor
 public class JwtChannelInterceptor implements ChannelInterceptor {
 
     static final String ERROR_QUEUE = "/user/queue/errors";
+    private static final String APP_PREFIX = "/app/";
     private static final Pattern PELADA_TOPIC = Pattern.compile("^/topic/pelada/(\\d+)$");
 
     private final JwtService jwtService;
@@ -43,7 +45,7 @@ public class JwtChannelInterceptor implements ChannelInterceptor {
         switch (accessor.getCommand()) {
             case CONNECT -> authenticate(accessor);
             case SUBSCRIBE -> authorizeSubscribe(accessor);
-            case SEND -> requireUser(accessor);
+            case SEND -> authorizeSend(accessor);
             default -> { }
         }
         return message;
@@ -75,6 +77,14 @@ public class JwtChannelInterceptor implements ChannelInterceptor {
         Long peladaId = Long.valueOf(matcher.group(1));
         if (!peladaRepository.existsByIdAndMembers_Email(peladaId, user.getName())) {
             throw new MessageDeliveryException("Acesso negado: você não é membro desta pelada");
+        }
+    }
+
+    private static void authorizeSend(StompHeaderAccessor accessor) {
+        requireUser(accessor);
+        String destination = accessor.getDestination();
+        if (destination == null || !destination.startsWith(APP_PREFIX)) {
+            throw new MessageDeliveryException("Destino não permitido");
         }
     }
 

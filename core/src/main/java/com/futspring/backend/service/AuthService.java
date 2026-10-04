@@ -24,8 +24,8 @@ public class AuthService {
         if (userRepository.findByEmail(request.getEmail()).isPresent()) {
             throw new AppException(HttpStatus.CONFLICT, "Este e-mail já está cadastrado");
         }
-        // Usernames are unique, as UserService.updateProfile already enforces
-        if (userRepository.findByUsername(request.getUsername().trim()).isPresent()) {
+        // Usernames are unique (case-insensitive), as UserService.updateProfile already enforces
+        if (userRepository.existsByUsernameIgnoreCase(request.getUsername().trim())) {
             throw new AppException(HttpStatus.CONFLICT, "Este nome de usuário já está em uso");
         }
 

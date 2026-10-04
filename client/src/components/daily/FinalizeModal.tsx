@@ -1,6 +1,6 @@
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { toast } from "sonner"
-import type { DailyDetail } from "@/types/daily"
+import type { DailyDetail, PlayerDTO } from "@/types/daily"
 import { finalizeDaily } from "@/api/dailies"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -31,7 +31,7 @@ function PlayerCheckboxList({
 }: {
   name: string
   legend: string
-  players: DailyDetail["confirmedPlayers"]
+  players: PlayerDTO[]
   selected: number[]
   toggle: (id: number) => void
 }) {
@@ -66,6 +66,8 @@ export default function FinalizeModal({ daily, onClose, onSuccess }: FinalizeMod
   const puskas = usePlayerSelection()
   const wiltball = usePlayerSelection()
   const [loading, setLoading] = useState(false)
+  // Awards go to players on the teams (the backend's session players), not the confirmed list
+  const sessionPlayers = useMemo(() => daily.teams.flatMap((t) => t.players), [daily.teams])
 
   async function handleSubmit() {
     setLoading(true)
@@ -91,14 +93,14 @@ export default function FinalizeModal({ daily, onClose, onSuccess }: FinalizeMod
           <PlayerCheckboxList
             name="puskas"
             legend="Puskás"
-            players={daily.confirmedPlayers}
+            players={sessionPlayers}
             selected={puskas.selected}
             toggle={puskas.toggle}
           />
           <PlayerCheckboxList
             name="bola-murcha"
             legend="Bola Murcha"
-            players={daily.confirmedPlayers}
+            players={sessionPlayers}
             selected={wiltball.selected}
             toggle={wiltball.toggle}
           />

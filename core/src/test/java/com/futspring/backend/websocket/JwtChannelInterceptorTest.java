@@ -105,6 +105,31 @@ class JwtChannelInterceptorTest {
                 .isInstanceOf(MessageDeliveryException.class);
     }
 
+    @Test
+    void send_toAppDestination_isAccepted() {
+        Message<?> message = frame(StompCommand.SEND, null, "/app/pelada/10/send", "member@example.com");
+
+        assertThat(interceptor.preSend(message, channel)).isSameAs(message);
+    }
+
+    @Test
+    void send_straightToBrokerTopic_isRejected() {
+        assertThatThrownBy(() -> interceptor.preSend(frame(StompCommand.SEND, null, "/topic/pelada/10", "member@example.com"), channel))
+                .isInstanceOf(MessageDeliveryException.class);
+    }
+
+    @Test
+    void send_toUserQueue_isRejected() {
+        assertThatThrownBy(() -> interceptor.preSend(frame(StompCommand.SEND, null, "/user/other@example.com/queue/errors", "member@example.com"), channel))
+                .isInstanceOf(MessageDeliveryException.class);
+    }
+
+    @Test
+    void send_withoutDestination_isRejected() {
+        assertThatThrownBy(() -> interceptor.preSend(frame(StompCommand.SEND, null, null, "member@example.com"), channel))
+                .isInstanceOf(MessageDeliveryException.class);
+    }
+
     private static Message<byte[]> frame(StompCommand command, String authorization, String destination, String userEmail) {
         StompHeaderAccessor accessor = StompHeaderAccessor.create(command);
         if (authorization != null) {

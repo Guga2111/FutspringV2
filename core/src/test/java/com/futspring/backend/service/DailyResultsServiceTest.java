@@ -4,6 +4,7 @@ import com.futspring.backend.support.MembershipStubs;
 import com.futspring.backend.helper.PeladaAccessHelper;
 import com.futspring.backend.dto.DailyDetailDTO.MatchDTO;
 import com.futspring.backend.dto.MatchResultDTO;
+import com.futspring.backend.dto.PopulateDailyRequestDTO;
 import com.futspring.backend.entity.*;
 import com.futspring.backend.exception.AppException;
 import com.futspring.backend.helper.UserAuthenticationHelper;
@@ -333,7 +334,7 @@ class DailyResultsServiceTest {
                 .team1Score(1).team2Score(0).winner(team1).build();
         when(matchRepository.findByDaily(inCourseDaily)).thenReturn(List.of(match));
 
-        // puskas winner id 99 is not a confirmed player
+        // puskas winner id 99 is not on any of the session's teams
         assertThatThrownBy(() -> resultsService.finalizeDaily(100L, List.of(99L), null, "admin@example.com"))
                 .isInstanceOf(AppException.class)
                 .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.BAD_REQUEST));
@@ -369,5 +370,231 @@ class DailyResultsServiceTest {
         verify(dailyRepository).save(inCourseDaily);
         verify(rankingRepository).saveAll(any());
         verify(statsRepository).saveAll(any());
+    }
+
+    @Test
+    void finalizeDaily_usesTeamPlayersNotTheConfirmedList() {
+        // member is on team2 but un-confirmed after the sort; bench confirmed after the sort and is on no team
+        User bench = User.builder().id(3L).email("bench@example.com").username("bench").password("hash").build();
+        inCourseDaily.setConfirmedPlayers(new HashSet<>(Set.of(admin, bench)));
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
+        when(dailyRepository.findById(100L)).thenReturn(Optional.of(inCourseDaily));
+
+        Match match = Match.builder().id(50L).daily(inCourseDaily).team1(team1).team2(team2)
+                .team1Score(0).team2Score(1).winner(team2).build();
+        when(matchRepository.findByDaily(inCourseDaily)).thenReturn(List.of(match));
+        when(teamRepository.findByDailyWithPlayers(inCourseDaily)).thenReturn(List.of(team1, team2));
+        when(playerMatchStatRepository.findByMatchInWithUser(any())).thenReturn(List.of(
+                PlayerMatchStat.builder().match(match).user(admin).goals(0).assists(0).build(),
+                PlayerMatchStat.builder().match(match).user(member).goals(1).assists(0).build()));
+        when(dailyAwardRepository.findByDaily(inCourseDaily)).thenReturn(Optional.empty());
+        stubCloseSession(Collections.emptyList());
+
+        resultsService.finalizeDaily(100L, List.of(2L), null, "admin@example.com");
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<Collection<UserDailyStats>> statsCaptor = ArgumentCaptor.forClass(Collection.class);
+        verify(userDailyStatsRepository).saveAll(statsCaptor.capture());
+        Map<Long, UserDailyStats> byUser = new HashMap<>();
+        statsCaptor.getValue().forEach(uds -> byUser.put(uds.getUser().getId(), uds));
+        assertThat(byUser).containsOnlyKeys(1L, 2L);
+        assertThat(byUser.get(2L).getGoals()).isEqualTo(1);
+        assertThat(byUser.get(2L).getMatchesPlayed()).isEqualTo(1);
+        assertThat(byUser.get(2L).isWonSession()).isTrue();
+
+        ArgumentCaptor<DailyAward> awardCaptor = ArgumentCaptor.forClass(DailyAward.class);
+        verify(dailyAwardRepository).save(awardCaptor.capture());
+        assertThat(awardCaptor.getValue().getArtilheiroWinners()).containsExactly(member);
+        assertThat(awardCaptor.getValue().getPuskasWinners()).containsExactly(member);
+    }
+
+    @Test
+    void finalizeDaily_puskasWinnerNotOnATeam_throwsBadRequest() {
+        User bench = User.builder().id(3L).email("bench@example.com").username("bench").password("hash").build();
+        inCourseDaily.getConfirmedPlayers().add(bench);
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
+        when(dailyRepository.findById(100L)).thenReturn(Optional.of(inCourseDaily));
+        Match match = Match.builder().id(50L).daily(inCourseDaily).team1(team1).team2(team2)
+                .team1Score(1).team2Score(0).winner(team1).build();
+        when(matchRepository.findByDaily(inCourseDaily)).thenReturn(List.of(match));
+        when(teamRepository.findByDailyWithPlayers(inCourseDaily)).thenReturn(List.of(team1, team2));
+
+        assertThatThrownBy(() -> resultsService.finalizeDaily(100L, List.of(3L), null, "admin@example.com"))
+                .isInstanceOf(AppException.class)
+                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.BAD_REQUEST));
+        verify(userDailyStatsRepository, never()).saveAll(any());
+    }
+
+    @Test
+    void finalizeDaily_again_rebuildsPlayersOfThePreviousFinalize() {
+        User former = User.builder().id(4L).email("former@example.com").username("former").password("hash").build();
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
+        when(dailyRepository.findById(100L)).thenReturn(Optional.of(inCourseDaily));
+        Match match = Match.builder().id(50L).daily(inCourseDaily).team1(team1).team2(team2)
+                .team1Score(1).team2Score(0).winner(team1).build();
+        when(matchRepository.findByDaily(inCourseDaily)).thenReturn(List.of(match));
+        when(teamRepository.findByDailyWithPlayers(inCourseDaily)).thenReturn(List.of(team1, team2));
+        when(playerMatchStatRepository.findByMatchInWithUser(any())).thenReturn(Collections.emptyList());
+        when(dailyAwardRepository.findByDaily(inCourseDaily)).thenReturn(Optional.empty());
+        stubCloseSession(List.of(UserDailyStats.builder().daily(inCourseDaily).user(former).build()));
+
+        resultsService.finalizeDaily(100L, null, null, "admin@example.com");
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<Collection<User>> playersCaptor = ArgumentCaptor.forClass(Collection.class);
+        verify(statsRepository).findByUserIn(playersCaptor.capture());
+        assertThat(playersCaptor.getValue()).containsExactlyInAnyOrder(admin, member, former);
+    }
+
+    // Stubs the rest of the close-session pipeline (stats, league table, award save, Ranking/Stats rebuild)
+    private void stubCloseSession(List<UserDailyStats> previousStats) {
+        when(userDailyStatsRepository.findByDaily(inCourseDaily)).thenReturn(previousStats);
+        when(leagueTableEntryRepository.findByDailyOrderByPositionAsc(inCourseDaily)).thenReturn(Collections.emptyList());
+        when(leagueTableEntryRepository.saveAll(any())).thenReturn(Collections.emptyList());
+        when(dailyAwardRepository.save(any())).thenReturn(null);
+        when(rankingRepository.findByPeladaAndUserIn(eq(pelada), any())).thenReturn(Collections.emptyList());
+        when(statsRepository.findByUserIn(any())).thenReturn(Collections.emptyList());
+        when(userDailyStatsRepository.aggregateRankingByUsersAndPelada(any(), eq(pelada))).thenReturn(Collections.emptyList());
+        when(userDailyStatsRepository.aggregateStatsByUsers(any())).thenReturn(Collections.emptyList());
+        when(dailyAwardRepository.findPuskasDatesByUsers(any())).thenReturn(Collections.emptyList());
+        when(dailyRepository.save(any())).thenReturn(inCourseDaily);
+        when(userDailyStatsRepository.saveAll(any())).thenReturn(Collections.emptyList());
+    }
+
+    // --- submitResults: replace semantics and finished sessions ---
+
+    @Test
+    void submitResults_savedMatchLeftOut_isDeleted() {
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
+        when(dailyRepository.findById(100L)).thenReturn(Optional.of(inCourseDaily));
+        when(teamRepository.findByDailyWithPlayers(inCourseDaily)).thenReturn(List.of(team1, team2));
+
+        Match kept = Match.builder().id(50L).daily(inCourseDaily).team1(team1).team2(team2).team1Score(0).team2Score(0).build();
+        Match removed = Match.builder().id(51L).daily(inCourseDaily).team1(team1).team2(team2).team1Score(3).team2Score(0).build();
+        when(matchRepository.findByIdAndDaily(50L, inCourseDaily)).thenReturn(Optional.of(kept));
+        when(matchRepository.save(kept)).thenReturn(kept);
+        when(matchRepository.findByDaily(inCourseDaily)).thenReturn(List.of(kept, removed));
+        when(leagueTableEntryRepository.findByDailyOrderByPositionAsc(inCourseDaily)).thenReturn(List.of());
+
+        MatchResultDTO result = new MatchResultDTO();
+        result.setMatchId(50L);
+        result.setTeam1Id(1L);
+        result.setTeam2Id(2L);
+        result.setTeam1Score(1);
+        result.setTeam2Score(0);
+
+        resultsService.submitResults(100L, List.of(result), "admin@example.com");
+
+        verify(playerMatchStatRepository).deleteByMatchIn(List.of(removed));
+        verify(matchRepository).deleteAll(List.of(removed));
+        // the league table only counts the kept match
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<List<LeagueTableEntry>> tableCaptor = ArgumentCaptor.forClass(List.class);
+        verify(leagueTableEntryRepository).saveAll(tableCaptor.capture());
+        assertThat(tableCaptor.getValue().get(0).getTeam()).isEqualTo(team1);
+        assertThat(tableCaptor.getValue().get(0).getGoalsFor()).isEqualTo(1);
+    }
+
+    @Test
+    void submitResults_sameMatchIdTwice_throwsBadRequest() {
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
+        when(dailyRepository.findById(100L)).thenReturn(Optional.of(inCourseDaily));
+        when(teamRepository.findByDailyWithPlayers(inCourseDaily)).thenReturn(List.of(team1, team2));
+        Match existing = Match.builder().id(50L).daily(inCourseDaily).team1(team1).team2(team2).build();
+        when(matchRepository.findByIdAndDaily(50L, inCourseDaily)).thenReturn(Optional.of(existing));
+        when(matchRepository.save(existing)).thenReturn(existing);
+
+        MatchResultDTO result = new MatchResultDTO();
+        result.setMatchId(50L);
+        result.setTeam1Id(1L);
+        result.setTeam2Id(2L);
+        result.setTeam1Score(1);
+        result.setTeam2Score(0);
+
+        assertThatThrownBy(() -> resultsService.submitResults(100L, List.of(result, result), "admin@example.com"))
+                .isInstanceOf(AppException.class)
+                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.BAD_REQUEST));
+    }
+
+    @Test
+    void submitResults_onFinishedDaily_recomputesStatsAndKeepsVotedAwards() {
+        inCourseDaily.setStatus(DailyStatus.FINISHED);
+        inCourseDaily.setFinished(true);
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
+        when(dailyRepository.findById(100L)).thenReturn(Optional.of(inCourseDaily));
+        when(teamRepository.findByDailyWithPlayers(inCourseDaily)).thenReturn(List.of(team1, team2));
+
+        Match match = Match.builder().id(50L).daily(inCourseDaily).team1(team1).team2(team2).team1Score(1).team2Score(0).build();
+        when(matchRepository.findByIdAndDaily(50L, inCourseDaily)).thenReturn(Optional.of(match));
+        when(matchRepository.save(match)).thenReturn(match);
+        when(matchRepository.findByDaily(inCourseDaily)).thenReturn(List.of(match));
+        when(playerMatchStatRepository.findByMatchInWithUser(any())).thenReturn(List.of(
+                PlayerMatchStat.builder().match(match).user(member).goals(0).assists(0).build(),
+                PlayerMatchStat.builder().match(match).user(admin).goals(0).assists(0).build()));
+        DailyAward award = DailyAward.builder().daily(inCourseDaily).build();
+        award.getPuskasWinners().add(member);
+        when(dailyAwardRepository.findByDaily(inCourseDaily)).thenReturn(Optional.of(award));
+        stubCloseSession(Collections.emptyList());
+
+        MatchResultDTO result = new MatchResultDTO();
+        result.setMatchId(50L);
+        result.setTeam1Id(1L);
+        result.setTeam2Id(2L);
+        result.setTeam1Score(0);
+        result.setTeam2Score(2);
+        MatchResultDTO.PlayerStatInputDTO goals = new MatchResultDTO.PlayerStatInputDTO();
+        goals.setUserId(2L);
+        goals.setGoals(2);
+        goals.setAssists(0);
+        result.setPlayerStats(List.of(goals));
+
+        resultsService.submitResults(100L, List.of(result), "admin@example.com");
+
+        verify(userDailyStatsRepository).saveAll(any());
+        verify(rankingRepository).saveAll(any());
+        verify(statsRepository).saveAll(any());
+        assertThat(award.getPuskasWinners()).containsExactly(member);
+        assertThat(inCourseDaily.getStatus()).isEqualTo(DailyStatus.FINISHED);
+    }
+
+    // --- populateFromMessage ---
+
+    @Test
+    void populateFromMessage_matchBetweenTheSameTeam_throwsBadRequest() {
+        inCourseDaily.setStatus(DailyStatus.CONFIRMED);
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
+        when(dailyRepository.findById(100L)).thenReturn(Optional.of(inCourseDaily));
+        when(userRepository.findAllById(any())).thenReturn(List.of(admin, member));
+        when(matchRepository.findByDaily(inCourseDaily)).thenReturn(List.of());
+        long[] nextId = {1};
+        when(teamRepository.save(any(Team.class))).thenAnswer(inv -> {
+            Team t = inv.getArgument(0);
+            t.setId(nextId[0]++);
+            return t;
+        });
+
+        PopulateDailyRequestDTO request = new PopulateDailyRequestDTO();
+        request.setTeams(List.of(parsedTeam("Azul", admin), parsedTeam("Vermelho", member)));
+        PopulateDailyRequestDTO.ParsedMatchDTO match = new PopulateDailyRequestDTO.ParsedMatchDTO();
+        match.setTeam1ColorName("Azul");
+        match.setTeam2ColorName("azul");
+        match.setTeam1Score(2);
+        match.setTeam2Score(1);
+        request.setMatches(List.of(match));
+
+        assertThatThrownBy(() -> resultsService.populateFromMessage(100L, request, "admin@example.com"))
+                .isInstanceOf(AppException.class)
+                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.BAD_REQUEST));
+        verify(matchRepository, never()).save(any());
+    }
+
+    private static PopulateDailyRequestDTO.ParsedTeamDTO parsedTeam(String color, User player) {
+        PopulateDailyRequestDTO.ParsedPlayerDTO parsedPlayer = new PopulateDailyRequestDTO.ParsedPlayerDTO();
+        parsedPlayer.setUserId(player.getId());
+        PopulateDailyRequestDTO.ParsedTeamDTO team = new PopulateDailyRequestDTO.ParsedTeamDTO();
+        team.setColorName(color);
+        team.setColorHex("#0000FF");
+        team.setPlayers(List.of(parsedPlayer));
+        return team;
     }
 }

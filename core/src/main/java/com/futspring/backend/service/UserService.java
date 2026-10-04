@@ -31,11 +31,11 @@ public class UserService {
 
         if (request.getUsername() != null) {
             String username = request.getUsername().trim();
-            userRepository.findByUsername(username).ifPresent(existing -> {
-                if (!existing.getId().equals(id)) {
-                    throw new AppException(HttpStatus.CONFLICT, "Este nome de usuário já está em uso");
-                }
-            });
+            // Keeping the current name is always allowed, even if a legacy duplicate exists
+            if (!username.equals(user.getUsername())
+                    && userRepository.existsByUsernameIgnoreCaseAndIdNot(username, id)) {
+                throw new AppException(HttpStatus.CONFLICT, "Este nome de usuário já está em uso");
+            }
             user.setUsername(username);
         }
 

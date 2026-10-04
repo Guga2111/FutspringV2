@@ -81,7 +81,7 @@ class UserServiceProfileTest {
     @Test
     void updateProfile_success_updatesAllFields() {
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
-        when(userRepository.findByUsername("newname")).thenReturn(Optional.empty());
+        when(userRepository.existsByUsernameIgnoreCaseAndIdNot("newname", 1L)).thenReturn(false);
         when(userRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         UpdateProfileRequest req = new UpdateProfileRequest();
@@ -118,9 +118,8 @@ class UserServiceProfileTest {
 
     @Test
     void updateProfile_usernameAlreadyTakenByOtherUser_throwsConflict() {
-        User other = User.builder().id(2L).email("other@example.com").username("taken").build();
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
-        when(userRepository.findByUsername("taken")).thenReturn(Optional.of(other));
+        when(userRepository.existsByUsernameIgnoreCaseAndIdNot("taken", 1L)).thenReturn(true);
 
         UpdateProfileRequest req = new UpdateProfileRequest();
         req.setUsername("taken");
@@ -133,7 +132,6 @@ class UserServiceProfileTest {
     @Test
     void updateProfile_usernameAlreadyTakenBySameUser_updatesSuccessfully() {
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
-        when(userRepository.findByUsername("alice")).thenReturn(Optional.of(user));
         when(userRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         UpdateProfileRequest req = new UpdateProfileRequest();

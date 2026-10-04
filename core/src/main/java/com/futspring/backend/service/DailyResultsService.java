@@ -55,8 +55,12 @@ public class DailyResultsService {
                 .collect(Collectors.toMap(Team::getId, t -> t));
 
         List<Match> savedMatches = new ArrayList<>();
+        Set<Long> submittedMatchIds = new HashSet<>();
 
         for (MatchResultDTO result : results) {
+            if (result.getMatchId() != null && !submittedMatchIds.add(result.getMatchId())) {
+                throw new AppException(HttpStatus.BAD_REQUEST, "Partida repetida nos resultados");
+            }
             Team t1 = teamMap.get(result.getTeam1Id());
             Team t2 = teamMap.get(result.getTeam2Id());
             if (t1 == null || t2 == null) {
@@ -127,8 +131,28 @@ public class DailyResultsService {
             playerMatchStatRepository.saveAll(statsToSave);
         }
 
-        // Calculate and persist the live league table so it's visible before finalization
-        persistLiveLeagueTable(daily, new ArrayList<>(teamMap.values()), matchRepository.findByDaily(daily));
+        // The submitted list is the session's full set of matches: saved matches left out were removed by the admin
+        Set<Long> savedMatchIds = savedMatches.stream().map(Match::getId).collect(Collectors.toSet());
+        List<Match> removedMatches = matchRepository.findByDaily(daily).stream()
+                .filter(m -> !savedMatchIds.contains(m.getId()))
+                .toList();
+        if (!removedMatches.isEmpty()) {
+            playerMatchStatRepository.deleteByMatchIn(removedMatches);
+            matchRepository.deleteAll(removedMatches);
+        }
+
+        List<Team> teams = new ArrayList<>(teamMap.values());
+        if (daily.getStatus() == DailyStatus.FINISHED) {
+            // Editing a finalized session: recompute its stats, awards, Ranking and Stats, keeping the voted awards
+            Map<Long, User> sessionPlayers = sessionPlayers(teams);
+            DailyAward award = dailyAwardRepository.findByDaily(daily).orElse(null);
+            closeSession(daily, teams, savedMatches,
+                    keepSessionPlayers(award != null ? award.getPuskasWinners() : null, sessionPlayers),
+                    keepSessionPlayers(award != null ? award.getWiltballWinners() : null, sessionPlayers));
+        } else {
+            // Calculate and persist the live league table so it's visible before finalization
+            persistLiveLeagueTable(daily, teams, savedMatches);
+        }
 
         return savedMatches.stream()
                 .map(m -> dailyDTOMapper.toMatchDTO(m, null))
@@ -207,26 +231,46 @@ public class DailyResultsService {
             throw new AppException(HttpStatus.BAD_REQUEST, "Lance pelo menos um resultado antes de finalizar a sessão");
         }
 
-        // Award winners must be confirmed players
-        Set<User> confirmedPlayers = daily.getConfirmedPlayers();
-        List<User> puskasWinners = resolveWinners(confirmedPlayers, puskasWinnerIds, "Puskás");
-        List<User> wiltballWinners = resolveWinners(confirmedPlayers, wiltballWinnerIds, "Bola Murcha");
+        // Award winners must have played: players on the session's teams
+        List<Team> teamsWithPlayers = teamRepository.findByDailyWithPlayers(daily);
+        Map<Long, User> sessionPlayers = sessionPlayers(teamsWithPlayers);
+        List<User> puskasWinners = resolveWinners(sessionPlayers, puskasWinnerIds, "Puskás");
+        List<User> wiltballWinners = resolveWinners(sessionPlayers, wiltballWinnerIds, "Bola Murcha");
 
-        // Compute UserDailyStats per confirmed player
-        userDailyStatsRepository.deleteAll(userDailyStatsRepository.findByDaily(daily));
+        closeSession(daily, teamsWithPlayers, matches, puskasWinners, wiltballWinners);
+    }
+
+    /**
+     * Computes the session's UserDailyStats, league table and awards from its matches, rebuilds Ranking/Stats and
+     * marks the daily FINISHED. The session's players are the players on its teams (the ones with match stats),
+     * not the confirmed list, which can change after the teams are sorted.
+     */
+    private void closeSession(Daily daily, List<Team> teamsWithPlayers, List<Match> matches,
+                              List<User> puskasWinners, List<User> wiltballWinners) {
+        Pelada pelada = daily.getPelada();
+        Map<Long, User> sessionPlayers = sessionPlayers(teamsWithPlayers);
+
+        // Players of a previous finalize (or a previous award) must be rebuilt too, in case they dropped out
+        DailyAward award = dailyAwardRepository.findByDaily(daily).orElse(DailyAward.builder().daily(daily).build());
+        Set<User> affected = new LinkedHashSet<>(sessionPlayers.values());
+        affected.addAll(award.getPuskasWinners());
+        affected.addAll(award.getWiltballWinners());
+
+        List<UserDailyStats> previousStats = userDailyStatsRepository.findByDaily(daily);
+        previousStats.forEach(uds -> affected.add(uds.getUser()));
+        userDailyStatsRepository.deleteAll(previousStats);
 
         Map<Long, UserDailyStats> statsMap = new HashMap<>();
-        for (User player : confirmedPlayers) {
+        for (User player : sessionPlayers.values()) {
             statsMap.put(player.getId(), UserDailyStats.builder().daily(daily).user(player).build());
         }
 
-        // Batch-load teams with players and all match stats (no N+1)
-        List<Team> teamsWithPlayers = teamRepository.findByDailyWithPlayers(daily);
         Map<Long, Set<Long>> teamPlayerIds = teamsWithPlayers.stream().collect(Collectors.toMap(
                 Team::getId,
                 t -> t.getPlayers().stream().map(User::getId).collect(Collectors.toSet())
         ));
 
+        // Batch-load all match stats (no N+1)
         Map<Long, List<PlayerMatchStat>> statsByMatchId = playerMatchStatRepository.findByMatchInWithUser(matches).stream()
                 .collect(Collectors.groupingBy(s -> s.getMatch().getId()));
 
@@ -277,30 +321,41 @@ public class DailyResultsService {
                 ? statsMap.values().stream().filter(s -> s.getAssists() == maxAssists).map(UserDailyStats::getUser).collect(Collectors.toList())
                 : new ArrayList<>();
 
-        DailyAward award = dailyAwardRepository.findByDaily(daily).orElse(DailyAward.builder().daily(daily).build());
         award.setPuskasWinners(puskasWinners);
         award.setWiltballWinners(wiltballWinners);
         award.setArtilheiroWinners(artilheiroWinners);
         award.setGarcomWinners(garcomWinners);
         dailyAwardRepository.save(award);
 
-        aggregateRebuildService.rebuild(pelada, confirmedPlayers);
+        aggregateRebuildService.rebuild(pelada, affected);
 
         daily.setStatus(DailyStatus.FINISHED);
         daily.setFinished(true);
         dailyRepository.save(daily);
     }
 
-    private static List<User> resolveWinners(Set<User> confirmedPlayers, List<Long> ids, String award) {
+    private static Map<Long, User> sessionPlayers(List<Team> teamsWithPlayers) {
+        Map<Long, User> players = new LinkedHashMap<>();
+        teamsWithPlayers.forEach(t -> t.getPlayers().forEach(p -> players.put(p.getId(), p)));
+        return players;
+    }
+
+    private static List<User> keepSessionPlayers(List<User> winners, Map<Long, User> sessionPlayers) {
+        if (winners == null) {
+            return new ArrayList<>();
+        }
+        return winners.stream().filter(w -> sessionPlayers.containsKey(w.getId())).collect(Collectors.toList());
+    }
+
+    private static List<User> resolveWinners(Map<Long, User> byId, List<Long> ids, String award) {
         if (ids == null) {
             return new ArrayList<>();
         }
-        Map<Long, User> byId = confirmedPlayers.stream().collect(Collectors.toMap(User::getId, u -> u));
         List<User> winners = new ArrayList<>();
         for (Long winnerId : new LinkedHashSet<>(ids)) {
             User winner = byId.get(winnerId);
             if (winner == null) {
-                throw new AppException(HttpStatus.BAD_REQUEST, "O vencedor do " + award + " precisa ser um jogador confirmado");
+                throw new AppException(HttpStatus.BAD_REQUEST, "O vencedor do " + award + " precisa ser um jogador de um dos times da sessão");
             }
             winners.add(winner);
         }
@@ -397,6 +452,9 @@ public class DailyResultsService {
                 }
                 if (t2 == null) {
                     throw new AppException(HttpStatus.BAD_REQUEST, "Time desconhecido: " + parsedMatch.getTeam2ColorName());
+                }
+                if (t1.getId().equals(t2.getId())) {
+                    throw new AppException(HttpStatus.BAD_REQUEST, "Uma partida precisa de dois times diferentes: " + parsedMatch.getTeam1ColorName());
                 }
                 Team winner = parsedMatch.getTeam1Score() > parsedMatch.getTeam2Score() ? t1
                         : parsedMatch.getTeam2Score() > parsedMatch.getTeam1Score() ? t2 : null;

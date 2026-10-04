@@ -106,7 +106,7 @@ Where new code goes:
 
 - `src/api/client.ts` exports the single axios instance (`apiClient`). **Only `src/api/*` imports it**; never import `axios` or call `fetch` elsewhere.
 - `context/AuthContext.tsx` owns the session: token in `localStorage.futspring_token`, user in `localStorage.futspring_user`, `login(token, user)` / `logout()`, read through `useAuth()`. Nothing else touches those keys.
-- AuthContext registers the interceptors: the request interceptor adds `Authorization: Bearer <token>`; the response interceptor logs out on **401** and hard-redirects to `/auth`. There is no refresh token (the JWT lasts 7 days).
+- AuthContext registers the interceptors: the request interceptor adds `Authorization: Bearer <token>`; the response interceptor logs out on **401** and hard-redirects to `/auth`, except for `/api/v1/auth/*` requests (a wrong password is a 401 the login form shows). There is no refresh token (the JWT lasts 7 days).
 - The chat sends the same token in the STOMP `connectHeaders`.
 
 ### API modules (`src/api/*.ts`)
@@ -127,7 +127,7 @@ When an endpoint or DTO changes, update the module, `src/types/*` and this table
 
 Data flows **api → hook → page/component**. A hook owns the request state; the page renders it.
 
-- `usePeladaDetail(id)` — loads pelada, dailies, ranking and awards in parallel, each with its own loading flag; exposes `accessDenied` (403), `error`, `refetch*` (each returns its promise).
+- `usePeladaDetail(id)` — loads pelada, dailies, ranking and awards in parallel, each with its own loading flag; exposes `accessDenied` (403), `error`, `refetch*` (each returns its promise). Results are keyed by pelada id and responses for another pelada are dropped, so navigating between peladas shows the skeletons, never the previous pelada's data.
 - `usePeladaActions(pelada, refetchPelada)` — delete pelada, remove member, toggle admin.
 - `usePeladaChat(peladaId, token)` — chat history + STOMP connection with backoff, `send`, error queue toasts.
 - `useMyPeladas()` — the home list (one request; cards use `nextDailyDate`).
@@ -137,7 +137,7 @@ Data flows **api → hook → page/component**. A hook owns the request state; t
 - `useDailyDetail(id)` — loads the daily detail; exposes `setDaily` to merge a mutation's response and `refetch` (returns a promise, doesn't show the skeleton again).
 - `useDailyActions({ daily, setDaily, refetch })` — every mutation of the session page with its pending flag.
 - `useDailyModals` — open/close state of the daily page's dialogs.
-- `useMatchResults` — the results form rows and submit.
+- `useMatchResults` — the results form rows and submit. It always sends every row: the backend treats the list as the session's full set of matches and deletes saved matches that were removed.
 - `usePlayerSelection` — shared multi-select of players (finalize and results modals).
 - `usePlayerPeladaHistory(peladaId, userId | null, limit | null)` — loads `getPlayerPeladaHistory` (`?limit=`, server-side) for the player history dialog; returns `{ rows, totalSessions, loading, fetching, error, retry }` (rows newest first). `loading` is only true until the first response for that player; changing the limit keeps the previous rows on screen with `fetching` (the dialog dims them). The dialog's period selector (last 5 / 10 / 20 / all, default 5) sets the limit, and the summary tiles, chart and table are derived from the returned rows. Results are keyed by request (no `setState` in the effect body), so switching player never shows the previous player's data. Reference for new fetch hooks under the `react-hooks/set-state-in-effect` lint rule.
 
