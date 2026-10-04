@@ -1,6 +1,7 @@
 package com.futspring.backend.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.futspring.backend.filter.AuthRateLimitFilter;
 import com.futspring.backend.filter.JwtAuthFilter;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
@@ -13,6 +14,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfigurationSource;
 
 import java.time.Instant;
 import java.util.HashMap;
@@ -30,8 +32,11 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http,
                                            JwtAuthFilter jwtAuthFilter,
+                                           AuthRateLimitFilter authRateLimitFilter,
+                                           CorsConfigurationSource corsConfigurationSource,
                                            ObjectMapper objectMapper) throws Exception {
         http
+            .cors(cors -> cors.configurationSource(corsConfigurationSource))
             .csrf(AbstractHttpConfigurer::disable)
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
@@ -46,11 +51,12 @@ public class SecurityConfig {
                     response.setContentType("application/json");
                     Map<String, Object> body = new HashMap<>();
                     body.put("status", 401);
-                    body.put("message", "Authentication required");
+                    body.put("message", "Autenticação necessária");
                     body.put("timestamp", Instant.now().toString());
                     objectMapper.writeValue(response.getWriter(), body);
                 })
             )
+            .addFilterBefore(authRateLimitFilter, UsernamePasswordAuthenticationFilter.class)
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }

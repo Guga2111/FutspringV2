@@ -1,21 +1,25 @@
 package com.futspring.backend.service;
 
 import com.futspring.backend.entity.Daily;
+import com.futspring.backend.entity.DailyStatus;
 import com.futspring.backend.entity.Pelada;
 import com.futspring.backend.repository.DailyRepository;
 import com.futspring.backend.repository.PeladaRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.DayOfWeek;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.format.TextStyle;
+import java.time.temporal.TemporalAdjusters;
 import java.util.List;
 import java.util.Locale;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class DailySchedulerService {
@@ -23,6 +27,7 @@ public class DailySchedulerService {
     private final PeladaRepository peladaRepository;
     private final DailyRepository dailyRepository;
 
+    // Hourly, server-local time: creates the next daily of each pelada once it is at most 24 h away
     @Scheduled(cron = "0 0 * * * *")
     @Transactional
     public void autoCreateDailies() {
@@ -30,35 +35,31 @@ public class DailySchedulerService {
         LocalDateTime now = LocalDateTime.now();
 
         for (Pelada pelada : peladas) {
-            LocalDate nextOccurrence = getNextOccurrence(pelada.getDayOfWeek(), now.toLocalDate());
-
-            LocalDateTime nextOccurrenceDateTime = nextOccurrence.atStartOfDay();
-            long hoursUntilNext = java.time.Duration.between(now, nextOccurrenceDateTime).toHours();
-
-            if (hoursUntilNext >= 0 && hoursUntilNext <= 24) {
-                boolean exists = dailyRepository.existsByPeladaAndDailyDate(pelada, nextOccurrence);
-                if (!exists) {
-                    Daily daily = Daily.builder()
-                            .pelada(pelada)
-                            .dailyDate(nextOccurrence)
-                            .dailyTime(pelada.getTimeOfDay())
-                            .status("SCHEDULED")
-                            .build();
-                    dailyRepository.save(daily);
-                }
+            // One bad pelada must not abort the run for the others
+            try {
+                createNextDailyIfDue(pelada, now);
+            } catch (RuntimeException e) {
+                log.error("Auto-create daily failed for pelada {} (dayOfWeek={})", pelada.getId(), pelada.getDayOfWeek(), e);
             }
         }
     }
 
-    private LocalDate getNextOccurrence(String dayOfWeekName, LocalDate from) {
-        DayOfWeek target = DayOfWeek.valueOf(dayOfWeekName.toUpperCase(Locale.ROOT));
-        LocalDate date = from;
-        for (int i = 0; i <= 7; i++) {
-            if (date.getDayOfWeek() == target) {
-                return date;
-            }
-            date = date.plusDays(1);
+    private void createNextDailyIfDue(Pelada pelada, LocalDateTime now) {
+        DayOfWeek target = DayOfWeek.valueOf(pelada.getDayOfWeek().toUpperCase(Locale.ROOT));
+        LocalDate nextOccurrence = now.toLocalDate().with(TemporalAdjusters.nextOrSame(target));
+        long hoursUntilNext = Duration.between(now, nextOccurrence.atStartOfDay()).toHours();
+
+        if (hoursUntilNext < 0 || hoursUntilNext > 24) {
+            return;
         }
-        return from.plusDays(7);
+        if (dailyRepository.existsByPeladaAndDailyDate(pelada, nextOccurrence)) {
+            return;
+        }
+        dailyRepository.save(Daily.builder()
+                .pelada(pelada)
+                .dailyDate(nextOccurrence)
+                .dailyTime(pelada.getTimeOfDay())
+                .status(DailyStatus.SCHEDULED)
+                .build());
     }
 }

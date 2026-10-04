@@ -7,6 +7,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.test.context.TestPropertySource;
 
+import org.springframework.data.domain.PageRequest;
+
 import java.util.List;
 import java.util.Optional;
 
@@ -71,33 +73,41 @@ class UserRepositoryTest {
 
     @Test
     void searchByUsernameOrEmail_caseInsensitiveUsernameMatch() {
-        List<User> results = userRepository.searchByUsernameOrEmail("ALICE");
+        List<User> results = userRepository.searchByUsernameOrEmail("ALICE", PAGE);
         assertThat(results).extracting(User::getUsername).contains("alice_user");
     }
 
     @Test
     void searchByUsernameOrEmail_emailMatch() {
-        List<User> results = userRepository.searchByUsernameOrEmail("bob@test");
+        List<User> results = userRepository.searchByUsernameOrEmail("bob@test", PAGE);
         assertThat(results).extracting(User::getEmail).contains("bob@test.org");
     }
 
     @Test
     void searchByUsernameOrEmail_partialMatch() {
-        List<User> results = userRepository.searchByUsernameOrEmail("player");
+        List<User> results = userRepository.searchByUsernameOrEmail("player", PAGE);
         assertThat(results).extracting(User::getUsername).contains("bob_player");
     }
 
     @Test
     void searchByUsernameOrEmail_noMatch_returnsEmpty() {
-        List<User> results = userRepository.searchByUsernameOrEmail("zzzzz");
+        List<User> results = userRepository.searchByUsernameOrEmail("zzzzz", PAGE);
         assertThat(results).isEmpty();
     }
 
     @Test
     void searchByUsernameOrEmail_noDuplicates() {
         // "example" matches alice's email; "alice" matches alice's username — only one result
-        List<User> results = userRepository.searchByUsernameOrEmail("alice");
+        List<User> results = userRepository.searchByUsernameOrEmail("alice", PAGE);
         long distinctIds = results.stream().map(User::getId).distinct().count();
         assertThat(distinctIds).isEqualTo(results.size());
     }
+
+    @Test
+    void searchByUsernameOrEmail_respectsPageSize() {
+        List<User> results = userRepository.searchByUsernameOrEmail("", PageRequest.of(0, 1));
+        assertThat(results).hasSize(1);
+    }
+
+    private static final PageRequest PAGE = PageRequest.of(0, 10);
 }

@@ -5,13 +5,16 @@ import lombok.*;
 
 @Entity
 @Table(name = "player_match_stats")
-@Data
+@Getter
+@Setter
+@ToString(onlyExplicitlyIncluded = true)
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 public class PlayerMatchStat {
 
     @Id
+    @ToString.Include
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
@@ -30,4 +33,14 @@ public class PlayerMatchStat {
     @Column(nullable = false)
     @Builder.Default
     private int assists = 0;
+
+    @Override
+    public boolean equals(Object o) {
+        return o instanceof PlayerMatchStat other && EntityIdentity.sameEntity(this, o, getId(), other.getId());
+    }
+
+    @Override
+    public int hashCode() {
+        return EntityIdentity.effectiveClass(this).hashCode();
+    }
 }

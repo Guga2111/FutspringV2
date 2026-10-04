@@ -8,13 +8,16 @@ import java.util.List;
 
 @Entity
 @Table(name = "daily_awards")
-@Data
+@Getter
+@Setter
+@ToString(onlyExplicitlyIncluded = true)
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 public class DailyAward {
 
     @Id
+    @ToString.Include
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
@@ -49,4 +52,14 @@ public class DailyAward {
         inverseJoinColumns = @JoinColumn(name = "user_id"))
     @Builder.Default
     private List<User> garcomWinners = new ArrayList<>();
+
+    @Override
+    public boolean equals(Object o) {
+        return o instanceof DailyAward other && EntityIdentity.sameEntity(this, o, getId(), other.getId());
+    }
+
+    @Override
+    public int hashCode() {
+        return EntityIdentity.effectiveClass(this).hashCode();
+    }
 }

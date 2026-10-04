@@ -8,13 +8,16 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "messages")
-@Data
+@Getter
+@Setter
+@ToString(onlyExplicitlyIncluded = true)
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 public class Message {
 
     @Id
+    @ToString.Include
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
@@ -32,4 +35,14 @@ public class Message {
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
     private LocalDateTime sentAt;
+
+    @Override
+    public boolean equals(Object o) {
+        return o instanceof Message other && EntityIdentity.sameEntity(this, o, getId(), other.getId());
+    }
+
+    @Override
+    public int hashCode() {
+        return EntityIdentity.effectiveClass(this).hashCode();
+    }
 }

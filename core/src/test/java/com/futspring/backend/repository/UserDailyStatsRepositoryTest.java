@@ -90,79 +90,52 @@ class UserDailyStatsRepositoryTest {
         assertThat(result).isEmpty();
     }
 
-    // --- findByUserOrderByDailyDailyDateDesc ---
+    // --- findHistoryByUser / findHistoryByUserInPeladas ---
 
     @Test
-    void findByUserOrderByDailyDailyDateDesc_correctOrder() {
-        List<UserDailyStats> result = userDailyStatsRepository.findByUserOrderByDailyDailyDateDesc(player);
+    void findHistoryByUser_correctOrder() {
+        List<UserDailyStats> result = userDailyStatsRepository.findHistoryByUser(player);
 
         assertThat(result).hasSize(3);
         assertThat(result.get(0).getDaily().getDailyDate()).isEqualTo(LocalDate.of(2024, 3, 8));
         assertThat(result.get(2).getDaily().getDailyDate()).isEqualTo(LocalDate.of(2024, 1, 5));
     }
 
-    // --- Global aggregate queries ---
+    @Test
+    void findHistoryByUserInPeladas_otherPelada_returnsEmpty() {
+        assertThat(userDailyStatsRepository.findHistoryByUserInPeladas(player, List.of(-1L))).isEmpty();
+        assertThat(userDailyStatsRepository.findHistoryByUserInPeladas(player, List.of(pelada.getId()))).hasSize(3);
+    }
+
+    // --- Batch aggregates used by AggregateRebuildService ---
 
     @Test
-    void sumGoalsByUser_returnsCorrectSum() {
-        int sum = userDailyStatsRepository.sumGoalsByUser(player);
-        assertThat(sum).isEqualTo(6); // 3 + 1 + 2
+    void aggregateStatsByUsers_returnsSums() {
+        List<Object[]> rows = userDailyStatsRepository.aggregateStatsByUsers(List.of(player));
+
+        assertThat(rows).hasSize(1);
+        Object[] row = rows.get(0);
+        assertThat(row[0]).isEqualTo(player.getId());
+        assertThat(((Number) row[1]).intValue()).isEqualTo(6); // goals 3 + 1 + 2
+        assertThat(((Number) row[2]).intValue()).isEqualTo(3); // assists 2 + 0 + 1
+        assertThat(((Number) row[3]).intValue()).isEqualTo(9); // matches 4 + 3 + 2
+        assertThat(((Number) row[4]).intValue()).isEqualTo(5); // match wins 2 + 1 + 2
+        assertThat(((Number) row[5]).intValue()).isEqualTo(3); // sessions
+        assertThat(((Number) row[6]).intValue()).isEqualTo(2); // session wins
     }
 
     @Test
-    void sumAssistsByUser_returnsCorrectSum() {
-        int sum = userDailyStatsRepository.sumAssistsByUser(player);
-        assertThat(sum).isEqualTo(3); // 2 + 0 + 1
+    void aggregateRankingByUsersAndPelada_returnsSums() {
+        List<Object[]> rows = userDailyStatsRepository.aggregateRankingByUsersAndPelada(List.of(player), pelada);
+
+        assertThat(rows).hasSize(1);
+        assertThat(((Number) rows.get(0)[1]).intValue()).isEqualTo(6);
+        assertThat(((Number) rows.get(0)[4]).intValue()).isEqualTo(2);
     }
 
     @Test
-    void sumMatchesPlayedByUser_returnsCorrectSum() {
-        int sum = userDailyStatsRepository.sumMatchesPlayedByUser(player);
-        assertThat(sum).isEqualTo(9); // 4 + 3 + 2
-    }
-
-    @Test
-    void sumMatchWinsByUser_returnsCorrectSum() {
-        int sum = userDailyStatsRepository.sumMatchWinsByUser(player);
-        assertThat(sum).isEqualTo(5); // 2 + 1 + 2
-    }
-
-    @Test
-    void countSessionsByUser_returnsCorrectCount() {
-        long count = userDailyStatsRepository.countSessionsByUser(player);
-        assertThat(count).isEqualTo(3);
-    }
-
-    @Test
-    void countSessionWinsByUser_returnsCorrectCount() {
-        long count = userDailyStatsRepository.countSessionWinsByUser(player);
-        assertThat(count).isEqualTo(2); // daily1 and daily3 have wonSession=true
-    }
-
-    // --- Pelada-scoped aggregates ---
-
-    @Test
-    void sumGoalsByUserAndPelada_returnsCorrectSum() {
-        int sum = userDailyStatsRepository.sumGoalsByUserAndPelada(player, pelada);
-        assertThat(sum).isEqualTo(6);
-    }
-
-    @Test
-    void sumAssistsByUserAndPelada_returnsCorrectSum() {
-        int sum = userDailyStatsRepository.sumAssistsByUserAndPelada(player, pelada);
-        assertThat(sum).isEqualTo(3);
-    }
-
-    @Test
-    void sumMatchesPlayedByUserAndPelada_returnsCorrectSum() {
-        int sum = userDailyStatsRepository.sumMatchesPlayedByUserAndPelada(player, pelada);
-        assertThat(sum).isEqualTo(9);
-    }
-
-    @Test
-    void countSessionWinsByUserAndPelada_returnsCorrectCount() {
-        long count = userDailyStatsRepository.countSessionWinsByUserAndPelada(player, pelada);
-        assertThat(count).isEqualTo(2);
+    void sumMatchWinsByUserAndPelada_returnsCorrectSum() {
+        assertThat(userDailyStatsRepository.sumMatchWinsByUserAndPelada(player, pelada)).isEqualTo(5);
     }
 
     // --- findHistoryByUserAndPelada ---
@@ -208,12 +181,11 @@ class UserDailyStatsRepositoryTest {
     }
 
     @Test
-    void aggregatesForUserWithNoStats_returnZero() {
+    void aggregatesForUserWithNoStats_returnNoRows() {
         User newPlayer = userRepository.save(User.builder()
                 .email("new@example.com").username("new").password("hash").build());
 
-        assertThat(userDailyStatsRepository.sumGoalsByUser(newPlayer)).isEqualTo(0);
-        assertThat(userDailyStatsRepository.sumAssistsByUser(newPlayer)).isEqualTo(0);
-        assertThat(userDailyStatsRepository.countSessionsByUser(newPlayer)).isEqualTo(0);
+        assertThat(userDailyStatsRepository.aggregateStatsByUsers(List.of(newPlayer))).isEmpty();
+        assertThat(userDailyStatsRepository.sumMatchWinsByUserAndPelada(newPlayer, pelada)).isEqualTo(0);
     }
 }

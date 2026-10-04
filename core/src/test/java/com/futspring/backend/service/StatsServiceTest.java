@@ -1,5 +1,7 @@
 package com.futspring.backend.service;
 
+import com.futspring.backend.support.MembershipStubs;
+import com.futspring.backend.repository.*;
 import com.futspring.backend.dto.StatsDTO;
 import com.futspring.backend.dto.UserMatchHistoryDTO;
 import com.futspring.backend.dto.UserStatsTimelineDTO;
@@ -9,6 +11,7 @@ import com.futspring.backend.entity.Stats;
 import com.futspring.backend.entity.User;
 import com.futspring.backend.entity.UserDailyStats;
 import com.futspring.backend.exception.AppException;
+import com.futspring.backend.helper.UserAuthenticationHelper;
 import com.futspring.backend.repository.DailyAwardRepository;
 import com.futspring.backend.repository.StatsRepository;
 import com.futspring.backend.repository.UserDailyStatsRepository;
@@ -23,6 +26,8 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDate;
 import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.List;
 import java.util.Optional;
 
@@ -33,6 +38,8 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class StatsServiceTest {
 
+    @Mock PeladaRepository peladaRepository;
+    @Mock UserAuthenticationHelper userAuthHelper;
     @Mock
     UserRepository userRepository;
     @Mock
@@ -45,14 +52,24 @@ class StatsServiceTest {
     StatsService statsService;
 
     User user;
+    User teammate;
+    User stranger;
     Pelada pelada;
 
     @BeforeEach
     void setUp() {
-        statsService = new StatsService(userRepository, statsRepository, userDailyStatsRepository, dailyAwardRepository);
+        statsService = new StatsService(userRepository, peladaRepository, statsRepository, userDailyStatsRepository, dailyAwardRepository, userAuthHelper);
 
         user = User.builder().id(1L).email("user@example.com").username("user").password("hash").build();
-        pelada = Pelada.builder().id(10L).name("Pelada").dayOfWeek("FRIDAY").timeOfDay("18:00").duration(2f).build();
+        teammate = User.builder().id(2L).email("teammate@example.com").username("teammate").password("hash").build();
+        stranger = User.builder().id(3L).email("stranger@example.com").username("stranger").password("hash").build();
+        pelada = Pelada.builder().id(10L).name("Pelada").dayOfWeek("FRIDAY").timeOfDay("18:00").duration(2f)
+                .members(new HashSet<>(Set.of(user, teammate))).build();
+        MembershipStubs.stubMembership(peladaRepository, pelada);
+        // "caller@example.com" is the profile owner in the existing tests
+        lenient().when(userAuthHelper.getAuthenticatedUser("caller@example.com")).thenReturn(user);
+        lenient().when(userAuthHelper.getAuthenticatedUser("teammate@example.com")).thenReturn(teammate);
+        lenient().when(userAuthHelper.getAuthenticatedUser("stranger@example.com")).thenReturn(stranger);
     }
 
     // --- getStats ---
@@ -71,9 +88,7 @@ class StatsServiceTest {
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
         when(statsRepository.findByUser(user)).thenReturn(Optional.of(stats));
-        when(dailyAwardRepository.countByWiltballWinnersContaining(user)).thenReturn(2L);
-        when(dailyAwardRepository.countByArtilheiroWinnersContaining(user)).thenReturn(3L);
-        when(dailyAwardRepository.countByGarcomWinnersContaining(user)).thenReturn(1L);
+        when(dailyAwardRepository.countAwardsByUser(1L)).thenReturn(awardRows(3, 1, 0, 2));
 
         StatsDTO result = statsService.getStats(1L, "caller@example.com");
 
@@ -88,9 +103,7 @@ class StatsServiceTest {
     void getStats_noStatsEntity_returnsDefaultFromUser() {
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
         when(statsRepository.findByUser(user)).thenReturn(Optional.empty());
-        when(dailyAwardRepository.countByWiltballWinnersContaining(user)).thenReturn(0L);
-        when(dailyAwardRepository.countByArtilheiroWinnersContaining(user)).thenReturn(0L);
-        when(dailyAwardRepository.countByGarcomWinnersContaining(user)).thenReturn(0L);
+        when(dailyAwardRepository.countAwardsByUser(1L)).thenReturn(awardRows(0, 0, 0, 0));
 
         StatsDTO result = statsService.getStats(1L, "caller@example.com");
 
@@ -102,9 +115,7 @@ class StatsServiceTest {
     void getStats_awardCountsPopulated() {
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
         when(statsRepository.findByUser(user)).thenReturn(Optional.empty());
-        when(dailyAwardRepository.countByWiltballWinnersContaining(user)).thenReturn(4L);
-        when(dailyAwardRepository.countByArtilheiroWinnersContaining(user)).thenReturn(7L);
-        when(dailyAwardRepository.countByGarcomWinnersContaining(user)).thenReturn(2L);
+        when(dailyAwardRepository.countAwardsByUser(1L)).thenReturn(awardRows(7, 2, 0, 4));
 
         StatsDTO result = statsService.getStats(1L, "caller@example.com");
 
@@ -233,7 +244,7 @@ class StatsServiceTest {
                 .build();
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
-        when(userDailyStatsRepository.findByUserOrderByDailyDailyDateDesc(user)).thenReturn(List.of(uds));
+        when(userDailyStatsRepository.findHistoryByUser(user)).thenReturn(List.of(uds));
 
         UserMatchHistoryDTO result = statsService.getMatchHistory(1L, "caller@example.com");
 
@@ -261,7 +272,7 @@ class StatsServiceTest {
                 .build();
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
-        when(userDailyStatsRepository.findByUserOrderByDailyDailyDateDesc(user)).thenReturn(List.of(uds));
+        when(userDailyStatsRepository.findHistoryByUser(user)).thenReturn(List.of(uds));
 
         UserMatchHistoryDTO result = statsService.getMatchHistory(1L, "caller@example.com");
 
@@ -288,7 +299,7 @@ class StatsServiceTest {
                 .build();
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
-        when(userDailyStatsRepository.findByUserOrderByDailyDailyDateDesc(user)).thenReturn(List.of(uds));
+        when(userDailyStatsRepository.findHistoryByUser(user)).thenReturn(List.of(uds));
 
         UserMatchHistoryDTO result = statsService.getMatchHistory(1L, "caller@example.com");
 
@@ -315,7 +326,7 @@ class StatsServiceTest {
                 .build();
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
-        when(userDailyStatsRepository.findByUserOrderByDailyDailyDateDesc(user)).thenReturn(List.of(uds));
+        when(userDailyStatsRepository.findHistoryByUser(user)).thenReturn(List.of(uds));
 
         UserMatchHistoryDTO result = statsService.getMatchHistory(1L, "caller@example.com");
 
@@ -334,5 +345,67 @@ class StatsServiceTest {
         assertThatThrownBy(() -> statsService.getMatchHistory(99L, "caller@example.com"))
                 .isInstanceOf(AppException.class)
                 .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.NOT_FOUND));
+    }
+
+    // --- access: owner, shared pelada, stranger ---
+
+    @Test
+    void getStats_strangerWithoutSharedPelada_throwsForbidden() {
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+
+        assertThatThrownBy(() -> statsService.getStats(1L, "stranger@example.com"))
+                .isInstanceOf(AppException.class)
+                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.FORBIDDEN));
+        verifyNoInteractions(statsRepository);
+    }
+
+    @Test
+    void getMatchHistory_strangerWithoutSharedPelada_throwsForbidden() {
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+
+        assertThatThrownBy(() -> statsService.getMatchHistory(1L, "stranger@example.com"))
+                .isInstanceOf(AppException.class)
+                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.FORBIDDEN));
+        verifyNoInteractions(userDailyStatsRepository);
+    }
+
+    @Test
+    void getMatchHistory_teammate_onlySeesSharedPeladas() {
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(peladaRepository.findIdsByMemberId(2L)).thenReturn(List.of(10L));
+        when(userDailyStatsRepository.findHistoryByUserInPeladas(user, List.of(10L))).thenReturn(List.of());
+
+        statsService.getMatchHistory(1L, "teammate@example.com");
+
+        verify(userDailyStatsRepository).findHistoryByUserInPeladas(user, List.of(10L));
+        verify(userDailyStatsRepository, never()).findHistoryByUser(any());
+    }
+
+    @Test
+    void getTimeline_teammate_onlySeesSharedPeladas() {
+        LocalDate from = LocalDate.of(2024, 1, 1);
+        LocalDate to = LocalDate.of(2024, 1, 31);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(peladaRepository.findIdsByMemberId(2L)).thenReturn(List.of(10L));
+        when(userDailyStatsRepository.findByUserAndDateRangeInPeladas(user, from, to, List.of(10L))).thenReturn(List.of());
+
+        statsService.getTimeline(1L, from, to, "teammate@example.com");
+
+        verify(userDailyStatsRepository, never()).findByUserAndDateRange(any(), any(), any());
+    }
+
+    @Test
+    void getTimeline_fromAfterTo_throwsBadRequest() {
+        assertThatThrownBy(() -> statsService.getTimeline(1L, LocalDate.of(2024, 2, 1), LocalDate.of(2024, 1, 1), "caller@example.com"))
+                .isInstanceOf(AppException.class)
+                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.BAD_REQUEST));
+    }
+
+    private static List<Object[]> awardRows(int artilheiro, int garcom, int puskas, int bolaMurcha) {
+        return List.of(
+                new Object[]{"ARTILHEIRO", (long) artilheiro},
+                new Object[]{"GARCOM", (long) garcom},
+                new Object[]{"PUSKAS", (long) puskas},
+                new Object[]{"BOLA_MURCHA", (long) bolaMurcha});
     }
 }

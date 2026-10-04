@@ -1,6 +1,10 @@
 package com.futspring.backend.service;
 
+import com.futspring.backend.support.MembershipStubs;
+import com.futspring.backend.helper.PeladaAccessHelper;
+import com.futspring.backend.repository.*;
 import com.futspring.backend.dto.DailyListItemDTO;
+import com.futspring.backend.entity.DailyStatus;
 import com.futspring.backend.entity.Daily;
 import com.futspring.backend.entity.Pelada;
 import com.futspring.backend.entity.User;
@@ -25,6 +29,7 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class DailyAttendanceServiceTest {
 
+    @Mock PeladaRepository peladaRepository;
     @Mock UserAuthenticationHelper userAuthHelper;
     @Mock DailyRepository dailyRepository;
     @Mock UserRepository userRepository;
@@ -39,7 +44,7 @@ class DailyAttendanceServiceTest {
 
     @BeforeEach
     void setUp() {
-        attendanceService = new DailyAttendanceService(userAuthHelper, dailyRepository, userRepository);
+        attendanceService = new DailyAttendanceService(userAuthHelper, new PeladaAccessHelper(peladaRepository), dailyRepository, userRepository);
 
         admin = User.builder().id(1L).email("admin@example.com").username("admin").password("hash").stars(4).build();
         member = User.builder().id(2L).email("member@example.com").username("member").password("hash").stars(3).build();
@@ -63,9 +68,10 @@ class DailyAttendanceServiceTest {
                 .pelada(pelada)
                 .dailyDate(LocalDate.now().plusDays(3))
                 .dailyTime("18:00")
-                .status("SCHEDULED")
+                .status(DailyStatus.SCHEDULED)
                 .confirmedPlayers(new HashSet<>())
                 .build();
+        MembershipStubs.stubMembership(peladaRepository, pelada);
     }
 
     // --- confirmAttendance ---
@@ -114,7 +120,7 @@ class DailyAttendanceServiceTest {
 
     @Test
     void confirmAttendance_lockedStatus_throwsBadRequest() {
-        scheduledDaily.setStatus("IN_COURSE");
+        scheduledDaily.setStatus(DailyStatus.IN_COURSE);
         when(userAuthHelper.getAuthenticatedUser("member@example.com")).thenReturn(member);
         when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
 
@@ -170,7 +176,7 @@ class DailyAttendanceServiceTest {
 
     @Test
     void disconfirmAttendance_lockedStatus_throwsBadRequest() {
-        scheduledDaily.setStatus("FINISHED");
+        scheduledDaily.setStatus(DailyStatus.FINISHED);
         when(userAuthHelper.getAuthenticatedUser("member@example.com")).thenReturn(member);
         when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
 
@@ -258,7 +264,7 @@ class DailyAttendanceServiceTest {
 
     @Test
     void adminConfirmAttendance_lockedStatus_throwsBadRequest() {
-        scheduledDaily.setStatus("IN_COURSE");
+        scheduledDaily.setStatus(DailyStatus.IN_COURSE);
         when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
         when(userRepository.findById(2L)).thenReturn(Optional.of(member));
@@ -319,7 +325,7 @@ class DailyAttendanceServiceTest {
 
     @Test
     void adminDisconfirmAttendance_lockedStatus_throwsBadRequest() {
-        scheduledDaily.setStatus("CANCELED");
+        scheduledDaily.setStatus(DailyStatus.CANCELED);
         when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
         when(userRepository.findById(2L)).thenReturn(Optional.of(member));

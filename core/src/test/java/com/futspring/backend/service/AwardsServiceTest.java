@@ -1,5 +1,8 @@
 package com.futspring.backend.service;
 
+import com.futspring.backend.support.MembershipStubs;
+import com.futspring.backend.helper.PeladaAccessHelper;
+import com.futspring.backend.repository.*;
 import com.futspring.backend.dto.PeladaAwardsDTO;
 import com.futspring.backend.entity.Daily;
 import com.futspring.backend.entity.DailyAward;
@@ -41,7 +44,7 @@ class AwardsServiceTest {
 
     @BeforeEach
     void setUp() {
-        awardsService = new AwardsService(peladaRepository, userAuthHelper, dailyAwardRepository);
+        awardsService = new AwardsService(peladaRepository, userAuthHelper, new PeladaAccessHelper(peladaRepository), dailyAwardRepository);
 
         admin = User.builder().id(1L).email("admin@example.com").username("admin").password("hash").build();
         player1 = User.builder().id(2L).email("player1@example.com").username("player1").password("hash").build();
@@ -57,13 +60,14 @@ class AwardsServiceTest {
                 .members(new HashSet<>(Set.of(admin, player1, player2)))
                 .admins(new HashSet<>(Set.of(admin)))
                 .build();
+        MembershipStubs.stubMembership(peladaRepository, pelada);
     }
 
     @Test
     void getAwards_returns4Categories() {
         when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
-        when(dailyAwardRepository.findAllByPelada(pelada)).thenReturn(Collections.emptyList());
+        when(dailyAwardRepository.countWinnersByPelada(10L)).thenReturn(rowsFrom(Collections.emptyList()));
 
         PeladaAwardsDTO result = awardsService.getAwards(10L, "admin@example.com");
 
@@ -75,7 +79,7 @@ class AwardsServiceTest {
     void getAwards_emptyPelada_allCategoriesEmpty() {
         when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
-        when(dailyAwardRepository.findAllByPelada(pelada)).thenReturn(Collections.emptyList());
+        when(dailyAwardRepository.countWinnersByPelada(10L)).thenReturn(rowsFrom(Collections.emptyList()));
 
         PeladaAwardsDTO result = awardsService.getAwards(10L, "admin@example.com");
 
@@ -107,7 +111,7 @@ class AwardsServiceTest {
 
         when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
-        when(dailyAwardRepository.findAllByPelada(pelada)).thenReturn(List.of(award1, award2));
+        when(dailyAwardRepository.countWinnersByPelada(10L)).thenReturn(rowsFrom(List.of(award1, award2)));
 
         PeladaAwardsDTO result = awardsService.getAwards(10L, "admin@example.com");
 
@@ -133,7 +137,7 @@ class AwardsServiceTest {
 
         when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
-        when(dailyAwardRepository.findAllByPelada(pelada)).thenReturn(List.of(award));
+        when(dailyAwardRepository.countWinnersByPelada(10L)).thenReturn(rowsFrom(List.of(award)));
 
         PeladaAwardsDTO result = awardsService.getAwards(10L, "admin@example.com");
 
@@ -161,7 +165,7 @@ class AwardsServiceTest {
 
         when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
-        when(dailyAwardRepository.findAllByPelada(pelada)).thenReturn(List.of(award1, award2, award3));
+        when(dailyAwardRepository.countWinnersByPelada(10L)).thenReturn(rowsFrom(List.of(award1, award2, award3)));
 
         PeladaAwardsDTO result = awardsService.getAwards(10L, "admin@example.com");
 
@@ -188,7 +192,7 @@ class AwardsServiceTest {
 
         when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
-        when(dailyAwardRepository.findAllByPelada(pelada)).thenReturn(List.of(award));
+        when(dailyAwardRepository.countWinnersByPelada(10L)).thenReturn(rowsFrom(List.of(award)));
 
         PeladaAwardsDTO result = awardsService.getAwards(10L, "admin@example.com");
 
@@ -241,7 +245,7 @@ class AwardsServiceTest {
 
         when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
-        when(dailyAwardRepository.findAllByPelada(pelada)).thenReturn(List.of(award));
+        when(dailyAwardRepository.countWinnersByPelada(10L)).thenReturn(rowsFrom(List.of(award)));
 
         PeladaAwardsDTO result = awardsService.getAwards(10L, "admin@example.com");
 
@@ -249,5 +253,26 @@ class AwardsServiceTest {
                 .filter(c -> "ARTILHEIRO".equals(c.getType())).findFirst().orElseThrow();
 
         assertThat(artilheiro.getTopWinners()).hasSize(2);
+    }
+
+    // What DailyAwardRepository.countWinnersByPelada returns for these awards: [category, userId, username, image, count]
+    private static List<Object[]> rowsFrom(List<DailyAward> awards) {
+        Map<String, Map<User, Integer>> counts = new LinkedHashMap<>();
+        for (DailyAward award : awards) {
+            count(counts, "ARTILHEIRO", award.getArtilheiroWinners());
+            count(counts, "GARCOM", award.getGarcomWinners());
+            count(counts, "PUSKAS", award.getPuskasWinners());
+            count(counts, "BOLA_MURCHA", award.getWiltballWinners());
+        }
+        List<Object[]> rows = new ArrayList<>();
+        counts.forEach((category, byUser) -> byUser.forEach((user, n) ->
+                rows.add(new Object[]{category, user.getId(), user.getUsername(), user.getImage(), (long) n})));
+        return rows;
+    }
+
+    private static void count(Map<String, Map<User, Integer>> counts, String category, List<User> winners) {
+        for (User winner : winners) {
+            counts.computeIfAbsent(category, k -> new LinkedHashMap<>()).merge(winner, 1, Integer::sum);
+        }
     }
 }

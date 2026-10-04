@@ -5,13 +5,16 @@ import lombok.*;
 
 @Entity
 @Table(name = "league_table_entries")
-@Data
+@Getter
+@Setter
+@ToString(onlyExplicitlyIncluded = true)
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 public class LeagueTableEntry {
 
     @Id
+    @ToString.Include
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
@@ -50,4 +53,14 @@ public class LeagueTableEntry {
     @Column(nullable = false)
     @Builder.Default
     private int points = 0;
+
+    @Override
+    public boolean equals(Object o) {
+        return o instanceof LeagueTableEntry other && EntityIdentity.sameEntity(this, o, getId(), other.getId());
+    }
+
+    @Override
+    public int hashCode() {
+        return EntityIdentity.effectiveClass(this).hashCode();
+    }
 }

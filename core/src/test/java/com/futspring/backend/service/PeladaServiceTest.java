@@ -1,10 +1,14 @@
 package com.futspring.backend.service;
 
+import com.futspring.backend.support.MembershipStubs;
+import com.futspring.backend.helper.PeladaAccessHelper;
+import com.futspring.backend.repository.*;
 import com.futspring.backend.dto.CreatePeladaRequestDTO;
 import com.futspring.backend.dto.PeladaDetailResponseDTO;
 import com.futspring.backend.dto.PeladaResponseDTO;
 import com.futspring.backend.dto.UpdatePeladaRequestDTO;
-import com.futspring.backend.dto.UserResponseDTO;
+import com.futspring.backend.dto.PublicUserDTO;
+import com.futspring.backend.entity.Daily;
 import com.futspring.backend.entity.Pelada;
 import com.futspring.backend.entity.User;
 import com.futspring.backend.exception.AppException;
@@ -32,6 +36,11 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class PeladaServiceTest {
 
+    @Mock DailyRepository dailyRepository;
+    @Mock RankingRepository rankingRepository;
+    @Mock MessageRepository messageRepository;
+    @Mock DailyService dailyService;
+    @Mock AggregateRebuildService aggregateRebuildService;
     @Mock
     PeladaRepository peladaRepository;
 
@@ -53,7 +62,8 @@ class PeladaServiceTest {
 
     @BeforeEach
     void setUp() {
-        peladaService = new PeladaService(peladaRepository, userRepository, fileUploadService, userAuthHelper);
+        peladaService = new PeladaService(peladaRepository, userRepository, dailyRepository, rankingRepository, messageRepository,
+                fileUploadService, userAuthHelper, new PeladaAccessHelper(peladaRepository), dailyService, aggregateRebuildService);
 
         admin = User.builder().id(1L).email("admin@example.com").username("admin").password("hash").build();
         member = User.builder().id(2L).email("member@example.com").username("member").password("hash").build();
@@ -74,6 +84,7 @@ class PeladaServiceTest {
                 .members(members)
                 .admins(admins)
                 .build();
+        MembershipStubs.stubMembership(peladaRepository, pelada);
     }
 
     // --- createPelada ---
@@ -409,6 +420,19 @@ class PeladaServiceTest {
     }
 
     @Test
+    void setAdmin_targetNotMember_throwsNotFoundAndKeepsAdmins() {
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
+        when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
+        when(userRepository.findById(3L)).thenReturn(Optional.of(outsider));
+
+        assertThatThrownBy(() -> peladaService.setAdmin(10L, 3L, true, "admin@example.com"))
+                .isInstanceOf(AppException.class)
+                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.NOT_FOUND));
+        assertThat(pelada.getAdmins()).doesNotContain(outsider);
+        verify(peladaRepository, never()).save(any());
+    }
+
+    @Test
     void setAdmin_targetNotFound_throwsNotFound() {
         when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
@@ -423,18 +447,27 @@ class PeladaServiceTest {
 
     @Test
     void searchUsers_returnsMatchingUsers() {
-        when(userRepository.searchByUsernameOrEmail("ali")).thenReturn(List.of(admin));
+        when(userRepository.searchByUsernameOrEmail(eq("ali"), any())).thenReturn(List.of(admin));
 
-        List<UserResponseDTO> result = peladaService.searchUsers("ali");
+        List<PublicUserDTO> result = peladaService.searchUsers("ali");
 
         assertThat(result).hasSize(1);
+        assertThat(result.get(0).getUsername()).isEqualTo("admin");
+    }
+
+    @Test
+    void searchUsers_queryTooShort_throwsBadRequest() {
+        assertThatThrownBy(() -> peladaService.searchUsers(" a "))
+                .isInstanceOf(AppException.class)
+                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.BAD_REQUEST));
+        verifyNoInteractions(userRepository);
     }
 
     @Test
     void searchUsers_noMatches_returnsEmptyList() {
-        when(userRepository.searchByUsernameOrEmail("zzz")).thenReturn(Collections.emptyList());
+        when(userRepository.searchByUsernameOrEmail(eq("zzz"), any())).thenReturn(Collections.emptyList());
 
-        List<UserResponseDTO> result = peladaService.searchUsers("zzz");
+        List<PublicUserDTO> result = peladaService.searchUsers("zzz");
 
         assertThat(result).isEmpty();
     }
@@ -512,6 +545,26 @@ class PeladaServiceTest {
         peladaService.deletePelada(10L, "admin@example.com");
 
         verify(peladaRepository).delete(pelada);
+    }
+
+    @Test
+    void deletePelada_cascadesDailiesMessagesRankingsAndRebuildsStats() {
+        Daily d1 = Daily.builder().id(100L).pelada(pelada).dailyDate(java.time.LocalDate.now()).dailyTime("18:00").build();
+        Daily d2 = Daily.builder().id(101L).pelada(pelada).dailyDate(java.time.LocalDate.now()).dailyTime("18:00").build();
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
+        when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
+        when(dailyRepository.findByPelada(pelada)).thenReturn(List.of(d1, d2));
+        when(dailyService.deleteDailyData(d1)).thenReturn(Set.of(admin));
+        when(dailyService.deleteDailyData(d2)).thenReturn(Set.of(member));
+
+        peladaService.deletePelada(10L, "admin@example.com");
+
+        verify(dailyService).deleteDailyData(d1);
+        verify(dailyService).deleteDailyData(d2);
+        verify(messageRepository).deleteByPelada(pelada);
+        verify(rankingRepository).deleteByPelada(pelada);
+        verify(peladaRepository).delete(pelada);
+        verify(aggregateRebuildService).rebuild(isNull(), eq(new java.util.LinkedHashSet<>(List.of(admin, member))));
     }
 
     @Test

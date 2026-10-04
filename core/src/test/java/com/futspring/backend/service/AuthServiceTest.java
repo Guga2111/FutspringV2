@@ -143,7 +143,7 @@ class AuthServiceTest {
         AuthResponseDTO result = authService.register(req);
 
         assertThat(jwtService.extractEmail(result.getToken())).isEqualTo("dave@example.com");
-        assertThat(jwtService.extractUserId(result.getToken())).isEqualTo(99L);
+        assertThat(jwtService.extractAllClaims(result.getToken()).get("userId", Long.class)).isEqualTo(99L);
     }
 
     // --- login ---
@@ -218,7 +218,7 @@ class AuthServiceTest {
 
         AuthResponseDTO result = authService.login(req);
 
-        assertThat(jwtService.extractUserId(result.getToken())).isEqualTo(42L);
+        assertThat(jwtService.extractAllClaims(result.getToken()).get("userId", Long.class)).isEqualTo(42L);
         assertThat(jwtService.extractEmail(result.getToken())).isEqualTo("alice@example.com");
     }
 }

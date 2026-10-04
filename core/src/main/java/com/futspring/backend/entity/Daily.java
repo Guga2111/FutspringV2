@@ -11,13 +11,16 @@ import java.util.Set;
 
 @Entity
 @Table(name = "dailies")
-@Data
+@Getter
+@Setter
+@ToString(onlyExplicitlyIncluded = true)
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 public class Daily {
 
     @Id
+    @ToString.Include
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
@@ -31,9 +34,10 @@ public class Daily {
     @Column(nullable = false)
     private String dailyTime;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     @Builder.Default
-    private String status = "SCHEDULED";
+    private DailyStatus status = DailyStatus.SCHEDULED;
 
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
@@ -53,4 +57,14 @@ public class Daily {
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
+
+    @Override
+    public boolean equals(Object o) {
+        return o instanceof Daily other && EntityIdentity.sameEntity(this, o, getId(), other.getId());
+    }
+
+    @Override
+    public int hashCode() {
+        return EntityIdentity.effectiveClass(this).hashCode();
+    }
 }

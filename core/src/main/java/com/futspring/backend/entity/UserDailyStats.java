@@ -5,13 +5,16 @@ import lombok.*;
 
 @Entity
 @Table(name = "user_daily_stats")
-@Data
+@Getter
+@Setter
+@ToString(onlyExplicitlyIncluded = true)
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 public class UserDailyStats {
 
     @Id
+    @ToString.Include
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
@@ -42,4 +45,14 @@ public class UserDailyStats {
     @Column(nullable = false)
     @Builder.Default
     private boolean wonSession = false;
+
+    @Override
+    public boolean equals(Object o) {
+        return o instanceof UserDailyStats other && EntityIdentity.sameEntity(this, o, getId(), other.getId());
+    }
+
+    @Override
+    public int hashCode() {
+        return EntityIdentity.effectiveClass(this).hashCode();
+    }
 }

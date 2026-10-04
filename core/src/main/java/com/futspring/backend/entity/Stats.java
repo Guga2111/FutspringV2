@@ -9,13 +9,16 @@ import java.util.List;
 
 @Entity
 @Table(name = "stats")
-@Data
+@Getter
+@Setter
+@ToString(onlyExplicitlyIncluded = true)
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 public class Stats {
 
     @Id
+    @ToString.Include
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
@@ -52,4 +55,14 @@ public class Stats {
     @Column(name = "puskas_date")
     @Builder.Default
     private List<LocalDate> puskasDates = new ArrayList<>();
+
+    @Override
+    public boolean equals(Object o) {
+        return o instanceof Stats other && EntityIdentity.sameEntity(this, o, getId(), other.getId());
+    }
+
+    @Override
+    public int hashCode() {
+        return EntityIdentity.effectiveClass(this).hashCode();
+    }
 }

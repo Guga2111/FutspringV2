@@ -6,6 +6,7 @@ import com.futspring.backend.entity.Pelada;
 import com.futspring.backend.entity.Team;
 import com.futspring.backend.entity.User;
 import com.futspring.backend.exception.AppException;
+import com.futspring.backend.helper.PeladaAccessHelper;
 import com.futspring.backend.helper.UserAuthenticationHelper;
 import com.futspring.backend.repository.DailyRepository;
 import com.futspring.backend.repository.TeamRepository;
@@ -17,7 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Set;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -25,71 +26,54 @@ import java.util.stream.Collectors;
 public class DailyTeamManagementService {
 
     private final UserAuthenticationHelper userAuthHelper;
+    private final PeladaAccessHelper accessHelper;
     private final DailyRepository dailyRepository;
     private final TeamRepository teamRepository;
     private final DailyDTOMapper dailyDTOMapper;
 
-    private static final Set<String> LOCKED_STATUSES = Set.of("IN_COURSE", "FINISHED", "CANCELED");
-
     @Transactional
     public List<DailyDetailDTO.TeamDTO> sortTeams(Long id, String currentUserEmail) {
         User caller = userAuthHelper.getAuthenticatedUser(currentUserEmail);
-
-        Daily daily = dailyRepository.findById(id)
-                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Daily not found"));
-
+        Daily daily = findDaily(id);
         Pelada pelada = daily.getPelada();
-        if (!pelada.getAdmins().contains(caller)) {
-            throw new AppException(HttpStatus.FORBIDDEN, "Only admins can sort teams");
-        }
-
-        if (LOCKED_STATUSES.contains(daily.getStatus())) {
-            throw new AppException(HttpStatus.BAD_REQUEST, "Cannot sort teams for a daily with status " + daily.getStatus());
-        }
+        accessHelper.requireAdmin(pelada, caller);
+        requireUnlocked(daily);
 
         // Group by star rating, shuffle within each tier, then flatten (desc by stars)
         List<User> players = daily.getConfirmedPlayers().stream()
                 .collect(Collectors.groupingBy(User::getStars))
                 .entrySet().stream()
-                .sorted(java.util.Map.Entry.<Integer, List<User>>comparingByKey().reversed())
+                .sorted(Map.Entry.<Integer, List<User>>comparingByKey().reversed())
                 .flatMap(e -> {
                     Collections.shuffle(e.getValue());
                     return e.getValue().stream();
                 })
                 .collect(Collectors.toList());
 
-        int numberOfTeams = daily.getPelada().getNumberOfTeams();
-        int playersPerTeam = daily.getPelada().getPlayersPerTeam();
+        int numberOfTeams = pelada.getNumberOfTeams();
+        int playersPerTeam = pelada.getPlayersPerTeam();
         int required = numberOfTeams * playersPerTeam;
 
         if (players.size() != required) {
             throw new AppException(HttpStatus.BAD_REQUEST,
-                "Exactly " + required + " confirmed players are required (" +
-                numberOfTeams + " teams × " + playersPerTeam + " players). " +
-                "Currently: " + players.size());
+                    "São necessários exatamente " + required + " jogadores confirmados (" +
+                    numberOfTeams + " times × " + playersPerTeam + " jogadores). Confirmados: " + players.size());
         }
 
-        // Delete existing teams
-        List<Team> existingTeams = teamRepository.findByDaily(daily);
-        for (Team t : existingTeams) {
-            t.getPlayers().clear();
-            teamRepository.save(t);
-        }
-        teamRepository.deleteAll(existingTeams);
+        clearTeams(daily);
 
-        // Create N teams dynamically
         List<Team> teams = new ArrayList<>();
         for (int i = 1; i <= numberOfTeams; i++) {
-            teams.add(teamRepository.save(
-                Team.builder().daily(daily).name("Team " + i).build()));
+            teams.add(teamRepository.save(Team.builder().daily(daily).name("Time " + i).build()));
         }
 
-        // Karmarkar-Karp (LPT): assign each player (highest stars first)
-        // to the non-full team with the lowest current total — minimises imbalance
+        // LPT (longest processing time): assign each player (highest stars first)
+        // to the non-full team with the lowest current total, which minimises imbalance
         int[] totals = new int[numberOfTeams];
-        int[] sizes  = new int[numberOfTeams];
+        int[] sizes = new int[numberOfTeams];
         for (User player : players) {
-            int minIdx = -1, minTotal = Integer.MAX_VALUE;
+            int minIdx = -1;
+            int minTotal = Integer.MAX_VALUE;
             for (int j = 0; j < numberOfTeams; j++) {
                 if (sizes[j] < playersPerTeam && totals[j] < minTotal) {
                     minTotal = totals[j];
@@ -102,34 +86,22 @@ public class DailyTeamManagementService {
         }
 
         teamRepository.saveAll(teams);
-
-        return teams.stream().map(dailyDTOMapper::buildTeamDTO).collect(Collectors.toList());
+        return teams.stream().map(dailyDTOMapper::buildTeamDTO).toList();
     }
 
     @Transactional
     public List<DailyDetailDTO.TeamDTO> swapPlayers(Long id, Long player1Id, Long player2Id, String currentUserEmail) {
         User caller = userAuthHelper.getAuthenticatedUser(currentUserEmail);
+        Daily daily = findDaily(id);
+        accessHelper.requireAdmin(daily.getPelada(), caller);
+        requireUnlocked(daily);
 
-        Daily daily = dailyRepository.findById(id)
-                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Daily not found"));
-
-        Pelada pelada = daily.getPelada();
-        if (!pelada.getAdmins().contains(caller)) {
-            throw new AppException(HttpStatus.FORBIDDEN, "Only admins can swap players");
-        }
-
-        if (LOCKED_STATUSES.contains(daily.getStatus())) {
-            throw new AppException(HttpStatus.BAD_REQUEST,
-                "Cannot swap players for a daily with status " + daily.getStatus());
-        }
-
-        List<Team> teams = teamRepository.findByDaily(daily);
+        List<Team> teams = teamRepository.findByDailyWithPlayers(daily);
 
         Team team1 = null;
         Team team2 = null;
         User player1 = null;
         User player2 = null;
-
         for (Team team : teams) {
             for (User p : team.getPlayers()) {
                 if (p.getId().equals(player1Id)) {
@@ -143,11 +115,11 @@ public class DailyTeamManagementService {
             }
         }
 
-        if (team1 == null || player1 == null) {
-            throw new AppException(HttpStatus.BAD_REQUEST, "Player 1 is not on any team in this daily");
+        if (player1 == null) {
+            throw new AppException(HttpStatus.BAD_REQUEST, "O jogador 1 não está em nenhum time desta sessão");
         }
-        if (team2 == null || player2 == null) {
-            throw new AppException(HttpStatus.BAD_REQUEST, "Player 2 is not on any team in this daily");
+        if (player2 == null) {
+            throw new AppException(HttpStatus.BAD_REQUEST, "O jogador 2 não está em nenhum time desta sessão");
         }
 
         team1.getPlayers().remove(player1);
@@ -157,35 +129,18 @@ public class DailyTeamManagementService {
 
         teamRepository.save(team1);
         teamRepository.save(team2);
-
-        return teams.stream().map(dailyDTOMapper::buildTeamDTO).collect(Collectors.toList());
+        return teams.stream().map(dailyDTOMapper::buildTeamDTO).toList();
     }
 
     @Transactional
     public DailyDetailDTO.TeamDTO updateTeamName(Long dailyId, Long teamId, String name, String callerEmail) {
         User caller = userAuthHelper.getAuthenticatedUser(callerEmail);
-
-        Daily daily = dailyRepository.findById(dailyId)
-                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Daily not found"));
-
-        Pelada pelada = daily.getPelada();
-        if (!pelada.getMembers().contains(caller)) {
-            throw new AppException(HttpStatus.FORBIDDEN, "Access denied: you are not a member of this pelada");
-        }
-
-        Team team = teamRepository.findById(teamId)
-                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Team not found"));
-
-        if (!team.getDaily().getId().equals(dailyId)) {
-            throw new AppException(HttpStatus.NOT_FOUND, "Team not found in this daily");
-        }
+        Daily daily = findDaily(dailyId);
+        accessHelper.requireMember(daily.getPelada(), caller);
+        Team team = findTeamInDaily(teamId, dailyId);
 
         if (!team.getPlayers().contains(caller)) {
-            throw new AppException(HttpStatus.FORBIDDEN, "Only team members can rename their team");
-        }
-
-        if (name == null || name.isBlank()) {
-            throw new AppException(HttpStatus.BAD_REQUEST, "Team name must not be blank");
+            throw new AppException(HttpStatus.FORBIDDEN, "Apenas jogadores do time podem renomeá-lo");
         }
 
         team.setName(name.trim());
@@ -196,28 +151,13 @@ public class DailyTeamManagementService {
     @Transactional
     public DailyDetailDTO.TeamDTO updateTeamColor(Long dailyId, Long teamId, String color, String callerEmail) {
         User caller = userAuthHelper.getAuthenticatedUser(callerEmail);
-
-        Daily daily = dailyRepository.findById(dailyId)
-                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Daily not found"));
-
+        Daily daily = findDaily(dailyId);
         Pelada pelada = daily.getPelada();
-        if (!pelada.getMembers().contains(caller)) {
-            throw new AppException(HttpStatus.FORBIDDEN, "Access denied: you are not a member of this pelada");
-        }
+        accessHelper.requireMember(pelada, caller);
+        Team team = findTeamInDaily(teamId, dailyId);
 
-        Team team = teamRepository.findById(teamId)
-                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Team not found"));
-
-        if (!team.getDaily().getId().equals(dailyId)) {
-            throw new AppException(HttpStatus.NOT_FOUND, "Team not found in this daily");
-        }
-
-        if (!team.getPlayers().contains(caller) && !pelada.getAdmins().contains(caller)) {
-            throw new AppException(HttpStatus.FORBIDDEN, "Only team members or admins can change a team's color");
-        }
-
-        if (color == null || !color.matches("^#[0-9a-fA-F]{6}$")) {
-            throw new AppException(HttpStatus.BAD_REQUEST, "Color must be a valid 6-digit hex (e.g. #3b82f6)");
+        if (!team.getPlayers().contains(caller) && !accessHelper.isAdmin(pelada, caller)) {
+            throw new AppException(HttpStatus.FORBIDDEN, "Apenas jogadores do time ou administradores podem mudar a cor");
         }
 
         team.setColor(color);
@@ -225,12 +165,33 @@ public class DailyTeamManagementService {
         return dailyDTOMapper.buildTeamDTO(team);
     }
 
+    /** Deletes every team of the daily (join rows first). Used by sort, import from message and daily delete. */
     void clearTeams(Daily daily) {
         List<Team> teams = teamRepository.findByDaily(daily);
         for (Team team : teams) {
             team.getPlayers().clear();
-            teamRepository.save(team);
         }
         teamRepository.deleteAll(teams);
+    }
+
+    private Daily findDaily(Long id) {
+        return dailyRepository.findById(id)
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Sessão não encontrada"));
+    }
+
+    private Team findTeamInDaily(Long teamId, Long dailyId) {
+        Team team = teamRepository.findById(teamId)
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Time não encontrado"));
+        if (!team.getDaily().getId().equals(dailyId)) {
+            throw new AppException(HttpStatus.NOT_FOUND, "Time não encontrado nesta sessão");
+        }
+        return team;
+    }
+
+    private static void requireUnlocked(Daily daily) {
+        if (daily.getStatus().isLocked()) {
+            throw new AppException(HttpStatus.BAD_REQUEST,
+                    "Não é possível alterar os times de uma sessão com status " + daily.getStatus());
+        }
     }
 }

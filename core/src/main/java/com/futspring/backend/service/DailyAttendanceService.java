@@ -5,6 +5,7 @@ import com.futspring.backend.entity.Daily;
 import com.futspring.backend.entity.Pelada;
 import com.futspring.backend.entity.User;
 import com.futspring.backend.exception.AppException;
+import com.futspring.backend.helper.PeladaAccessHelper;
 import com.futspring.backend.helper.UserAuthenticationHelper;
 import com.futspring.backend.repository.DailyRepository;
 import com.futspring.backend.repository.UserRepository;
@@ -13,36 +14,24 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Set;
-
 @Service
 @RequiredArgsConstructor
 public class DailyAttendanceService {
 
     private final UserAuthenticationHelper userAuthHelper;
+    private final PeladaAccessHelper accessHelper;
     private final DailyRepository dailyRepository;
     private final UserRepository userRepository;
-
-    private static final Set<String> LOCKED_STATUSES = Set.of("IN_COURSE", "FINISHED", "CANCELED");
 
     @Transactional
     public DailyListItemDTO confirmAttendance(Long id, String currentUserEmail) {
         User caller = userAuthHelper.getAuthenticatedUser(currentUserEmail);
-
-        Daily daily = dailyRepository.findById(id)
-                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Daily not found"));
-
-        Pelada pelada = daily.getPelada();
-        if (!pelada.getMembers().contains(caller)) {
-            throw new AppException(HttpStatus.FORBIDDEN, "Access denied: you are not a member of this pelada");
-        }
-
-        if (LOCKED_STATUSES.contains(daily.getStatus())) {
-            throw new AppException(HttpStatus.BAD_REQUEST, "Cannot confirm attendance for a daily with status " + daily.getStatus());
-        }
+        Daily daily = findDaily(id);
+        accessHelper.requireMember(daily.getPelada(), caller);
+        requireUnlocked(daily);
 
         if (daily.getConfirmedPlayers().contains(caller)) {
-            throw new AppException(HttpStatus.CONFLICT, "You are already confirmed for this daily");
+            throw new AppException(HttpStatus.CONFLICT, "Você já confirmou presença nesta sessão");
         }
 
         daily.getConfirmedPlayers().add(caller);
@@ -53,16 +42,11 @@ public class DailyAttendanceService {
     @Transactional
     public DailyListItemDTO disconfirmAttendance(Long id, String currentUserEmail) {
         User caller = userAuthHelper.getAuthenticatedUser(currentUserEmail);
-
-        Daily daily = dailyRepository.findById(id)
-                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Daily not found"));
-
-        if (LOCKED_STATUSES.contains(daily.getStatus())) {
-            throw new AppException(HttpStatus.BAD_REQUEST, "Cannot disconfirm attendance for a daily with status " + daily.getStatus());
-        }
+        Daily daily = findDaily(id);
+        requireUnlocked(daily);
 
         if (!daily.getConfirmedPlayers().contains(caller)) {
-            throw new AppException(HttpStatus.BAD_REQUEST, "You are not confirmed for this daily");
+            throw new AppException(HttpStatus.BAD_REQUEST, "Você não confirmou presença nesta sessão");
         }
 
         daily.getConfirmedPlayers().remove(caller);
@@ -73,31 +57,17 @@ public class DailyAttendanceService {
     @Transactional
     public DailyListItemDTO adminConfirmAttendance(Long dailyId, Long targetUserId, String callerEmail) {
         User caller = userAuthHelper.getAuthenticatedUser(callerEmail);
-
-        Daily daily = dailyRepository.findById(dailyId)
-                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Daily not found"));
-
+        Daily daily = findDaily(dailyId);
         Pelada pelada = daily.getPelada();
-        if (!pelada.getAdmins().contains(caller)) {
-            throw new AppException(HttpStatus.FORBIDDEN, "Only admins can confirm attendance for other members");
+        accessHelper.requireAdmin(pelada, caller);
+        User target = findMember(pelada, targetUserId);
+        requireUnlocked(daily);
+
+        if (daily.getConfirmedPlayers().contains(target)) {
+            throw new AppException(HttpStatus.CONFLICT, "O jogador já está confirmado nesta sessão");
         }
 
-        User targetUser = userRepository.findById(targetUserId)
-                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Target user not found"));
-
-        if (!pelada.getMembers().contains(targetUser)) {
-            throw new AppException(HttpStatus.BAD_REQUEST, "Target user is not a member of this pelada");
-        }
-
-        if (LOCKED_STATUSES.contains(daily.getStatus())) {
-            throw new AppException(HttpStatus.BAD_REQUEST, "Cannot confirm attendance for a daily with status " + daily.getStatus());
-        }
-
-        if (daily.getConfirmedPlayers().contains(targetUser)) {
-            throw new AppException(HttpStatus.CONFLICT, "Player is already confirmed for this daily");
-        }
-
-        daily.getConfirmedPlayers().add(targetUser);
+        daily.getConfirmedPlayers().add(target);
         dailyRepository.save(daily);
         return DailyListItemDTO.from(daily);
     }
@@ -105,31 +75,17 @@ public class DailyAttendanceService {
     @Transactional
     public DailyListItemDTO adminDisconfirmAttendance(Long dailyId, Long targetUserId, String callerEmail) {
         User caller = userAuthHelper.getAuthenticatedUser(callerEmail);
-
-        Daily daily = dailyRepository.findById(dailyId)
-                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Daily not found"));
-
+        Daily daily = findDaily(dailyId);
         Pelada pelada = daily.getPelada();
-        if (!pelada.getAdmins().contains(caller)) {
-            throw new AppException(HttpStatus.FORBIDDEN, "Only admins can disconfirm attendance for other members");
+        accessHelper.requireAdmin(pelada, caller);
+        User target = findMember(pelada, targetUserId);
+        requireUnlocked(daily);
+
+        if (!daily.getConfirmedPlayers().contains(target)) {
+            throw new AppException(HttpStatus.BAD_REQUEST, "O jogador não está confirmado nesta sessão");
         }
 
-        User targetUser = userRepository.findById(targetUserId)
-                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Target user not found"));
-
-        if (!pelada.getMembers().contains(targetUser)) {
-            throw new AppException(HttpStatus.BAD_REQUEST, "Target user is not a member of this pelada");
-        }
-
-        if (LOCKED_STATUSES.contains(daily.getStatus())) {
-            throw new AppException(HttpStatus.BAD_REQUEST, "Cannot disconfirm attendance for a daily with status " + daily.getStatus());
-        }
-
-        if (!daily.getConfirmedPlayers().contains(targetUser)) {
-            throw new AppException(HttpStatus.BAD_REQUEST, "Player is not confirmed for this daily");
-        }
-
-        daily.getConfirmedPlayers().remove(targetUser);
+        daily.getConfirmedPlayers().remove(target);
         dailyRepository.save(daily);
         return DailyListItemDTO.from(daily);
     }
@@ -137,5 +93,26 @@ public class DailyAttendanceService {
     void clearAttendees(Daily daily) {
         daily.getConfirmedPlayers().clear();
         dailyRepository.save(daily);
+    }
+
+    private Daily findDaily(Long id) {
+        return dailyRepository.findById(id)
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Sessão não encontrada"));
+    }
+
+    private User findMember(Pelada pelada, Long userId) {
+        User target = userRepository.findById(userId)
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Jogador não encontrado"));
+        if (!accessHelper.isMember(pelada, target)) {
+            throw new AppException(HttpStatus.BAD_REQUEST, "O jogador não é membro desta pelada");
+        }
+        return target;
+    }
+
+    private static void requireUnlocked(Daily daily) {
+        if (daily.getStatus().isLocked()) {
+            throw new AppException(HttpStatus.BAD_REQUEST,
+                    "Não é possível alterar a presença de uma sessão com status " + daily.getStatus());
+        }
     }
 }

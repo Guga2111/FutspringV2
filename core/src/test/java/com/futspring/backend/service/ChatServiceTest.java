@@ -1,5 +1,8 @@
 package com.futspring.backend.service;
 
+import com.futspring.backend.support.MembershipStubs;
+import com.futspring.backend.helper.PeladaAccessHelper;
+import com.futspring.backend.repository.*;
 import com.futspring.backend.dto.MessageDTO;
 import com.futspring.backend.entity.Message;
 import com.futspring.backend.entity.Pelada;
@@ -43,7 +46,7 @@ class ChatServiceTest {
 
     @BeforeEach
     void setUp() {
-        chatService = new ChatService(messageRepository, peladaRepository, userAuthHelper);
+        chatService = new ChatService(messageRepository, peladaRepository, userAuthHelper, new PeladaAccessHelper(peladaRepository));
 
         admin = User.builder().id(1L).email("admin@example.com").username("admin").password("hash").build();
         member = User.builder().id(2L).email("member@example.com").username("member").password("hash").build();
@@ -58,6 +61,7 @@ class ChatServiceTest {
                 .members(new HashSet<>(Set.of(admin, member)))
                 .admins(new HashSet<>(Set.of(admin)))
                 .build();
+        MembershipStubs.stubMembership(peladaRepository, pelada);
     }
 
     // --- saveAndBroadcast ---

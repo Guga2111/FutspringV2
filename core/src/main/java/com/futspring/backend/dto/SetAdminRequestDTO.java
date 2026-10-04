@@ -10,6 +10,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class SetAdminRequestDTO {
 
-    @NotNull(message = "isAdmin is required")
+    @NotNull(message = "Informe se o jogador é administrador")
     private Boolean isAdmin;
 }

@@ -19,7 +19,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -38,24 +38,21 @@ public class PeladaController {
     @PostMapping
     public ResponseEntity<PeladaResponseDTO> createPelada(
             @Valid @RequestBody CreatePeladaRequestDTO request,
-            Authentication authentication
+            @AuthenticationPrincipal String email
     ) {
-        String email = (String) authentication.getPrincipal();
         return ResponseEntity.status(HttpStatus.CREATED).body(peladaService.createPelada(request, email));
     }
 
     @GetMapping("/my")
-    public ResponseEntity<List<PeladaResponseDTO>> getMyPeladas(Authentication authentication) {
-        String email = (String) authentication.getPrincipal();
+    public ResponseEntity<List<PeladaResponseDTO>> getMyPeladas(@AuthenticationPrincipal String email) {
         return ResponseEntity.ok(peladaService.getMyPeladas(email));
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<PeladaDetailResponseDTO> getPeladaDetail(
             @PathVariable Long id,
-            Authentication authentication
+            @AuthenticationPrincipal String email
     ) {
-        String email = (String) authentication.getPrincipal();
         return ResponseEntity.ok(peladaService.getPeladaDetail(id, email));
     }
 
@@ -63,9 +60,8 @@ public class PeladaController {
     public ResponseEntity<Void> addPlayer(
             @PathVariable Long id,
             @Valid @RequestBody AddPlayerRequestDTO request,
-            Authentication authentication
+            @AuthenticationPrincipal String email
     ) {
-        String email = (String) authentication.getPrincipal();
         peladaService.addPlayer(id, request.getUserId(), email);
         return ResponseEntity.ok().build();
     }
@@ -74,9 +70,8 @@ public class PeladaController {
     public ResponseEntity<Void> removePlayer(
             @PathVariable Long id,
             @PathVariable Long userId,
-            Authentication authentication
+            @AuthenticationPrincipal String email
     ) {
-        String email = (String) authentication.getPrincipal();
         peladaService.removePlayer(id, userId, email);
         return ResponseEntity.ok().build();
     }
@@ -86,9 +81,8 @@ public class PeladaController {
             @PathVariable Long id,
             @PathVariable Long userId,
             @Valid @RequestBody SetAdminRequestDTO request,
-            Authentication authentication
+            @AuthenticationPrincipal String email
     ) {
-        String email = (String) authentication.getPrincipal();
         peladaService.setAdmin(id, userId, request.getIsAdmin(), email);
         return ResponseEntity.ok().build();
     }
@@ -96,19 +90,17 @@ public class PeladaController {
     @PutMapping("/{id}")
     public ResponseEntity<PeladaResponseDTO> updatePelada(
             @PathVariable Long id,
-            @RequestBody UpdatePeladaRequestDTO request,
-            Authentication authentication
+            @Valid @RequestBody UpdatePeladaRequestDTO request,
+            @AuthenticationPrincipal String email
     ) {
-        String email = (String) authentication.getPrincipal();
         return ResponseEntity.ok(peladaService.updatePelada(id, request, email));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deletePelada(
             @PathVariable Long id,
-            Authentication authentication
+            @AuthenticationPrincipal String email
     ) {
-        String email = (String) authentication.getPrincipal();
         peladaService.deletePelada(id, email);
         return ResponseEntity.noContent().build();
     }
@@ -116,9 +108,8 @@ public class PeladaController {
     @GetMapping("/{id}/ranking")
     public ResponseEntity<List<RankingDTO>> getRanking(
             @PathVariable Long id,
-            Authentication authentication
+            @AuthenticationPrincipal String email
     ) {
-        String email = (String) authentication.getPrincipal();
         return ResponseEntity.ok(rankingService.getRanking(id, email));
     }
 
@@ -126,9 +117,8 @@ public class PeladaController {
     public ResponseEntity<PlayerPeladaStatsDTO> getPlayerPeladaStats(
             @PathVariable Long id,
             @PathVariable Long userId,
-            Authentication authentication
+            @AuthenticationPrincipal String email
     ) {
-        String email = (String) authentication.getPrincipal();
         return ResponseEntity.ok(rankingService.getPlayerPeladaStats(id, userId, email));
     }
 
@@ -137,18 +127,16 @@ public class PeladaController {
             @PathVariable Long id,
             @PathVariable Long userId,
             @RequestParam(required = false) Integer limit,
-            Authentication authentication
+            @AuthenticationPrincipal String email
     ) {
-        String email = (String) authentication.getPrincipal();
         return ResponseEntity.ok(rankingService.getPlayerPeladaHistory(id, userId, limit, email));
     }
 
     @GetMapping("/{id}/awards")
     public ResponseEntity<PeladaAwardsDTO> getAwards(
             @PathVariable Long id,
-            Authentication authentication
+            @AuthenticationPrincipal String email
     ) {
-        String email = (String) authentication.getPrincipal();
         return ResponseEntity.ok(awardsService.getAwards(id, email));
     }
 
@@ -157,9 +145,8 @@ public class PeladaController {
             @PathVariable Long id,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "50") int size,
-            Authentication authentication
+            @AuthenticationPrincipal String email
     ) {
-        String email = (String) authentication.getPrincipal();
         return ResponseEntity.ok(chatService.getHistory(id, email, page, size));
     }
 
@@ -167,9 +154,8 @@ public class PeladaController {
     public ResponseEntity<PeladaResponseDTO> uploadImage(
             @PathVariable Long id,
             @RequestParam("file") MultipartFile file,
-            Authentication authentication
+            @AuthenticationPrincipal String email
     ) {
-        String email = (String) authentication.getPrincipal();
         return ResponseEntity.ok(peladaService.uploadPeladaImage(id, file, email));
     }
 }

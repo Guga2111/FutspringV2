@@ -11,93 +11,74 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.Set;
-
 @Service
 @RequiredArgsConstructor
 public class UserService {
 
-    private static final Set<String> VALID_POSITIONS = Set.of(
-            "GOALKEEPER", "DEFENDER", "MIDFIELDER", "FORWARD",
-            "GOLEIRO", "ZAGUEIRO", "MEIO", "ATACANTE"
-    );
-
     private final UserRepository userRepository;
     private final FileUploadService fileUploadService;
 
+    // Public profile; the email is only included for the owner
     @Transactional(readOnly = true)
-    public ProfileDTO getProfile(Long id) {
-        User user = userRepository.findById(id)
-                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "User not found"));
-        return ProfileDTO.from(user);
+    public ProfileDTO getProfile(Long id, String callerEmail) {
+        User user = findUser(id);
+        return ProfileDTO.from(user, user.getEmail().equals(callerEmail));
     }
 
     @Transactional
     public ProfileDTO updateProfile(Long id, UpdateProfileRequest request, String callerEmail) {
-        User user = userRepository.findById(id)
-                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "User not found"));
-
-        if (!user.getEmail().equals(callerEmail)) {
-            throw new AppException(HttpStatus.FORBIDDEN, "You can only update your own profile");
-        }
+        User user = findOwnUser(id, callerEmail);
 
         if (request.getUsername() != null) {
-            userRepository.findByUsername(request.getUsername()).ifPresent(existing -> {
+            String username = request.getUsername().trim();
+            userRepository.findByUsername(username).ifPresent(existing -> {
                 if (!existing.getId().equals(id)) {
-                    throw new AppException(HttpStatus.CONFLICT, "Username is already taken");
+                    throw new AppException(HttpStatus.CONFLICT, "Este nome de usuário já está em uso");
                 }
             });
-            user.setUsername(request.getUsername());
+            user.setUsername(username);
         }
 
+        // Allowed values are validated on UpdateProfileRequest; empty clears the position
         if (request.getPosition() != null) {
-            if (request.getPosition().isEmpty()) {
-                user.setPosition(null);
-            } else {
-                if (!VALID_POSITIONS.contains(request.getPosition())) {
-                    throw new AppException(HttpStatus.BAD_REQUEST,
-                            "Invalid position. Must be one of: GOALKEEPER, DEFENDER, MIDFIELDER, FORWARD");
-                }
-                user.setPosition(request.getPosition());
-            }
+            user.setPosition(request.getPosition().isEmpty() ? null : request.getPosition());
         }
 
         if (request.getStars() != null) {
             user.setStars(request.getStars());
         }
 
-        User saved = userRepository.save(user);
-        return ProfileDTO.from(saved);
+        return ProfileDTO.from(userRepository.save(user), true);
     }
 
     @Transactional
     public ProfileDTO uploadUserImage(Long id, MultipartFile file, String callerEmail) {
-        User user = userRepository.findById(id)
-                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "User not found"));
-
-        if (!user.getEmail().equals(callerEmail)) {
-            throw new AppException(HttpStatus.FORBIDDEN, "You can only upload your own image");
-        }
-
+        User user = findOwnUser(id, callerEmail);
         String filename = fileUploadService.uploadImage(file);
-        fileUploadService.deleteImage(user.getImage());
+        fileUploadService.deleteImageAfterCommit(user.getImage());
         user.setImage(filename);
-        return ProfileDTO.from(userRepository.save(user));
+        return ProfileDTO.from(userRepository.save(user), true);
     }
 
     @Transactional
     public ProfileDTO uploadBackgroundImage(Long id, MultipartFile file, String callerEmail) {
-        User user = userRepository.findById(id)
-                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "User not found"));
-
-        if (!user.getEmail().equals(callerEmail)) {
-            throw new AppException(HttpStatus.FORBIDDEN, "You can only upload your own background image");
-        }
-
+        User user = findOwnUser(id, callerEmail);
         String filename = fileUploadService.uploadImage(file);
-        fileUploadService.deleteImage(user.getBackgroundImage());
+        fileUploadService.deleteImageAfterCommit(user.getBackgroundImage());
         user.setBackgroundImage(filename);
-        return ProfileDTO.from(userRepository.save(user));
+        return ProfileDTO.from(userRepository.save(user), true);
     }
 
+    private User findUser(Long id) {
+        return userRepository.findById(id)
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Usuário não encontrado"));
+    }
+
+    private User findOwnUser(Long id, String callerEmail) {
+        User user = findUser(id);
+        if (!user.getEmail().equals(callerEmail)) {
+            throw new AppException(HttpStatus.FORBIDDEN, "Você só pode alterar o seu próprio perfil");
+        }
+        return user;
+    }
 }

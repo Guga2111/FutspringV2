@@ -7,6 +7,7 @@ import com.futspring.backend.dto.SwapPlayersRequestDTO;
 import com.futspring.backend.dto.UpdateDailyStatusRequestDTO;
 import com.futspring.backend.dto.UpdateTeamColorRequestDTO;
 import com.futspring.backend.dto.UpdateTeamNameRequestDTO;
+import com.futspring.backend.entity.DailyStatus;
 import com.futspring.backend.entity.Daily;
 import com.futspring.backend.entity.Pelada;
 import com.futspring.backend.entity.Team;
@@ -166,7 +167,7 @@ class DailyControllerTest extends BaseIntegrationTest {
         mockMvc.perform(put("/api/v1/dailies/" + daily.getId() + "/status")
                 .contentType(MediaType.APPLICATION_JSON)
                 .header("Authorization", bearerToken(admin.getId(), admin.getEmail()))
-                .content(objectMapper.writeValueAsString(new UpdateDailyStatusRequestDTO("CONFIRMED"))))
+                .content(objectMapper.writeValueAsString(new UpdateDailyStatusRequestDTO(DailyStatus.CONFIRMED))))
                 .andExpect(status().isOk());
     }
 
@@ -291,8 +292,28 @@ class DailyControllerTest extends BaseIntegrationTest {
         mockMvc.perform(post("/api/v1/dailies/" + daily.getId() + "/results")
                 .contentType(MediaType.APPLICATION_JSON)
                 .header("Authorization", bearerToken(member.getId(), member.getEmail()))
-                .content("[]"))
+                .content("[{\"team1Id\":1,\"team2Id\":2,\"team1Score\":1,\"team2Score\":0}]"))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void submitResults_negativeScore_returnsValidationErrors() throws Exception {
+        mockMvc.perform(post("/api/v1/dailies/" + daily.getId() + "/results")
+                .contentType(MediaType.APPLICATION_JSON)
+                .header("Authorization", bearerToken(admin.getId(), admin.getEmail()))
+                .content("[{\"team1Id\":1,\"team2Id\":2,\"team1Score\":-1,\"team2Score\":0}]"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors['results[0].team1Score']").exists());
+    }
+
+    @Test
+    void submitResults_malformedJson_returnsBadRequest() throws Exception {
+        mockMvc.perform(post("/api/v1/dailies/" + daily.getId() + "/results")
+                .contentType(MediaType.APPLICATION_JSON)
+                .header("Authorization", bearerToken(admin.getId(), admin.getEmail()))
+                .content("[{"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400));
     }
 
     @Test
@@ -351,7 +372,7 @@ class DailyControllerTest extends BaseIntegrationTest {
     @Test
     void uploadChampionImage_asAdmin() throws Exception {
         // Champion image upload requires the daily to be in FINISHED status
-        daily.setStatus("FINISHED");
+        daily.setStatus(DailyStatus.FINISHED);
         dailyRepository.save(daily);
 
         MockMultipartFile file = new MockMultipartFile(

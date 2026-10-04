@@ -17,42 +17,43 @@ public interface UserDailyStatsRepository extends JpaRepository<UserDailyStats, 
 
     List<UserDailyStats> findByDaily(Daily daily);
 
-    List<UserDailyStats> findByUserOrderByDailyDailyDateDesc(User user);
+    // Profile history and timeline, with daily and pelada fetched to avoid N+1.
+    // The *InPeladas variants restrict the rows to the peladas a non-owner viewer shares with the player.
+    @Query("""
+        SELECT uds FROM UserDailyStats uds
+        JOIN FETCH uds.daily d JOIN FETCH d.pelada
+        WHERE uds.user = :user
+        ORDER BY d.dailyDate DESC, d.id DESC
+        """)
+    List<UserDailyStats> findHistoryByUser(@Param("user") User user);
 
-    @Query("SELECT uds FROM UserDailyStats uds WHERE uds.user = :user AND uds.daily.dailyDate >= :from AND uds.daily.dailyDate <= :to ORDER BY uds.daily.dailyDate ASC")
+    @Query("""
+        SELECT uds FROM UserDailyStats uds
+        JOIN FETCH uds.daily d JOIN FETCH d.pelada p
+        WHERE uds.user = :user AND p.id IN :peladaIds
+        ORDER BY d.dailyDate DESC, d.id DESC
+        """)
+    List<UserDailyStats> findHistoryByUserInPeladas(@Param("user") User user, @Param("peladaIds") Collection<Long> peladaIds);
+
+    @Query("""
+        SELECT uds FROM UserDailyStats uds
+        JOIN FETCH uds.daily d
+        WHERE uds.user = :user AND d.dailyDate >= :from AND d.dailyDate <= :to
+        ORDER BY d.dailyDate ASC
+        """)
     List<UserDailyStats> findByUserAndDateRange(@Param("user") User user, @Param("from") LocalDate from, @Param("to") LocalDate to);
 
-    // Global aggregates (for Stats rebuild)
-    @Query("SELECT COALESCE(SUM(uds.goals), 0) FROM UserDailyStats uds WHERE uds.user = :user")
-    int sumGoalsByUser(@Param("user") User user);
+    @Query("""
+        SELECT uds FROM UserDailyStats uds
+        JOIN FETCH uds.daily d
+        WHERE uds.user = :user AND d.dailyDate >= :from AND d.dailyDate <= :to AND d.pelada.id IN :peladaIds
+        ORDER BY d.dailyDate ASC
+        """)
+    List<UserDailyStats> findByUserAndDateRangeInPeladas(@Param("user") User user, @Param("from") LocalDate from,
+                                                         @Param("to") LocalDate to, @Param("peladaIds") Collection<Long> peladaIds);
 
-    @Query("SELECT COALESCE(SUM(uds.assists), 0) FROM UserDailyStats uds WHERE uds.user = :user")
-    int sumAssistsByUser(@Param("user") User user);
-
-    @Query("SELECT COALESCE(SUM(uds.matchesPlayed), 0) FROM UserDailyStats uds WHERE uds.user = :user")
-    int sumMatchesPlayedByUser(@Param("user") User user);
-
-    @Query("SELECT COALESCE(SUM(uds.wins), 0) FROM UserDailyStats uds WHERE uds.user = :user")
-    int sumMatchWinsByUser(@Param("user") User user);
-
-    @Query("SELECT COUNT(uds) FROM UserDailyStats uds WHERE uds.user = :user")
-    long countSessionsByUser(@Param("user") User user);
-
-    @Query("SELECT COUNT(uds) FROM UserDailyStats uds WHERE uds.user = :user AND uds.wonSession = true")
-    long countSessionWinsByUser(@Param("user") User user);
-
-    // Pelada-scoped aggregates (for Ranking rebuild)
-    @Query("SELECT COALESCE(SUM(uds.goals), 0) FROM UserDailyStats uds WHERE uds.user = :user AND uds.daily.pelada = :pelada")
-    int sumGoalsByUserAndPelada(@Param("user") User user, @Param("pelada") Pelada pelada);
-
-    @Query("SELECT COALESCE(SUM(uds.assists), 0) FROM UserDailyStats uds WHERE uds.user = :user AND uds.daily.pelada = :pelada")
-    int sumAssistsByUserAndPelada(@Param("user") User user, @Param("pelada") Pelada pelada);
-
-    @Query("SELECT COALESCE(SUM(uds.matchesPlayed), 0) FROM UserDailyStats uds WHERE uds.user = :user AND uds.daily.pelada = :pelada")
-    int sumMatchesPlayedByUserAndPelada(@Param("user") User user, @Param("pelada") Pelada pelada);
-
-    @Query("SELECT COUNT(uds) FROM UserDailyStats uds WHERE uds.user = :user AND uds.wonSession = true AND uds.daily.pelada = :pelada")
-    long countSessionWinsByUserAndPelada(@Param("user") User user, @Param("pelada") Pelada pelada);
+    @Query("SELECT uds FROM UserDailyStats uds JOIN FETCH uds.user WHERE uds.daily = :daily")
+    List<UserDailyStats> findByDailyWithUser(@Param("daily") Daily daily);
 
     @Query("SELECT COALESCE(SUM(uds.wins), 0) FROM UserDailyStats uds WHERE uds.user = :user AND uds.daily.pelada = :pelada")
     int sumMatchWinsByUserAndPelada(@Param("user") User user, @Param("pelada") Pelada pelada);

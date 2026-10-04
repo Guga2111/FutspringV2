@@ -8,13 +8,16 @@ import java.util.Set;
 
 @Entity
 @Table(name = "teams")
-@Data
+@Getter
+@Setter
+@ToString(onlyExplicitlyIncluded = true)
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 public class Team {
 
     @Id
+    @ToString.Include
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
@@ -36,4 +39,14 @@ public class Team {
     )
     @Builder.Default
     private Set<User> players = new HashSet<>();
+
+    @Override
+    public boolean equals(Object o) {
+        return o instanceof Team other && EntityIdentity.sameEntity(this, o, getId(), other.getId());
+    }
+
+    @Override
+    public int hashCode() {
+        return EntityIdentity.effectiveClass(this).hashCode();
+    }
 }

@@ -6,6 +6,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDate;
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -24,8 +26,14 @@ public class PeladaResponseDTO {
     private int memberCount;
     private int numberOfTeams;
     private int playersPerTeam;
+    // next SCHEDULED/CONFIRMED session from today on; only filled by GET /peladas/my and /users/{id}/peladas
+    private LocalDate nextDailyDate;
 
     public static PeladaResponseDTO from(Pelada pelada) {
+        return from(pelada, pelada.getMembers().size(), null);
+    }
+
+    public static PeladaResponseDTO from(Pelada pelada, int memberCount, LocalDate nextDailyDate) {
         return PeladaResponseDTO.builder()
                 .id(pelada.getId())
                 .name(pelada.getName())
@@ -36,9 +44,10 @@ public class PeladaResponseDTO {
                 .reference(pelada.getReference())
                 .image(pelada.getImage())
                 .autoCreateDailyEnabled(pelada.isAutoCreateDailyEnabled())
-                .memberCount(pelada.getMembers().size())
+                .memberCount(memberCount)
                 .numberOfTeams(pelada.getNumberOfTeams())
                 .playersPerTeam(pelada.getPlayersPerTeam())
+                .nextDailyDate(nextDailyDate)
                 .build();
     }
 }

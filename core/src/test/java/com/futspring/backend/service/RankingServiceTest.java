@@ -1,5 +1,8 @@
 package com.futspring.backend.service;
 
+import com.futspring.backend.support.MembershipStubs;
+import com.futspring.backend.helper.PeladaAccessHelper;
+import com.futspring.backend.repository.*;
 import com.futspring.backend.dto.PlayerPeladaHistoryDTO;
 import com.futspring.backend.dto.PlayerPeladaStatsDTO;
 import com.futspring.backend.dto.RankingDTO;
@@ -56,7 +59,7 @@ class RankingServiceTest {
 
     @BeforeEach
     void setUp() {
-        rankingService = new RankingService(peladaRepository, userAuthHelper, rankingRepository, dailyAwardRepository, userRepository, userDailyStatsRepository);
+        rankingService = new RankingService(peladaRepository, userAuthHelper, new PeladaAccessHelper(peladaRepository), rankingRepository, dailyAwardRepository, userRepository, userDailyStatsRepository);
 
         admin = User.builder().id(1L).email("admin@example.com").username("admin").password("hash").stars(4).build();
         player = User.builder().id(2L).email("player@example.com").username("player").password("hash").stars(3).build();
@@ -71,6 +74,7 @@ class RankingServiceTest {
                 .members(new HashSet<>(Set.of(admin, player)))
                 .admins(new HashSet<>(Set.of(admin)))
                 .build();
+        MembershipStubs.stubMembership(peladaRepository, pelada);
     }
 
     @Test
@@ -87,7 +91,7 @@ class RankingServiceTest {
 
         when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
-        when(rankingRepository.findByPelada(pelada)).thenReturn(List.of(ranking));
+        when(rankingRepository.findByPeladaWithUser(pelada)).thenReturn(List.of(ranking));
 
         List<RankingDTO> result = rankingService.getRanking(10L, "admin@example.com");
 
@@ -103,7 +107,7 @@ class RankingServiceTest {
     void getRanking_noRankingRecord_returnsDefaultValues() {
         when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
-        when(rankingRepository.findByPelada(pelada)).thenReturn(Collections.emptyList());
+        when(rankingRepository.findByPeladaWithUser(pelada)).thenReturn(Collections.emptyList());
 
         List<RankingDTO> result = rankingService.getRanking(10L, "admin@example.com");
 
@@ -121,7 +125,7 @@ class RankingServiceTest {
 
         when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
-        when(rankingRepository.findByPelada(pelada)).thenReturn(List.of(r1, r2));
+        when(rankingRepository.findByPeladaWithUser(pelada)).thenReturn(List.of(r1, r2));
 
         List<RankingDTO> result = rankingService.getRanking(10L, "admin@example.com");
 
@@ -134,7 +138,7 @@ class RankingServiceTest {
     void getRanking_allMembersIncluded() {
         when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
-        when(rankingRepository.findByPelada(pelada)).thenReturn(Collections.emptyList());
+        when(rankingRepository.findByPeladaWithUser(pelada)).thenReturn(Collections.emptyList());
 
         List<RankingDTO> result = rankingService.getRanking(10L, "admin@example.com");
 
@@ -180,7 +184,7 @@ class RankingServiceTest {
 
         when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
-        when(rankingRepository.findByPelada(pelada)).thenReturn(List.of(r1, r2));
+        when(rankingRepository.findByPeladaWithUser(pelada)).thenReturn(List.of(r1, r2));
 
         List<RankingDTO> result = rankingService.getRanking(10L, "admin@example.com");
 
@@ -199,10 +203,7 @@ class RankingServiceTest {
         when(userRepository.findById(2L)).thenReturn(Optional.of(player));
         when(rankingRepository.findByPeladaAndUser(pelada, player)).thenReturn(Optional.of(ranking));
         when(userDailyStatsRepository.sumMatchWinsByUserAndPelada(player, pelada)).thenReturn(6);
-        when(dailyAwardRepository.countArtilheiroWinsByUserAndPelada(player, pelada)).thenReturn(1L);
-        when(dailyAwardRepository.countGarcomWinsByUserAndPelada(player, pelada)).thenReturn(1L);
-        when(dailyAwardRepository.countPuskasWinsByUserAndPelada(player, pelada)).thenReturn(0L);
-        when(dailyAwardRepository.countWiltballWinsByUserAndPelada(player, pelada)).thenReturn(0L);
+        when(dailyAwardRepository.countAwardsByUserAndPelada(2L, 10L)).thenReturn(awardRows(1, 1, 0, 0));
 
         PlayerPeladaStatsDTO result = rankingService.getPlayerPeladaStats(10L, 2L, "admin@example.com");
 
@@ -225,10 +226,7 @@ class RankingServiceTest {
         when(userRepository.findById(2L)).thenReturn(Optional.of(player));
         when(rankingRepository.findByPeladaAndUser(pelada, player)).thenReturn(Optional.empty());
         when(userDailyStatsRepository.sumMatchWinsByUserAndPelada(player, pelada)).thenReturn(0);
-        when(dailyAwardRepository.countArtilheiroWinsByUserAndPelada(player, pelada)).thenReturn(0L);
-        when(dailyAwardRepository.countGarcomWinsByUserAndPelada(player, pelada)).thenReturn(0L);
-        when(dailyAwardRepository.countPuskasWinsByUserAndPelada(player, pelada)).thenReturn(0L);
-        when(dailyAwardRepository.countWiltballWinsByUserAndPelada(player, pelada)).thenReturn(0L);
+        when(dailyAwardRepository.countAwardsByUserAndPelada(2L, 10L)).thenReturn(awardRows(0, 0, 0, 0));
 
         PlayerPeladaStatsDTO result = rankingService.getPlayerPeladaStats(10L, 2L, "admin@example.com");
 
@@ -250,10 +248,7 @@ class RankingServiceTest {
         when(userRepository.findById(2L)).thenReturn(Optional.of(player));
         when(rankingRepository.findByPeladaAndUser(pelada, player)).thenReturn(Optional.empty());
         when(userDailyStatsRepository.sumMatchWinsByUserAndPelada(player, pelada)).thenReturn(0);
-        when(dailyAwardRepository.countArtilheiroWinsByUserAndPelada(player, pelada)).thenReturn(0L);
-        when(dailyAwardRepository.countGarcomWinsByUserAndPelada(player, pelada)).thenReturn(0L);
-        when(dailyAwardRepository.countPuskasWinsByUserAndPelada(player, pelada)).thenReturn(2L);
-        when(dailyAwardRepository.countWiltballWinsByUserAndPelada(player, pelada)).thenReturn(1L);
+        when(dailyAwardRepository.countAwardsByUserAndPelada(2L, 10L)).thenReturn(awardRows(0, 0, 2, 1));
 
         PlayerPeladaStatsDTO result = rankingService.getPlayerPeladaStats(10L, 2L, "admin@example.com");
 
@@ -417,5 +412,13 @@ class RankingServiceTest {
                     .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.BAD_REQUEST));
         }
         verifyNoInteractions(peladaRepository, userDailyStatsRepository);
+    }
+
+    private static List<Object[]> awardRows(int artilheiro, int garcom, int puskas, int bolaMurcha) {
+        return List.of(
+                new Object[]{"ARTILHEIRO", (long) artilheiro},
+                new Object[]{"GARCOM", (long) garcom},
+                new Object[]{"PUSKAS", (long) puskas},
+                new Object[]{"BOLA_MURCHA", (long) bolaMurcha});
     }
 }

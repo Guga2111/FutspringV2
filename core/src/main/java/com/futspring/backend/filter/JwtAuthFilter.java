@@ -40,7 +40,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         String token = authHeader.substring(7);
 
         if (!jwtService.isTokenValid(token)) {
-            writeUnauthorizedResponse(response, "Invalid or expired token");
+            writeUnauthorizedResponse(response, "Token inválido ou expirado");
             return;
         }
 

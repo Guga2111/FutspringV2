@@ -10,13 +10,16 @@ import java.util.Set;
 
 @Entity
 @Table(name = "peladas")
-@Data
+@Getter
+@Setter
+@ToString(onlyExplicitlyIncluded = true)
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 public class Pelada {
 
     @Id
+    @ToString.Include
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
@@ -75,4 +78,14 @@ public class Pelada {
     )
     @Builder.Default
     private Set<User> admins = new HashSet<>();
+
+    @Override
+    public boolean equals(Object o) {
+        return o instanceof Pelada other && EntityIdentity.sameEntity(this, o, getId(), other.getId());
+    }
+
+    @Override
+    public int hashCode() {
+        return EntityIdentity.effectiveClass(this).hashCode();
+    }
 }

@@ -1,5 +1,6 @@
 package com.futspring.backend.service;
 
+import com.futspring.backend.entity.DailyStatus;
 import com.futspring.backend.entity.Daily;
 import com.futspring.backend.entity.Pelada;
 import com.futspring.backend.repository.DailyRepository;
@@ -75,7 +76,7 @@ class DailySchedulerServiceTest {
 
         ArgumentCaptor<Daily> captor = ArgumentCaptor.forClass(Daily.class);
         verify(dailyRepository).save(captor.capture());
-        assertThat(captor.getValue().getStatus()).isEqualTo("SCHEDULED");
+        assertThat(captor.getValue().getStatus()).isEqualTo(DailyStatus.SCHEDULED);
     }
 
     @Test

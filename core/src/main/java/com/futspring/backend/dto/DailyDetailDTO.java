@@ -1,6 +1,7 @@
 package com.futspring.backend.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.futspring.backend.entity.DailyStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -18,7 +19,7 @@ public class DailyDetailDTO {
     private Long id;
     private LocalDate dailyDate;
     private String dailyTime;
-    private String status;
+    private DailyStatus status;
     @JsonProperty("isFinished")
     private boolean isFinished;
     private String championImage;

@@ -15,6 +15,6 @@ public class UserAuthenticationHelper {
 
     public User getAuthenticatedUser(String email) {
         return userRepository.findByEmail(email)
-                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "User not found"));
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Usuário não encontrado"));
     }
 }

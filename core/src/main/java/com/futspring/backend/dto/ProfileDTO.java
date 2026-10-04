@@ -1,5 +1,6 @@
 package com.futspring.backend.dto;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.futspring.backend.entity.User;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -7,6 +8,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Data
+@JsonInclude(JsonInclude.Include.NON_NULL)
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -20,11 +22,12 @@ public class ProfileDTO {
     private int stars;
     private String position;
 
-    public static ProfileDTO from(User user) {
+    // email is only returned to the profile owner
+    public static ProfileDTO from(User user, boolean isSelf) {
         return ProfileDTO.builder()
                 .id(user.getId())
                 .username(user.getUsername())
-                .email(user.getEmail())
+                .email(isSelf ? user.getEmail() : null)
                 .image(user.getImage())
                 .backgroundImage(user.getBackgroundImage())
                 .stars(user.getStars())

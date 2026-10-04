@@ -2,6 +2,7 @@ package com.futspring.backend.config;
 
 import com.futspring.backend.dto.MatchResultDTO;
 import com.futspring.backend.entity.Daily;
+import com.futspring.backend.entity.DailyStatus;
 import com.futspring.backend.entity.Pelada;
 import com.futspring.backend.entity.Team;
 import com.futspring.backend.entity.User;
@@ -27,7 +28,8 @@ import java.util.Map;
 import java.util.Random;
 
 @Component
-@Profile("!prod")
+// Only with SPRING_PROFILES_ACTIVE=dev (docker-compose.dev.yml): seeds users with a known password
+@Profile("dev")
 @RequiredArgsConstructor
 @Slf4j
 public class DataInitializer implements CommandLineRunner {
@@ -54,26 +56,26 @@ public class DataInitializer implements CommandLineRunner {
         String encodedPassword = passwordEncoder.encode("senha123");
 
         List<User> users = List.of(
-            buildUser("leal@futspring.com",    "Leal",    encodedPassword, "Atacante",  5),
-            buildUser("souto@futspring.com",   "Souto",   encodedPassword, "Atacante",  5),
-            buildUser("ferraz@futspring.com",  "Ferraz",  encodedPassword, "Defensor",  1),
-            buildUser("lui@futspring.com",     "Lui",     encodedPassword, "Meia",      5),
-            buildUser("tuca@futspring.com",    "Tuca",    encodedPassword, "Atacante",  4),
-            buildUser("gone@futspring.com",    "Gone",    encodedPassword, "Atacante",  5),
-            buildUser("thiago@futspring.com",  "Thiago",  encodedPassword, "Meia",      4),
-            buildUser("tao@futspring.com",     "Tão",     encodedPassword, "Meia",      3),
-            buildUser("lobo@futspring.com",    "Lobo",    encodedPassword, "Meia",      2),
-            buildUser("dudu@futspring.com",    "Dudu",    encodedPassword, "Atacante",  4),
-            buildUser("miguel@futspring.com",  "Miguel",  encodedPassword, "Meia",      2),
-            buildUser("neto@futspring.com",    "Neto",    encodedPassword, "Atacante",  2),
-            buildUser("vuzzi@futspring.com",   "Vuzzi",   encodedPassword, "Atacante",  3),
-            buildUser("27@futspring.com",      "27",      encodedPassword, "Meia",      2),
-            buildUser("nando@futspring.com",   "Nando",   encodedPassword, "Goleiro",   1),
-            buildUser("abreu@futspring.com",   "Abreu",   encodedPassword, "Atacante",  1),
-            buildUser("leudo@futspring.com",   "Leudo",   encodedPassword, "Meia",      2),
-            buildUser("diego@futspring.com",   "Diego",   encodedPassword, "Atacante",  3),
-            buildUser("pirro@futspring.com",   "Pirro",   encodedPassword, "Meia",      3),
-            buildUser("andre@futspring.com",   "André",   encodedPassword, "Atacante",  4)
+            buildUser("leal@futspring.com",    "Leal",    encodedPassword, "ATACANTE",  5),
+            buildUser("souto@futspring.com",   "Souto",   encodedPassword, "ATACANTE",  5),
+            buildUser("ferraz@futspring.com",  "Ferraz",  encodedPassword, "ZAGUEIRO",  1),
+            buildUser("lui@futspring.com",     "Lui",     encodedPassword, "MEIO",      5),
+            buildUser("tuca@futspring.com",    "Tuca",    encodedPassword, "ATACANTE",  4),
+            buildUser("gone@futspring.com",    "Gone",    encodedPassword, "ATACANTE",  5),
+            buildUser("thiago@futspring.com",  "Thiago",  encodedPassword, "MEIO",      4),
+            buildUser("tao@futspring.com",     "Tão",     encodedPassword, "MEIO",      3),
+            buildUser("lobo@futspring.com",    "Lobo",    encodedPassword, "MEIO",      2),
+            buildUser("dudu@futspring.com",    "Dudu",    encodedPassword, "ATACANTE",  4),
+            buildUser("miguel@futspring.com",  "Miguel",  encodedPassword, "MEIO",      2),
+            buildUser("neto@futspring.com",    "Neto",    encodedPassword, "ATACANTE",  2),
+            buildUser("vuzzi@futspring.com",   "Vuzzi",   encodedPassword, "ATACANTE",  3),
+            buildUser("27@futspring.com",      "27",      encodedPassword, "MEIO",      2),
+            buildUser("nando@futspring.com",   "Nando",   encodedPassword, "GOLEIRO",   1),
+            buildUser("abreu@futspring.com",   "Abreu",   encodedPassword, "ATACANTE",  1),
+            buildUser("leudo@futspring.com",   "Leudo",   encodedPassword, "MEIO",      2),
+            buildUser("diego@futspring.com",   "Diego",   encodedPassword, "ATACANTE",  3),
+            buildUser("pirro@futspring.com",   "Pirro",   encodedPassword, "MEIO",      3),
+            buildUser("andre@futspring.com",   "André",   encodedPassword, "ATACANTE",  4)
         );
 
         List<User> savedUsers = userRepository.saveAll(users);
@@ -114,7 +116,7 @@ public class DataInitializer implements CommandLineRunner {
                 .pelada(pelada)
                 .dailyDate(LocalDate.now())
                 .dailyTime("08:00")
-                .status("SCHEDULED")
+                .status(DailyStatus.SCHEDULED)
                 .confirmedPlayers(new HashSet<>(savedUsers))
                 .build();
 
@@ -136,7 +138,7 @@ public class DataInitializer implements CommandLineRunner {
                 .pelada(pelada)
                 .dailyDate(date)
                 .dailyTime(pelada.getTimeOfDay())
-                .status("IN_COURSE")
+                .status(DailyStatus.IN_COURSE)
                 .confirmedPlayers(new HashSet<>(confirmed))
                 .build());
 

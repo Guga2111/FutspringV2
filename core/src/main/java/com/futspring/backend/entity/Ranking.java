@@ -7,13 +7,16 @@ import lombok.*;
 @Table(name = "rankings", uniqueConstraints = {
         @UniqueConstraint(columnNames = {"pelada_id", "user_id"})
 })
-@Data
+@Getter
+@Setter
+@ToString(onlyExplicitlyIncluded = true)
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 public class Ranking {
 
     @Id
+    @ToString.Include
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
@@ -40,4 +43,14 @@ public class Ranking {
     @Column(nullable = false)
     @Builder.Default
     private int wins = 0;
+
+    @Override
+    public boolean equals(Object o) {
+        return o instanceof Ranking other && EntityIdentity.sameEntity(this, o, getId(), other.getId());
+    }
+
+    @Override
+    public int hashCode() {
+        return EntityIdentity.effectiveClass(this).hashCode();
+    }
 }

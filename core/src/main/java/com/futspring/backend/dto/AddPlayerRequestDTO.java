@@ -10,6 +10,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class AddPlayerRequestDTO {
 
-    @NotNull(message = "userId is required")
+    @NotNull(message = "Informe o jogador")
     private Long userId;
 }

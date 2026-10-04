@@ -1,6 +1,10 @@
 package com.futspring.backend.service;
 
+import com.futspring.backend.support.MembershipStubs;
+import com.futspring.backend.helper.PeladaAccessHelper;
+import com.futspring.backend.repository.*;
 import com.futspring.backend.dto.DailyDetailDTO;
+import com.futspring.backend.entity.DailyStatus;
 import com.futspring.backend.entity.Daily;
 import com.futspring.backend.entity.Pelada;
 import com.futspring.backend.entity.Team;
@@ -27,6 +31,7 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class DailyTeamManagementServiceTest {
 
+    @Mock PeladaRepository peladaRepository;
     @Mock UserAuthenticationHelper userAuthHelper;
     @Mock DailyRepository dailyRepository;
     @Mock TeamRepository teamRepository;
@@ -43,7 +48,7 @@ class DailyTeamManagementServiceTest {
     @BeforeEach
     void setUp() {
         teamManagementService = new DailyTeamManagementService(
-                userAuthHelper, dailyRepository, teamRepository, dailyDTOMapper);
+                userAuthHelper, new PeladaAccessHelper(peladaRepository), dailyRepository, teamRepository, dailyDTOMapper);
 
         admin = User.builder().id(1L).email("admin@example.com").username("admin").password("hash").stars(4).build();
         member = User.builder().id(2L).email("member@example.com").username("member").password("hash").stars(3).build();
@@ -67,9 +72,10 @@ class DailyTeamManagementServiceTest {
                 .pelada(pelada)
                 .dailyDate(LocalDate.now().plusDays(3))
                 .dailyTime("18:00")
-                .status("SCHEDULED")
+                .status(DailyStatus.SCHEDULED)
                 .confirmedPlayers(new HashSet<>())
                 .build();
+        MembershipStubs.stubMembership(peladaRepository, pelada);
     }
 
     // --- sortTeams error paths ---
@@ -86,7 +92,7 @@ class DailyTeamManagementServiceTest {
 
     @Test
     void sortTeams_lockedStatusInCourse_throwsBadRequest() {
-        scheduledDaily.setStatus("IN_COURSE");
+        scheduledDaily.setStatus(DailyStatus.IN_COURSE);
         when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
 
@@ -97,7 +103,7 @@ class DailyTeamManagementServiceTest {
 
     @Test
     void sortTeams_lockedStatusFinished_throwsBadRequest() {
-        scheduledDaily.setStatus("FINISHED");
+        scheduledDaily.setStatus(DailyStatus.FINISHED);
         when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
 
@@ -108,7 +114,7 @@ class DailyTeamManagementServiceTest {
 
     @Test
     void sortTeams_lockedStatusCanceled_throwsBadRequest() {
-        scheduledDaily.setStatus("CANCELED");
+        scheduledDaily.setStatus(DailyStatus.CANCELED);
         when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
 
@@ -200,7 +206,7 @@ class DailyTeamManagementServiceTest {
 
         when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
-        when(teamRepository.findByDaily(scheduledDaily)).thenReturn(List.of(team1, team2));
+        when(teamRepository.findByDailyWithPlayers(scheduledDaily)).thenReturn(List.of(team1, team2));
         when(teamRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         when(dailyDTOMapper.buildTeamDTO(any(Team.class))).thenReturn(
                 DailyDetailDTO.TeamDTO.builder().id(1L).name("Team").players(List.of()).build());
@@ -225,7 +231,7 @@ class DailyTeamManagementServiceTest {
 
     @Test
     void swapPlayers_lockedStatus_throwsBadRequest() {
-        scheduledDaily.setStatus("FINISHED");
+        scheduledDaily.setStatus(DailyStatus.FINISHED);
         when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
 
@@ -241,7 +247,7 @@ class DailyTeamManagementServiceTest {
 
         when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
-        when(teamRepository.findByDaily(scheduledDaily)).thenReturn(List.of(team2));
+        when(teamRepository.findByDailyWithPlayers(scheduledDaily)).thenReturn(List.of(team2));
 
         assertThatThrownBy(() -> teamManagementService.swapPlayers(100L, 999L, 2L, "admin@example.com"))
                 .isInstanceOf(AppException.class)
@@ -255,7 +261,7 @@ class DailyTeamManagementServiceTest {
 
         when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
-        when(teamRepository.findByDaily(scheduledDaily)).thenReturn(List.of(team1));
+        when(teamRepository.findByDailyWithPlayers(scheduledDaily)).thenReturn(List.of(team1));
 
         assertThatThrownBy(() -> teamManagementService.swapPlayers(100L, 1L, 999L, "admin@example.com"))
                 .isInstanceOf(AppException.class)

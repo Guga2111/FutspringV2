@@ -50,7 +50,7 @@ class UserServiceProfileTest {
     void getProfile_existingUser_returnsProfileDTO() {
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
 
-        ProfileDTO result = userService.getProfile(1L);
+        ProfileDTO result = userService.getProfile(1L, "alice@example.com");
 
         assertThat(result.getId()).isEqualTo(1L);
         assertThat(result.getEmail()).isEqualTo("alice@example.com");
@@ -58,10 +58,20 @@ class UserServiceProfileTest {
     }
 
     @Test
+    void getProfile_otherViewer_hidesEmail() {
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+
+        ProfileDTO result = userService.getProfile(1L, "bob@example.com");
+
+        assertThat(result.getUsername()).isEqualTo("alice");
+        assertThat(result.getEmail()).isNull();
+    }
+
+    @Test
     void getProfile_userNotFound_throwsNotFound() {
         when(userRepository.findById(99L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> userService.getProfile(99L))
+        assertThatThrownBy(() -> userService.getProfile(99L, "alice@example.com"))
                 .isInstanceOf(AppException.class)
                 .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.NOT_FOUND));
     }
@@ -158,15 +168,16 @@ class UserServiceProfileTest {
     }
 
     @Test
-    void updateProfile_invalidPosition_throwsBadRequest() {
-        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
-
+    void updateProfile_invalidPosition_rejectedByRequestValidation() {
+        // The allowed positions are a constraint on UpdateProfileRequest (400 from @Valid in the controller)
         UpdateProfileRequest req = new UpdateProfileRequest();
         req.setPosition("INVALID_POS");
 
-        assertThatThrownBy(() -> userService.updateProfile(1L, req, "alice@example.com"))
-                .isInstanceOf(AppException.class)
-                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.BAD_REQUEST));
+        try (jakarta.validation.ValidatorFactory factory = jakarta.validation.Validation.buildDefaultValidatorFactory()) {
+            assertThat(factory.getValidator().validate(req))
+                    .extracting(v -> v.getPropertyPath().toString())
+                    .containsExactly("position");
+        }
     }
 
     @Test

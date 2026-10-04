@@ -1,5 +1,7 @@
 package com.futspring.backend.service;
 
+import com.futspring.backend.support.MembershipStubs;
+import com.futspring.backend.helper.PeladaAccessHelper;
 import com.futspring.backend.dto.CreateDailyRequestDTO;
 import com.futspring.backend.dto.DailyDetailDTO;
 import com.futspring.backend.dto.DailyListItemDTO;
@@ -25,6 +27,8 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class DailyServiceTest {
 
+    @Mock AggregateRebuildService aggregateRebuildService;
+    @Mock FileUploadService fileUploadService;
     @Mock UserAuthenticationHelper userAuthHelper;
     @Mock DailyAttendanceService dailyAttendanceService;
     @Mock DailyTeamManagementService dailyTeamManagementService;
@@ -50,8 +54,8 @@ class DailyServiceTest {
     @BeforeEach
     void setUp() {
         dailyService = new DailyService(
-                userAuthHelper, dailyAttendanceService, dailyTeamManagementService,
-                dailyResultsService, dailyDTOMapper,
+                userAuthHelper, new PeladaAccessHelper(peladaRepository), dailyAttendanceService, dailyTeamManagementService,
+                dailyResultsService, aggregateRebuildService, fileUploadService, dailyDTOMapper,
                 dailyRepository, peladaRepository, teamRepository,
                 matchRepository, playerMatchStatRepository, userDailyStatsRepository,
                 leagueTableEntryRepository, dailyAwardRepository);
@@ -78,9 +82,10 @@ class DailyServiceTest {
                 .pelada(pelada)
                 .dailyDate(LocalDate.now().plusDays(3))
                 .dailyTime("18:00")
-                .status("SCHEDULED")
+                .status(DailyStatus.SCHEDULED)
                 .confirmedPlayers(new HashSet<>())
                 .build();
+        MembershipStubs.stubMembership(peladaRepository, pelada);
     }
 
     // --- createDaily ---
@@ -190,9 +195,9 @@ class DailyServiceTest {
     @Test
     void getDailiesForPelada_returnsDescOrder() {
         Daily older = Daily.builder().id(1L).pelada(pelada).dailyDate(LocalDate.of(2024, 1, 1))
-                .dailyTime("18:00").status("FINISHED").confirmedPlayers(new HashSet<>()).build();
+                .dailyTime("18:00").status(DailyStatus.FINISHED).confirmedPlayers(new HashSet<>()).build();
         Daily newer = Daily.builder().id(2L).pelada(pelada).dailyDate(LocalDate.of(2024, 3, 1))
-                .dailyTime("18:00").status("SCHEDULED").confirmedPlayers(new HashSet<>()).build();
+                .dailyTime("18:00").status(DailyStatus.SCHEDULED).confirmedPlayers(new HashSet<>()).build();
 
         when(userAuthHelper.getAuthenticatedUser("member@example.com")).thenReturn(member);
         when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
@@ -210,16 +215,16 @@ class DailyServiceTest {
     void getDailyDetail_success_returnsDTO() {
         when(userAuthHelper.getAuthenticatedUser("member@example.com")).thenReturn(member);
         when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
-        when(teamRepository.findByDaily(scheduledDaily)).thenReturn(Collections.emptyList());
-        when(matchRepository.findByDaily(scheduledDaily)).thenReturn(Collections.emptyList());
-        when(userDailyStatsRepository.findByDaily(scheduledDaily)).thenReturn(Collections.emptyList());
-        when(leagueTableEntryRepository.findByDailyOrderByPositionAsc(scheduledDaily)).thenReturn(Collections.emptyList());
+        when(teamRepository.findByDailyWithPlayers(scheduledDaily)).thenReturn(Collections.emptyList());
+        when(matchRepository.findByDailyWithTeams(scheduledDaily)).thenReturn(Collections.emptyList());
+        when(userDailyStatsRepository.findByDailyWithUser(scheduledDaily)).thenReturn(Collections.emptyList());
+        when(leagueTableEntryRepository.findByDailyWithTeam(scheduledDaily)).thenReturn(Collections.emptyList());
         when(dailyAwardRepository.findByDaily(scheduledDaily)).thenReturn(Optional.empty());
 
         DailyDetailDTO result = dailyService.getDailyDetail(100L, "member@example.com");
 
         assertThat(result).isNotNull();
-        assertThat(result.getStatus()).isEqualTo("SCHEDULED");
+        assertThat(result.getStatus()).isEqualTo(DailyStatus.SCHEDULED);
     }
 
     @Test
@@ -259,9 +264,9 @@ class DailyServiceTest {
         when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
         when(dailyRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        dailyService.updateStatus(100L, "CONFIRMED", "admin@example.com");
+        dailyService.updateStatus(100L, DailyStatus.CONFIRMED, "admin@example.com");
 
-        assertThat(scheduledDaily.getStatus()).isEqualTo("CONFIRMED");
+        assertThat(scheduledDaily.getStatus()).isEqualTo(DailyStatus.CONFIRMED);
     }
 
     @Test
@@ -270,21 +275,21 @@ class DailyServiceTest {
         when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
         when(dailyRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        dailyService.updateStatus(100L, "CANCELED", "admin@example.com");
+        dailyService.updateStatus(100L, DailyStatus.CANCELED, "admin@example.com");
 
-        assertThat(scheduledDaily.getStatus()).isEqualTo("CANCELED");
+        assertThat(scheduledDaily.getStatus()).isEqualTo(DailyStatus.CANCELED);
     }
 
     @Test
     void updateStatus_confirmedToInCourse_succeeds() {
-        scheduledDaily.setStatus("CONFIRMED");
+        scheduledDaily.setStatus(DailyStatus.CONFIRMED);
         when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
         when(dailyRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        dailyService.updateStatus(100L, "IN_COURSE", "admin@example.com");
+        dailyService.updateStatus(100L, DailyStatus.IN_COURSE, "admin@example.com");
 
-        assertThat(scheduledDaily.getStatus()).isEqualTo("IN_COURSE");
+        assertThat(scheduledDaily.getStatus()).isEqualTo(DailyStatus.IN_COURSE);
     }
 
     @Test
@@ -292,7 +297,7 @@ class DailyServiceTest {
         when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
 
-        assertThatThrownBy(() -> dailyService.updateStatus(100L, "IN_COURSE", "admin@example.com"))
+        assertThatThrownBy(() -> dailyService.updateStatus(100L, DailyStatus.IN_COURSE, "admin@example.com"))
                 .isInstanceOf(AppException.class)
                 .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.BAD_REQUEST));
     }
@@ -302,7 +307,7 @@ class DailyServiceTest {
         when(userAuthHelper.getAuthenticatedUser("member@example.com")).thenReturn(member);
         when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
 
-        assertThatThrownBy(() -> dailyService.updateStatus(100L, "CONFIRMED", "member@example.com"))
+        assertThatThrownBy(() -> dailyService.updateStatus(100L, DailyStatus.CONFIRMED, "member@example.com"))
                 .isInstanceOf(AppException.class)
                 .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.FORBIDDEN));
     }
@@ -311,7 +316,7 @@ class DailyServiceTest {
     void updateStatus_callerNotFound_throwsNotFound() {
         when(userAuthHelper.getAuthenticatedUser("ghost@example.com")).thenThrow(new AppException(HttpStatus.NOT_FOUND, "User not found"));
 
-        assertThatThrownBy(() -> dailyService.updateStatus(100L, "CONFIRMED", "ghost@example.com"))
+        assertThatThrownBy(() -> dailyService.updateStatus(100L, DailyStatus.CONFIRMED, "ghost@example.com"))
                 .isInstanceOf(AppException.class)
                 .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.NOT_FOUND));
     }
@@ -321,18 +326,18 @@ class DailyServiceTest {
         when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(dailyRepository.findById(999L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> dailyService.updateStatus(999L, "CONFIRMED", "admin@example.com"))
+        assertThatThrownBy(() -> dailyService.updateStatus(999L, DailyStatus.CONFIRMED, "admin@example.com"))
                 .isInstanceOf(AppException.class)
                 .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.NOT_FOUND));
     }
 
     @Test
     void updateStatus_finishedToAnyStatus_throwsBadRequest() {
-        scheduledDaily.setStatus("FINISHED");
+        scheduledDaily.setStatus(DailyStatus.FINISHED);
         when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
 
-        assertThatThrownBy(() -> dailyService.updateStatus(100L, "SCHEDULED", "admin@example.com"))
+        assertThatThrownBy(() -> dailyService.updateStatus(100L, DailyStatus.SCHEDULED, "admin@example.com"))
                 .isInstanceOf(AppException.class)
                 .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.BAD_REQUEST));
     }
@@ -344,9 +349,12 @@ class DailyServiceTest {
         when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
 
+        when(dailyResultsService.clearResults(scheduledDaily)).thenReturn(Set.of(member));
+
         dailyService.deleteDaily(100L, "admin@example.com");
 
-        verify(dailyResultsService).clearResults(scheduledDaily, pelada);
+        verify(dailyResultsService).clearResults(scheduledDaily);
+        verify(aggregateRebuildService).rebuild(pelada, Set.of(member));
         verify(dailyTeamManagementService).clearTeams(scheduledDaily);
         verify(dailyAttendanceService).clearAttendees(scheduledDaily);
         verify(dailyRepository).delete(scheduledDaily);
@@ -361,7 +369,7 @@ class DailyServiceTest {
                 .isInstanceOf(AppException.class)
                 .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.FORBIDDEN));
 
-        verify(dailyResultsService, never()).clearResults(any(), any());
+        verify(dailyResultsService, never()).clearResults(any());
         verify(dailyRepository, never()).delete(any(Daily.class));
     }
 

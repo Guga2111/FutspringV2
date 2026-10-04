@@ -1,5 +1,8 @@
 package com.futspring.backend.service;
 
+import com.futspring.backend.support.MembershipStubs;
+import com.futspring.backend.helper.PeladaAccessHelper;
+import com.futspring.backend.repository.*;
 import com.futspring.backend.dto.PeladaResponseDTO;
 import com.futspring.backend.entity.Pelada;
 import com.futspring.backend.entity.User;
@@ -25,6 +28,11 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class PeladaServiceImageTest {
 
+    @Mock DailyRepository dailyRepository;
+    @Mock RankingRepository rankingRepository;
+    @Mock MessageRepository messageRepository;
+    @Mock DailyService dailyService;
+    @Mock AggregateRebuildService aggregateRebuildService;
     @Mock
     PeladaRepository peladaRepository;
 
@@ -45,7 +53,8 @@ class PeladaServiceImageTest {
 
     @BeforeEach
     void setUp() {
-        peladaService = new PeladaService(peladaRepository, userRepository, fileUploadService, userAuthHelper);
+        peladaService = new PeladaService(peladaRepository, userRepository, dailyRepository, rankingRepository, messageRepository,
+                fileUploadService, userAuthHelper, new PeladaAccessHelper(peladaRepository), dailyService, aggregateRebuildService);
 
         admin = User.builder().id(1L).email("admin@example.com").username("admin").password("hash").build();
         member = User.builder().id(2L).email("member@example.com").username("member").password("hash").build();
@@ -62,6 +71,7 @@ class PeladaServiceImageTest {
         pelada.getMembers().add(admin);
         pelada.getMembers().add(member);
         pelada.getAdmins().add(admin);
+        MembershipStubs.stubMembership(peladaRepository, pelada);
     }
 
     @Test
@@ -142,6 +152,6 @@ class PeladaServiceImageTest {
         MockMultipartFile file = new MockMultipartFile("file", "new-cover.png", "image/png", new byte[200]);
         peladaService.uploadPeladaImage(10L, file, "admin@example.com");
 
-        verify(fileUploadService).deleteImage("old-cover.jpg");
+        verify(fileUploadService).deleteImageAfterCommit("old-cover.jpg");
     }
 }

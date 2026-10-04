@@ -117,7 +117,7 @@ class UserServiceTest {
         MockMultipartFile file = new MockMultipartFile("file", "new.jpg", "image/jpeg", new byte[100]);
         userService.uploadUserImage(1L, file, "test@example.com");
 
-        verify(fileUploadService).deleteImage("old-avatar.jpg");
+        verify(fileUploadService).deleteImageAfterCommit("old-avatar.jpg");
     }
 
     // --- uploadBackgroundImage ---
@@ -194,6 +194,6 @@ class UserServiceTest {
         MockMultipartFile file = new MockMultipartFile("file", "new-bg.png", "image/png", new byte[200]);
         userService.uploadBackgroundImage(1L, file, "test@example.com");
 
-        verify(fileUploadService).deleteImage("old-bg.jpg");
+        verify(fileUploadService).deleteImageAfterCommit("old-bg.jpg");
     }
 }

@@ -41,7 +41,7 @@ class JwtServiceTest {
     @Test
     void generateToken_userIdClaimIsCorrect() {
         String token = jwtService.generateToken(77L, "user@example.com");
-        assertThat(jwtService.extractUserId(token)).isEqualTo(77L);
+        assertThat(jwtService.extractAllClaims(token).get("userId", Long.class)).isEqualTo(77L);
     }
 
     @Test
@@ -139,8 +139,8 @@ class JwtServiceTest {
     }
 
     @Test
-    void extractUserId_returnsCorrectId() {
+    void userIdClaim_returnsCorrectId() {
         String token = jwtService.generateToken(123L, "user@example.com");
-        assertThat(jwtService.extractUserId(token)).isEqualTo(123L);
+        assertThat(jwtService.extractAllClaims(token).get("userId", Long.class)).isEqualTo(123L);
     }
 }

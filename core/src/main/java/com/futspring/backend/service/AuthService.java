@@ -22,11 +22,15 @@ public class AuthService {
 
     public AuthResponseDTO register(RegisterRequestDTO request) {
         if (userRepository.findByEmail(request.getEmail()).isPresent()) {
-            throw new AppException(HttpStatus.CONFLICT, "Email is already registered");
+            throw new AppException(HttpStatus.CONFLICT, "Este e-mail já está cadastrado");
+        }
+        // Usernames are unique, as UserService.updateProfile already enforces
+        if (userRepository.findByUsername(request.getUsername().trim()).isPresent()) {
+            throw new AppException(HttpStatus.CONFLICT, "Este nome de usuário já está em uso");
         }
 
         User user = User.builder()
-                .username(request.getUsername())
+                .username(request.getUsername().trim())
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .build();
@@ -38,10 +42,10 @@ public class AuthService {
 
     public AuthResponseDTO login(LoginRequestDTO request) {
         User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new AppException(HttpStatus.UNAUTHORIZED, "Invalid email or password"));
+                .orElseThrow(() -> new AppException(HttpStatus.UNAUTHORIZED, "E-mail ou senha inválidos"));
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-            throw new AppException(HttpStatus.UNAUTHORIZED, "Invalid email or password");
+            throw new AppException(HttpStatus.UNAUTHORIZED, "E-mail ou senha inválidos");
         }
 
         String token = jwtService.generateToken(user.getId(), user.getEmail());

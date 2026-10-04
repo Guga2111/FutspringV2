@@ -1,5 +1,7 @@
 package com.futspring.backend.service;
 
+import com.futspring.backend.support.MembershipStubs;
+import com.futspring.backend.helper.PeladaAccessHelper;
 import com.futspring.backend.dto.DailyDetailDTO.MatchDTO;
 import com.futspring.backend.dto.MatchResultDTO;
 import com.futspring.backend.entity.*;
@@ -24,6 +26,8 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class DailyResultsServiceTest {
 
+    @Mock PeladaRepository peladaRepository;
+    @Mock DailyTeamManagementService dailyTeamManagementService;
     @Mock FileUploadService fileUploadService;
     @Mock UserAuthenticationHelper userAuthHelper;
     @Mock DailyRepository dailyRepository;
@@ -49,10 +53,11 @@ class DailyResultsServiceTest {
     @BeforeEach
     void setUp() {
         resultsService = new DailyResultsService(
-                fileUploadService, userAuthHelper, dailyRepository, userRepository,
+                fileUploadService, userAuthHelper, new PeladaAccessHelper(peladaRepository),
+                new AggregateRebuildService(userDailyStatsRepository, dailyAwardRepository, rankingRepository, statsRepository),
+                dailyTeamManagementService, new DailyDTOMapper(), dailyRepository, userRepository,
                 teamRepository, matchRepository, playerMatchStatRepository,
-                userDailyStatsRepository, leagueTableEntryRepository,
-                dailyAwardRepository, statsRepository, rankingRepository);
+                userDailyStatsRepository, leagueTableEntryRepository, dailyAwardRepository);
 
         admin = User.builder().id(1L).email("admin@example.com").username("admin").password("hash").stars(4).build();
         member = User.builder().id(2L).email("member@example.com").username("member").password("hash").stars(3).build();
@@ -78,9 +83,10 @@ class DailyResultsServiceTest {
                 .pelada(pelada)
                 .dailyDate(LocalDate.now())
                 .dailyTime("18:00")
-                .status("IN_COURSE")
+                .status(DailyStatus.IN_COURSE)
                 .confirmedPlayers(new HashSet<>(Set.of(admin, member)))
                 .build();
+        MembershipStubs.stubMembership(peladaRepository, pelada);
     }
 
     // --- submitResults ---
@@ -89,7 +95,7 @@ class DailyResultsServiceTest {
     void submitResults_success_returnsMatchDTOs() {
         when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(dailyRepository.findById(100L)).thenReturn(Optional.of(inCourseDaily));
-        when(teamRepository.findByDaily(inCourseDaily)).thenReturn(List.of(team1, team2));
+        when(teamRepository.findByDailyWithPlayers(inCourseDaily)).thenReturn(List.of(team1, team2));
 
         Match savedMatch = Match.builder().id(50L).daily(inCourseDaily).team1(team1).team2(team2)
                 .team1Score(2).team2Score(1).winner(team1).build();
@@ -115,6 +121,66 @@ class DailyResultsServiceTest {
     }
 
     @Test
+    void submitResults_matchIdFromAnotherDaily_throwsNotFoundAndChangesNothing() {
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
+        when(dailyRepository.findById(100L)).thenReturn(Optional.of(inCourseDaily));
+        when(teamRepository.findByDailyWithPlayers(inCourseDaily)).thenReturn(List.of(team1, team2));
+        // match 999 exists, but in another pelada's daily: the scoped lookup does not find it
+        when(matchRepository.findByIdAndDaily(999L, inCourseDaily)).thenReturn(Optional.empty());
+
+        MatchResultDTO result = new MatchResultDTO();
+        result.setMatchId(999L);
+        result.setTeam1Id(1L);
+        result.setTeam2Id(2L);
+        result.setTeam1Score(5);
+        result.setTeam2Score(0);
+
+        assertThatThrownBy(() -> resultsService.submitResults(100L, List.of(result), "admin@example.com"))
+                .isInstanceOf(AppException.class)
+                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.NOT_FOUND));
+
+        verify(matchRepository, never()).findById(any());
+        verify(matchRepository, never()).save(any());
+        verify(playerMatchStatRepository, never()).deleteByMatch(any());
+        verify(playerMatchStatRepository, never()).saveAll(any());
+    }
+
+    @Test
+    void submitResults_statsForPlayerOutsideTheMatch_throwsBadRequest() {
+        User stranger = User.builder().id(9L).email("x@example.com").username("x").password("hash").build();
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
+        when(dailyRepository.findById(100L)).thenReturn(Optional.of(inCourseDaily));
+        when(teamRepository.findByDailyWithPlayers(inCourseDaily)).thenReturn(List.of(team1, team2));
+
+        MatchResultDTO result = new MatchResultDTO();
+        result.setTeam1Id(1L);
+        result.setTeam2Id(2L);
+        result.setTeam1Score(1);
+        result.setTeam2Score(0);
+        result.setPlayerStats(List.of(new MatchResultDTO.PlayerStatInputDTO(stranger.getId(), 1, 0)));
+
+        assertThatThrownBy(() -> resultsService.submitResults(100L, List.of(result), "admin@example.com"))
+                .isInstanceOf(AppException.class)
+                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.BAD_REQUEST));
+        verify(matchRepository, never()).save(any());
+    }
+
+    @Test
+    void submitResults_sameTeamTwice_throwsBadRequest() {
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
+        when(dailyRepository.findById(100L)).thenReturn(Optional.of(inCourseDaily));
+        when(teamRepository.findByDailyWithPlayers(inCourseDaily)).thenReturn(List.of(team1, team2));
+
+        MatchResultDTO result = new MatchResultDTO();
+        result.setTeam1Id(1L);
+        result.setTeam2Id(1L);
+
+        assertThatThrownBy(() -> resultsService.submitResults(100L, List.of(result), "admin@example.com"))
+                .isInstanceOf(AppException.class)
+                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.BAD_REQUEST));
+    }
+
+    @Test
     @SuppressWarnings("unchecked")
     void submitResults_savesStatsOnlyForPlayersOfTheTwoTeams() {
         User benched = User.builder().id(3L).email("bench@example.com").username("bench").password("hash").stars(2).build();
@@ -123,7 +189,7 @@ class DailyResultsServiceTest {
 
         when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(dailyRepository.findById(100L)).thenReturn(Optional.of(inCourseDaily));
-        when(teamRepository.findByDaily(inCourseDaily)).thenReturn(List.of(team1, team2, team3));
+        when(teamRepository.findByDailyWithPlayers(inCourseDaily)).thenReturn(List.of(team1, team2, team3));
         Match savedMatch = Match.builder().id(50L).daily(inCourseDaily).team1(team1).team2(team2)
                 .team1Score(1).team2Score(0).winner(team1).build();
         when(matchRepository.save(any(Match.class))).thenReturn(savedMatch);
@@ -179,7 +245,7 @@ class DailyResultsServiceTest {
 
     @Test
     void submitResults_invalidStatus_throwsBadRequest() {
-        inCourseDaily.setStatus("SCHEDULED");
+        inCourseDaily.setStatus(DailyStatus.SCHEDULED);
         when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(dailyRepository.findById(100L)).thenReturn(Optional.of(inCourseDaily));
 
@@ -192,7 +258,7 @@ class DailyResultsServiceTest {
     void submitResults_invalidTeamIds_throwsBadRequest() {
         when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(dailyRepository.findById(100L)).thenReturn(Optional.of(inCourseDaily));
-        when(teamRepository.findByDaily(inCourseDaily)).thenReturn(List.of(team1, team2));
+        when(teamRepository.findByDailyWithPlayers(inCourseDaily)).thenReturn(List.of(team1, team2));
 
         MatchResultDTO result = new MatchResultDTO();
         result.setTeam1Id(99L); // unknown team
@@ -239,7 +305,7 @@ class DailyResultsServiceTest {
 
     @Test
     void finalizeDaily_invalidStatus_throwsBadRequest() {
-        inCourseDaily.setStatus("SCHEDULED");
+        inCourseDaily.setStatus(DailyStatus.SCHEDULED);
         when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(dailyRepository.findById(100L)).thenReturn(Optional.of(inCourseDaily));
 
@@ -298,7 +364,7 @@ class DailyResultsServiceTest {
 
         resultsService.finalizeDaily(100L, null, null, "admin@example.com");
 
-        assertThat(inCourseDaily.getStatus()).isEqualTo("FINISHED");
+        assertThat(inCourseDaily.getStatus()).isEqualTo(DailyStatus.FINISHED);
         assertThat(inCourseDaily.isFinished()).isTrue();
         verify(dailyRepository).save(inCourseDaily);
         verify(rankingRepository).saveAll(any());
