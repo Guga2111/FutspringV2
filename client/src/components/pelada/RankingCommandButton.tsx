@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Users, CalendarPlus, UserPlus, UserMinus, Home, User } from "lucide-react";
+import { Users, CalendarPlus, UserPlus, UserMinus, Home, User, History } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "../ui/button";
 import {
@@ -27,6 +27,7 @@ interface RankingCommandButtonProps {
   onCreateSession?: () => void;
   onAddPlayer?: () => void;
   onRemovePlayer?: (member: PeladaMember) => void;
+  onOpenHistory: () => void;
 }
 
 export function RankingCommandButton({
@@ -37,6 +38,7 @@ export function RankingCommandButton({
   onCreateSession,
   onAddPlayer,
   onRemovePlayer,
+  onOpenHistory,
 }: RankingCommandButtonProps) {
   const navigate = useNavigate();
   const [popoverOpen, setPopoverOpen] = useState(false);
@@ -68,6 +70,10 @@ export function RankingCommandButton({
           e.preventDefault();
           run(() => setCompareOpen(true));
           break;
+        case "i":
+          e.preventDefault();
+          run(onOpenHistory);
+          break;
         case "a":
           if (isAdmin && onAddPlayer) { e.preventDefault(); run(onAddPlayer); }
           break;
@@ -85,7 +91,7 @@ export function RankingCommandButton({
     };
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
-  }, [popoverOpen, isAdmin, onAddPlayer, onRemovePlayer, onCreateSession]);
+  }, [popoverOpen, isAdmin, onAddPlayer, onRemovePlayer, onCreateSession, onOpenHistory, navigate]);
 
   return (
     <>
@@ -109,6 +115,11 @@ export function RankingCommandButton({
               <Users />
               Comparar Jogadores
               <CommandShortcut>{mod}J</CommandShortcut>
+            </CommandItem>
+            <CommandItem onSelect={() => run(onOpenHistory)}>
+              <History />
+              Histórico do Jogador
+              <CommandShortcut>{mod}I</CommandShortcut>
             </CommandItem>
             {isAdmin && onAddPlayer && (
               <CommandItem onSelect={() => run(onAddPlayer)}>

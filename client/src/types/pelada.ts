@@ -47,6 +47,23 @@ export interface PeladaAwards {
   categories: AwardCategory[]
 }
 
+export interface PlayerPeladaHistoryRow {
+  dailyId: number
+  date: string
+  goals: number
+  assists: number
+  matchesPlayed: number
+  wins: number
+  wonSession: boolean
+}
+
+// mirrors PlayerPeladaHistoryDTO (rows newest first, at most `limit`)
+export interface PlayerPeladaHistoryDTO {
+  userId: number
+  totalSessions: number
+  rows: PlayerPeladaHistoryRow[]
+}
+
 export interface PlayerPeladaStatsDTO {
   userId: number
   goals: number

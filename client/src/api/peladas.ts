@@ -1,5 +1,5 @@
 import apiClient from "./client"
-import type { PeladaResponse, PeladaDetail, PeladaAwards, PlayerPeladaStatsDTO } from "../types/pelada"
+import type { PeladaResponse, PeladaDetail, PeladaAwards, PlayerPeladaHistoryDTO, PlayerPeladaStatsDTO } from "../types/pelada"
 import type { UserResponseDTO } from "../types/auth"
 import type { RankingDTO } from "../types/daily"
 
@@ -85,5 +85,13 @@ export async function getPeladaAwards(peladaId: number): Promise<PeladaAwards> {
 
 export async function getPlayerPeladaStats(peladaId: number, userId: number): Promise<PlayerPeladaStatsDTO> {
   const r = await apiClient.get<PlayerPeladaStatsDTO>(`/api/v1/peladas/${peladaId}/members/${userId}/stats`)
+  return r.data
+}
+
+// limit = last N sessions (1–100); null = every session
+export async function getPlayerPeladaHistory(peladaId: number, userId: number, limit: number | null): Promise<PlayerPeladaHistoryDTO> {
+  const r = await apiClient.get<PlayerPeladaHistoryDTO>(`/api/v1/peladas/${peladaId}/members/${userId}/history`, {
+    params: limit !== null ? { limit } : undefined,
+  })
   return r.data
 }

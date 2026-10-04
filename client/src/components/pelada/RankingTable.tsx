@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
-import { Trophy, ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
+import { Trophy, ChevronUp, ChevronDown, ChevronsUpDown, History } from "lucide-react";
+import { Button } from "../ui/button";
 import { Skeleton } from "../ui/skeleton";
 import { Avatar, AvatarImage, AvatarFallback } from "../ui/avatar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ui/table";
@@ -14,6 +15,7 @@ interface RankingTabProps {
   };
   onSort: (col: "goals" | "assists" | "matchesPlayed" | "wins") => void;
   getFileUrl: (path: string | null | undefined) => string | undefined;
+  onOpenHistory: (userId: number) => void;
 }
 
 export function RankingTable({
@@ -22,6 +24,7 @@ export function RankingTable({
   sortConfig,
   onSort,
   getFileUrl,
+  onOpenHistory,
 }: RankingTabProps) {
   return (
     <div className="mt-2">
@@ -110,6 +113,16 @@ export function RankingTable({
                       >
                         {row.username}
                       </Link>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="ml-auto h-7 w-7 flex-shrink-0 text-muted-foreground"
+                        aria-label={`Ver histórico de ${row.username}`}
+                        title="Ver histórico"
+                        onClick={() => onOpenHistory(row.userId)}
+                      >
+                        <History className="h-4 w-4" />
+                      </Button>
                     </div>
                   </TableCell>
                   <TableCell className="py-2 px-2 text-center">{row.matchesPlayed}</TableCell>

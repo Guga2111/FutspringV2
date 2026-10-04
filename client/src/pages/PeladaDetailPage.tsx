@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import NavBar from "../components/NavBar";
@@ -38,6 +38,13 @@ import { CreateSessionDialog } from "@/components/pelada/CreateSessionDialog";
 import { DeletePeladaDialog } from "@/components/pelada/DeletePeladaDialog";
 import { RankingCommandButton } from "@/components/pelada/RankingCommandButton";
 
+// Lazy so recharts only downloads when the dialog is first opened
+const PlayerHistoryDialog = lazy(() =>
+  import("@/components/pelada/PlayerHistoryDialog").then((m) => ({
+    default: m.PlayerHistoryDialog,
+  })),
+);
+
 export default function PeladaDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -72,6 +79,15 @@ export default function PeladaDetailPage() {
   }>({ col: "goals", dir: "desc" });
   const [chatCollapsed, setChatCollapsed] = useState(false);
   const [showMobileChat, setShowMobileChat] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [historyMounted, setHistoryMounted] = useState(false);
+  const [historyUserId, setHistoryUserId] = useState<number | null>(null);
+
+  const openPlayerHistory = (userId: number | null) => {
+    setHistoryUserId(userId);
+    setHistoryMounted(true);
+    setHistoryOpen(true);
+  };
 
   type RankingCol = "goals" | "assists" | "matchesPlayed" | "wins";
 
@@ -239,6 +255,7 @@ export default function PeladaDetailPage() {
                       onCreateSession={() => setShowCreateSession(true)}
                       onAddPlayer={() => setShowAddPlayer(true)}
                       onRemovePlayer={setConfirmRemoveMember}
+                      onOpenHistory={() => openPlayerHistory(null)}
                     />
                   </div>
                   <RankingTable
@@ -247,6 +264,7 @@ export default function PeladaDetailPage() {
                     sortConfig={rankingSort}
                     onSort={handleRankingSort}
                     getFileUrl={getFileUrl}
+                    onOpenHistory={openPlayerHistory}
                   />
                 </TabsContent>
 
@@ -299,6 +317,18 @@ export default function PeladaDetailPage() {
         <div className="flex items-center justify-center py-24">
           <p className="text-muted-foreground">Pelada não encontrada.</p>
         </div>
+      )}
+
+      {pelada && historyMounted && (
+        <Suspense fallback={null}>
+          <PlayerHistoryDialog
+            open={historyOpen}
+            onOpenChange={setHistoryOpen}
+            peladaId={pelada.id}
+            members={pelada.members}
+            initialUserId={historyUserId}
+          />
+        </Suspense>
       )}
 
       {showAddPlayer && pelada && (
