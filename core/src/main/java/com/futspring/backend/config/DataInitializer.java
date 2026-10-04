@@ -1,13 +1,15 @@
 package com.futspring.backend.config;
 
+import com.futspring.backend.dto.MatchResultDTO;
 import com.futspring.backend.entity.Daily;
-import com.futspring.backend.entity.DailyAward;
 import com.futspring.backend.entity.Pelada;
+import com.futspring.backend.entity.Team;
 import com.futspring.backend.entity.User;
-import com.futspring.backend.repository.DailyAwardRepository;
 import com.futspring.backend.repository.DailyRepository;
 import com.futspring.backend.repository.PeladaRepository;
+import com.futspring.backend.repository.TeamRepository;
 import com.futspring.backend.repository.UserRepository;
+import com.futspring.backend.service.DailyResultsService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
@@ -16,8 +18,13 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Random;
 
 @Component
 @Profile("!prod")
@@ -25,10 +32,14 @@ import java.util.List;
 @Slf4j
 public class DataInitializer implements CommandLineRunner {
 
+    private static final String[] TEAM_NAMES = {"Vermelho", "Branco", "Preto", "Azul"};
+    private static final String[] TEAM_COLORS = {"#ef4444", "#f8fafc", "#1e293b", "#3b82f6"};
+
     private final UserRepository userRepository;
     private final PeladaRepository peladaRepository;
     private final DailyRepository dailyRepository;
-    private final DailyAwardRepository dailyAwardRepository;
+    private final TeamRepository teamRepository;
+    private final DailyResultsService dailyResultsService;
     private final PasswordEncoder passwordEncoder;
 
     @Override
@@ -43,25 +54,21 @@ public class DataInitializer implements CommandLineRunner {
         String encodedPassword = passwordEncoder.encode("senha123");
 
         List<User> users = List.of(
-            // VERMELHO — 5G+2A, 6G+2A, 0G+1A, 2G+5A, 3G+1A
             buildUser("leal@futspring.com",    "Leal",    encodedPassword, "Atacante",  5),
             buildUser("souto@futspring.com",   "Souto",   encodedPassword, "Atacante",  5),
             buildUser("ferraz@futspring.com",  "Ferraz",  encodedPassword, "Defensor",  1),
             buildUser("lui@futspring.com",     "Lui",     encodedPassword, "Meia",      5),
             buildUser("tuca@futspring.com",    "Tuca",    encodedPassword, "Atacante",  4),
-            // BRANCO — 6G+1A, 2G+4A, 2G+1A, 1G+1A, 3G+2A
             buildUser("gone@futspring.com",    "Gone",    encodedPassword, "Atacante",  5),
             buildUser("thiago@futspring.com",  "Thiago",  encodedPassword, "Meia",      4),
             buildUser("tao@futspring.com",     "Tão",     encodedPassword, "Meia",      3),
             buildUser("lobo@futspring.com",    "Lobo",    encodedPassword, "Meia",      2),
             buildUser("dudu@futspring.com",    "Dudu",    encodedPassword, "Atacante",  4),
-            // PRETO — 1G+1A, 1G, 2G+1A, 1G+1A, 0
             buildUser("miguel@futspring.com",  "Miguel",  encodedPassword, "Meia",      2),
             buildUser("neto@futspring.com",    "Neto",    encodedPassword, "Atacante",  2),
             buildUser("vuzzi@futspring.com",   "Vuzzi",   encodedPassword, "Atacante",  3),
             buildUser("27@futspring.com",      "27",      encodedPassword, "Meia",      2),
             buildUser("nando@futspring.com",   "Nando",   encodedPassword, "Goleiro",   1),
-            // AZUL — 1G, 1G+1A, 2G+1A, 1G+2A, 3G+1A
             buildUser("abreu@futspring.com",   "Abreu",   encodedPassword, "Atacante",  1),
             buildUser("leudo@futspring.com",   "Leudo",   encodedPassword, "Meia",      2),
             buildUser("diego@futspring.com",   "Diego",   encodedPassword, "Atacante",  3),
@@ -93,78 +100,13 @@ public class DataInitializer implements CommandLineRunner {
 
         log.info("DataInitializer: pelada '{}' criada com {} membros.", pelada.getName(), savedUsers.size());
 
-        // Finished dailies with awards (spread over past weeks for realistic history)
-        // Players by index: 0=Leal,1=Souto,2=Ferraz,3=Lui,4=Tuca,5=Gone,6=Thiago,7=Tão,
-        //                   8=Lobo,9=Dudu,10=Miguel,11=Neto,12=Vuzzi,13=27,14=Nando,
-        //                   15=Abreu,16=Leudo,17=Diego,18=Pirro,19=André
-        record AwardData(List<User> artilheiros, List<User> garcons, List<User> puskas, List<User> wiltball) {}
-
-        record DailySpec(LocalDate date, AwardData awards) {}
-
-        List<DailySpec> specs = List.of(
-            new DailySpec(LocalDate.now().minusWeeks(7), new AwardData(
-                List.of(u(savedUsers,0), u(savedUsers,5)),
-                List.of(u(savedUsers,3), u(savedUsers,6)),
-                List.of(u(savedUsers,1)),
-                List.of(u(savedUsers,14))
-            )),
-            new DailySpec(LocalDate.now().minusWeeks(6), new AwardData(
-                List.of(u(savedUsers,5), u(savedUsers,17)),
-                List.of(u(savedUsers,9), u(savedUsers,3)),
-                List.of(u(savedUsers,0)),
-                List.of(u(savedUsers,13))
-            )),
-            new DailySpec(LocalDate.now().minusWeeks(5), new AwardData(
-                List.of(u(savedUsers,1), u(savedUsers,4)),
-                List.of(u(savedUsers,7), u(savedUsers,16)),
-                List.of(u(savedUsers,17)),
-                List.of(u(savedUsers,2))
-            )),
-            new DailySpec(LocalDate.now().minusWeeks(4), new AwardData(
-                List.of(u(savedUsers,0), u(savedUsers,12)),
-                List.of(u(savedUsers,3), u(savedUsers,9)),
-                List.of(u(savedUsers,5)),
-                List.of(u(savedUsers,11))
-            )),
-            new DailySpec(LocalDate.now().minusWeeks(3), new AwardData(
-                List.of(u(savedUsers,5), u(savedUsers,19)),
-                List.of(u(savedUsers,6), u(savedUsers,4)),
-                List.of(u(savedUsers,12)),
-                List.of(u(savedUsers,8))
-            )),
-            new DailySpec(LocalDate.now().minusWeeks(2), new AwardData(
-                List.of(u(savedUsers,17), u(savedUsers,0)),
-                List.of(u(savedUsers,3), u(savedUsers,18)),
-                List.of(u(savedUsers,1)),
-                List.of(u(savedUsers,13))
-            )),
-            new DailySpec(LocalDate.now().minusWeeks(1), new AwardData(
-                List.of(u(savedUsers,1), u(savedUsers,5)),
-                List.of(u(savedUsers,9), u(savedUsers,6)),
-                List.of(u(savedUsers,19)),
-                List.of(u(savedUsers,14))
-            ))
-        );
-
-        for (DailySpec spec : specs) {
-            Daily daily = Daily.builder()
-                    .pelada(pelada)
-                    .dailyDate(spec.date())
-                    .dailyTime("08:00")
-                    .status("FINISHED")
-                    .isFinished(true)
-                    .confirmedPlayers(new HashSet<>(savedUsers))
-                    .build();
-            daily = dailyRepository.save(daily);
-
-            DailyAward award = DailyAward.builder()
-                    .daily(daily)
-                    .artilheiroWinners(new java.util.ArrayList<>(spec.awards().artilheiros()))
-                    .garcomWinners(new java.util.ArrayList<>(spec.awards().garcons()))
-                    .puskasWinners(new java.util.ArrayList<>(spec.awards().puskas()))
-                    .wiltballWinners(new java.util.ArrayList<>(spec.awards().wiltball()))
-                    .build();
-            dailyAwardRepository.save(award);
+        // Finished dailies, one per week. Sessions with 3 teams confirm only 15 players,
+        // so players' histories differ. Fixed seed → same data on every run.
+        Random random = new Random(2026);
+        int[] teamsPerSession = {4, 3, 4, 4, 3, 4, 4};
+        for (int i = 0; i < teamsPerSession.length; i++) {
+            LocalDate date = LocalDate.now().minusWeeks(teamsPerSession.length - i);
+            seedFinishedDaily(pelada, admin, savedUsers, date, teamsPerSession[i], random);
         }
 
         // Today's daily — still scheduled
@@ -178,7 +120,98 @@ public class DataInitializer implements CommandLineRunner {
 
         dailyRepository.save(daily);
 
-        log.info("DataInitializer: 7 dailies finalizados + 1 agendado criados com prêmios.");
+        log.info("DataInitializer: {} dailies finalizados (times, partidas, estatísticas, prêmios) + 1 agendado.",
+                teamsPerSession.length);
+    }
+
+    // Creates teams and random results, then runs the real submit + finalize flow so match stats,
+    // league table, UserDailyStats, Ranking, Stats and awards are consistent with the app's rules.
+    private void seedFinishedDaily(Pelada pelada, User admin, List<User> allUsers, LocalDate date,
+                                   int teamCount, Random random) {
+        List<User> shuffled = new ArrayList<>(allUsers);
+        Collections.shuffle(shuffled, random);
+        List<User> confirmed = shuffled.subList(0, teamCount * pelada.getPlayersPerTeam());
+
+        Daily daily = dailyRepository.save(Daily.builder()
+                .pelada(pelada)
+                .dailyDate(date)
+                .dailyTime(pelada.getTimeOfDay())
+                .status("IN_COURSE")
+                .confirmedPlayers(new HashSet<>(confirmed))
+                .build());
+
+        List<Team> teams = new ArrayList<>();
+        Map<Long, List<User>> playersByTeamId = new HashMap<>();
+        for (int t = 0; t < teamCount; t++) {
+            List<User> players = confirmed.subList(t * pelada.getPlayersPerTeam(), (t + 1) * pelada.getPlayersPerTeam());
+            Team team = teamRepository.save(Team.builder()
+                    .daily(daily)
+                    .name(TEAM_NAMES[t])
+                    .color(TEAM_COLORS[t])
+                    .players(new HashSet<>(players))
+                    .build());
+            teams.add(team);
+            playersByTeamId.put(team.getId(), players);
+        }
+
+        // Round robin; with 3 teams play it twice so every session has 6 matches
+        int rounds = teamCount == 3 ? 2 : 1;
+        List<MatchResultDTO> results = new ArrayList<>();
+        List<User> scorers = new ArrayList<>();
+        for (int round = 0; round < rounds; round++) {
+            for (int a = 0; a < teams.size(); a++) {
+                for (int b = a + 1; b < teams.size(); b++) {
+                    Team t1 = teams.get(a);
+                    Team t2 = teams.get(b);
+                    int score1 = random.nextInt(5);
+                    int score2 = random.nextInt(5);
+                    Map<Long, int[]> stats = new HashMap<>();
+                    scorers.addAll(distributeGoals(playersByTeamId.get(t1.getId()), score1, stats, random));
+                    scorers.addAll(distributeGoals(playersByTeamId.get(t2.getId()), score2, stats, random));
+
+                    List<MatchResultDTO.PlayerStatInputDTO> playerStats = stats.entrySet().stream()
+                            .map(e -> new MatchResultDTO.PlayerStatInputDTO(e.getKey(), e.getValue()[0], e.getValue()[1]))
+                            .toList();
+                    results.add(new MatchResultDTO(null, t1.getId(), t2.getId(), score1, score2, playerStats));
+                }
+            }
+        }
+
+        dailyResultsService.submitResults(daily.getId(), results, admin.getEmail());
+
+        List<Long> puskas = scorers.isEmpty()
+                ? List.of()
+                : List.of(scorers.get(random.nextInt(scorers.size())).getId());
+        List<Long> wiltball = List.of(confirmed.get(random.nextInt(confirmed.size())).getId());
+        dailyResultsService.finalizeDaily(daily.getId(), puskas, wiltball, admin.getEmail());
+    }
+
+    // Each goal goes to a player weighted by stars; 60% of goals get an assist from a teammate.
+    // stats maps userId → {goals, assists}. Returns one entry per goal scored (for the Puskás pick).
+    private List<User> distributeGoals(List<User> players, int goals, Map<Long, int[]> stats, Random random) {
+        List<User> scorers = new ArrayList<>();
+        for (int g = 0; g < goals; g++) {
+            User scorer = pickWeightedByStars(players, random);
+            stats.computeIfAbsent(scorer.getId(), id -> new int[2])[0]++;
+            scorers.add(scorer);
+
+            if (random.nextDouble() < 0.6) {
+                List<User> teammates = players.stream().filter(p -> !p.getId().equals(scorer.getId())).toList();
+                User assister = teammates.get(random.nextInt(teammates.size()));
+                stats.computeIfAbsent(assister.getId(), id -> new int[2])[1]++;
+            }
+        }
+        return scorers;
+    }
+
+    private User pickWeightedByStars(List<User> players, Random random) {
+        int total = players.stream().mapToInt(p -> p.getStars() + 1).sum();
+        int roll = random.nextInt(total);
+        for (User player : players) {
+            roll -= player.getStars() + 1;
+            if (roll < 0) return player;
+        }
+        return players.get(players.size() - 1);
     }
 
     private User buildUser(String email, String username, String password, String position, int stars) {
@@ -189,9 +222,5 @@ public class DataInitializer implements CommandLineRunner {
                 .position(position)
                 .stars(stars)
                 .build();
-    }
-
-    private static User u(List<User> users, int index) {
-        return users.get(index);
     }
 }
