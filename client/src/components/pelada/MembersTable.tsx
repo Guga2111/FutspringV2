@@ -1,15 +1,15 @@
 import { Link } from "react-router-dom";
 import { Plus, Crown, ShieldCheck, ShieldOff, User, MoreVertical, Trash2 } from "lucide-react";
-import { Avatar, AvatarImage, AvatarFallback } from "../ui/avatar";
-import { Badge } from "../ui/badge";
-import { Button } from "../ui/button";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "../ui/dropdown-menu";
-import { getPeladaGradient, getFileUrl } from "@/lib/utils";
+} from "@/components/ui/dropdown-menu";
+import { getPeladaGradient, getFileUrl, getInitials } from "@/lib/utils";
 import type { PeladaMember } from "@/types/pelada";
 
 interface MembersTabProps {
@@ -38,8 +38,8 @@ export function MembersTable({
           {members.length} membros
         </span>
         {isCurrentUserAdmin && (
-          <Button className="bg-gradient-primary rounded-full" size="icon" onClick={onAddPlayer}>
-            <Plus className="h-5 w-5 text-white" />
+          <Button variant="gradient" size="icon" aria-label="Adicionar jogador" onClick={onAddPlayer}>
+            <Plus className="size-5" />
           </Button>
         )}
       </div>
@@ -77,7 +77,7 @@ function MemberItem({
   onToggleAdmin: () => void;
   onRemove: () => void;
 }) {
-  const initials = member.username.slice(0, 2).toUpperCase();
+  const initials = getInitials(member.username);
 
   return (
     <div className="flex items-center gap-3">
@@ -110,7 +110,7 @@ function MemberItem({
 
       <div className="flex items-center gap-2 flex-shrink-0">
         {isCreator ? (
-          <Crown className="h-4 w-4 text-yellow-500" />
+          <Crown className="h-4 w-4 text-gold" />
         ) : member.isAdmin ? (
           <ShieldCheck className="h-4 w-4 text-blue-500" />
         ) : (

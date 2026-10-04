@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import type { DailyDetail } from '../../types/daily'
+import type { DailyDetail } from '@/types/daily'
 import { ChevronDown, ChevronRight } from 'lucide-react'
-import { Button } from '../ui/button'
+import { Button } from '@/components/ui/button'
 
 interface MatchResultsSectionProps {
   daily: DailyDetail
@@ -36,14 +36,16 @@ export default function MatchResultsSection({ daily }: MatchResultsSectionProps)
           const team2Players = team2?.players ?? []
 
           const team1Scorers = team1Players.flatMap(p => {
-            const s = daily.playerStats.find(s => s.userId === p.id)
+            // this match's goals/assists (daily.playerStats holds the session totals)
+            const s = match.playerStats?.find(s => s.userId === p.id)
             if (!s || (s.goals === 0 && s.assists === 0)) return []
-            return [{ username: p.username, goals: s.goals, assists: s.assists }]
+            return [{ userId: p.id, username: p.username, goals: s.goals, assists: s.assists }]
           })
           const team2Scorers = team2Players.flatMap(p => {
-            const s = daily.playerStats.find(s => s.userId === p.id)
+            // this match's goals/assists (daily.playerStats holds the session totals)
+            const s = match.playerStats?.find(s => s.userId === p.id)
             if (!s || (s.goals === 0 && s.assists === 0)) return []
-            return [{ username: p.username, goals: s.goals, assists: s.assists }]
+            return [{ userId: p.id, username: p.username, goals: s.goals, assists: s.assists }]
           })
           const hasScorers = team1Scorers.length > 0 || team2Scorers.length > 0
           const maxRows = Math.max(team1Scorers.length, team2Scorers.length)
@@ -73,9 +75,10 @@ export default function MatchResultsSection({ daily }: MatchResultsSectionProps)
                   <div className="flex-1 flex flex-col items-end gap-0.5">
                     {Array.from({ length: maxRows }).map((_, i) => {
                       const p = team1Scorers[i]
-                      if (!p) return <div key={i} className="h-4" />
+                      // empty rows keep both columns aligned; they are placeholders, so the index is their key
+                      if (!p) return <div key={`empty-${i}`} className="h-4" />
                       return (
-                        <div key={i} className="flex items-center gap-1">
+                        <div key={p.userId} className="flex items-center gap-1">
                           {p.goals > 0 && <><span>{p.username}</span><span>{Array.from({ length: p.goals }).map((_, j) => <span key={j}>⚽</span>)}</span></>}
                           {p.assists > 0 && p.goals === 0 && <><span>{p.username}</span><span>{Array.from({ length: p.assists }).map((_, j) => <span key={j}>🅰️</span>)}</span></>}
                         </div>
@@ -85,9 +88,10 @@ export default function MatchResultsSection({ daily }: MatchResultsSectionProps)
                   <div className="flex-1 flex flex-col items-start gap-0.5">
                     {Array.from({ length: maxRows }).map((_, i) => {
                       const p = team2Scorers[i]
-                      if (!p) return <div key={i} className="h-4" />
+                      // empty rows keep both columns aligned; they are placeholders, so the index is their key
+                      if (!p) return <div key={`empty-${i}`} className="h-4" />
                       return (
-                        <div key={i} className="flex items-center gap-1">
+                        <div key={p.userId} className="flex items-center gap-1">
                           {p.goals > 0 && <><span>{p.username}</span><span>{Array.from({ length: p.goals }).map((_, j) => <span key={j}>⚽</span>)}</span></>}
                           {p.assists > 0 && p.goals === 0 && <><span>{p.username}</span><span>{Array.from({ length: p.assists }).map((_, j) => <span key={j}>🅰️</span>)}</span></>}
                         </div>

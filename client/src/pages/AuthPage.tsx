@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { useNavigate, useSearchParams, useLocation } from "react-router-dom"
 import { toast } from "sonner"
+import { getErrorMessage } from "@/lib/errors"
 import { registerUser, loginUser } from "@/api/auth"
 import { useAuth } from "@/hooks/useAuth"
 import { Button } from "@/components/ui/button"
@@ -60,7 +61,10 @@ export default function AuthPage() {
 
   function validateRegister(): boolean {
     const errors: FieldErrors = {}
-    if (!registerData.username) errors.username = "Nome de usuário é obrigatório"
+    // mirrors RegisterRequestDTO
+    const username = registerData.username.trim()
+    if (!username) errors.username = "Nome de usuário é obrigatório"
+    else if (username.length < 3 || username.length > 30) errors.username = "O nome de usuário deve ter entre 3 e 30 caracteres"
     if (!registerData.email) errors.email = "E-mail é obrigatório"
     if (!registerData.password) {
       errors.password = "Senha é obrigatória"
@@ -88,9 +92,8 @@ export default function AuthPage() {
       })
       login(response.token, response.user)
       navigate(from, { replace: true })
-    } catch (err: unknown) {
-      const message = extractErrorMessage(err) ?? "Falha no cadastro"
-      toast.error(message)
+    } catch (error) {
+      toast.error(getErrorMessage(error, "Não foi possível criar a conta"))
     } finally {
       setRegisterLoading(false)
     }
@@ -103,9 +106,8 @@ export default function AuthPage() {
       const response = await loginUser(loginData)
       login(response.token, response.user)
       navigate(from, { replace: true })
-    } catch (err: unknown) {
-      const message = extractErrorMessage(err) ?? "Falha no login"
-      toast.error(message)
+    } catch (error) {
+      toast.error(getErrorMessage(error, "Não foi possível entrar"))
     } finally {
       setLoginLoading(false)
     }
@@ -180,23 +182,19 @@ export default function AuthPage() {
                       <span className="bg-card px-2 text-muted-foreground">Ou continue com</span>
                     </div>
                   </div>
-                  <Button
-                    variant="outline"
-                    className="w-full"
-                    type="button"
-                    onClick={() => toast.info("Sign-in com Google em breve")}
-                  >
-                    <GoogleIcon /> Continue com Google
+                  <Button variant="outline" className="w-full" type="button" disabled>
+                    <GoogleIcon /> Google (em breve)
                   </Button>
                   <p className="text-sm text-muted-foreground text-center mt-4">
-                    Nao tem uma conta?{" "}
-                    <button
+                    Não tem uma conta?{" "}
+                    <Button
                       type="button"
+                      variant="link"
+                      className="h-auto p-0 text-muted-foreground underline underline-offset-4 hover:text-primary"
                       onClick={() => handleTabChange("register")}
-                      className="underline underline-offset-4 hover:text-primary"
                     >
                       Cadastre-se
-                    </button>
+                    </Button>
                   </p>
                 </form>
               </TabsContent>
@@ -271,18 +269,11 @@ export default function AuthPage() {
                       checked={termsAccepted}
                       onCheckedChange={(v) => setTermsAccepted(v === true)}
                     />
-                    <label htmlFor="terms" className="text-sm text-muted-foreground cursor-pointer">
-                      Eu li e concordo com os{" "}
-                      <a
-                        href="/terms"
-                        className="text-gradient-primary underline"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        Termos de uso
-                      </a>
-                    </label>
+                    <Label htmlFor="terms" className="cursor-pointer font-normal text-muted-foreground">
+                      Eu li e concordo com os termos de uso
+                    </Label>
                   </div>
-                  <Button type="submit" className="w-full bg-gradient-primary text-white border-0" disabled={registerLoading || !termsAccepted}>
+                  <Button type="submit" variant="gradient" className="w-full" disabled={registerLoading || !termsAccepted}>
                     {registerLoading ? "Criando conta..." : "Criar conta"}
                   </Button>
                   <div className="relative my-4">
@@ -293,23 +284,19 @@ export default function AuthPage() {
                       <span className="bg-card px-2 text-muted-foreground">Ou continue com</span>
                     </div>
                   </div>
-                  <Button
-                    variant="outline"
-                    className="w-full"
-                    type="button"
-                    onClick={() => toast.info("Sign-in Google em breve")}
-                  >
-                    <GoogleIcon /> Continue com Google
+                  <Button variant="outline" className="w-full" type="button" disabled>
+                    <GoogleIcon /> Google (em breve)
                   </Button>
                   <p className="text-sm text-muted-foreground text-center mt-4">
-                    Ja tem uma conta?{" "}
-                    <button
+                    Já tem uma conta?{" "}
+                    <Button
                       type="button"
+                      variant="link"
+                      className="h-auto p-0 text-muted-foreground underline underline-offset-4 hover:text-primary"
                       onClick={() => handleTabChange("login")}
-                      className="underline underline-offset-4 hover:text-primary"
                     >
                       Entre
-                    </button>
+                    </Button>
                   </p>
                 </form>
               </TabsContent>
@@ -359,22 +346,4 @@ function GoogleIcon() {
       />
     </svg>
   )
-}
-
-function extractErrorMessage(err: unknown): string | null {
-  if (
-    err &&
-    typeof err === "object" &&
-    "response" in err &&
-    err.response &&
-    typeof err.response === "object" &&
-    "data" in err.response &&
-    err.response.data &&
-    typeof err.response.data === "object" &&
-    "message" in err.response.data &&
-    typeof (err.response.data as { message: unknown }).message === "string"
-  ) {
-    return (err.response.data as { message: string }).message
-  }
-  return null
 }

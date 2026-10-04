@@ -1,4 +1,4 @@
-import type { DailyDetail } from '../../types/daily'
+import type { DailyDetail } from '@/types/daily'
 import { useMatchResults } from './hooks/useMatchResults'
 import { ResultsForm } from './ResultsForm'
 

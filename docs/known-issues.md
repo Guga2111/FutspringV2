@@ -1,15 +1,17 @@
 # Problemas conhecidos — Futspring
 
-Problemas críticos encontrados durante a escrita de `backend/documentation/BACKEND.md` e `frontend/documentation/FRONTEND.md` (2026-10-03). Nenhum deles foi corrigido ainda.
+Problemas críticos encontrados durante a escrita de `core/docs/BACKEND.md` e `client/docs/FRONTEND.md` (2026-10-03). Todos foram corrigidos; os detalhes ficam abaixo como histórico.
 
 | # | Problema | Severidade | Status |
 |---|----------|-----------|--------|
 | 1 | Backend não compila (`UserDailyStatsRepository`) | Crítica (bloqueia build/deploy) | Corrigido na branch `lf/user-history-dialog` |
-| 2 | Segredos de produção em texto puro no `deploy.sh` | Alta | Aberto |
-| 3 | IDOR no envio de resultados (`matchId`) | Alta | Aberto |
-| 4 | Chat via WebSocket sem autorização de inscrição | Alta | Aberto |
+| 2 | Segredos de produção em texto puro no `deploy.sh` | Alta | Corrigido em `fe59429` (`scripts/deploy.sh` versionado, segredos vêm do GitHub / `.env`) |
+| 3 | IDOR no envio de resultados (`matchId`) | Alta | Corrigido em `cf31a82` (`findByIdAndDaily`, 404) |
+| 4 | Chat via WebSocket sem autorização de inscrição | Alta | Corrigido em `cf31a82` (`JwtChannelInterceptor`) |
 
 Ao corrigir um item, mude o status para "Corrigido" com o commit/PR e remova a entrada correspondente das tabelas de antipatterns / "Known gaps" do `BACKEND.md`.
+
+Os caminhos em "Onde" apontam para a organização atual do backend (pacotes por domínio em `domain/`, ver "Package layout" no `BACKEND.md`); os números de linha são do código atual, não do commit em que o problema foi encontrado.
 
 ---
 
@@ -17,7 +19,7 @@ Ao corrigir um item, mude o status para "Corrigido" com o commit/PR e remova a e
 
 > **Corrigido** na branch `lf/user-history-dialog`: a query virou text block com `JOIN FETCH uds.daily`, e o endpoint `GET /api/v1/peladas/{id}/members/{userId}/history` checa se quem chama e o jogador-alvo são membros da pelada.
 
-**Onde:** `backend/src/main/java/com/futspring/backend/repository/UserDailyStatsRepository.java:87-89` (método `findHistoryByUserAndPelada`, introduzido no commit `53efc75`).
+**Onde:** `core/src/main/java/com/futspring/backend/domain/stats/repository/UserDailyStatsRepository.java:97` (método `findHistoryByUserAndPelada`, introduzido no commit `53efc75`).
 
 **Problema:**
 - A string da `@Query` quebra linha com aspas simples `"..."`, o que não compila em Java 17. É preciso usar um text block `"""`.
@@ -50,6 +52,8 @@ Considere usar `JOIN FETCH uds.daily` se o resultado for acessar a daily, para e
 
 ## 2. Segredos de produção em texto puro no `deploy.sh`
 
+> **Corrigido** em `fe59429`: o script agora é `scripts/deploy.sh`, versionado e sem segredos; os valores vêm dos segredos do GitHub (CD) ou de um `.env` fora do git, e o script recusa um `.env` com `DDL_AUTO`. Se o `deploy.sh` antigo ainda existir em alguma máquina, apague-o e troque a senha do banco e o `JWT_SECRET` (passo 1 abaixo).
+
 **Onde:** `deploy.sh`, na raiz:
 - linhas 10-12: `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` do Supabase;
 - linha 15: `JWT_SECRET`;
@@ -71,7 +75,9 @@ Considere usar `JOIN FETCH uds.daily` se o resultado for acessar a daily, para e
 
 ## 3. IDOR no envio de resultados (`matchId` não é checado contra a daily)
 
-**Onde:** `backend/src/main/java/com/futspring/backend/service/DailyResultsService.java:67-68` (`submitResults`), rota `POST /api/v1/dailies/{id}/results`.
+> **Corrigido** em `cf31a82`: `submitResults` busca a partida com `matchRepository.findByIdAndDaily(matchId, daily)` e responde 404 "Partida não encontrada nesta sessão" sem alterar nada; o corpo é validado (`List<@Valid MatchResultDTO>`), e estatísticas de jogadores fora da partida são rejeitadas. Testes: `DailyResultsServiceTest.submitResults_matchIdFromAnotherDaily_*`.
+
+**Onde:** `core/src/main/java/com/futspring/backend/domain/daily/DailyResultsService.java:62` (`submitResults`), rota `POST /api/v1/dailies/{id}/results`.
 
 ```java
 if (result.getMatchId() != null) {
@@ -96,10 +102,12 @@ Isso corrompe resultados, rankings e estatísticas de terceiros.
 
 ## 4. Chat via WebSocket sem autorização de inscrição
 
+> **Corrigido** em `cf31a82`: `CONNECT` exige token válido, `SUBSCRIBE` só em `/topic/pelada/{id}` para membros (e na fila `/user/queue/errors` do próprio usuário), `SEND` exige sessão autenticada, e os erros do `ChatController` voltam ao remetente. Testes: `JwtChannelInterceptorTest`.
+
 **Onde:**
-- `backend/src/main/java/com/futspring/backend/websocket/JwtChannelInterceptor.java`
-- `backend/src/main/java/com/futspring/backend/controller/ChatController.java:28`
-- `backend/src/main/java/com/futspring/backend/config/SecurityConfig.java` (`/ws/**` é `permitAll`)
+- `core/src/main/java/com/futspring/backend/domain/auth/JwtChannelInterceptor.java`
+- `core/src/main/java/com/futspring/backend/domain/chat/ChatController.java:29`
+- `core/src/main/java/com/futspring/backend/shared/config/SecurityConfig.java:45` (`/ws/**` é `permitAll`)
 
 **Problema:**
 - O interceptor só valida o token no frame `CONNECT`, e um `CONNECT` sem token ou com token inválido também é aceito: a sessão só fica sem usuário.

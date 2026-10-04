@@ -8,9 +8,9 @@ import {
   useReactTable,
 } from '@tanstack/react-table'
 import { ArrowUpDown, ArrowUp, ArrowDown, ChevronDown, ChevronRight } from 'lucide-react'
-import { Button } from '../ui/button'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table'
-import type { UserDailyStatsDTO } from '../../types/daily'
+import { Button } from '@/components/ui/button'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import type { UserDailyStatsDTO } from '@/types/daily'
 
 interface PlayerStatsSectionProps {
   stats: UserDailyStatsDTO[]

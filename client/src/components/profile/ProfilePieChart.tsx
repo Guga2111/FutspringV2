@@ -1,10 +1,10 @@
 import { PieChart, Pie, Cell, Label } from 'recharts'
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from '../ui/chart'
-import type { ChartConfig } from '../ui/chart'
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
+import type { ChartConfig } from '@/components/ui/chart'
 
 const PIE_CONFIG: ChartConfig = {
-  Goals: { label: 'Goals', color: '#3b82f6' },
-  Assists: { label: 'Assists', color: '#93c5fd' },
+  Goals: { label: 'Gols', color: 'hsl(var(--chart-1))' },
+  Assists: { label: 'Assistências', color: 'hsl(var(--chart-2))' },
 }
 
 interface ProfilePieChartProps {
@@ -14,8 +14,9 @@ interface ProfilePieChartProps {
 
 export default function ProfilePieChart({ goals, assists }: ProfilePieChartProps) {
   const pieData = [
-    { name: 'Goals', value: goals, fill: '#32CD32' },
-    { name: 'Assists', value: assists, fill: '#99CB0E' },
+    // fills come from the chart config, so the legend and the slices share one color source
+    { name: 'Goals', value: goals, fill: 'var(--color-Goals)' },
+    { name: 'Assists', value: assists, fill: 'var(--color-Assists)' },
   ]
   const totalContributions = goals + assists
 

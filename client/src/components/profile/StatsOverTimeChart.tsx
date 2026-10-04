@@ -6,12 +6,12 @@ import {
   ChartLegendContent,
   ChartTooltip,
   ChartTooltipContent,
-} from '../ui/chart'
-import type { ChartConfig } from '../ui/chart'
-import { Card, CardContent, CardDescription, CardHeader } from '../ui/card'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select'
-import { Skeleton } from '../ui/skeleton'
-import type { TimelinePoint } from '../../types/stats'
+} from '@/components/ui/chart'
+import type { ChartConfig } from '@/components/ui/chart'
+import { Card, CardContent, CardDescription, CardHeader } from '@/components/ui/card'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Skeleton } from '@/components/ui/skeleton'
+import type { TimelinePoint } from '@/types/stats'
 
 interface StatsOverTimeChartProps {
   timelinePoints: TimelinePoint[]
@@ -19,9 +19,9 @@ interface StatsOverTimeChartProps {
 }
 
 const chartConfig = {
-  goals:         { label: 'Goals',   color: '#32CD32' },
-  assists:       { label: 'Assists', color: '#99CB0E' },
-  matchesPlayed: { label: 'Matches', color: '#f97316' },
+  goals:         { label: 'Gols',   color: '#32CD32' },
+  assists:       { label: 'Assistências', color: '#99CB0E' },
+  matchesPlayed: { label: 'Partidas', color: '#f97316' },
 } satisfies ChartConfig
 
 export default function StatsOverTimeChart({ timelinePoints = [], loading }: StatsOverTimeChartProps) {
@@ -57,7 +57,7 @@ export default function StatsOverTimeChart({ timelinePoints = [], loading }: Sta
       <Card className="pt-0 flex-1 min-w-0">
         <CardHeader className="flex items-center gap-2 border-b py-5 sm:flex-row">
           <div className="grid flex-1 gap-1">
-            <CardDescription>Gols, Assists &amp; Partidas pelo tempo</CardDescription>
+            <CardDescription>Gols, assistências e partidas ao longo do tempo</CardDescription>
           </div>
         </CardHeader>
         <CardContent className="px-2 pt-4 sm:px-6 sm:pt-6">
@@ -71,16 +71,16 @@ export default function StatsOverTimeChart({ timelinePoints = [], loading }: Sta
     <Card className="pt-0 flex-1 min-w-0">
       <CardHeader className="flex items-center gap-2 border-b py-5 sm:flex-row">
         <div className="grid flex-1 gap-1">
-          <CardDescription>Goals, Assists &amp; Matches over time</CardDescription>
+          <CardDescription>Gols, assistências e partidas ao longo do tempo</CardDescription>
         </div>
         <Select value={timeRange} onValueChange={setTimeRange}>
           <SelectTrigger className="hidden w-[160px] sm:flex">
-            <SelectValue placeholder="Last 3 months" />
+            <SelectValue placeholder="Últimos 3 meses" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="90d">Last 3 months</SelectItem>
-            <SelectItem value="30d">Last 30 days</SelectItem>
-            <SelectItem value="7d">Last 7 days</SelectItem>
+            <SelectItem value="90d">Últimos 3 meses</SelectItem>
+            <SelectItem value="30d">Últimos 30 dias</SelectItem>
+            <SelectItem value="7d">Últimos 7 dias</SelectItem>
           </SelectContent>
         </Select>
       </CardHeader>

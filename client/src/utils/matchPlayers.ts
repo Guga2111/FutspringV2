@@ -1,5 +1,5 @@
 import type { ParsedSession, ParsedPlayer } from './parseSessionMessage'
-import type { PlayerDTO } from '../types/daily'
+import type { PlayerDTO } from '@/types/daily'
 
 export interface MatchedPlayer extends ParsedPlayer {
   matchedUserId: number | null

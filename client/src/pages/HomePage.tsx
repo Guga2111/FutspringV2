@@ -1,14 +1,12 @@
-import { useEffect, useState } from 'react'
-import { toast } from 'sonner'
-import NavBar from '../components/NavBar'
-import { Card, CardContent } from '../components/ui/card'
-import { Button } from '../components/ui/button'
-import { Skeleton } from '../components/ui/skeleton'
-import { getMyPeladas } from '../api/peladas'
-import { getDailiesForPelada } from '../api/dailies'
-import type { PeladaResponse } from '../types/pelada'
-import CreatePeladaModal from '../components/CreatePeladaModal'
-import { PeladaCard, getNextSession } from '../components/pelada/PeladaCard'
+import { useState } from 'react'
+import NavBar from '@/components/NavBar'
+import { Card, CardContent } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { useMyPeladas } from '@/components/pelada/hooks/useMyPeladas'
+import CreatePeladaModal from '@/components/CreatePeladaModal'
+import { PeladaCard } from '@/components/pelada/PeladaCard'
 
 function PeladaCardSkeleton() {
   return (
@@ -25,36 +23,8 @@ function PeladaCardSkeleton() {
 
 
 export default function HomePage() {
-  const [peladas, setPeladas] = useState<PeladaResponse[]>([])
-  const [loading, setLoading] = useState(true)
+  const { peladas, loading, error, reload } = useMyPeladas()
   const [showCreateModal, setShowCreateModal] = useState(false)
-  const [nextSessions, setNextSessions] = useState<Record<number, string | null>>({})
-
-  function fetchPeladas() {
-    setLoading(true)
-    getMyPeladas()
-      .then((data) => {
-        setPeladas(data)
-        // Fetch dailies for each pelada in parallel
-        Promise.all(
-          data.map((p) =>
-            getDailiesForPelada(p.id)
-              .then((dailies) => ({ id: p.id, next: getNextSession(dailies) }))
-              .catch(() => ({ id: p.id, next: null }))
-          )
-        ).then((results) => {
-          const map: Record<number, string | null> = {}
-          results.forEach(({ id, next }) => { map[id] = next })
-          setNextSessions(map)
-        })
-      })
-      .catch(() => toast.error('Falha ao carregar peladas'))
-      .finally(() => setLoading(false))
-  }
-
-  useEffect(() => {
-    fetchPeladas()
-  }, [])
 
   return (
     <div className="page-enter min-h-screen flex flex-col">
@@ -62,7 +32,7 @@ export default function HomePage() {
       {showCreateModal && (
         <CreatePeladaModal
           onClose={() => setShowCreateModal(false)}
-          onCreated={() => { setShowCreateModal(false); fetchPeladas() }}
+          onCreated={() => { setShowCreateModal(false); reload() }}
         />
       )}
       <main className="flex-1 container max-w-5xl mx-auto px-4 py-8">
@@ -116,20 +86,25 @@ export default function HomePage() {
             <PeladaCardSkeleton />
             <PeladaCardSkeleton />
           </div>
+        ) : error ? (
+          <Alert variant="destructive" className="flex items-center justify-between gap-4">
+            <AlertDescription>Não foi possível carregar suas peladas.</AlertDescription>
+            <Button variant="outline" size="sm" onClick={reload}>Tentar novamente</Button>
+          </Alert>
         ) : peladas.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24 text-center">
             <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center shadow-md mb-4">
               <img src="/gerrard.png" alt="Football" className="w-11 h-11 object-cover rounded-full" />
             </div>
             <p className="text-muted-foreground text-lg mb-6">
-              Voce nao está numa pelada ainda. Crie uma para começar.
+              Você ainda não está em nenhuma pelada. Crie uma para começar.
             </p>
             <Button variant="gradient" onClick={() => setShowCreateModal(true)}>+ Nova Pelada</Button>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {peladas.map((pelada) => (
-              <PeladaCard key={pelada.id} pelada={pelada} nextSession={nextSessions[pelada.id]} />
+              <PeladaCard key={pelada.id} pelada={pelada} />
             ))}
           </div>
         )}

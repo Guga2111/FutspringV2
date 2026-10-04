@@ -1,11 +1,14 @@
 import { useState } from 'react'
 import { toast } from 'sonner'
-import type { DailyDetail } from '../../../types/daily'
-import { submitResults, getDailyDetail } from '../../../api/dailies'
-import type { MatchResultInput } from '../../../api/dailies'
-import { buildPlayerStats } from '../../../utils/matchStats'
+import { getErrorMessage } from '@/lib/errors'
+import type { DailyDetail } from '@/types/daily'
+import { submitResults, getDailyDetail } from '@/api/dailies'
+import type { MatchResultInput } from '@/api/dailies'
+import { buildPlayerStats } from '@/utils/matchStats'
 
 export interface MatchFormRow {
+  // stable React key: the match id for saved matches, a local id for new rows
+  key: string
   matchId: number | null
   team1Id: number
   team2Id: number
@@ -15,9 +18,16 @@ export interface MatchFormRow {
   playerStats: { userId: number; username: string; goals: number; assists: number }[]
 }
 
+let nextRowKey = 0
+function newRowKey(): string {
+  nextRowKey += 1
+  return `new-${nextRowKey}`
+}
+
 function initMatchRows(daily: DailyDetail): MatchFormRow[] {
   if (daily.matches.length > 0) {
     return daily.matches.map((m) => ({
+      key: `match-${m.id}`,
       matchId: m.id,
       team1Id: m.team1Id,
       team2Id: m.team2Id,
@@ -32,6 +42,7 @@ function initMatchRows(daily: DailyDetail): MatchFormRow[] {
     const t2 = daily.teams[1].id
     return [
       {
+        key: newRowKey(),
         matchId: null,
         team1Id: t1,
         team2Id: t2,
@@ -81,6 +92,7 @@ export function useMatchResults(daily: DailyDetail, onSubmit: (updated: DailyDet
     setRows((prev) => [
       ...prev,
       {
+        key: newRowKey(),
         matchId: null,
         team1Id: t1,
         team2Id: t2,
@@ -115,11 +127,10 @@ export function useMatchResults(daily: DailyDetail, onSubmit: (updated: DailyDet
       }))
       await submitResults(daily.id, payload)
       const updated = await getDailyDetail(daily.id)
-      toast.success('Resultados salvados!')
+      toast.success('Resultados salvos')
       onSubmit(updated)
-    } catch (err: unknown) {
-      const e = err as { response?: { data?: { message?: string } } }
-      toast.error(e?.response?.data?.message ?? 'Falha ao salvar resultados')
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Não foi possível salvar os resultados'))
     } finally {
       setLoading(false)
     }

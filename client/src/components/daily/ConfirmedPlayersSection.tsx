@@ -1,11 +1,11 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { UserPlus, UserMinus, Loader2, ChevronDown, ChevronRight } from 'lucide-react'
-import type { DailyDetail, PlayerDTO } from '../../types/daily'
-import { getFileUrl } from '../../lib/utils'
-import { Badge } from '../ui/badge'
-import { Button } from '../ui/button'
-import { Avatar, AvatarImage, AvatarFallback } from '../ui/avatar'
+import type { DailyDetail, PlayerDTO } from '@/types/daily'
+import { getFileUrl, getInitials } from '@/lib/utils'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import StarRating from './StarRating'
 
 interface ConfirmedPlayersSectionProps {
@@ -39,7 +39,7 @@ function PlayerRow({
           <AvatarImage src={getFileUrl(player.image)} alt={player.username} />
         ) : null}
         <AvatarFallback className="text-sm font-semibold">
-          {player.username.slice(0, 2).toUpperCase()}
+          {getInitials(player.username)}
         </AvatarFallback>
       </Avatar>
       <div className="flex-1 min-w-0 flex items-center gap-2 flex-wrap">

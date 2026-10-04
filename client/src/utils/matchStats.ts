@@ -1,4 +1,4 @@
-import type { DailyDetail } from '../types/daily'
+import type { DailyDetail } from '@/types/daily'
 
 export function buildPlayerStats(
   daily: DailyDetail,

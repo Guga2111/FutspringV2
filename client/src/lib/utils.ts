@@ -1,11 +1,11 @@
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
+import { API_BASE } from "@/lib/config"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:8080"
 
 export function getFileUrl(filename: string | null | undefined): string | undefined {
   if (!filename) return undefined
@@ -23,7 +23,8 @@ const PELADA_GRADIENTS = [
   'bg-gradient-to-br from-teal-500 to-teal-700',
 ]
 
-export function getPeladaInitials(name: string): string {
+// "Pelada do Fut" -> "PF", "leal" -> "LE"; used for avatar and banner fallbacks
+export function getInitials(name: string): string {
   const tokens = name.trim().split(/\s+/).filter(Boolean)
   if (tokens.length === 0) return '?'
   if (tokens.length === 1) return tokens[0].slice(0, 2).toUpperCase()

@@ -1,5 +1,5 @@
 import apiClient from "./client"
-import type { DailyListItem, DailyDetail, MatchDTO, TeamDTO } from "../types/daily"
+import type { DailyListItem, DailyDetail, DailyStatus, MatchDTO, TeamDTO } from "@/types/daily"
 
 export interface CreateDailyData {
   dailyDate: string
@@ -66,7 +66,7 @@ export async function swapPlayers(id: number, player1Id: number, player2Id: numb
   return response.data
 }
 
-export async function updateDailyStatus(id: number, status: string): Promise<DailyListItem> {
+export async function updateDailyStatus(id: number, status: DailyStatus): Promise<DailyListItem> {
   const response = await apiClient.put<DailyListItem>(`/api/v1/dailies/${id}/status`, { status })
   return response.data
 }

@@ -1,169 +1,128 @@
-import { useState } from "react";
-import { format } from "date-fns";
-import { CalendarIcon } from "lucide-react";
-import { toast } from "sonner";
-import { createDaily } from "../../api/dailies";
-import { Button } from "../ui/button";
-import { Calendar } from "../ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
-import { cn } from "../../lib/utils";
-
-function TimeSegment({
-  value,
-  min,
-  max,
-  onChange,
-}: {
-  value: string;
-  min: number;
-  max: number;
-  onChange: (v: string) => void;
-}) {
-  const pad = (n: number) => String(n).padStart(2, "0");
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    const num = parseInt(value, 10) || 0;
-    if (e.key === "ArrowUp") {
-      e.preventDefault();
-      onChange(pad(num >= max ? min : num + 1));
-    } else if (e.key === "ArrowDown") {
-      e.preventDefault();
-      onChange(pad(num <= min ? max : num - 1));
-    }
-  };
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const raw = e.target.value.replace(/\D/g, "").slice(-2);
-    onChange(raw);
-  };
-
-  const handleBlur = () => {
-    const num = Math.min(max, Math.max(min, parseInt(value, 10) || 0));
-    onChange(pad(num));
-  };
-
-  return (
-    <input
-      type="text"
-      inputMode="numeric"
-      maxLength={2}
-      value={value}
-      onChange={handleChange}
-      onKeyDown={handleKeyDown}
-      onBlur={handleBlur}
-      onFocus={(e) => e.target.select()}
-      className="w-8 text-center bg-transparent text-sm font-medium focus:outline-none tabular-nums"
-    />
-  );
-}
+import { useState } from "react"
+import { Controller, useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { format } from "date-fns"
+import { ptBR } from "date-fns/locale"
+import { CalendarIcon } from "lucide-react"
+import { toast } from "sonner"
+import { createDaily } from "@/api/dailies"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Button } from "@/components/ui/button"
+import { Calendar } from "@/components/ui/calendar"
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
+import { Input } from "@/components/ui/input"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { applyServerErrors } from "@/lib/form-errors"
+import { cn } from "@/lib/utils"
+import { createDailySchema, type CreateDailyInput, type CreateDailyValues } from "@/schemas/daily"
 
 export function CreateSessionDialog({
   peladaId,
+  defaultTime = "08:00",
   onClose,
   onCreated,
 }: {
-  peladaId: number;
-  onClose: () => void;
-  onCreated: () => void;
+  peladaId: number
+  defaultTime?: string
+  onClose: () => void
+  onCreated: () => void
 }) {
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>();
-  const [calendarOpen, setCalendarOpen] = useState(false);
-  const [hour, setHour] = useState("08");
-  const [minute, setMinute] = useState("00");
-  const dailyTime = `${hour}:${minute}`;
-  const [submitting, setSubmitting] = useState(false);
+  const [calendarOpen, setCalendarOpen] = useState(false)
+  const form = useForm<CreateDailyInput, unknown, CreateDailyValues>({
+    resolver: zodResolver(createDailySchema),
+    defaultValues: { dailyDate: null, dailyTime: defaultTime.slice(0, 5) },
+  })
 
-  const dailyDate = selectedDate ? format(selectedDate, "yyyy-MM-dd") : "";
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!dailyDate || !dailyTime) return;
-    setSubmitting(true);
+  async function onSubmit(values: CreateDailyValues) {
     try {
-      await createDaily(peladaId, { dailyDate, dailyTime });
-      toast.success("Sessão criada!");
-      onCreated();
-      onClose();
-    } catch (err: unknown) {
-      const e = err as { response?: { data?: { message?: string } } };
-      toast.error(e?.response?.data?.message ?? "Falha ao criar uma sessão");
-    } finally {
-      setSubmitting(false);
+      await createDaily(peladaId, { dailyDate: format(values.dailyDate, "yyyy-MM-dd"), dailyTime: values.dailyTime })
+      toast.success("Sessão criada")
+      onCreated()
+      onClose()
+    } catch (error) {
+      applyServerErrors(form, error, "Não foi possível criar a sessão")
     }
-  };
+  }
+
+  const submitting = form.formState.isSubmitting
 
   return (
-    <div
-      className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
-      onClick={onClose}
-    >
-      <div
-        className="bg-background rounded-lg shadow-lg w-full max-w-sm p-6"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h3 className="text-lg font-semibold mb-4">Criar Sessão</h3>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Date — shadcn Calendar in a Popover */}
-          <div>
-            <label className="block text-sm font-medium mb-1">Data</label>
-            <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className={cn(
-                    "w-full justify-start text-left font-normal rounded-md",
-                    !selectedDate && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {selectedDate ? format(selectedDate, "PPP") : "Escolha uma data"}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={selectedDate}
-                  onSelect={(date) => {
-                    setSelectedDate(date);
-                    setCalendarOpen(false);
-                  }}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
-          </div>
-
-          {/* Time */}
-          <div>
-            <label className="block text-sm font-medium mb-1">Horário</label>
-            <div className="flex items-center h-9 w-full rounded-md border border-input bg-transparent px-3 gap-0.5 focus-within:ring-1 focus-within:ring-ring shadow-sm">
-              <TimeSegment value={hour} min={0} max={23} onChange={setHour} />
-              <span className="text-muted-foreground text-sm select-none">:</span>
-              <TimeSegment value={minute} min={0} max={59} onChange={setMinute} />
-            </div>
-          </div>
-
-          <div className="flex gap-3 justify-end pt-2">
-            <button
-              type="button"
-              className="text-sm text-muted-foreground hover:underline"
-              onClick={onClose}
-              disabled={submitting}
-            >
+    <Dialog open onOpenChange={(open) => !open && !submitting && onClose()}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Criar sessão</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={form.handleSubmit(onSubmit)} noValidate className="flex flex-col gap-6">
+          <FieldGroup className="gap-5">
+            <Controller
+              name="dailyDate"
+              control={form.control}
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor="dailyDate">Data</FieldLabel>
+                  <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        id="dailyDate"
+                        type="button"
+                        variant="outline"
+                        aria-invalid={fieldState.invalid}
+                        className={cn("w-full justify-start rounded-md font-normal", !field.value && "text-muted-foreground")}
+                      >
+                        <CalendarIcon className="mr-2 size-4" />
+                        {field.value ? format(field.value, "PPP", { locale: ptBR }) : "Escolha uma data"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={field.value ?? undefined}
+                        onSelect={(date) => {
+                          field.onChange(date ?? null)
+                          setCalendarOpen(false)
+                        }}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  <FieldError errors={[fieldState.error]} />
+                </Field>
+              )}
+            />
+            <Controller
+              name="dailyTime"
+              control={form.control}
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor="dailyTime">Horário</FieldLabel>
+                  <Input {...field} id="dailyTime" type="time" aria-invalid={fieldState.invalid} />
+                  <FieldError errors={[fieldState.error]} />
+                </Field>
+              )}
+            />
+          </FieldGroup>
+          {form.formState.errors.root && (
+            <Alert variant="destructive">
+              <AlertDescription>{form.formState.errors.root.message}</AlertDescription>
+            </Alert>
+          )}
+          <DialogFooter className="gap-2">
+            <Button type="button" variant="ghost" onClick={onClose} disabled={submitting}>
               Cancelar
-            </button>
-            <Button
-              type="submit"
-              className="rounded-full"
-              variant="gradient"
-              disabled={submitting || !selectedDate}
-            >
+            </Button>
+            <Button type="submit" variant="gradient" disabled={submitting}>
               {submitting ? "Criando..." : "Criar"}
             </Button>
-          </div>
+          </DialogFooter>
         </form>
-      </div>
-    </div>
-  );
+      </DialogContent>
+    </Dialog>
+  )
 }

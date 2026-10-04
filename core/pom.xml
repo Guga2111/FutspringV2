@@ -90,6 +90,12 @@
             <version>${bucket4j.version}</version>
         </dependency>
 
+        <!-- Bounded, expiring cache for the rate-limit buckets (version managed by Spring Boot) -->
+        <dependency>
+            <groupId>com.github.ben-manes.caffeine</groupId>
+            <artifactId>caffeine</artifactId>
+        </dependency>
+
         <!-- WebSocket (STOMP over SockJS) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

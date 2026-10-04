@@ -5,7 +5,7 @@ vi.mock('./client', () => ({
 }))
 
 import apiClient from './client'
-import { uploadPeladaImage } from './peladas'
+import { uploadPeladaImage, searchUsers } from './peladas'
 
 const mockPost = vi.mocked(apiClient.post)
 
@@ -32,5 +32,16 @@ describe('uploadPeladaImage', () => {
 
     const config = mockPost.mock.calls[0][2] as Record<string, unknown> | undefined
     expect(config?.headers).toBeUndefined()
+  })
+})
+
+describe('searchUsers', () => {
+  it('sends the query as a param', async () => {
+    const mockGet = vi.mocked(apiClient.get)
+    mockGet.mockResolvedValue({ data: [] })
+
+    await searchUsers('leal')
+
+    expect(mockGet).toHaveBeenCalledWith('/api/v1/users/search', { params: { q: 'leal' } })
   })
 })

@@ -1,12 +1,25 @@
 import { useState, useMemo } from 'react'
-import { CheckCircle2, AlertTriangle, X, Pencil } from 'lucide-react'
+import { CheckCircle2, AlertTriangle, Pencil } from 'lucide-react'
 import { toast } from 'sonner'
-import { Button } from '../ui/button'
-import { parseSessionMessage } from '../../utils/parseSessionMessage'
-import { autoMatchPlayers } from '../../utils/matchPlayers'
-import { populateFromMessage } from '../../api/dailies'
-import type { DailyDetail } from '../../types/daily'
-import type { PopulateDailyInput } from '../../api/dailies'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Field, FieldLabel } from '@/components/ui/field'
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Textarea } from '@/components/ui/textarea'
+import { getErrorMessage } from '@/lib/errors'
+import { parseSessionMessage } from '@/utils/parseSessionMessage'
+import { autoMatchPlayers } from '@/utils/matchPlayers'
+import { populateFromMessage } from '@/api/dailies'
+import type { DailyDetail } from '@/types/daily'
+import type { PopulateDailyInput } from '@/api/dailies'
 
 interface MatchedPlayerState {
   rawName: string
@@ -99,129 +112,127 @@ export default function ImportFromMessageModal({ daily, onClose, onSuccess }: Pr
         teams: parsedTeams.map((team, i) => ({
           colorName: team.colorName,
           colorHex: team.colorHex,
-          players: (matchedPlayers[i] ?? [])
-            .filter(p => p.matchedUserId !== null && !p.skipped)
-            .map(p => ({
-              userId: p.matchedUserId!,
-              totalGoals: p.totalGoals,
-              totalAssists: p.totalAssists,
-            })),
+          players: (matchedPlayers[i] ?? []).flatMap(p =>
+            p.matchedUserId !== null && !p.skipped
+              ? [{ userId: p.matchedUserId, totalGoals: p.totalGoals, totalAssists: p.totalAssists }]
+              : [],
+          ),
         })),
         matches: parsedMatches,
       }
       const updated = await populateFromMessage(daily.id, input)
-      toast.success('Sessão importada com sucesso!')
+      toast.success('Sessão importada')
       onSuccess(updated)
-    } catch (err: unknown) {
-      const e = err as { response?: { data?: { message?: string } } }
-      toast.error(e?.response?.data?.message ?? 'Falha ao importar sessão')
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Não foi possível importar a sessão'))
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-      <div className="bg-background rounded-xl border border-border shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
-          <div>
-            <h2 className="text-base font-semibold">Importar da Mensagem</h2>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              {step === 1 ? 'Passo 1 de 2 — Colar mensagem' : 'Passo 2 de 2 — Confirmar jogadores'}
-            </p>
-          </div>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground p-1">
-            <X className="h-4 w-4" />
-          </button>
-        </div>
+    <Dialog open onOpenChange={open => !open && !loading && onClose()}>
+      <DialogContent className="flex max-h-[90vh] max-w-2xl flex-col">
+        <DialogHeader>
+          <DialogTitle>Importar da mensagem</DialogTitle>
+          <DialogDescription>
+            {step === 1 ? 'Passo 1 de 2: cole a mensagem' : 'Passo 2 de 2: confirme os jogadores'}
+          </DialogDescription>
+        </DialogHeader>
 
-        {/* Body */}
-        <div className="overflow-y-auto flex-1 px-5 py-4">
+        <div className="flex-1 overflow-y-auto">
           {step === 1 ? (
-            <div className="space-y-3">
-              <p className="text-sm text-muted-foreground">
-                Cole a mensagem do WhatsApp com os times, jogadores e resultados abaixo.
-              </p>
-              <textarea
-                className="w-full h-64 rounded-lg border border-border bg-muted/30 p-3 text-sm font-mono resize-none focus:outline-none focus:ring-2 focus:ring-ring"
+            <Field data-invalid={parseError !== null}>
+              <FieldLabel htmlFor="session-message" className="font-normal text-muted-foreground">
+                Cole a mensagem do WhatsApp com os times, jogadores e resultados.
+              </FieldLabel>
+              <Textarea
+                id="session-message"
+                className="h-64 resize-none font-mono"
                 placeholder={"Azul 🔵\n\nLeal⚽️⚽️⚽️🅰️\nSouto ⚽️🅰️\nFerraz\n\nBranco ⚪️\n\nPedrão ⚽️\n\nAzul 2 x 0 Branco"}
                 value={text}
+                aria-invalid={parseError !== null}
                 onChange={e => setText(e.target.value)}
               />
               {parseError && (
-                <p className="text-sm text-destructive flex items-center gap-1.5">
-                  <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+                <p role="alert" className="flex items-center gap-1.5 text-sm text-destructive">
+                  <AlertTriangle className="size-4 shrink-0" />
                   {parseError}
                 </p>
               )}
-            </div>
+            </Field>
           ) : (
-            <div className="space-y-6">
-              {/* Teams */}
+            <div className="flex flex-col gap-6">
               {parsedTeams.map((team, teamIdx) => (
-                <div key={teamIdx}>
-                  <div className="flex items-center gap-2 mb-2">
+                <div key={team.colorName}>
+                  <div className="mb-2 flex items-center gap-2">
                     <span
-                      className="inline-block w-3 h-3 rounded-full border border-border flex-shrink-0"
+                      className="inline-block size-3 shrink-0 rounded-full border border-border"
                       style={{ backgroundColor: team.colorHex }}
                     />
                     <span className="text-sm font-semibold">{team.colorName}</span>
                   </div>
-                  <div className="space-y-1.5 pl-5">
+                  <div className="flex flex-col gap-1.5 pl-5">
                     {(matchedPlayers[teamIdx] ?? []).map((player, playerIdx) => (
-                      <div key={playerIdx} className="flex items-center gap-2 text-sm min-h-[28px]">
-                        <span className="text-muted-foreground w-24 truncate shrink-0">{player.rawName}</span>
-                        <span className="text-xs text-muted-foreground w-16 shrink-0">
+                      <div key={`${team.colorName}-${playerIdx}`} className="flex min-h-[28px] flex-wrap items-center gap-2 text-sm">
+                        <span className="w-24 shrink-0 truncate text-muted-foreground">{player.rawName}</span>
+                        <span className="w-16 shrink-0 text-xs text-muted-foreground">
                           {player.totalGoals > 0 && `⚽${player.totalGoals}`}
                           {player.totalGoals > 0 && player.totalAssists > 0 && ' '}
                           {player.totalAssists > 0 && `🅰️${player.totalAssists}`}
                         </span>
                         {player.matchedUserId !== null ? (
-                          <span className="flex items-center gap-1.5 text-green-600 dark:text-green-400 text-xs">
-                            <CheckCircle2 className="h-3.5 w-3.5 flex-shrink-0" />
+                          <span className="flex items-center gap-1.5 text-xs">
+                            <CheckCircle2 className="size-3.5 shrink-0 text-chart-1" />
                             {members.find(m => m.id === player.matchedUserId)?.username}
-                            <button
-                              className="text-muted-foreground hover:text-foreground ml-0.5"
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="size-6"
+                              aria-label="Trocar jogador"
                               onClick={() => handlePlayerChange(teamIdx, playerIdx, null, false)}
-                              title="Trocar jogador"
                             >
-                              <Pencil className="h-3 w-3" />
-                            </button>
+                              <Pencil className="size-3" />
+                            </Button>
                           </span>
                         ) : player.skipped ? (
-                          <span className="flex items-center gap-1.5 text-muted-foreground text-xs">
-                            Pulado
-                            <button
-                              className="underline"
+                          <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                            Ignorado
+                            <Button
+                              variant="link"
+                              size="sm"
+                              className="h-auto p-0 text-xs"
                               onClick={() => handlePlayerChange(teamIdx, playerIdx, null, false)}
                             >
                               Desfazer
-                            </button>
+                            </Button>
                           </span>
                         ) : (
                           <span className="flex items-center gap-1.5">
-                            <AlertTriangle className="h-3.5 w-3.5 text-orange-500 flex-shrink-0" />
-                            <select
-                              className="text-xs rounded border border-border bg-background px-1.5 py-0.5"
-                              value=""
-                              onChange={e => {
-                                const val = e.target.value
+                            <AlertTriangle className="size-3.5 shrink-0 text-destructive" />
+                            <Select
+                              onValueChange={val => {
                                 if (val === '__skip__') {
                                   handlePlayerChange(teamIdx, playerIdx, null, true)
-                                } else if (val) {
+                                } else {
                                   handlePlayerChange(teamIdx, playerIdx, Number(val), false)
                                 }
                               }}
                             >
-                              <option value="" disabled>Selecionar jogador...</option>
-                              {members
-                                .filter(m => !assignedUserIds.has(m.id))
-                                .map(m => (
-                                  <option key={m.id} value={m.id}>{m.username}</option>
-                                ))}
-                              <option value="__skip__">Pular jogador</option>
-                            </select>
+                              <SelectTrigger className="h-7 w-44 text-xs" aria-label={`Jogador para ${player.rawName}`}>
+                                <SelectValue placeholder="Selecionar jogador..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectGroup>
+                                  {members
+                                    .filter(m => !assignedUserIds.has(m.id))
+                                    .map(m => (
+                                      <SelectItem key={m.id} value={String(m.id)}>{m.username}</SelectItem>
+                                    ))}
+                                  <SelectItem value="__skip__">Ignorar jogador</SelectItem>
+                                </SelectGroup>
+                              </SelectContent>
+                            </Select>
                           </span>
                         )}
                       </div>
@@ -230,21 +241,20 @@ export default function ImportFromMessageModal({ daily, onClose, onSuccess }: Pr
                 </div>
               ))}
 
-              {/* Match results */}
               <div>
-                <p className="text-sm font-semibold mb-2">Resultados</p>
+                <p className="mb-2 text-sm font-semibold">Resultados</p>
                 {parsedMatches.length > 0 ? (
                   <div className="flex flex-wrap gap-2">
                     {parsedMatches.map((m, i) => (
-                      <span key={i} className="text-xs bg-muted rounded-full px-3 py-1 font-medium">
+                      <Badge key={`${i}-${m.team1ColorName}-${m.team2ColorName}`} variant="secondary">
                         {m.team1ColorName} {m.team1Score} × {m.team2Score} {m.team2ColorName}
-                      </span>
+                      </Badge>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-xs text-muted-foreground flex items-center gap-1.5">
-                    <AlertTriangle className="h-3.5 w-3.5 text-orange-500 flex-shrink-0" />
-                    Nenhum resultado encontrado na mensagem. Você pode inserir os resultados manualmente depois.
+                  <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <AlertTriangle className="size-3.5 shrink-0" />
+                    Nenhum resultado encontrado na mensagem. Você pode lançar os resultados depois.
                   </p>
                 )}
               </div>
@@ -252,8 +262,7 @@ export default function ImportFromMessageModal({ daily, onClose, onSuccess }: Pr
           )}
         </div>
 
-        {/* Footer */}
-        <div className="px-5 py-4 border-t border-border flex justify-between gap-2">
+        <DialogFooter className="gap-2 sm:justify-between">
           <div>
             {step === 2 && (
               <Button variant="outline" onClick={() => setStep(1)}>
@@ -262,23 +271,19 @@ export default function ImportFromMessageModal({ daily, onClose, onSuccess }: Pr
             )}
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={onClose}>Cancelar</Button>
+            <Button variant="outline" onClick={onClose} disabled={loading}>Cancelar</Button>
             {step === 1 ? (
               <Button variant="gradient" onClick={handleAnalyze} disabled={!text.trim()}>
-                Analisar Mensagem
+                Analisar mensagem
               </Button>
             ) : (
-              <Button
-                variant="gradient"
-                onClick={handleImport}
-                disabled={!allResolved || loading}
-              >
-                {loading ? 'Importando...' : 'Confirmar e Importar'}
+              <Button variant="gradient" onClick={handleImport} disabled={!allResolved || loading}>
+                {loading ? 'Importando...' : 'Confirmar e importar'}
               </Button>
             )}
           </div>
-        </div>
-      </div>
-    </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }

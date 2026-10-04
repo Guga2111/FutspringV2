@@ -1,4 +1,4 @@
-import type { DailyDetail } from '../../types/daily'
+import type { DailyDetail } from '@/types/daily'
 import PlayerAvatar from './PlayerAvatar'
 import { Target, ThumbsDown, Brush, HandHelping } from 'lucide-react'
 

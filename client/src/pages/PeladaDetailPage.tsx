@@ -1,30 +1,25 @@
-import { lazy, Suspense, useState } from "react";
+import { lazy, Suspense, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { toast } from "sonner";
-import NavBar from "../components/NavBar";
-import {
-  removePlayer,
-  setAdmin,
-  deletePelada,
-} from "../api/peladas";
-import type { PeladaMember } from "../types/pelada";
-import { useAuth } from "../hooks/useAuth";
-import { getFileUrl } from "../lib/utils";
-import { usePeladaDetail } from "../components/pelada/hooks/usePeladaDetail";
-import EditPeladaModal from "../components/EditPeladaModal";
+import NavBar from "@/components/NavBar";
+import type { PeladaMember } from "@/types/pelada";
+import { useAuth } from "@/hooks/useAuth";
+import { Button } from "@/components/ui/button";
+import { usePeladaDetail } from "@/components/pelada/hooks/usePeladaDetail";
+import { usePeladaActions } from "@/components/pelada/hooks/usePeladaActions";
+import EditPeladaModal from "@/components/EditPeladaModal";
 import {
   Tabs,
   TabsList,
   TabsTrigger,
   TabsContent,
-} from "../components/ui/tabs";
+} from "@/components/ui/tabs";
 import { MessageCircle } from "lucide-react";
 import {
   Drawer,
   DrawerContent,
   DrawerHeader,
   DrawerTitle,
-} from "../components/ui/drawer";
+} from "@/components/ui/drawer";
 import { SessionsTable } from "@/components/pelada/SessionTable";
 import { MembersTable } from "@/components/pelada/MembersTable";
 import { RankingTable } from "@/components/pelada/RankingTable";
@@ -67,11 +62,8 @@ export default function PeladaDetailPage() {
   const [showAddPlayer, setShowAddPlayer] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [deleting, setDeleting] = useState(false);
   const [confirmRemoveMember, setConfirmRemoveMember] =
     useState<PeladaMember | null>(null);
-  const [removing, setRemoving] = useState(false);
-  const [togglingAdmin, setTogglingAdmin] = useState<number | null>(null);
   const [showCreateSession, setShowCreateSession] = useState(false);
   const [rankingSort, setRankingSort] = useState<{
     col: "goals" | "assists" | "matchesPlayed" | "wins";
@@ -99,10 +91,14 @@ export default function PeladaDetailPage() {
     );
   };
 
-  const sortedRanking = [...ranking].sort((a, b) => {
-    const diff = b[rankingSort.col] - a[rankingSort.col];
-    return rankingSort.dir === "desc" ? diff : -diff;
-  });
+  const sortedRanking = useMemo(
+    () =>
+      [...ranking].sort((a, b) => {
+        const diff = b[rankingSort.col] - a[rankingSort.col];
+        return rankingSort.dir === "desc" ? diff : -diff;
+      }),
+    [ranking, rankingSort],
+  );
 
   const isCurrentUserAdmin =
     pelada?.members.find((m) => m.id === currentUser?.id)?.isAdmin ?? false;
@@ -110,55 +106,16 @@ export default function PeladaDetailPage() {
   const isCurrentUserCreator =
     currentUser != null && creatorId === currentUser.id;
 
+  const { deleting, removing, togglingAdmin, removePeladaAndLeave, removeMember, toggleAdmin } =
+    usePeladaActions(pelada, refetchPelada);
+
   const handleDelete = async () => {
-    if (!pelada) return;
-    setDeleting(true);
-    try {
-      await deletePelada(pelada.id);
-      toast.success("Pelada deleted");
-      navigate("/home");
-    } catch (err: unknown) {
-      const e = err as { response?: { data?: { message?: string } } };
-      toast.error(e?.response?.data?.message ?? "Failed to delete pelada");
-      setDeleting(false);
-      setShowDeleteConfirm(false);
-    }
+    if (!(await removePeladaAndLeave())) setShowDeleteConfirm(false);
   };
 
   const handleRemoveConfirm = async () => {
-    if (!confirmRemoveMember || !pelada) return;
-    setRemoving(true);
-    try {
-      await removePlayer(pelada.id, confirmRemoveMember.id);
-      toast.success(`${confirmRemoveMember.username} removed from pelada`);
+    if (confirmRemoveMember && (await removeMember(confirmRemoveMember))) {
       setConfirmRemoveMember(null);
-      refetchPelada();
-    } catch (err: unknown) {
-      const e = err as { response?: { data?: { message?: string } } };
-      toast.error(e?.response?.data?.message ?? "Failed to remove player");
-    } finally {
-      setRemoving(false);
-    }
-  };
-
-  const handleToggleAdmin = async (member: PeladaMember) => {
-    if (!pelada) return;
-    setTogglingAdmin(member.id);
-    try {
-      await setAdmin(pelada.id, member.id, !member.isAdmin);
-      toast.success(
-        member.isAdmin
-          ? `${member.username} is no longer an admin`
-          : `${member.username} is now an admin`,
-      );
-      refetchPelada();
-    } catch (err: unknown) {
-      const e = err as { response?: { data?: { message?: string } } };
-      toast.error(
-        e?.response?.data?.message ?? "Failed to update admin status",
-      );
-    } finally {
-      setTogglingAdmin(null);
     }
   };
 
@@ -170,9 +127,9 @@ export default function PeladaDetailPage() {
       ) : accessDenied ? (
         <div className="flex flex-col items-center justify-center py-24 text-center">
           <span className="text-5xl mb-4">🚫</span>
-          <h2 className="text-xl font-semibold mb-2">Acesso Negado</h2>
+          <h2 className="text-xl font-semibold mb-2">Acesso negado</h2>
           <p className="text-muted-foreground">
-            Você não faz parte dessa pelada.
+            Você não faz parte desta pelada.
           </p>
         </div>
       ) : pelada ? (
@@ -184,7 +141,6 @@ export default function PeladaDetailPage() {
             isCurrentUserCreator={isCurrentUserCreator}
             onEdit={() => setShowEdit(true)}
             onDelete={() => setShowDeleteConfirm(true)}
-            getFileUrl={getFileUrl}
           />
 
           <div className="container max-w-6xl mx-auto px-4 py-6 flex gap-6">
@@ -225,7 +181,7 @@ export default function PeladaDetailPage() {
                     isCurrentUserAdmin={isCurrentUserAdmin}
                     togglingAdmin={togglingAdmin}
                     onAddPlayer={() => setShowAddPlayer(true)}
-                    onToggleAdmin={handleToggleAdmin}
+                    onToggleAdmin={toggleAdmin}
                     onRemoveMember={setConfirmRemoveMember}
                   />
                 </TabsContent>
@@ -250,8 +206,7 @@ export default function PeladaDetailPage() {
                     <RankingCommandButton
                       peladaId={pelada.id}
                       members={pelada.members}
-                      getFileUrl={getFileUrl}
-                      isAdmin={isCurrentUserAdmin}
+                                isAdmin={isCurrentUserAdmin}
                       onCreateSession={() => setShowCreateSession(true)}
                       onAddPlayer={() => setShowAddPlayer(true)}
                       onRemovePlayer={setConfirmRemoveMember}
@@ -263,8 +218,7 @@ export default function PeladaDetailPage() {
                     isLoading={rankingLoading}
                     sortConfig={rankingSort}
                     onSort={handleRankingSort}
-                    getFileUrl={getFileUrl}
-                    onOpenHistory={openPlayerHistory}
+                            onOpenHistory={openPlayerHistory}
                   />
                 </TabsContent>
 
@@ -288,13 +242,15 @@ export default function PeladaDetailPage() {
           </div>
 
           {/* Mobile floating chat button */}
-          <button
-            aria-label="Open chat"
-            className="fixed bottom-6 right-6 z-40 lg:hidden p-3 rounded-full bg-green-600 text-white shadow-lg hover:bg-green-500 transition-colors"
+          <Button
+            variant="gradient"
+            size="icon"
+            aria-label="Abrir chat"
+            className="fixed bottom-6 right-6 z-40 size-12 shadow-lg lg:hidden"
             onClick={() => setShowMobileChat((v) => !v)}
           >
-            <MessageCircle className="h-6 w-6" />
-          </button>
+            <MessageCircle className="size-6" />
+          </Button>
 
           {/* Mobile chat drawer */}
           <Drawer open={showMobileChat} onOpenChange={setShowMobileChat}>
@@ -360,6 +316,7 @@ export default function PeladaDetailPage() {
       {showCreateSession && pelada && (
         <CreateSessionDialog
           peladaId={pelada.id}
+          defaultTime={pelada.timeOfDay}
           onClose={() => setShowCreateSession(false)}
           onCreated={refetchDailies}
         />

@@ -1,108 +1,36 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { toast } from 'sonner'
-import NavBar from '../components/NavBar'
-import { getUserStats, getUser, getUserMatchHistory, getUserStatsTimeline } from '../api/users'
-import { getPeladaInitials, getPeladaGradient, getFileUrl } from '../lib/utils'
-import { getMyPeladas, getPelada } from '../api/peladas'
-import { useAuth } from '../hooks/useAuth'
-import type { StatsDTO } from '../types/stats'
-import type { ProfileDTO } from '../types/user'
-import type { PeladaResponse } from '../types/pelada'
-import type { TimelinePoint, MatchHistoryRow } from '../types/stats'
-import { Skeleton } from '../components/ui/skeleton'
-import { Separator } from '../components/ui/separator'
+import NavBar from '@/components/NavBar'
+import { getInitials, getPeladaGradient, getFileUrl } from '@/lib/utils'
+import { useAuth } from '@/hooks/useAuth'
+import { getPositionLabel } from '@/types/user'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Skeleton } from '@/components/ui/skeleton'
+import { useProfile } from '@/components/profile/hooks/useProfile'
+import { Separator } from '@/components/ui/separator'
 import { Target, Handshake, CalendarDays, Trophy, TrendingUp, Medal, Star, Swords, Award, Zap } from 'lucide-react'
-import KpiCard from '../components/profile/KpiCard'
-import ProfilePieChart from '../components/profile/ProfilePieChart'
-import StatsOverTimeChart from '../components/profile/StatsOverTimeChart'
-import MatchHistoryTable from '../components/profile/MatchHistoryTable'
-import EditProfileModal from '../components/profile/EditProfileModal'
-import { Stars, ProfileSkeleton } from '../components/profile'
-
-const POSITION_COLORS: Record<string, string> = {
-  GOALKEEPER: 'bg-green-100 text-green-800',
-  DEFENDER: 'bg-blue-100 text-blue-800',
-  MIDFIELDER: 'bg-yellow-100 text-yellow-800',
-  FORWARD: 'bg-red-100 text-red-800',
-}
-
-const POSITION_LABELS: Record<string, string> = {
-  GOALKEEPER: 'GK',
-  DEFENDER: 'DEF',
-  MIDFIELDER: 'MID',
-  FORWARD: 'FWD',
-}
+import KpiCard from '@/components/profile/KpiCard'
+import ProfilePieChart from '@/components/profile/ProfilePieChart'
+import StatsOverTimeChart from '@/components/profile/StatsOverTimeChart'
+import MatchHistoryTable from '@/components/profile/MatchHistoryTable'
+import EditProfileModal from '@/components/profile/EditProfileModal'
+import { Stars, ProfileSkeleton } from '@/components/profile'
 
 export default function ProfilePage() {
   const { id } = useParams<{ id: string }>()
   const { user: currentUser } = useAuth()
-  const [profile, setProfile] = useState<ProfileDTO | null>(null)
-  const [stats, setStats] = useState<StatsDTO | null>(null)
-  const [loading, setLoading] = useState(true)
+  const userId = Number(id)
   const [editOpen, setEditOpen] = useState(false)
-  const [profilePeladas, setProfilePeladas] = useState<PeladaResponse[]>([])
-  const [peladasLoading, setPeladasLoading] = useState(true)
-  const [timelinePoints, setTimelinePoints] = useState<TimelinePoint[]>([])
-  const [timelineLoading, setTimelineLoading] = useState(true)
-  const [matchHistory, setMatchHistory] = useState<MatchHistoryRow[]>([])
-  const [matchHistoryLoading, setMatchHistoryLoading] = useState(true)
+  const {
+    status, profile, stats, setProfile,
+    peladas: profilePeladas, peladasLoading,
+    timelinePoints, timelineLoading,
+    matchHistory, matchHistoryLoading,
+  } = useProfile(userId)
 
-  useEffect(() => {
-    if (!id) return
-    const userId = Number(id)
-    Promise.all([getUser(userId), getUserStats(userId)])
-      .then(([profileData, statsData]) => {
-        setProfile(profileData)
-        setStats(statsData)
-      })
-      .catch(() => toast.error('Failed to load profile'))
-      .finally(() => setLoading(false))
-  }, [id])
-
-  useEffect(() => {
-    if (!id) return
-    const userId = Number(id)
-    setPeladasLoading(true)
-    getMyPeladas()
-      .then((myPeladas) =>
-        Promise.all(myPeladas.map((p) => getPelada(p.id))).then((details) =>
-          details
-            .filter((d) => d.members.some((m) => m.id === userId))
-            .map((d) => myPeladas.find((p) => p.id === d.id)!)
-        )
-      )
-      .then(setProfilePeladas)
-      .catch(() => toast.error('Failed to load peladas'))
-      .finally(() => setPeladasLoading(false))
-  }, [id])
-
-  useEffect(() => {
-    if (!id) return
-    const userId = Number(id)
-    setTimelineLoading(true)
-    const today = new Date()
-    const to = today.toISOString().slice(0, 10)
-    const fromDate = new Date(today)
-    fromDate.setMonth(fromDate.getMonth() - 3)
-    const from = fromDate.toISOString().slice(0, 10)
-    getUserStatsTimeline(userId, from, to)
-      .then((data) => setTimelinePoints(data.points))
-      .catch(() => toast.error('Failed to load stats timeline'))
-      .finally(() => setTimelineLoading(false))
-  }, [id])
-
-  useEffect(() => {
-    if (!id) return
-    const userId = Number(id)
-    setMatchHistoryLoading(true)
-    getUserMatchHistory(userId)
-      .then((data) => setMatchHistory(data.rows))
-      .catch(() => toast.error('Failed to load match history'))
-      .finally(() => setMatchHistoryLoading(false))
-  }, [id])
-
-  if (loading) {
+  if (status === 'loading') {
     return (
       <>
         <NavBar />
@@ -112,26 +40,24 @@ export default function ProfilePage() {
   }
 
   if (!profile || !stats) {
+    const message = status === 'forbidden'
+      ? 'Você só pode ver o perfil de jogadores das suas peladas.'
+      : status === 'notFound'
+        ? 'Perfil não encontrado.'
+        : 'Não foi possível carregar o perfil.'
     return (
       <>
         <NavBar />
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <p className="text-muted-foreground">Perfil não encontrado.</p>
+        <div className="flex items-center justify-center min-h-[60vh] px-4 text-center">
+          <p className="text-muted-foreground">{message}</p>
         </div>
       </>
     )
   }
 
   const isOwnProfile = currentUser?.id === profile.id
-  const avatarUrl = profile.image ? getFileUrl(profile.image)! : null
-  const bgUrl = profile.backgroundImage ? getFileUrl(profile.backgroundImage)! : null
-
-  const initials = profile.username
-    .split(' ')
-    .map((w) => w[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2)
+  const bgUrl = getFileUrl(profile.backgroundImage)
+  const positionLabel = getPositionLabel(profile.position)
 
   return (
     <div className="page-enter">
@@ -148,37 +74,21 @@ export default function ProfilePage() {
       <div className="max-w-5xl mx-auto px-4 sm:px-6">
         {/* Avatar + name row */}
         <div className={`flex items-end gap-4 mb-6 ${bgUrl ? '-mt-12' : 'mt-6'}`}>
-          {avatarUrl ? (
-            <img
-              src={avatarUrl}
-              alt={profile.username}
-              className="h-24 w-24 rounded-full border-4 border-background object-cover"
-            />
-          ) : (
-            <div className="h-24 w-24 rounded-full border-4 border-background bg-muted flex items-center justify-center text-xl font-bold">
-              {initials}
-            </div>
-          )}
+          <Avatar className="size-24 border-4 border-background">
+            <AvatarImage src={getFileUrl(profile.image)} alt={profile.username} className="object-cover" />
+            <AvatarFallback className="text-xl font-bold">{getInitials(profile.username)}</AvatarFallback>
+          </Avatar>
           <div className="flex-1 pb-2">
             <div className="flex items-center gap-3 flex-wrap">
               <h1 className="text-2xl font-bold">{profile.username}</h1>
               {isOwnProfile && (
-                <button
-                  onClick={() => setEditOpen(true)}
-                  className="text-sm px-3 py-1 border rounded-full hover:bg-muted transition-colors"
-                >
-                  Editar Perfil
-                </button>
+                <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
+                  Editar perfil
+                </Button>
               )}
             </div>
             <div className="flex items-center gap-3 mt-1 flex-wrap">
-              {profile.position && (
-                <span
-                  className={`text-xs font-semibold px-2 py-0.5 rounded ${POSITION_COLORS[profile.position] ?? 'bg-muted text-muted-foreground'}`}
-                >
-                  {POSITION_LABELS[profile.position] ?? profile.position}
-                </span>
-              )}
+              {positionLabel && <Badge variant="secondary">{positionLabel}</Badge>}
               <Stars count={profile.stars} />
             </div>
           </div>
@@ -204,7 +114,7 @@ export default function ProfilePage() {
                   <KpiCard label="Vitórias" value={wins} icon={<Swords className="w-5 h-5 text-red-400" />} />
                   <KpiCard label="Partidas" value={matches} icon={<CalendarDays className="w-5 h-5 text-orange-400" />} />
                   <KpiCard label="% Vitória" value={winPct} icon={<TrendingUp className="w-5 h-5 text-green-500" />} />
-                  <KpiCard label="Campeão" value={stats.wins} icon={<Trophy className="w-5 h-5 text-yellow-400" />} />
+                  <KpiCard label="Campeão" value={stats.wins} icon={<Trophy className="w-5 h-5 text-gold" />} />
                   <KpiCard label="Sessões" value={sessions} icon={<Star className="w-5 h-5 text-purple-400" />} />
                   <KpiCard label="Aproveitamento" value={champPct} icon={<TrendingUp className="w-5 h-5 text-green-400" />} />
                 </div>
@@ -226,10 +136,10 @@ export default function ProfilePage() {
           <h2 className="text-xl font-semibold mb-4">Prêmios</h2>
           <Separator className="mb-6" />
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <KpiCard label="Witball" value={stats.wiltballWins ?? 0} icon={<Medal className="w-5 h-5 text-yellow-500" />} />
+            <KpiCard label="Bola Murcha" value={stats.wiltballWins ?? 0} icon={<Medal className="w-5 h-5 text-gold" />} />
             <KpiCard label="Artilheiro" value={stats.artilheiroWins ?? 0} icon={<Target className="w-5 h-5 text-red-500" />} />
             <KpiCard label="Garçom" value={stats.garcomWins ?? 0} icon={<Handshake className="w-5 h-5 text-blue-500" />} />
-            <KpiCard label="Puskas" value={stats.puskasDates?.length ?? 0} icon={<Award className="w-5 h-5 text-orange-500" />} />
+            <KpiCard label="Puskás" value={stats.puskasDates?.length ?? 0} icon={<Award className="w-5 h-5 text-orange-500" />} />
           </div>
         </section>
 
@@ -247,7 +157,7 @@ export default function ProfilePage() {
 
         {/* Peladas section */}
         <section className="mb-10">
-          <h2 className="text-xl font-semibold mb-4">Peladas</h2>
+          <h2 className="text-xl font-semibold mb-4">{isOwnProfile ? 'Peladas' : 'Peladas em comum'}</h2>
           <Separator className="mb-6" />
           {peladasLoading ? (
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -261,7 +171,9 @@ export default function ProfilePage() {
               ))}
             </div>
           ) : profilePeladas.length === 0 ? (
-            <p className="text-muted-foreground text-sm">Ainda não está em nenhuma pelada.</p>
+            <p className="text-muted-foreground text-sm">
+              {isOwnProfile ? 'Você ainda não está em nenhuma pelada.' : 'Vocês não têm peladas em comum.'}
+            </p>
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               {profilePeladas.map((pelada) => (
@@ -279,7 +191,7 @@ export default function ProfilePage() {
                   ) : (
                     <div className={`h-28 ${getPeladaGradient(pelada.name)} flex items-center justify-center`}>
                       <span className="text-2xl font-extrabold text-white tracking-wide select-none">
-                        {getPeladaInitials(pelada.name)}
+                        {getInitials(pelada.name)}
                       </span>
                     </div>
                   )}
@@ -304,7 +216,7 @@ export default function ProfilePage() {
         <EditProfileModal
           profile={profile}
           onClose={() => setEditOpen(false)}
-          onProfileUpdated={(updated) => setProfile(updated)}
+          onProfileUpdated={setProfile}
         />
       )}
     </div>

@@ -1,6 +1,7 @@
+import { dayOfWeekLabel } from "@/lib/constants"
 import { Calendar, Clock, MapPin, Bookmark, Pencil, Trash2 } from "lucide-react";
-import { getPeladaInitials, getPeladaGradient } from "../../lib/utils";
-import type { PeladaDetail } from "../../types/pelada";
+import { getInitials, getPeladaGradient, getFileUrl } from "@/lib/utils";
+import type { PeladaDetail } from "@/types/pelada";
 
 interface PeladaBannerProps {
   pelada: PeladaDetail;
@@ -8,7 +9,6 @@ interface PeladaBannerProps {
   isCurrentUserCreator: boolean;
   onEdit: () => void;
   onDelete: () => void;
-  getFileUrl: (path: string | null | undefined) => string | undefined;
 }
 
 export function PeladaBanner({
@@ -17,7 +17,6 @@ export function PeladaBanner({
   isCurrentUserCreator,
   onEdit,
   onDelete,
-  getFileUrl,
 }: PeladaBannerProps) {
   return (
     <div className="relative h-72">
@@ -32,7 +31,7 @@ export function PeladaBanner({
           className={`h-full w-full ${getPeladaGradient(pelada.name)} flex items-center justify-center`}
         >
           <span className="text-6xl font-extrabold text-white tracking-wide select-none">
-            {getPeladaInitials(pelada.name)}
+            {getInitials(pelada.name)}
           </span>
         </div>
       )}
@@ -47,7 +46,7 @@ export function PeladaBanner({
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-white/80">
           <span className="flex items-center gap-1">
             <Calendar className="h-3.5 w-3.5 shrink-0" />
-            {pelada.dayOfWeek}
+            {dayOfWeekLabel(pelada.dayOfWeek)}
           </span>
           <span className="flex items-center gap-1">
             <Clock className="h-3.5 w-3.5 shrink-0" />

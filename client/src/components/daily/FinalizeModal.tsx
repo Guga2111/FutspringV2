@@ -1,9 +1,20 @@
-import { useState } from 'react'
-import { toast } from 'sonner'
-import type { DailyDetail } from '../../types/daily'
-import { finalizeDaily } from '../../api/dailies'
-import { Button } from '../ui/button'
-import { usePlayerSelection } from './hooks/usePlayerSelection'
+import { useMemo, useState } from "react"
+import { toast } from "sonner"
+import type { DailyDetail, PlayerDTO } from "@/types/daily"
+import { finalizeDaily } from "@/api/dailies"
+import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Field, FieldLabel, FieldLegend, FieldSet } from "@/components/ui/field"
+import { getErrorMessage } from "@/lib/errors"
+import { usePlayerSelection } from "@/components/daily/hooks/usePlayerSelection"
 
 interface FinalizeModalProps {
   daily: DailyDetail
@@ -12,31 +23,42 @@ interface FinalizeModalProps {
 }
 
 function PlayerCheckboxList({
+  name,
+  legend,
   players,
   selected,
   toggle,
 }: {
-  players: DailyDetail['confirmedPlayers']
+  name: string
+  legend: string
+  players: PlayerDTO[]
   selected: number[]
   toggle: (id: number) => void
 }) {
   return (
-    <div className="max-h-48 overflow-y-auto rounded-md border border-border divide-y divide-border">
-      {players.map(p => (
-        <label
-          key={p.id}
-          className="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-muted/50 select-none"
-        >
-          <input
-            type="checkbox"
-            className="accent-primary h-4 w-4 flex-shrink-0"
-            checked={selected.includes(p.id)}
-            onChange={() => toggle(p.id)}
-          />
-          <span className="text-sm">{p.username}</span>
-        </label>
-      ))}
-    </div>
+    <FieldSet className="gap-1.5">
+      <FieldLegend variant="label" className="mb-1.5">
+        {legend}
+        {selected.length > 0 && (
+          <span className="ml-2 text-xs font-normal text-muted-foreground">
+            ({selected.length} selecionado{selected.length > 1 ? "s" : ""})
+          </span>
+        )}
+      </FieldLegend>
+      <div className="max-h-48 divide-y divide-border overflow-y-auto rounded-md border border-border">
+        {players.map((p) => {
+          const id = `${name}-${p.id}`
+          return (
+            <Field key={p.id} orientation="horizontal" className="px-3 py-2 hover:bg-muted/50">
+              <Checkbox id={id} checked={selected.includes(p.id)} onCheckedChange={() => toggle(p.id)} />
+              <FieldLabel htmlFor={id} className="cursor-pointer font-normal">
+                {p.username}
+              </FieldLabel>
+            </Field>
+          )
+        })}
+      </div>
+    </FieldSet>
   )
 }
 
@@ -44,80 +66,54 @@ export default function FinalizeModal({ daily, onClose, onSuccess }: FinalizeMod
   const puskas = usePlayerSelection()
   const wiltball = usePlayerSelection()
   const [loading, setLoading] = useState(false)
+  // Awards go to players on the teams (the backend's session players), not the confirmed list
+  const sessionPlayers = useMemo(() => daily.teams.flatMap((t) => t.players), [daily.teams])
 
   async function handleSubmit() {
     setLoading(true)
     try {
       const updated = await finalizeDaily(daily.id, puskas.selected, wiltball.selected)
-      toast.success('Diária Finalizada')
+      toast.success("Sessão finalizada")
       onSuccess(updated)
-    } catch (err: unknown) {
-      const e = err as { response?: { data?: { message?: string } } }
-      toast.error(e?.response?.data?.message ?? 'Falha ao finalizar diária')
+    } catch (error) {
+      toast.error(getErrorMessage(error, "Não foi possível finalizar a sessão"))
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-      <div className="bg-background rounded-lg shadow-lg w-full max-w-md">
-        <div className="flex items-center justify-between p-4 border-b">
-          <h2 className="text-lg font-semibold">Finalizar Diária</h2>
-          <button
-            aria-label="Close"
-            className="text-muted-foreground hover:text-foreground text-xl leading-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-full"
-            onClick={onClose}
-          >
-            ×
-          </button>
+    <Dialog open onOpenChange={(open) => !open && !loading && onClose()}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Finalizar sessão</DialogTitle>
+          <DialogDescription>Escolha os premiados; as estatísticas e o ranking serão calculados.</DialogDescription>
+        </DialogHeader>
+        <div className="flex flex-col gap-4">
+          <PlayerCheckboxList
+            name="puskas"
+            legend="Puskás"
+            players={sessionPlayers}
+            selected={puskas.selected}
+            toggle={puskas.toggle}
+          />
+          <PlayerCheckboxList
+            name="bola-murcha"
+            legend="Bola Murcha"
+            players={sessionPlayers}
+            selected={wiltball.selected}
+            toggle={wiltball.toggle}
+          />
         </div>
-        <div className="p-4 space-y-4">
-          <p className="text-sm text-muted-foreground">
-            Selecione os premiados e compute as estatísticas.
-          </p>
-
-          <div>
-            <label className="text-sm font-medium block mb-1.5">
-              Puskas
-              {puskas.selected.length > 0 && (
-                <span className="ml-2 text-xs text-muted-foreground font-normal">
-                  ({puskas.selected.length} selecionado{puskas.selected.length > 1 ? 's' : ''})
-                </span>
-              )}
-            </label>
-            <PlayerCheckboxList
-              players={daily.confirmedPlayers}
-              selected={puskas.selected}
-              toggle={puskas.toggle}
-            />
-          </div>
-
-          <div>
-            <label className="text-sm font-medium block mb-1.5">
-              Bola Murcha
-              {wiltball.selected.length > 0 && (
-                <span className="ml-2 text-xs text-muted-foreground font-normal">
-                  ({wiltball.selected.length} selecionado{wiltball.selected.length > 1 ? 's' : ''})
-                </span>
-              )}
-            </label>
-            <PlayerCheckboxList
-              players={daily.confirmedPlayers}
-              selected={wiltball.selected}
-              toggle={wiltball.toggle}
-            />
-          </div>
-        </div>
-        <div className="flex justify-end gap-3 p-4 border-t">
+        <DialogFooter className="gap-2">
           <Button variant="outline" disabled={loading} onClick={onClose}>
             Cancelar
           </Button>
           <Button variant="gradient" disabled={loading} onClick={handleSubmit}>
-            {loading ? 'Finalizando...' : 'Finalizar'}
+            {loading ? "Finalizando..." : "Finalizar"}
           </Button>
-        </div>
-      </div>
-    </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }

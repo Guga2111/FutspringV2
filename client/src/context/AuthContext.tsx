@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import type { ReactNode } from "react"
-import type { UserResponseDTO } from "../types/auth"
-import apiClient from "../api/client"
+import type { UserResponseDTO } from "@/types/auth"
+import apiClient from "@/api/client"
 import { AuthContext } from "./auth-context-value"
 
 const TOKEN_KEY = "futspring_token"
@@ -41,7 +41,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const responseInterceptor = apiClient.interceptors.response.use(
       (response) => response,
       (error) => {
-        if (error.response?.status === 401) {
+        // A 401 from login/register is a wrong password or similar, shown by the form, not an expired session
+        const isAuthRequest = error.config?.url?.startsWith("/api/v1/auth/")
+        if (error.response?.status === 401 && !isAuthRequest) {
           logout()
           window.location.href = "/auth"
         }

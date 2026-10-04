@@ -1,6 +1,7 @@
 import apiClient from "./client"
-import type { StatsDTO, UserStatsTimelineDTO, UserMatchHistoryDTO } from "../types/stats"
-import type { ProfileDTO } from "../types/user"
+import type { StatsDTO, UserStatsTimelineDTO, UserMatchHistoryDTO } from "@/types/stats"
+import type { PeladaResponse } from "@/types/pelada"
+import type { ProfileDTO } from "@/types/user"
 
 export async function getUserStats(userId: number): Promise<StatsDTO> {
   const response = await apiClient.get<StatsDTO>(`/api/v1/users/${userId}/stats`)
@@ -53,5 +54,11 @@ export async function getUserMatchHistory(userId: number): Promise<UserMatchHist
   const response = await apiClient.get<UserMatchHistoryDTO>(
     `/api/v1/users/${userId}/stats/matches`,
   )
+  return response.data
+}
+
+// Peladas that the current user and userId both belong to
+export async function getUserPeladas(userId: number): Promise<PeladaResponse[]> {
+  const response = await apiClient.get<PeladaResponse[]>(`/api/v1/users/${userId}/peladas`)
   return response.data
 }
