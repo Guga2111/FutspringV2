@@ -189,6 +189,49 @@ class PeladaControllerTest extends BaseIntegrationTest {
                 .andExpect(jsonPath("$").isArray());
     }
 
+    // --- GET /api/v1/peladas/{id}/members/{userId}/history ---
+
+    @Test
+    void getPlayerHistory_asMember() throws Exception {
+        mockMvc.perform(get("/api/v1/peladas/" + pelada.getId() + "/members/" + admin.getId() + "/history")
+                .header("Authorization", bearerToken(member.getId(), member.getEmail())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.userId").value(admin.getId()))
+                .andExpect(jsonPath("$.rows").isArray());
+    }
+
+    @Test
+    void getPlayerHistory_withLimit() throws Exception {
+        mockMvc.perform(get("/api/v1/peladas/" + pelada.getId() + "/members/" + admin.getId() + "/history")
+                .param("limit", "5")
+                .header("Authorization", bearerToken(member.getId(), member.getEmail())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalSessions").value(0))
+                .andExpect(jsonPath("$.rows").isArray());
+    }
+
+    @Test
+    void getPlayerHistory_invalidLimit() throws Exception {
+        mockMvc.perform(get("/api/v1/peladas/" + pelada.getId() + "/members/" + admin.getId() + "/history")
+                .param("limit", "0")
+                .header("Authorization", bearerToken(member.getId(), member.getEmail())))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void getPlayerHistory_asOutsider() throws Exception {
+        mockMvc.perform(get("/api/v1/peladas/" + pelada.getId() + "/members/" + admin.getId() + "/history")
+                .header("Authorization", bearerToken(outsider.getId(), outsider.getEmail())))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void getPlayerHistory_targetNotMember() throws Exception {
+        mockMvc.perform(get("/api/v1/peladas/" + pelada.getId() + "/members/" + outsider.getId() + "/history")
+                .header("Authorization", bearerToken(member.getId(), member.getEmail())))
+                .andExpect(status().isNotFound());
+    }
+
     // --- GET /api/v1/peladas/{id}/awards ---
 
     @Test

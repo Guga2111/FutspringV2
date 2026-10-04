@@ -8,6 +8,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.test.context.TestPropertySource;
 
 import java.time.LocalDate;
@@ -161,6 +163,48 @@ class UserDailyStatsRepositoryTest {
     void countSessionWinsByUserAndPelada_returnsCorrectCount() {
         long count = userDailyStatsRepository.countSessionWinsByUserAndPelada(player, pelada);
         assertThat(count).isEqualTo(2);
+    }
+
+    // --- findHistoryByUserAndPelada ---
+
+    @Test
+    void findHistoryByUserAndPelada_onlyThatPelada_newestFirst() {
+        User creator = userRepository.save(User.builder()
+                .email("other-creator@example.com").username("other").password("hash").build());
+        Pelada otherPelada = peladaRepository.save(Pelada.builder()
+                .name("Outra").dayOfWeek("MONDAY").timeOfDay("20:00").duration(1f)
+                .creator(creator).build());
+        Daily otherDaily = dailyRepository.save(Daily.builder()
+                .pelada(otherPelada).dailyDate(LocalDate.of(2024, 4, 1)).dailyTime("20:00").build());
+        userDailyStatsRepository.save(UserDailyStats.builder()
+                .daily(otherDaily).user(player).goals(9).build());
+
+        List<UserDailyStats> result = userDailyStatsRepository
+                .findHistoryByUserAndPelada(player.getId(), pelada.getId(), Pageable.unpaged());
+
+        assertThat(result).hasSize(3);
+        assertThat(result).extracting(uds -> uds.getDaily().getId())
+                .containsExactly(daily3.getId(), daily2.getId(), daily1.getId());
+        assertThat(userDailyStatsRepository.countHistoryByUserAndPelada(player.getId(), pelada.getId()))
+                .isEqualTo(3);
+    }
+
+    @Test
+    void findHistoryByUserAndPelada_withLimit_returnsMostRecent() {
+        List<UserDailyStats> result = userDailyStatsRepository
+                .findHistoryByUserAndPelada(player.getId(), pelada.getId(), PageRequest.of(0, 2));
+
+        assertThat(result).extracting(uds -> uds.getDaily().getId())
+                .containsExactly(daily3.getId(), daily2.getId());
+    }
+
+    @Test
+    void findHistoryByUserAndPelada_otherUser_returnsEmpty() {
+        User newPlayer = userRepository.save(User.builder()
+                .email("nohistory@example.com").username("nohistory").password("hash").build());
+
+        assertThat(userDailyStatsRepository.findHistoryByUserAndPelada(newPlayer.getId(), pelada.getId(), Pageable.unpaged()))
+                .isEmpty();
     }
 
     @Test

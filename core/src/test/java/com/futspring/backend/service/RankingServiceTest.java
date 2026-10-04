@@ -1,10 +1,13 @@
 package com.futspring.backend.service;
 
+import com.futspring.backend.dto.PlayerPeladaHistoryDTO;
 import com.futspring.backend.dto.PlayerPeladaStatsDTO;
 import com.futspring.backend.dto.RankingDTO;
+import com.futspring.backend.entity.Daily;
 import com.futspring.backend.entity.Pelada;
 import com.futspring.backend.entity.Ranking;
 import com.futspring.backend.entity.User;
+import com.futspring.backend.entity.UserDailyStats;
 import com.futspring.backend.exception.AppException;
 import com.futspring.backend.helper.UserAuthenticationHelper;
 import com.futspring.backend.repository.DailyAwardRepository;
@@ -17,11 +20,15 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 
+import java.time.LocalDate;
 import java.util.*;
 
 import static org.assertj.core.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -292,5 +299,123 @@ class RankingServiceTest {
         assertThatThrownBy(() -> rankingService.getPlayerPeladaStats(10L, 999L, "admin@example.com"))
                 .isInstanceOf(AppException.class)
                 .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.NOT_FOUND));
+    }
+
+    @Test
+    void getPlayerPeladaStats_targetNotMember_throwsNotFound() {
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
+        when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
+        when(userRepository.findById(3L)).thenReturn(Optional.of(outsider));
+
+        assertThatThrownBy(() -> rankingService.getPlayerPeladaStats(10L, 3L, "admin@example.com"))
+                .isInstanceOf(AppException.class)
+                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.NOT_FOUND));
+        verifyNoInteractions(rankingRepository, dailyAwardRepository, userDailyStatsRepository);
+    }
+
+    // ── getPlayerPeladaHistory tests ────────────────────────────────────────────
+
+    @Test
+    void getPlayerPeladaHistory_mapsRowsInRepositoryOrder() {
+        Daily newer = Daily.builder().id(21L).pelada(pelada).dailyDate(LocalDate.of(2026, 9, 26)).build();
+        Daily older = Daily.builder().id(20L).pelada(pelada).dailyDate(LocalDate.of(2026, 9, 19)).build();
+        UserDailyStats newerStats = UserDailyStats.builder().id(2L).daily(newer).user(player)
+                .goals(2).assists(1).matchesPlayed(4).wins(3).wonSession(true).build();
+        UserDailyStats olderStats = UserDailyStats.builder().id(1L).daily(older).user(player)
+                .goals(0).assists(2).matchesPlayed(4).wins(1).wonSession(false).build();
+
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
+        when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
+        when(userDailyStatsRepository.findHistoryByUserAndPelada(2L, 10L, Pageable.unpaged())).thenReturn(List.of(newerStats, olderStats));
+
+        PlayerPeladaHistoryDTO result = rankingService.getPlayerPeladaHistory(10L, 2L, null, "admin@example.com");
+
+        assertThat(result.getUserId()).isEqualTo(2L);
+        assertThat(result.getTotalSessions()).isEqualTo(2);
+        assertThat(result.getRows()).hasSize(2);
+        PlayerPeladaHistoryDTO.Row first = result.getRows().get(0);
+        assertThat(first.getDailyId()).isEqualTo(21L);
+        assertThat(first.getDate()).isEqualTo(LocalDate.of(2026, 9, 26));
+        assertThat(first.getGoals()).isEqualTo(2);
+        assertThat(first.getAssists()).isEqualTo(1);
+        assertThat(first.getMatchesPlayed()).isEqualTo(4);
+        assertThat(first.getWins()).isEqualTo(3);
+        assertThat(first.isWonSession()).isTrue();
+        assertThat(result.getRows().get(1).getDailyId()).isEqualTo(20L);
+        assertThat(result.getRows().get(1).isWonSession()).isFalse();
+    }
+
+    @Test
+    void getPlayerPeladaHistory_noSessions_returnsEmptyRows() {
+        when(userAuthHelper.getAuthenticatedUser("player@example.com")).thenReturn(player);
+        when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
+        when(userDailyStatsRepository.findHistoryByUserAndPelada(1L, 10L, PageRequest.of(0, 5))).thenReturn(List.of());
+
+        PlayerPeladaHistoryDTO result = rankingService.getPlayerPeladaHistory(10L, 1L, 5, "player@example.com");
+
+        assertThat(result.getUserId()).isEqualTo(1L);
+        assertThat(result.getTotalSessions()).isZero();
+        assertThat(result.getRows()).isEmpty();
+        verify(userDailyStatsRepository, never()).countHistoryByUserAndPelada(anyLong(), anyLong());
+    }
+
+    @Test
+    void getPlayerPeladaHistory_peladaNotFound_throwsNotFound() {
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
+        when(peladaRepository.findById(999L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> rankingService.getPlayerPeladaHistory(999L, 2L, null, "admin@example.com"))
+                .isInstanceOf(AppException.class)
+                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.NOT_FOUND));
+    }
+
+    @Test
+    void getPlayerPeladaHistory_callerNotMember_throwsForbidden() {
+        when(userAuthHelper.getAuthenticatedUser("out@example.com")).thenReturn(outsider);
+        when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
+
+        assertThatThrownBy(() -> rankingService.getPlayerPeladaHistory(10L, 2L, null, "out@example.com"))
+                .isInstanceOf(AppException.class)
+                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.FORBIDDEN));
+        verifyNoInteractions(userDailyStatsRepository);
+    }
+
+    @Test
+    void getPlayerPeladaHistory_targetNotMember_throwsNotFound() {
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
+        when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
+
+        assertThatThrownBy(() -> rankingService.getPlayerPeladaHistory(10L, 3L, null, "admin@example.com"))
+                .isInstanceOf(AppException.class)
+                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.NOT_FOUND));
+        verifyNoInteractions(userDailyStatsRepository);
+    }
+
+    @Test
+    void getPlayerPeladaHistory_limitReached_countsAllSessions() {
+        Daily d1 = Daily.builder().id(31L).pelada(pelada).dailyDate(LocalDate.of(2026, 9, 26)).build();
+        Daily d2 = Daily.builder().id(30L).pelada(pelada).dailyDate(LocalDate.of(2026, 9, 19)).build();
+        UserDailyStats s1 = UserDailyStats.builder().id(11L).daily(d1).user(player).build();
+        UserDailyStats s2 = UserDailyStats.builder().id(10L).daily(d2).user(player).build();
+
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
+        when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
+        when(userDailyStatsRepository.findHistoryByUserAndPelada(2L, 10L, PageRequest.of(0, 2))).thenReturn(List.of(s1, s2));
+        when(userDailyStatsRepository.countHistoryByUserAndPelada(2L, 10L)).thenReturn(9L);
+
+        PlayerPeladaHistoryDTO result = rankingService.getPlayerPeladaHistory(10L, 2L, 2, "admin@example.com");
+
+        assertThat(result.getRows()).extracting(PlayerPeladaHistoryDTO.Row::getDailyId).containsExactly(31L, 30L);
+        assertThat(result.getTotalSessions()).isEqualTo(9);
+    }
+
+    @Test
+    void getPlayerPeladaHistory_limitOutOfRange_throwsBadRequest() {
+        for (int limit : new int[]{0, RankingService.MAX_HISTORY_LIMIT + 1}) {
+            assertThatThrownBy(() -> rankingService.getPlayerPeladaHistory(10L, 2L, limit, "admin@example.com"))
+                    .isInstanceOf(AppException.class)
+                    .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.BAD_REQUEST));
+        }
+        verifyNoInteractions(peladaRepository, userDailyStatsRepository);
     }
 }

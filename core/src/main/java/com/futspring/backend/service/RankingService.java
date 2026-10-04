@@ -1,5 +1,6 @@
 package com.futspring.backend.service;
 
+import com.futspring.backend.dto.PlayerPeladaHistoryDTO;
 import com.futspring.backend.dto.PlayerPeladaStatsDTO;
 import com.futspring.backend.dto.RankingDTO;
 import com.futspring.backend.entity.Pelada;
@@ -13,6 +14,8 @@ import com.futspring.backend.repository.RankingRepository;
 import com.futspring.backend.repository.UserDailyStatsRepository;
 import com.futspring.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -73,6 +76,10 @@ public class RankingService {
         User targetUser = userRepository.findById(userId)
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "User not found"));
 
+        if (!pelada.getMembers().contains(targetUser)) {
+            throw new AppException(HttpStatus.NOT_FOUND, "Jogador não encontrado nesta pelada");
+        }
+
         Ranking ranking = rankingRepository.findByPeladaAndUser(pelada, targetUser)
                 .orElse(null);
 
@@ -98,6 +105,56 @@ public class RankingService {
                 .garcomWins(garcomWins)
                 .puskasWins(puskasWins)
                 .bolaMurchaWins(bolaMurchaWins)
+                .build();
+    }
+
+    public static final int MAX_HISTORY_LIMIT = 100;
+
+    // limit = last N sessions (1..MAX_HISTORY_LIMIT); null = every session
+    @Transactional(readOnly = true)
+    public PlayerPeladaHistoryDTO getPlayerPeladaHistory(Long peladaId, Long userId, Integer limit, String callerEmail) {
+        if (limit != null && (limit < 1 || limit > MAX_HISTORY_LIMIT)) {
+            throw new AppException(HttpStatus.BAD_REQUEST,
+                    "O limite deve estar entre 1 e " + MAX_HISTORY_LIMIT);
+        }
+
+        User caller = userAuthHelper.getAuthenticatedUser(callerEmail);
+
+        Pelada pelada = peladaRepository.findById(peladaId)
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Pelada não encontrada"));
+
+        if (!pelada.getMembers().contains(caller)) {
+            throw new AppException(HttpStatus.FORBIDDEN, "Acesso negado: você não é membro desta pelada");
+        }
+
+        boolean targetIsMember = pelada.getMembers().stream()
+                .anyMatch(member -> member.getId().equals(userId));
+        if (!targetIsMember) {
+            throw new AppException(HttpStatus.NOT_FOUND, "Jogador não encontrado nesta pelada");
+        }
+
+        Pageable pageable = limit != null ? PageRequest.of(0, limit) : Pageable.unpaged();
+        List<PlayerPeladaHistoryDTO.Row> rows = userDailyStatsRepository
+                .findHistoryByUserAndPelada(userId, peladaId, pageable).stream()
+                .map(uds -> PlayerPeladaHistoryDTO.Row.builder()
+                        .dailyId(uds.getDaily().getId())
+                        .date(uds.getDaily().getDailyDate())
+                        .goals(uds.getGoals())
+                        .assists(uds.getAssists())
+                        .matchesPlayed(uds.getMatchesPlayed())
+                        .wins(uds.getWins())
+                        .wonSession(uds.isWonSession())
+                        .build())
+                .collect(Collectors.toList());
+
+        long totalSessions = limit != null && rows.size() == limit
+                ? userDailyStatsRepository.countHistoryByUserAndPelada(userId, peladaId)
+                : rows.size();
+
+        return PlayerPeladaHistoryDTO.builder()
+                .userId(userId)
+                .totalSessions(totalSessions)
+                .rows(rows)
                 .build();
     }
 }

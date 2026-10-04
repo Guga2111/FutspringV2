@@ -4,6 +4,7 @@ import com.futspring.backend.entity.Daily;
 import com.futspring.backend.entity.Pelada;
 import com.futspring.backend.entity.User;
 import com.futspring.backend.entity.UserDailyStats;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -84,9 +85,16 @@ public interface UserDailyStatsRepository extends JpaRepository<UserDailyStats, 
         """)
     List<Object[]> aggregateStatsByUsers(@Param("users") Collection<User> users);
 
-    @Query("SELECT usd FROM UserDailyStats
-     uds WHERE usd.user.id = :userId
-      AND uds.daily.pelada.id = :peladaId
-       ORDER BY uds.daily.dailyDate DESC")
-    List<UserDailyStats> findHistoryByUserAndPelada(@Param("userId") Long userId, @Param("peladaId") Long peladaId);
+    // Per-session history of one player in one pelada (newest first), daily fetched to avoid N+1.
+    // Pageable limits the rows (PageRequest.of(0, n) = last n sessions; Pageable.unpaged() = all)
+    @Query("""
+        SELECT uds FROM UserDailyStats uds
+        JOIN FETCH uds.daily d
+        WHERE uds.user.id = :userId AND d.pelada.id = :peladaId
+        ORDER BY d.dailyDate DESC, d.id DESC
+        """)
+    List<UserDailyStats> findHistoryByUserAndPelada(@Param("userId") Long userId, @Param("peladaId") Long peladaId, Pageable pageable);
+
+    @Query("SELECT COUNT(uds) FROM UserDailyStats uds WHERE uds.user.id = :userId AND uds.daily.pelada.id = :peladaId")
+    long countHistoryByUserAndPelada(@Param("userId") Long userId, @Param("peladaId") Long peladaId);
 }

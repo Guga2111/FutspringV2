@@ -6,6 +6,7 @@ import com.futspring.backend.dto.MessageDTO;
 import com.futspring.backend.dto.PeladaAwardsDTO;
 import com.futspring.backend.dto.PeladaDetailResponseDTO;
 import com.futspring.backend.dto.PeladaResponseDTO;
+import com.futspring.backend.dto.PlayerPeladaHistoryDTO;
 import com.futspring.backend.dto.PlayerPeladaStatsDTO;
 import com.futspring.backend.dto.RankingDTO;
 import com.futspring.backend.dto.SetAdminRequestDTO;
@@ -129,6 +130,17 @@ public class PeladaController {
     ) {
         String email = (String) authentication.getPrincipal();
         return ResponseEntity.ok(rankingService.getPlayerPeladaStats(id, userId, email));
+    }
+
+    @GetMapping("/{id}/members/{userId}/history")
+    public ResponseEntity<PlayerPeladaHistoryDTO> getPlayerPeladaHistory(
+            @PathVariable Long id,
+            @PathVariable Long userId,
+            @RequestParam(required = false) Integer limit,
+            Authentication authentication
+    ) {
+        String email = (String) authentication.getPrincipal();
+        return ResponseEntity.ok(rankingService.getPlayerPeladaHistory(id, userId, limit, email));
     }
 
     @GetMapping("/{id}/awards")
