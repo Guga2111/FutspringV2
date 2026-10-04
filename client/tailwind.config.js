@@ -69,6 +69,7 @@ export default {
   			},
   			silver: 'hsl(var(--silver))',
   			bronze: 'hsl(var(--bronze))',
+  			brand: 'hsl(var(--brand))',
   			success: {
   				DEFAULT: 'hsl(var(--success))',
   				strong: 'hsl(var(--success-strong))',

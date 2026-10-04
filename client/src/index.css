@@ -24,6 +24,8 @@
     --input: 214.3 31.8% 91.4%;
     --ring: 222.2 84% 4.9%;
     --radius: 0.5rem;
+    /* brand green (#149440): buttons, progress, checkbox, logo text */
+    --brand: 142 76% 33%;
     --chart-1: 142 72% 29%;
     --chart-2: 217 91% 60%;
     /* stars, trophies, crowns */
@@ -108,6 +110,7 @@
     --border: 0 0% 22%;
     --input: 0 0% 22%;
     --ring: 0 0% 68%;
+    --brand: 142 76% 33%;
     --chart-1: 142 69% 45%;
     --chart-2: 213 94% 68%;
     --gold: 45 93% 58%;
@@ -186,16 +189,16 @@
 }
 
 .checkbox-gradient {
-  border: 2px solid #15803d;
+  border: 2px solid hsl(var(--brand));
 }
 
 .checkbox-gradient[data-state=checked] {
-  background: linear-gradient(135deg, #15803d, #16a34a);
+  background: hsl(var(--brand));
   border-color: transparent;
 }
 
 .bg-gradient-primary {
-  background: linear-gradient(135deg, #15803d, #16a34a);
+  background: hsl(var(--brand));
   transition: filter 0.15s ease, transform 0.15s ease;
 }
 
@@ -214,15 +217,12 @@
 }
 
 .text-gradient-primary {
-  background: linear-gradient(135deg, #15803d, #16a34a);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: hsl(var(--brand));
 }
 
-/* Next-session date block (brand green, darker at the bottom) */
+/* Next-session date block (brand green) */
 .bg-gradient-date {
-  background: linear-gradient(180deg, #15803d, #14532d);
+  background: hsl(var(--brand));
 }
 
 /* Live session card */

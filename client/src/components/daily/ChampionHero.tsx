@@ -63,7 +63,7 @@ export function ChampionHero({ daily, uploadLoading, onChangePhoto }: ChampionHe
             {(
               [
                 ["pontos", String(champion.entry.points)],
-                ["V–D", `${champion.entry.wins}–${champion.entry.losses}`],
+                ["V–E–D", `${champion.entry.wins}–${champion.entry.draws}–${champion.entry.losses}`],
                 ["aproveit.", `${champion.winRate}%`],
               ] as const
             ).map(([label, value]) => (
