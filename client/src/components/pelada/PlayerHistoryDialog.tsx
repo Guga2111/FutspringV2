@@ -82,6 +82,10 @@ function formatDay(date: string) {
   return format(parseISO(date), "dd MMM", { locale: ptBR })
 }
 
+function formatDayWithYear(date: string) {
+  return format(parseISO(date), "dd MMM, yyyy", { locale: ptBR })
+}
+
 function formatFullDate(date: string) {
   return format(parseISO(date), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
 }
@@ -313,7 +317,7 @@ function PlayerHistoryContent({
                         }}
                         className="font-medium hover:underline"
                       >
-                        {formatDay(row.date)}
+                        {formatDayWithYear(row.date)}
                       </Link>
                     </TableCell>
                     <TableCell className="px-2 py-2 text-center">{row.matchesPlayed}</TableCell>
