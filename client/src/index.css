@@ -74,6 +74,16 @@
     --avatar-4: 222 55% 56%;
     --avatar-5: 353 46% 53.3%;
     --avatar-6: 184 100% 30.3%;
+
+    /* app shell sidebar (shadcn sidebar) */
+    --sidebar-background: 210 40% 98%;
+    --sidebar-foreground: 222.2 84% 4.9%;
+    --sidebar-primary: 222.2 47.4% 11.2%;
+    --sidebar-primary-foreground: 210 40% 98%;
+    --sidebar-accent: 210 40% 94%;
+    --sidebar-accent-foreground: 222.2 84% 4.9%;
+    --sidebar-border: 214.3 31.8% 91.4%;
+    --sidebar-ring: 222.2 84% 4.9%;
   }
 
   .dark {
@@ -132,6 +142,15 @@
     --live-to: 132 9% 11.2%;
     --live-foreground: 141 26% 71.4%;
     --live-border: 139 23% 23.5%;
+
+    --sidebar-background: 0 0% 8.2%;
+    --sidebar-foreground: 0 0% 98%;
+    --sidebar-primary: 0 0% 98%;
+    --sidebar-primary-foreground: 0 0% 9%;
+    --sidebar-accent: 0 0% 14.9%;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-border: 0 0% 16.5%;
+    --sidebar-ring: 0 0% 63.9%;
   }
 }
 

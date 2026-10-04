@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from "react"
 import { getMyPeladas } from "@/api/peladas"
-import type { PeladaResponse } from "@/types/pelada"
+import type { NextDaily, PeladaResponse } from "@/types/pelada"
 
 // The user's peladas. Each item already carries memberCount, isAdmin and nextDaily, so there is one request.
+// Used once by AppLayout and shared through MyPeladasContext.
 export function useMyPeladas() {
   const [peladas, setPeladas] = useState<PeladaResponse[]>([])
   const [loading, setLoading] = useState(true)
@@ -26,5 +27,11 @@ export function useMyPeladas() {
 
   const reload = useCallback(() => setVersion((v) => v + 1), [])
 
-  return { peladas, loading, error, reload }
+  const updateNextDaily = useCallback((peladaId: number, patch: Partial<NextDaily>) => {
+    setPeladas((prev) =>
+      prev.map((p) => (p.id === peladaId && p.nextDaily ? { ...p, nextDaily: { ...p.nextDaily, ...patch } } : p)),
+    )
+  }, [])
+
+  return { peladas, loading, error, reload, updateNextDaily }
 }

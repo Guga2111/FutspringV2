@@ -1,6 +1,5 @@
 import { CalendarCheck, CalendarX } from 'lucide-react'
 import { useParams, Link } from 'react-router-dom'
-import NavBar from '@/components/NavBar'
 import ImportFromMessageModal from '@/components/daily/ImportFromMessageModal'
 import { useAuth } from '@/hooks/useAuth'
 import { Button } from '@/components/ui/button'
@@ -57,8 +56,7 @@ export default function DailyDetailPage() {
   const canToggleAttendance = daily != null && isDailyOpen(daily.status)
 
   return (
-    <div className="page-enter min-h-screen flex flex-col">
-      <NavBar />
+    <div className="page-enter flex flex-1 flex-col">
       {loading ? (
         <DetailSkeleton />
       ) : accessDenied ? (

@@ -57,15 +57,17 @@ client/
     │   ├── ui/           shadcn primitives (owned code, see shadcn rules)
     │   ├── ConfirmActionDialog.tsx   shared AlertDialog for confirmations
     │   ├── pelada/       pelada detail feature (Banner, MembersTable, SessionTable, RankingTable, AwardsTab, ChatSidebar, dialogs…)
-    │   │   └── hooks/    usePeladaDetail, usePeladaActions, usePeladaChat, usePlayerPeladaHistory, useComparePlayers, useUserSearch, useMyPeladas
+    │   │   └── hooks/    usePeladaDetail, usePeladaActions, usePeladaChat, usePlayerPeladaHistory, useComparePlayers, useUserSearch
     │   ├── daily/        session detail feature (AdminActionBar, TeamsSection, MatchResultsSection, LeagueTableSection, DailyStatusBadge, modals…)
     │   │   └── hooks/    useDailyDetail, useDailyActions, useDailyModals, useMatchResults, usePlayerSelection
     │   ├── profile/      profile feature (KpiCard, charts, MatchHistoryTable, EditProfileModal…) + index.ts barrel
     │   │   └── hooks/    useProfile
-    │   ├── NavBar.tsx, PrivateRoute.tsx, ErrorBoundary.tsx, ScrollToTop.tsx
+    │   ├── layout/       AppLayout (shell + MyPeladasContext provider), AppSidebar, SidebarPeladaItem, UserMenu, MobileTopBar
+    │   ├── PeladaAvatar.tsx   pelada photo or gradient with initials (sidebar, cards, banner)
+    │   ├── PrivateRoute.tsx, ErrorBoundary.tsx, ScrollToTop.tsx
     │   └── CreatePeladaModal.tsx, EditPeladaModal.tsx   Sheet-based forms
-    ├── context/          AuthContext.tsx (provider, token storage, axios interceptors), auth-context-value.ts
-    ├── hooks/useAuth.ts  reads AuthContext
+    ├── context/          AuthContext.tsx (provider, token storage, axios interceptors), auth-context-value.ts, my-peladas-context-value.ts
+    ├── hooks/            useAuth, useMyPeladas (+ useMyPeladasContext), useTheme (dark class + localStorage.theme), useIsMobile (< 768 px)
     ├── lib/
     │   ├── config.ts     API_BASE (the only reader of VITE_API_URL)
     │   ├── utils.ts      cn(), getFileUrl(), getInitials(), getPeladaGradient()
@@ -75,7 +77,7 @@ client/
     ├── pages/            LandingPage, AuthPage, HomePage, PeladaDetailPage, DailyDetailPage, ProfilePage, NotFoundPage
     ├── schemas/          zod schemas mirroring request DTOs: daily.ts, user.ts, upload.ts
     ├── types/            API DTO types: auth, pelada, daily (DailyStatus), stats, user (PublicUser, Position), chat
-    └── utils/            pure functions: matchStats, matchPlayers, parseSessionMessage (WhatsApp text → teams/matches)
+    └── utils/            pure functions: matchStats, matchPlayers, parseSessionMessage (WhatsApp text → teams/matches), dates (local date parsing, short pt-BR labels)
 ```
 
 Where new code goes:
@@ -95,10 +97,12 @@ Where new code goes:
 | `/profile/:id` | `ProfilePage` — KPIs, charts, match history, peladas in common, edit profile (own). Another user's profile is only visible when you share a pelada (403 → message) | private |
 | `*` | `NotFoundPage` | public |
 
-- Every page is `React.lazy` with a default export; the route element is `<ErrorBoundary>` → `<PrivateRoute>` (when private) → page.
+- Every page is `React.lazy` with a default export. Public routes: `<ErrorBoundary>` → page. Private routes are children of one **layout route** whose element is `<ErrorBoundary>` → `<PrivateRoute>` → `<AppLayout>`; each child is `<ErrorBoundary>` → page.
+- `AppLayout` (`components/layout/`) is the shell: `SidebarProvider` + `AppSidebar` (logo, "Início", "Minhas peladas" with the "+" that opens `CreatePeladaModal`, `UserMenu` with Perfil / Notificações "Em breve" / Tema / Sair) + `SidebarInset` with `MobileTopBar` and the page in `<Suspense><Outlet/></Suspense>`, so the shell stays on screen while a page loads. Sidebar: 264 px, collapsible to 64 px (state in `localStorage.sidebar_open`); below 768 px it is a Sheet opened from the top bar that closes when you pick a pelada.
+- `AppLayout` loads the user's peladas once (`useMyPeladas`) and shares them through `MyPeladasContext` (`useMyPeladasContext()`: `peladas`, `loading`, `error`, `reload`, `updateNextDaily`, `openCreatePelada`), used by the sidebar and the Home page.
 - `PrivateRoute` only checks that a token exists (no expiry check); an expired token is caught by the 401 interceptor.
-- There is no layout route: each page renders `<NavBar />` itself and uses the `.page-enter` fade on its root.
-- To add a page: create `pages/<Name>Page.tsx` (default export), add the lazy import and the `<Route>` in `App.tsx` with the same wrappers, and link to it from `NavBar` or the page that leads to it.
+- Pages don't render a nav bar; they own their padding and use the `.page-enter` fade on their root.
+- To add a private page: create `pages/<Name>Page.tsx` (default export), add the lazy import and a child `<Route>` under the layout route in `App.tsx`, and link to it from the sidebar or the page that leads to it.
 
 ## Data layer
 
@@ -106,7 +110,7 @@ Where new code goes:
 
 - `src/api/client.ts` exports the single axios instance (`apiClient`). **Only `src/api/*` imports it**; never import `axios` or call `fetch` elsewhere.
 - `context/AuthContext.tsx` owns the session: token in `localStorage.futspring_token`, user in `localStorage.futspring_user`, `login(token, user)` / `logout()`, read through `useAuth()`. Nothing else touches those keys.
-- AuthContext registers the interceptors: the request interceptor adds `Authorization: Bearer <token>`; the response interceptor logs out on **401** and hard-redirects to `/auth`, except for `/api/v1/auth/*` requests (a wrong password is a 401 the login form shows). There is no refresh token (the JWT lasts 7 days).
+- AuthContext registers the interceptors: the request interceptor (registered when `AuthContext.tsx` loads, so the shell's first requests already carry it) adds `Authorization: Bearer <token>`; the response interceptor (in the provider's effect) logs out on **401** and hard-redirects to `/auth`, except for `/api/v1/auth/*` requests (a wrong password is a 401 the login form shows). There is no refresh token (the JWT lasts 7 days).
 - The chat sends the same token in the STOMP `connectHeaders`.
 
 ### API modules (`src/api/*.ts`)
@@ -130,7 +134,7 @@ Data flows **api → hook → page/component**. A hook owns the request state; t
 - `usePeladaDetail(id)` — loads pelada, dailies, ranking and awards in parallel, each with its own loading flag; exposes `accessDenied` (403), `error`, `refetch*` (each returns its promise). Results are keyed by pelada id and responses for another pelada are dropped, so navigating between peladas shows the skeletons, never the previous pelada's data.
 - `usePeladaActions(pelada, refetchPelada)` — delete pelada, remove member, toggle admin.
 - `usePeladaChat(peladaId, token)` — chat history + STOMP connection with backoff, `send`, error queue toasts.
-- `useMyPeladas()` — the home list (one request; each item has `isAdmin` and `nextDaily` with the caller's attendance).
+- `useMyPeladas()` (in `src/hooks/`, called once by `AppLayout`; read it with `useMyPeladasContext()`) — the sidebar and home list (one request; each item has `isAdmin` and `nextDaily` with the caller's attendance).
 - `useUserSearch(query)` — debounced search, keyed by query, `tooShort` below 3 characters.
 - `useComparePlayers(peladaId, a, b)` — profile + pelada stats of two players, keyed by the pair.
 - `useProfile(userId)` — profile page data keyed by user id; `status` is `loading | ready | forbidden | notFound | error`.
@@ -194,10 +198,10 @@ export const dailyStatusLabel: Record<DailyStatus, string> = {
 - **Brand green** (`#15803d` → `#16a34a`) lives only in the `.bg-gradient-primary`, `.text-gradient-primary` and `.checkbox-gradient` classes in `index.css`. Use those classes or the Button `variant="gradient"`; never retype the hex. If a solid brand color is needed, add a `--brand` token (light + dark) to `index.css` and `tailwind.config.js` first.
 - **Chart colors:** `--chart-1` (green) and `--chart-2` (blue), light and dark, exposed as `chart-1`/`chart-2` in Tailwind. `--gold` (`text-gold`) is for stars, trophies and crowns. In a `ChartConfig` use `color: "hsl(var(--chart-1))"` and reference series as `var(--color-<key>)` (reference: `components/pelada/PlayerHistoryDialog.tsx`).
 - **New colors** (status badges, positions, more chart series): add tokens to both `:root` and `.dark` (e.g. `--chart-1…5`, `--success`) and use them; don't scatter `bg-green-100 text-green-800` maps without dark variants.
-- **Dark mode** is class-based (`.dark` on `<html>`); the choice is saved in `localStorage.theme`, applied in `main.tsx` and toggled in `NavBar`. Every new UI must work in both themes.
+- **Dark mode** is class-based (`.dark` on `<html>`); the choice is saved in `localStorage.theme`, applied in `main.tsx` and toggled from the user menu (`useTheme`). Every new UI must work in both themes.
 - **Composition:** `cn()` from `@/lib/utils` for class names; `cva` variants for repeated styles (`components/ui/button-variants.ts` has `default`, `destructive`, `outline`, `secondary`, `ghost`, `link`, `gradient`).
 - **Overlays:** `Sheet` for create/edit forms (reference: `CreatePeladaModal`, `EditPeladaModal`), `Dialog`/`AlertDialog` for confirmations and short forms, `Drawer` for mobile bottom panels (chat), `DropdownMenu` / `Command` for menus.
-- **Responsive:** mobile first; the redesign switches to the mobile layout below **768 px (`md:`)**, which is also the shadcn sidebar's `useIsMobile` breakpoint; use `md:` for new layouts. Older screens still use `sm:` (desktop nav `hidden sm:flex`) and `lg:` for side panels (chat sidebar). Grids go `grid-cols-1 md:grid-cols-2 lg:grid-cols-3`. Check every screen at 375 px.
+- **Responsive:** mobile first; the redesign switches to the mobile layout below **768 px (`md:`)**, which is also the shadcn sidebar's `useIsMobile` breakpoint; use `md:` for new layouts. Older screens still use `sm:` and `lg:` for side panels (chat sidebar). Grids go `grid-cols-1 md:grid-cols-2 lg:grid-cols-3`. Check every screen at 375 px.
 - Buttons are pill-shaped (`rounded-full` in the base variant); don't override the radius per screen.
 
 ### shadcn/ui usage rules (mandatory)
@@ -216,7 +220,7 @@ Before UI work, load the `shadcn` skill. Run its CLI from `client/` (where `comp
 | Feedback / status | `Skeleton`, `Badge`, `Progress`, `Alert`, toasts via `sonner` |
 | Data display | `Card`, `Table`, `Avatar`, `Separator`, `chart` |
 
-Installed today: alert, alert-dialog, avatar, badge, button, calendar, card, chart, checkbox, collapsible, command, dialog, drawer, dropdown-menu, field, input, label, popover, select, separator, sheet, skeleton, table, tabs, textarea. `tooltip` and `progress` are not installed yet — add them with the CLI when first needed. `field.tsx` was adapted to Tailwind 3 (no container-query orientation). Variants live in `button-variants.ts` / `badge-variants.ts` so the component files only export components.
+Installed today: alert, alert-dialog, avatar, badge, button, calendar, card, chart, checkbox, collapsible, command, dialog, drawer, dropdown-menu, field, input, label, popover, select, separator, sheet, sidebar, skeleton, table, tabs, textarea, tooltip. `progress` is not installed yet — add it with the CLI when first needed. `sidebar.tsx` was adapted: 264/64 px widths, no cookie (AppLayout persists the state), `useSidebar`/context in `sidebar-context.ts`, `useIsMobile` from `src/hooks/useIsMobile.ts`; `SheetContent` takes an `overlayClassName`. `field.tsx` was adapted to Tailwind 3 (no container-query orientation). Variants live in `button-variants.ts` / `badge-variants.ts` so the component files only export components.
 
 Not in scope: layout and text elements (`div`, `section`, `main`, `header`, `h1`–`h6`, `p`, `ul`, `img`) and the native `<form>`. Keep those as semantic HTML styled with tokens.
 

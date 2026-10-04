@@ -1,11 +1,8 @@
-import { useState } from 'react'
-import NavBar from '@/components/NavBar'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { useMyPeladas } from '@/components/pelada/hooks/useMyPeladas'
-import CreatePeladaModal from '@/components/CreatePeladaModal'
+import { useMyPeladasContext } from '@/hooks/useMyPeladasContext'
 import { PeladaCard } from '@/components/pelada/PeladaCard'
 
 function PeladaCardSkeleton() {
@@ -23,18 +20,10 @@ function PeladaCardSkeleton() {
 
 
 export default function HomePage() {
-  const { peladas, loading, error, reload } = useMyPeladas()
-  const [showCreateModal, setShowCreateModal] = useState(false)
+  const { peladas, loading, error, reload, openCreatePelada } = useMyPeladasContext()
 
   return (
-    <div className="page-enter min-h-screen flex flex-col">
-      <NavBar />
-      {showCreateModal && (
-        <CreatePeladaModal
-          onClose={() => setShowCreateModal(false)}
-          onCreated={() => { setShowCreateModal(false); reload() }}
-        />
-      )}
+    <div className="page-enter flex flex-1 flex-col">
       <main className="flex-1 container max-w-5xl mx-auto px-4 py-8">
         {/* Hero Card */}
         <div
@@ -73,7 +62,7 @@ export default function HomePage() {
                 </div>
               </div>
             </div>
-            <Button variant="gradient" className="shrink-0" onClick={() => setShowCreateModal(true)}>
+            <Button variant="gradient" className="shrink-0" onClick={openCreatePelada}>
               + Nova Pelada
             </Button>
           </div>
@@ -99,7 +88,7 @@ export default function HomePage() {
             <p className="text-muted-foreground text-lg mb-6">
               Você ainda não está em nenhuma pelada. Crie uma para começar.
             </p>
-            <Button variant="gradient" onClick={() => setShowCreateModal(true)}>+ Nova Pelada</Button>
+            <Button variant="gradient" onClick={openCreatePelada}>+ Nova Pelada</Button>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

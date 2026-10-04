@@ -1,6 +1,5 @@
 import { lazy, Suspense, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import NavBar from "@/components/NavBar";
 import type { PeladaMember } from "@/types/pelada";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -120,8 +119,7 @@ export default function PeladaDetailPage() {
   };
 
   return (
-    <div className="page-enter min-h-screen flex flex-col">
-      <NavBar />
+    <div className="page-enter flex flex-1 flex-col">
       {loading ? (
         <DetailSkeleton />
       ) : accessDenied ? (
