@@ -29,7 +29,7 @@ bun run test         # vitest run
 bunx shadcn@latest add <component>   # add a shadcn component to src/components/ui
 ```
 
-CI (`.github/workflows/ci-frontend.yml`) runs `bun install --frozen-lockfile`, lint, build and test on pushes and PRs to `main`/`dev` that touch `client/`; the deploy on `main` waits for it (see CI/CD in `BACKEND.md`). Lint is blocking (0 errors; two `react-hooks/incompatible-library` warnings from TanStack Table remain). Before finishing a change run `bun run lint && bun run build && bun run test`.
+CI (`.github/workflows/ci-frontend.yml`) runs `bun install --frozen-lockfile`, lint, build and test on pushes and PRs to `main`/`dev` that touch `client/`; the deploy on `main` waits for it (see CI/CD in `BACKEND.md`). Lint is blocking (0 errors; one `react-hooks/incompatible-library` warning from TanStack Table remains). Before finishing a change run `bun run lint && bun run build && bun run test`.
 
 ## Environment
 
@@ -58,7 +58,7 @@ client/
     │   ├── ConfirmActionDialog.tsx   shared AlertDialog for confirmations
     │   ├── pelada/       pelada detail feature (PeladaBanner, MembersGrid + MemberCard, NextSessionCard, SessionHistoryList, RankingTable, AwardsTab, PeladaChat + ChatPanel, dialogs…)
     │   │   └── hooks/    usePeladaDetail, usePeladaActions, usePeladaChat, usePlayerPeladaHistory, useComparePlayers, useUserSearch
-    │   ├── daily/        session detail feature (DailyHeader with the admin actions, AttendanceSummaryCard, AttendanceList, TeamsSection + TeamCard/TeamColorDot, LiveSessionCard, LiveLeagueTable, SavedMatchesList, LiveTeamsSection, ResultsDialog + ResultsMatchCard + ScoreStepper, MatchResultsSection, LeagueTableSection, DailyStatusBadge, modals…)
+    │   ├── daily/        session detail feature (DailyHeader with the admin actions, AttendanceSummaryCard, AttendanceList, TeamsSection + TeamCard/TeamColorDot, LiveSessionCard, LiveLeagueTable, SavedMatchesList, LiveTeamsSection, ResultsDialog + ResultsMatchCard + ScoreStepper, ChampionHero, DailyAwardsGrid, FinishedSessionTabs, DailyStatusBadge, modals…)
     │   │   └── hooks/    useDailyDetail, useDailyActions, useDailyModals, useResultsForm, usePlayerSelection
     │   ├── profile/      profile feature (KpiCard, charts, MatchHistoryTable, EditProfileModal…) + index.ts barrel
     │   │   └── hooks/    useProfile
@@ -78,7 +78,7 @@ client/
     ├── pages/            LandingPage, AuthPage, HomePage, PeladaDetailPage, DailyDetailPage, ProfilePage, NotFoundPage
     ├── schemas/          zod schemas mirroring request DTOs: daily.ts, user.ts, upload.ts
     ├── types/            API DTO types: auth, pelada, daily (DailyStatus), stats, user (PublicUser, Position), chat
-    └── utils/            pure functions: matchStats, matchPlayers, parseSessionMessage (WhatsApp text → teams/matches), dates (local date parsing, short pt-BR labels), liveSession (player totals, scorers line, matchup rotation, goal check), attendance (confirmed/pending split, sort rule and hints), sessions (next session, month groups, pt-BR session labels), memberFilters (position normalization, counts, search)
+    └── utils/            pure functions: matchStats, matchPlayers, parseSessionMessage (WhatsApp text → teams/matches), dates (local date parsing, short pt-BR labels), liveSession (player totals, scorers line, matchup rotation, goal check), attendance (confirmed/pending split, sort rule and hints), finishedSession (champion summary, match stat names, player sort, award detail), sessions (next session, month groups, pt-BR session labels), memberFilters (position normalization, counts, search)
 ```
 
 Where new code goes:
@@ -94,7 +94,7 @@ Where new code goes:
 | `/auth` (`?tab=login\|register`) | `AuthPage` — returns to `location.state.from` after login | public |
 | `/home` | `HomePage` — the user's peladas and next sessions | private |
 | `/pelada/:id` | `PeladaDetailPage` — banner card, pill tabs (members grid with search and position chips, stats from the ranking already loaded; sessions: next-session card with confirm/withdraw + history grouped by month; ranking; awards with the leader highlighted), chat from a floating button (Popover panel on desktop, Drawer on mobile). Ranking rows have a history button and the ⌘K menu has "Histórico do Jogador" (⌘I); both open `PlayerHistoryDialog` (lazy-loaded: summary, goals/assists chart, sessions linking to `/daily/:id`) | private |
-| `/daily/:id` | `DailyDetailPage` — header (back link, date, status, metadata, admin actions + ⋯ menu); before the session: attendance card (confirm / withdraw), collapsible attendance list (confirmed / pending, admin confirm/remove/confirm all) and teams (sort, swap, rename, color); live: live card (finalize / lançar resultados), live league table, saved matches, teams with goals and assists; the results dialog (Dialog on desktop, Drawer on mobile: team chips, score steppers, goals/assists with a goal check that only warns); finished: results, league table, stats, awards, champion photo | private |
+| `/daily/:id` | `DailyDetailPage` — header (back link, date, status, metadata, admin actions + ⋯ menu); before the session: attendance card (confirm / withdraw), collapsible attendance list (confirmed / pending, admin confirm/remove/confirm all) and teams (sort, swap, rename, color); live: live card (finalize / lançar resultados), live league table, saved matches, teams with goals and assists; the results dialog (Dialog on desktop, Drawer on mobile: team chips, score steppers, goals/assists with a goal check that only warns); finished: champion photo + champion team card, awards, pill tabs (final table, match cards, sortable players table, teams with final position) | private |
 | `/profile/:id` | `ProfilePage` — KPIs, charts, match history, peladas in common, edit profile (own). Another user's profile is only visible when you share a pelada (403 → message) | private |
 | `*` | `NotFoundPage` | public |
 
@@ -401,7 +401,7 @@ Don't introduce these. Some exist already ("Found in", paths under `src/`); fix 
 |---|-------|-----------|----------|
 | 1 | Hand-rolled modals (`fixed inset-0 bg-black/50`): no focus trap, Esc or aria | `Dialog` / `AlertDialog` / `Sheet` | — |
 | 2 | Raw `<button>`, `<input>`, `<select>`, `<textarea>`, `<label>` | `Button`, `Input`, `Select`, `Textarea`, `Label`/`FieldLabel` | — |
-| 3 | Raw palette colors, hex values, `text-white`/`bg-black` on surfaces, screens hardcoded to one theme | Semantic tokens; new tokens in `index.css` for light and dark | `pelada/ComparePlayersDialog.tsx` (always dark), `profile/StatsOverTimeChart.tsx`, `ProfilePage.tsx` KPI icon colors, `HomePage.tsx` hero, `LeagueTableSection`/`MatchHistoryTable`/`AwardsTab` highlight backgrounds, focus rings in the pelada modals, `LandingPage.tsx` (`neutral-*`) |
+| 3 | Raw palette colors, hex values, `text-white`/`bg-black` on surfaces, screens hardcoded to one theme | Semantic tokens; new tokens in `index.css` for light and dark | `pelada/ComparePlayersDialog.tsx` (always dark), `profile/StatsOverTimeChart.tsx`, `ProfilePage.tsx` KPI icon colors, `HomePage.tsx` hero, `MatchHistoryTable` highlight background, focus rings in the pelada modals, `LandingPage.tsx` (`neutral-*`) |
 | 4 | Retyping the brand gradient instead of the variant | `<Button variant="gradient">` | — |
 | 5 | Forms with `useState` per field and hand-written validation | react-hook-form + zod + `Field` ([Forms](#forms-mandatory)) | `AuthPage`, `CreatePeladaModal`, `EditPeladaModal`, `FinalizeModal`, `ImportFromMessageModal` |
 | 6 | Casting errors inline (`err as { response?: { data?: { message?: string } } }`) or copying an `extractErrorMessage` per file | One `getErrorMessage(error, fallback)` in `lib/errors.ts`; `applyServerErrors` for forms | — |

@@ -12,11 +12,9 @@ import LiveSessionCard from '@/components/daily/LiveSessionCard'
 import { LiveLeagueTable } from '@/components/daily/LiveLeagueTable'
 import { SavedMatchesList } from '@/components/daily/SavedMatchesList'
 import { LiveTeamsSection } from '@/components/daily/LiveTeamsSection'
-import MatchResultsSection from '@/components/daily/MatchResultsSection'
-import LeagueTableSection from '@/components/daily/LeagueTableSection'
-import PlayerStatsSection from '@/components/daily/PlayerStatsSection'
-import AwardsSection from '@/components/daily/AwardsSection'
-import ChampionPhotoSection from '@/components/daily/ChampionPhotoSection'
+import { ChampionHero } from '@/components/daily/ChampionHero'
+import { DailyAwardsGrid } from '@/components/daily/DailyAwardsGrid'
+import { FinishedSessionTabs } from '@/components/daily/FinishedSessionTabs'
 import { DailyHeader } from '@/components/daily/DailyHeader'
 import { AttendanceSummaryCard } from '@/components/daily/AttendanceSummaryCard'
 import { AttendanceList } from '@/components/daily/AttendanceList'
@@ -163,17 +161,13 @@ export default function DailyDetailPage() {
 
         {daily.status === 'FINISHED' && (
           <>
-            <ChampionPhotoSection
+            <ChampionHero
               daily={daily}
-              fileInputRef={fileInputRef}
               uploadLoading={actions.uploadLoading}
-              onUploadClick={() => fileInputRef.current?.click()}
-              onChange={handleChampionUpload}
+              onChangePhoto={() => fileInputRef.current?.click()}
             />
-            <AwardsSection daily={daily} />
-            <LeagueTableSection daily={daily} />
-            <MatchResultsSection daily={daily} />
-            <PlayerStatsSection stats={daily.playerStats} />
+            <DailyAwardsGrid daily={daily} />
+            <FinishedSessionTabs daily={daily} />
           </>
         )}
       </main>
