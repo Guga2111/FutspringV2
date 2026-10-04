@@ -6,9 +6,6 @@
 # Shell deploy scripts (may contain credentials)
 *.sh
 
-# Documentation files
-*.md
-
 # macOS system files
 .DS_Store
 **/.DS_Store
@@ -36,6 +33,3 @@ uploads/
 
 # Logs
 *.log
-
-# Claude local state
-.claude/
