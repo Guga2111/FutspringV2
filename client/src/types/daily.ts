@@ -9,6 +9,15 @@ export const dailyStatusLabel: Record<DailyStatus, string> = {
   CANCELED: "Cancelada",
 }
 
+// Badge background/text and the status dot (tokens in index.css)
+export const dailyStatusStyle: Record<DailyStatus, { badge: string; dot: string }> = {
+  SCHEDULED: { badge: "bg-status-scheduled text-status-scheduled-foreground", dot: "bg-status-scheduled-dot" },
+  CONFIRMED: { badge: "bg-success-muted text-success-soft", dot: "bg-success-strong" },
+  IN_COURSE: { badge: "bg-status-live text-status-live-foreground", dot: "bg-status-live-dot" },
+  FINISHED: { badge: "bg-secondary text-secondary-foreground", dot: "bg-muted-foreground" },
+  CANCELED: { badge: "bg-destructive-muted text-destructive-soft", dot: "bg-destructive" },
+}
+
 // Attendance and teams can only change before the session starts (backend: DailyStatus.LOCKED)
 export function isDailyOpen(status: DailyStatus): boolean {
   return status === "SCHEDULED" || status === "CONFIRMED"

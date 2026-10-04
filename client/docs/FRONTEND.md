@@ -173,14 +173,31 @@ export const dailyStatusLabel: Record<DailyStatus, string> = {
 
 ## Styling & design system
 
-- **Tokens:** CSS variables in `src/index.css` as bare HSL triplets (`--primary: 222.2 47.4% 11.2%`) for `:root` (light, stock slate) and `.dark` (custom neutral grays), exposed through `tailwind.config.js` as `hsl(var(--x))`. Use the semantic classes: `bg-background`, `bg-card`, `text-foreground`, `text-muted-foreground`, `border-border`, `bg-primary`, `text-destructive`, `bg-accent`…
+- **Tokens:** CSS variables in `src/index.css` as bare HSL triplets (`--primary: 222.2 47.4% 11.2%`) for `:root` (light, stock slate) and `.dark` (custom neutral grays; the redesign handoff in `docs/design/` uses slightly darker hex values, which were not adopted for the base tokens), exposed through `tailwind.config.js` as `hsl(var(--x))`. Use the semantic classes: `bg-background`, `bg-card`, `text-foreground`, `text-muted-foreground`, `border-border`, `bg-primary`, `text-destructive`, `bg-accent`…
+- **Redesign tokens** (light + dark, same names):
+
+  | Class | Use |
+  |-------|-----|
+  | `bg-card-elevated` | table headers, cards inside cards |
+  | `bg-row-hover` | list/table row hover |
+  | `bg-avatar-fallback`, `bg-avatar-1…6` | initials avatars (neutral / colored by id) |
+  | `text-subtle-foreground`, `text-faint-foreground` | tertiary text and uppercase labels |
+  | `border-team-dot-border` | ring around team color dots |
+  | `success` (`DEFAULT`, `strong`, `soft`, `muted`, `border`), `warning`, `info` (`DEFAULT`, `muted`) | feedback, "Você vai", Garçom |
+  | `destructive-soft`, `destructive-muted` | destructive hover text/background |
+  | `gold`, `gold-muted`, `silver`, `bronze` | 1st/2nd/3rd, champion row |
+  | `status-scheduled*`, `status-live*` | status badges (`status-live` is also the "Admin" pill) |
+  | `live-foreground`, `live-border` + `.bg-gradient-live` | live session card |
+
+  Composite classes in `index.css`: `.bg-gradient-date`, `.bg-gradient-leader`, photo overlays (`.bg-banner-overlay`, `.bg-photo-overlay`, `.bg-hero-overlay`, the same in both themes because they sit on images) and `.scrollbar-none`. Radii `rounded-tile` (14px) and `rounded-hero` (18px); shadows `shadow-menu`, `shadow-panel`, `shadow-dialog`, `shadow-fab` (overlays only).
+- **Status maps:** `dailyStatusLabel` and `dailyStatusStyle` (badge + dot classes) in `types/daily.ts`, rendered by `DailyStatusBadge` (`size` `sm` | `md` | `lg`, Badge `variant="status"`).
 - **Brand green** (`#15803d` → `#16a34a`) lives only in the `.bg-gradient-primary`, `.text-gradient-primary` and `.checkbox-gradient` classes in `index.css`. Use those classes or the Button `variant="gradient"`; never retype the hex. If a solid brand color is needed, add a `--brand` token (light + dark) to `index.css` and `tailwind.config.js` first.
 - **Chart colors:** `--chart-1` (green) and `--chart-2` (blue), light and dark, exposed as `chart-1`/`chart-2` in Tailwind. `--gold` (`text-gold`) is for stars, trophies and crowns. In a `ChartConfig` use `color: "hsl(var(--chart-1))"` and reference series as `var(--color-<key>)` (reference: `components/pelada/PlayerHistoryDialog.tsx`).
 - **New colors** (status badges, positions, more chart series): add tokens to both `:root` and `.dark` (e.g. `--chart-1…5`, `--success`) and use them; don't scatter `bg-green-100 text-green-800` maps without dark variants.
 - **Dark mode** is class-based (`.dark` on `<html>`); the choice is saved in `localStorage.theme`, applied in `main.tsx` and toggled in `NavBar`. Every new UI must work in both themes.
 - **Composition:** `cn()` from `@/lib/utils` for class names; `cva` variants for repeated styles (`components/ui/button-variants.ts` has `default`, `destructive`, `outline`, `secondary`, `ghost`, `link`, `gradient`).
 - **Overlays:** `Sheet` for create/edit forms (reference: `CreatePeladaModal`, `EditPeladaModal`), `Dialog`/`AlertDialog` for confirmations and short forms, `Drawer` for mobile bottom panels (chat), `DropdownMenu` / `Command` for menus.
-- **Responsive:** mobile first; `sm:` is the main breakpoint (desktop nav `hidden sm:flex`, Sheet menu on mobile), `lg:` for side panels (chat sidebar). Grids go `grid-cols-1 md:grid-cols-2 lg:grid-cols-3`. Check every screen at 375 px.
+- **Responsive:** mobile first; the redesign switches to the mobile layout below **768 px (`md:`)**, which is also the shadcn sidebar's `useIsMobile` breakpoint; use `md:` for new layouts. Older screens still use `sm:` (desktop nav `hidden sm:flex`) and `lg:` for side panels (chat sidebar). Grids go `grid-cols-1 md:grid-cols-2 lg:grid-cols-3`. Check every screen at 375 px.
 - Buttons are pill-shaped (`rounded-full` in the base variant); don't override the radius per screen.
 
 ### shadcn/ui usage rules (mandatory)

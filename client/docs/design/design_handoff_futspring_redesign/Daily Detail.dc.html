@@ -1,0 +1,998 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0;background:#1a1a1a;color:#fafafa;font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
+a{color:#22c55e;text-decoration:none}a:hover{color:#4ade80}
+*{box-sizing:border-box}
+</style>
+</helmet>
+<div style="width:{{ frameW }};height:{{ frameH }};overflow-y:{{ frameOverflow }};transform:{{ frameTransform }};margin:0 auto;border-left:{{ frameBorder }};border-right:{{ frameBorder }};background:#1a1a1a">
+<div style="display:flex;flex-direction:{{ rootDir }};min-height:100%;background:#1a1a1a">
+
+  <sc-if value="{{ isMobile }}" hint-placeholder-val="{{ false }}">
+    <header style="position:sticky;top:0;z-index:30;height:56px;flex-shrink:0;display:flex;align-items:center;gap:10px;padding:0 12px 0 16px;background:#151515;border-bottom:1px solid #2a2a2a">
+      <div style="width:28px;height:28px;border-radius:999px;background:#2e2e2e;flex-shrink:0"></div>
+      <span style="font-weight:700;font-size:17px;background:linear-gradient(90deg,#15803d,#16a34a);-webkit-background-clip:text;color:transparent;flex:1">FutSpring</span>
+      <button onClick="{{ openMobileMenu }}" aria-label="Abrir menu" style="width:40px;height:40px;border-radius:10px;border:none;background:transparent;color:#fafafa;cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="background:#262626">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"></path></svg>
+      </button>
+    </header>
+  </sc-if>
+  <sc-if value="{{ mobileMenuOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeMobileMenu }}" style="position:fixed;inset:0;z-index:55;background:rgba(0,0,0,.6)"></div>
+  </sc-if>
+
+  <aside style="width:{{ sidebarW }};flex-shrink:0;position:{{ asidePos }};top:0;left:0;z-index:{{ asideZ }};transform:{{ asideTransform }};height:100vh;display:flex;flex-direction:column;border-right:1px solid #2a2a2a;background:#151515;transition:width .2s, transform .25s">
+    <div style="display:flex;align-items:center;justify-content:{{ justify }};gap:10px;padding:16px 14px;height:60px">
+      <sc-if value="{{ expanded }}" hint-placeholder-val="{{ true }}">
+        <div style="width:30px;height:30px;border-radius:999px;background:#2e2e2e;flex-shrink:0"></div>
+        <span style="font-weight:700;font-size:17px;background:linear-gradient(90deg,#15803d,#16a34a);-webkit-background-clip:text;color:transparent;flex:1">FutSpring</span>
+      </sc-if>
+      <button onClick="{{ toggleSidebar }}" aria-label="{{ toggleLabel }}" style="width:28px;height:28px;border-radius:8px;border:none;background:transparent;color:#a3a3a3;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0" style-hover="background:#262626;color:#fafafa">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"></rect><path d="M9 3v18"></path></svg>
+      </button>
+    </div>
+
+    <nav style="padding:4px 10px;display:flex;flex-direction:column;gap:2px">
+      <a href="#" style="display:flex;align-items:center;justify-content:{{ justify }};gap:10px;padding:8px 10px;border-radius:8px;color:#a3a3a3;font-size:14px;font-weight:500" style-hover="background:#222;color:#fafafa">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M3 10.5 12 3l9 7.5V21H3z"></path><path d="M9 21v-7h6v7"></path></svg>
+        <sc-if value="{{ expanded }}" hint-placeholder-val="{{ true }}"><span>Início</span></sc-if>
+      </a>
+    </nav>
+
+    <div style="padding:16px 10px 6px;display:flex;align-items:center;justify-content:space-between;min-height:42px">
+      <sc-if value="{{ expanded }}" hint-placeholder-val="{{ true }}">
+        <span style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#737373;padding-left:10px">Minhas peladas</span>
+      </sc-if>
+      <button aria-label="Nova pelada" style="width:26px;height:26px;border-radius:999px;border:1px solid #2e2e2e;background:transparent;color:#a3a3a3;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin:{{ plusMargin }}" style-hover="background:#262626;color:#fafafa">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>
+      </button>
+    </div>
+
+    <div style="flex:1;overflow-y:auto;padding:0 10px;display:flex;flex-direction:column;gap:2px">
+      <sc-for list="{{ peladaItems }}" as="p" hint-placeholder-count="4">
+        <button onClick="{{ p.select }}" title="{{ p.name }}" style="display:flex;align-items:center;justify-content:{{ justify }};gap:10px;padding:{{ itemPad }};border-radius:10px;border:none;width:100%;text-align:left;cursor:pointer;background:{{ p.bg }};color:#fafafa;font-family:inherit" style-hover="background:#222">
+          <div style="width:34px;height:34px;border-radius:9px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;background:{{ p.gradient }}">{{ p.avatarText }}</div>
+          <sc-if value="{{ expanded }}" hint-placeholder-val="{{ true }}">
+            <div style="min-width:0;display:flex;flex-direction:column;gap:2px">
+              <span style="font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ p.name }}</span>
+              <span style="font-size:12px;color:#8a8a8a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ p.next }}</span>
+            </div>
+          </sc-if>
+        </button>
+      </sc-for>
+    </div>
+
+    <div style="position:relative;padding:8px">
+      <sc-if value="{{ menuOpen }}" hint-placeholder-val="{{ false }}">
+        <div onClick="{{ closeMenu }}" style="position:fixed;inset:0;z-index:40"></div>
+        <div style="position:absolute;left:{{ menuLeft }};bottom:{{ menuBottom }};z-index:50;width:240px;background:#1c1c1c;border:1px solid #2e2e2e;border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.45);padding:4px;display:flex;flex-direction:column">
+          <div style="display:flex;align-items:center;gap:10px;padding:8px">
+            <div style="width:32px;height:32px;border-radius:8px;background:#2e2e2e;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;flex-shrink:0">GO</div>
+            <div style="min-width:0;display:flex;flex-direction:column">
+              <span style="font-size:14px;font-weight:600">Gone</span>
+              <span style="font-size:12px;color:#a3a3a3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">gone@futspring.com</span>
+            </div>
+          </div>
+          <div style="height:1px;background:#2a2a2a;margin:4px -4px"></div>
+          <button onClick="{{ closeMenu }}" style="display:flex;align-items:center;gap:10px;padding:7px 8px;border:none;border-radius:6px;background:transparent;color:#fafafa;font-size:14px;font-family:inherit;cursor:pointer;text-align:left" style-hover="background:#262626">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#a3a3a3" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"></circle><path d="M4 21a8 8 0 0 1 16 0"></path></svg>Perfil
+          </button>
+          <button onClick="{{ closeMenu }}" style="display:flex;align-items:center;gap:10px;padding:7px 8px;border:none;border-radius:6px;background:transparent;color:#fafafa;font-size:14px;font-family:inherit;cursor:pointer;text-align:left" style-hover="background:#262626">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#a3a3a3" stroke-width="2" stroke-linecap="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"></path></svg>Notificações
+          </button>
+          <button onClick="{{ closeMenu }}" style="display:flex;align-items:center;gap:10px;padding:7px 8px;border:none;border-radius:6px;background:transparent;color:#fafafa;font-size:14px;font-family:inherit;cursor:pointer;text-align:left" style-hover="background:#262626">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#a3a3a3" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg>Tema claro
+          </button>
+          <div style="height:1px;background:#2a2a2a;margin:4px -4px"></div>
+          <button onClick="{{ closeMenu }}" style="display:flex;align-items:center;gap:10px;padding:7px 8px;border:none;border-radius:6px;background:transparent;color:#ef4444;font-size:14px;font-family:inherit;cursor:pointer;text-align:left" style-hover="background:#2a1a1a">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><path d="M16 17l5-5-5-5M21 12H9"></path></svg>Sair
+          </button>
+        </div>
+      </sc-if>
+      <button onClick="{{ toggleMenu }}" aria-label="Menu do usuário" style="width:100%;display:flex;align-items:center;justify-content:{{ justify }};gap:10px;padding:{{ itemPad }};border:none;border-radius:10px;background:{{ menuBg }};color:#fafafa;cursor:pointer;font-family:inherit;text-align:left" style-hover="background:#262626">
+        <div style="width:32px;height:32px;border-radius:8px;background:#2e2e2e;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;flex-shrink:0">GO</div>
+        <sc-if value="{{ expanded }}" hint-placeholder-val="{{ true }}">
+          <div style="flex:1;min-width:0;display:flex;flex-direction:column">
+            <span style="font-size:14px;font-weight:600">Gone</span>
+            <span style="font-size:12px;color:#a3a3a3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">gone@futspring.com</span>
+          </div>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#a3a3a3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M7 15l5 5 5-5M7 9l5-5 5 5"></path></svg>
+        </sc-if>
+      </button>
+    </div>
+  </aside>
+
+  <main style="flex:1;min-width:0;padding:{{ mainPad }}">
+   <div style="max-width:1120px;margin:0 auto;display:flex;flex-direction:column;gap:28px">
+
+    <header style="display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px">
+      <div style="display:flex;flex-direction:column;gap:8px;min-width:0">
+        <a href="Pelada Detail.dc.html" style="display:flex;align-items:center;gap:6px;font-size:13px;color:#a3a3a3" style-hover="color:#fafafa">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 12H5M12 19l-7-7 7-7"></path></svg>Jogasse onde
+        </a>
+        <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px">
+          <h1 style="margin:0;font-size:{{ titleSize }};font-weight:700;letter-spacing:-.01em">{{ dTitle }}</h1>
+          <span style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:500;padding:3px 10px;border-radius:999px;background:{{ badgeBg }};color:{{ badgeFg }}"><span style="width:6px;height:6px;border-radius:999px;background:{{ badgeDot }}"></span>{{ badgeLabel }}</span>
+          <sc-if value="{{ isLive }}" hint-placeholder-val="{{ false }}">
+            <span style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:#4ade80"><span style="width:8px;height:8px;border-radius:999px;background:#22c55e;box-shadow:0 0 0 4px rgba(34,197,94,.18)"></span>Ao vivo</span>
+          </sc-if>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:16px;font-size:13px;color:#a3a3a3">
+          <span style="display:flex;align-items:center;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path></svg>{{ dTime }}</span>
+          <span style="display:flex;align-items:center;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="8" r="4"></circle><path d="M2 21a7 7 0 0 1 14 0M16 3.5a4 4 0 0 1 0 9M22 21a7 7 0 0 0-4-6.3"></path></svg>{{ dPlayersMeta }}</span>
+          <sc-if value="{{ isFinished }}" hint-placeholder-val="{{ true }}"><span style="display:flex;align-items:center;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="m12 7 4 3-1.5 5h-5L8 10z"></path></svg>17 partidas</span></sc-if>
+        </div>
+      </div>
+      <sc-if value="{{ isAdminView }}" hint-placeholder-val="{{ true }}">
+        <div style="position:relative;display:flex;gap:8px;flex-wrap:wrap">
+          <sc-if value="{{ isLive }}" hint-placeholder-val="{{ false }}">
+          <button onClick="{{ openDlg }}" style="display:flex;align-items:center;gap:8px;height:38px;padding:0 16px;border-radius:999px;border:none;background:linear-gradient(90deg,#15803d,#16a34a);color:#fff;font-size:14px;font-weight:600;font-family:inherit;cursor:pointer;white-space:nowrap">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="2"></rect><path d="M9 3v3h6V3M9 12h6M9 16h4"></path></svg>Lançar resultados
+          </button>
+          </sc-if>
+          <sc-if value="{{ isScheduled }}" hint-placeholder-val="{{ false }}">
+          <button style="display:flex;align-items:center;gap:8px;height:38px;padding:0 16px;border-radius:999px;border:1px solid #2e2e2e;background:transparent;color:#fafafa;font-size:14px;font-weight:500;font-family:inherit;cursor:pointer;white-space:nowrap" style-hover="background:#262626">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><path d="M14 3v6h6M8 13h8M8 17h5"></path></svg>Importar mensagem
+          </button>
+          <button style="display:flex;align-items:center;gap:8px;height:38px;padding:0 16px;border-radius:999px;border:none;background:linear-gradient(90deg,#15803d,#16a34a);color:#fff;font-size:14px;font-weight:600;font-family:inherit;cursor:pointer;white-space:nowrap">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="m8 12 3 3 5-6"></path></svg>Confirmar diária
+          </button>
+          </sc-if>
+          <sc-if value="{{ isFinished }}" hint-placeholder-val="{{ true }}">
+          <button style="display:flex;align-items:center;gap:8px;height:38px;padding:0 16px;border-radius:999px;border:1px solid #2e2e2e;background:transparent;color:#fafafa;font-size:14px;font-weight:500;font-family:inherit;cursor:pointer;white-space:nowrap" style-hover="background:#262626">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z"></path></svg>Editar resultados
+          </button>
+          <button style="display:flex;align-items:center;gap:8px;height:38px;padding:0 16px;border-radius:999px;border:1px solid #2e2e2e;background:transparent;color:#fafafa;font-size:14px;font-weight:500;font-family:inherit;cursor:pointer;white-space:nowrap" style-hover="background:#262626">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22V4s1-1 4-1 5 2 8 2 4-1 4-1v11s-1 1-4 1-5-2-8-2-4 1-4 1"></path></svg>Re-finalizar
+          </button>
+          </sc-if>
+          <button onClick="{{ toggleDayMenu }}" aria-label="Mais ações" style="width:38px;height:38px;border-radius:999px;border:1px solid #2e2e2e;background:transparent;color:#fafafa;cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="background:#262626">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"></circle><circle cx="12" cy="12" r="1.8"></circle><circle cx="19" cy="12" r="1.8"></circle></svg>
+          </button>
+          <sc-if value="{{ dayMenuOpen }}" hint-placeholder-val="{{ false }}">
+            <div onClick="{{ closeDayMenu }}" style="position:fixed;inset:0;z-index:40"></div>
+            <div style="position:absolute;right:0;top:calc(100% + 6px);z-index:50;width:220px;background:#1c1c1c;border:1px solid #2e2e2e;border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.45);padding:4px;display:flex;flex-direction:column">
+              <sc-if value="{{ isScheduled }}" hint-placeholder-val="{{ false }}">
+              <button onClick="{{ closeDayMenu }}" style="display:flex;align-items:center;gap:10px;padding:8px;border:none;border-radius:6px;background:transparent;color:#fafafa;font-size:14px;font-family:inherit;cursor:pointer;text-align:left" style-hover="background:#262626">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#a3a3a3" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"></circle><path d="m15 9-6 6M9 9l6 6"></path></svg>Cancelar diária
+              </button>
+              </sc-if>
+              <sc-if value="{{ isFinished }}" hint-placeholder-val="{{ true }}">
+              <button onClick="{{ closeDayMenu }}" style="display:flex;align-items:center;gap:10px;padding:8px;border:none;border-radius:6px;background:transparent;color:#fafafa;font-size:14px;font-family:inherit;cursor:pointer;text-align:left" style-hover="background:#262626">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#a3a3a3" stroke-width="2" stroke-linecap="round"><path d="M12 15V3M7 8l5-5 5 5M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"></path></svg>Trocar foto do campeão
+              </button>
+              </sc-if>
+              <div style="height:1px;background:#2a2a2a;margin:4px -4px"></div>
+              <button onClick="{{ closeDayMenu }}" style="display:flex;align-items:center;gap:10px;padding:8px;border:none;border-radius:6px;background:transparent;color:#ef4444;font-size:14px;font-family:inherit;cursor:pointer;text-align:left" style-hover="background:#2a1a1a">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"></path></svg>Excluir sessão
+              </button>
+            </div>
+          </sc-if>
+        </div>
+      </sc-if>
+    </header>
+
+    <sc-if value="{{ isFinished }}" hint-placeholder-val="{{ true }}">
+    <section style="display:grid;grid-template-columns:{{ heroCols }};gap:16px">
+      <div style="position:relative;border-radius:14px;overflow:hidden;min-height:{{ photoH }};background:url('assets/campeao-27-09.jpeg') center 45% / cover no-repeat #222">
+        <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,0) 55%,rgba(0,0,0,.65) 100%)"></div>
+        <span style="position:absolute;left:16px;bottom:14px;display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:#fafafa;letter-spacing:.04em;text-transform:uppercase">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#eab308" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4"></path></svg>Foto do campeão
+        </span>
+        <sc-if value="{{ isAdminView }}" hint-placeholder-val="{{ true }}">
+          <button style="position:absolute;top:12px;right:12px;display:flex;align-items:center;gap:6px;height:32px;padding:0 12px;border-radius:999px;border:none;background:rgba(0,0,0,.5);color:#fff;font-size:13px;font-weight:500;font-family:inherit;cursor:pointer" style-hover="background:rgba(0,0,0,.7)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 15V3M7 8l5-5 5 5M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"></path></svg>Trocar foto
+          </button>
+        </sc-if>
+      </div>
+
+      <div style="border:1px solid #2a2a2a;border-radius:14px;background:#1e1e1e;padding:20px;display:flex;flex-direction:column;gap:18px">
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <span style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#eab308">Time campeão</span>
+          <div style="display:flex;align-items:center;gap:10px">
+            <span style="width:14px;height:14px;border-radius:999px;background:#ef4444"></span>
+            <span style="font-size:24px;font-weight:700">Vermelho</span>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+          <div style="background:#262626;border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:2px"><span style="font-size:20px;font-weight:700">21</span><span style="font-size:11px;color:#a3a3a3">pontos</span></div>
+          <div style="background:#262626;border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:2px"><span style="font-size:20px;font-weight:700">7–3</span><span style="font-size:11px;color:#a3a3a3">V–D</span></div>
+          <div style="background:#262626;border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:2px"><span style="font-size:20px;font-weight:700">70%</span><span style="font-size:11px;color:#a3a3a3">aproveit.</span></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:2px">
+          <sc-for list="{{ champPlayers }}" as="cp" hint-placeholder-count="5">
+            <div style="display:flex;align-items:center;gap:10px;padding:6px 0">
+              <span style="width:28px;height:28px;border-radius:999px;background:#2e2e2e;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0">{{ cp.initials }}</span>
+              <span style="flex:1;font-size:14px;font-weight:500;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ cp.name }}</span>
+              <span style="font-size:12px;color:#a3a3a3">{{ cp.line }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </section>
+
+    <section style="display:flex;flex-direction:column;gap:12px">
+      <h2 style="margin:0;font-size:16px;font-weight:600">Prêmios</h2>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px">
+        <sc-for list="{{ awards }}" as="aw" hint-placeholder-count="4">
+          <div style="border:1px solid #2a2a2a;border-radius:12px;background:#1e1e1e;padding:14px;display:flex;flex-direction:column;gap:12px">
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="width:28px;height:28px;border-radius:8px;background:{{ aw.tint }};display:flex;align-items:center;justify-content:center;font-size:14px;color:{{ aw.color }};font-weight:700">{{ aw.glyph }}</span>
+              <span style="font-size:13px;font-weight:600">{{ aw.title }}</span>
+              <span style="margin-left:auto;font-size:12px;color:#8a8a8a">{{ aw.detail }}</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px">
+              <span style="width:36px;height:36px;border-radius:999px;background:#2e2e2e;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;flex-shrink:0">{{ aw.initials }}</span>
+              <span style="font-size:16px;font-weight:600;min-width:0;text-wrap:pretty">{{ aw.winners }}</span>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </section>
+
+    <section style="display:flex;flex-direction:column;gap:16px">
+      <div style="display:flex;overflow-x:{{ tabOverflow }}">
+        <div style="display:{{ tabDisplay }};width:{{ tabWidth }};gap:4px;padding:4px;border-radius:999px;background:#262626;flex-shrink:0">
+          <sc-for list="{{ dTabs }}" as="t" hint-placeholder-count="4">
+            <button onClick="{{ t.select }}" style="flex:{{ tabFlex }};min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border:none;cursor:pointer;padding:{{ tabPad }};border-radius:999px;font-size:{{ tabFont }};font-weight:500;font-family:inherit;background:{{ t.bg }};color:{{ t.fg }}">{{ t.label }}</button>
+          </sc-for>
+        </div>
+      </div>
+
+      <sc-if value="{{ tabTable }}" hint-placeholder-val="{{ true }}">
+        <div style="border:1px solid #2a2a2a;border-radius:12px;overflow:hidden">
+          <div style="display:grid;grid-template-columns:{{ leagueCols }};align-items:center;padding:10px 12px;font-size:12px;color:#8a8a8a;background:#1e1e1e;border-bottom:1px solid #2a2a2a">
+            <span style="text-align:center">#</span><span>Time</span><span style="text-align:center">V</span><span style="text-align:center">E</span><span style="text-align:center">D</span><span style="text-align:center">GP</span><span style="text-align:center">GC</span><span style="text-align:center">SG</span><span style="text-align:center;color:#fafafa">Pts</span>
+          </div>
+          <sc-for list="{{ league }}" as="l" hint-placeholder-count="4">
+            <div style="display:grid;grid-template-columns:{{ leagueCols }};align-items:center;padding:12px;font-size:14px;border-bottom:1px solid #242424;background:{{ l.bg }}">
+              <span style="text-align:center;font-weight:700;color:{{ l.rankColor }}">{{ l.rank }}</span>
+              <span style="display:flex;align-items:center;gap:8px;font-weight:{{ l.weight }};min-width:0"><span style="width:10px;height:10px;border-radius:999px;flex-shrink:0;background:{{ l.color }};border:1px solid #4a4a4a"></span>{{ l.name }}</span>
+              <span style="text-align:center">{{ l.v }}</span><span style="text-align:center">{{ l.e }}</span><span style="text-align:center">{{ l.d }}</span><span style="text-align:center">{{ l.gp }}</span><span style="text-align:center">{{ l.gc }}</span>
+              <span style="text-align:center;color:{{ l.sgColor }}">{{ l.sg }}</span>
+              <span style="text-align:center;font-weight:700">{{ l.pts }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ tabMatches }}" hint-placeholder-val="{{ false }}">
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px">
+          <sc-for list="{{ matches }}" as="mt" hint-placeholder-count="6">
+            <div style="border:1px solid #2a2a2a;border-radius:12px;background:#1e1e1e;padding:14px;display:flex;flex-direction:column;gap:12px">
+              <span style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#737373">Partida {{ mt.n }}</span>
+              <div style="display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:10px">
+                <span style="display:flex;align-items:center;gap:8px;font-size:15px;font-weight:{{ mt.w1 }};min-width:0"><span style="width:10px;height:10px;border-radius:999px;flex-shrink:0;background:{{ mt.c1 }};border:1px solid #4a4a4a"></span>{{ mt.t1 }}</span>
+                <span style="font-size:22px;font-weight:700;letter-spacing:.02em;font-variant-numeric:tabular-nums">{{ mt.s1 }} – {{ mt.s2 }}</span>
+                <span style="display:flex;align-items:center;justify-content:flex-end;gap:8px;font-size:15px;font-weight:{{ mt.w2 }};min-width:0">{{ mt.t2 }}<span style="width:10px;height:10px;border-radius:999px;flex-shrink:0;background:{{ mt.c2 }};border:1px solid #4a4a4a"></span></span>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:4px;border-top:1px solid #2a2a2a;padding-top:10px;font-size:13px">
+                <span style="color:#d4d4d4"><span style="color:#8a8a8a">Gols </span>{{ mt.goals }}</span>
+                <span style="color:#d4d4d4"><span style="color:#8a8a8a">Assist. </span>{{ mt.assists }}</span>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+        <button style="align-self:center;height:36px;padding:0 16px;border-radius:999px;border:1px solid #2e2e2e;background:transparent;color:#fafafa;font-size:14px;font-weight:500;font-family:inherit;cursor:pointer" style-hover="background:#262626">Mostrar todas as 17 partidas</button>
+      </sc-if>
+
+      <sc-if value="{{ tabPlayers }}" hint-placeholder-val="{{ false }}">
+        <div style="border:1px solid #2a2a2a;border-radius:12px;overflow:hidden">
+          <div style="display:grid;grid-template-columns:{{ playerCols }};align-items:center;padding:6px 12px;background:#1e1e1e;border-bottom:1px solid #2a2a2a">
+            <span style="font-size:12px;color:#8a8a8a">Jogador</span>
+            <sc-for list="{{ sortHeads }}" as="h" hint-placeholder-count="4">
+              <button onClick="{{ h.select }}" style="border:none;background:transparent;font-family:inherit;font-size:12px;cursor:pointer;padding:6px 0;color:{{ h.fg }};font-weight:{{ h.weight }}">{{ h.label }}</button>
+            </sc-for>
+          </div>
+          <sc-for list="{{ playerRows }}" as="pr" hint-placeholder-count="10">
+            <div style="display:grid;grid-template-columns:{{ playerCols }};align-items:center;padding:10px 12px;font-size:14px;border-bottom:1px solid #242424" style-hover="background:#202020">
+              <span style="display:flex;align-items:center;gap:10px;min-width:0">
+                <span style="position:relative;width:28px;height:28px;border-radius:999px;background:#2e2e2e;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0">{{ pr.initials }}<span style="position:absolute;right:-1px;bottom:-1px;width:10px;height:10px;border-radius:999px;background:{{ pr.color }};border:2px solid #1a1a1a"></span></span>
+                <span style="font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ pr.name }}</span>
+              </span>
+              <span style="text-align:center;font-weight:{{ pr.wg }}">{{ pr.g }}</span>
+              <span style="text-align:center;font-weight:{{ pr.wa }}">{{ pr.a }}</span>
+              <span style="text-align:center;font-weight:{{ pr.wp }}">{{ pr.p }}</span>
+              <span style="text-align:center;font-weight:{{ pr.wv }}">{{ pr.v }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ tabTeams }}" hint-placeholder-val="{{ false }}">
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px">
+          <sc-for list="{{ teams }}" as="tm" hint-placeholder-count="4">
+            <div style="border:1px solid #2a2a2a;border-radius:12px;background:#1e1e1e;overflow:hidden">
+              <div style="display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid #2a2a2a;background:#212121">
+                <span style="width:12px;height:12px;border-radius:999px;background:{{ tm.color }};border:1px solid #4a4a4a"></span>
+                <span style="font-size:15px;font-weight:600;flex:1">{{ tm.name }}</span>
+                <span style="font-size:12px;color:#a3a3a3">{{ tm.pos }}</span>
+                <span style="font-size:12px;font-weight:600;color:#eab308">{{ tm.avg }} ★</span>
+              </div>
+              <div style="padding:6px 14px">
+                <sc-for list="{{ tm.players }}" as="tp" hint-placeholder-count="5">
+                  <div style="display:flex;align-items:center;gap:10px;padding:7px 0">
+                    <span style="width:28px;height:28px;border-radius:999px;background:#2e2e2e;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0">{{ tp.initials }}</span>
+                    <span style="flex:1;font-size:14px;font-weight:500;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ tp.name }}</span>
+                    <span style="font-size:12px;letter-spacing:1px"><span style="color:#eab308">{{ tp.on }}</span><span style="color:#3a3a3a">{{ tp.off }}</span></span>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
+    </section>
+    </sc-if>
+
+    <sc-if value="{{ isScheduled }}" hint-placeholder-val="{{ false }}">
+    <section style="border:1px solid #2a2a2a;border-radius:14px;background:#1e1e1e;padding:20px;display:flex;flex-wrap:wrap;align-items:center;gap:20px">
+      <div style="flex:1;min-width:240px;display:flex;flex-direction:column;gap:10px">
+        <span style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#8a8a8a">Presença</span>
+        <div style="display:flex;align-items:baseline;gap:8px"><span style="font-size:32px;font-weight:700;font-variant-numeric:tabular-nums">{{ confCount }}</span><span style="font-size:15px;color:#a3a3a3">de 20 confirmados</span></div>
+        <div style="height:8px;border-radius:999px;background:#2a2a2a;overflow:hidden;max-width:420px"><div style="height:100%;width:{{ confPct }};background:linear-gradient(90deg,#15803d,#16a34a);transition:width .3s"></div></div>
+        <span style="font-size:13px;color:#a3a3a3">{{ confHint }}</span>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-start;gap:8px">
+        <sc-if value="{{ meNotConfirmed }}" hint-placeholder-val="{{ true }}">
+          <span style="font-size:13px;color:#a3a3a3">Você ainda não confirmou</span>
+          <button onClick="{{ toggleMe }}" style="display:flex;align-items:center;gap:8px;height:42px;padding:0 20px;border-radius:999px;border:none;background:linear-gradient(90deg,#15803d,#16a34a);color:#fff;font-size:15px;font-weight:600;font-family:inherit;cursor:pointer;white-space:nowrap">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"></rect><path d="M16 2v4M8 2v4M3 10h18M9 16l2 2 4-4"></path></svg>Confirmar presença
+          </button>
+        </sc-if>
+        <sc-if value="{{ meConfirmed }}" hint-placeholder-val="{{ false }}">
+          <span style="display:flex;align-items:center;gap:6px;font-size:14px;font-weight:600;color:#4ade80"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="m5 12 5 5L20 7"></path></svg>Presença confirmada</span>
+          <button onClick="{{ toggleMe }}" style="height:36px;padding:0 16px;border-radius:999px;border:1px solid #2e2e2e;background:transparent;color:#fafafa;font-size:14px;font-weight:500;font-family:inherit;cursor:pointer" style-hover="background:#262626">Não vou mais</button>
+        </sc-if>
+      </div>
+    </section>
+
+    <section style="display:flex;flex-direction:column;gap:12px">
+    <button onClick="{{ toggleAtt }}" aria-expanded="{{ attOpen }}" style="display:flex;align-items:center;gap:10px;width:100%;padding:0;border:none;background:transparent;color:#fafafa;font-family:inherit;cursor:pointer;text-align:left">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="transform:{{ attChev }};transition:transform .15s;flex-shrink:0"><path d="m9 18 6-6-6-6"></path></svg>
+      <span style="font-size:16px;font-weight:600">Lista de presença</span>
+      <span style="font-size:13px;color:#8a8a8a">{{ confCount }} confirmados · {{ pendCount }} pendentes</span>
+      <span style="margin-left:auto;font-size:13px;color:#a3a3a3">{{ attToggleLabel }}</span>
+    </button>
+    <sc-if value="{{ attOpen }}" hint-placeholder-val="{{ true }}">
+    <section style="display:grid;grid-template-columns:{{ attCols }};gap:16px;align-items:start">
+      <div style="border:1px solid #2a2a2a;border-radius:12px;overflow:hidden">
+        <div style="display:flex;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid #2a2a2a;background:#1e1e1e">
+          <span style="width:8px;height:8px;border-radius:999px;background:#22c55e"></span>
+          <span style="font-size:14px;font-weight:600">Confirmados</span>
+          <span style="font-size:13px;color:#8a8a8a">{{ confCount }}</span>
+        </div>
+        <sc-for list="{{ confList }}" as="c" hint-placeholder-count="3">
+          <div style="display:flex;align-items:center;gap:10px;padding:9px 14px;border-bottom:1px solid #242424">
+            <span style="width:30px;height:30px;border-radius:999px;background:#2e2e2e;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0">{{ c.initials }}</span>
+            <span style="font-size:14px;font-weight:500;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ c.name }}</span>
+            <span style="font-size:10px;font-weight:600;letter-spacing:.03em;padding:2px 7px;border-radius:999px;background:#2a2a2a;color:#d4d4d4">{{ c.pos }}</span>
+            <span style="margin-left:auto;font-size:11px;letter-spacing:1px"><span style="color:#eab308">{{ c.on }}</span><span style="color:#3a3a3a">{{ c.off }}</span></span>
+            <sc-if value="{{ isAdminView }}" hint-placeholder-val="{{ true }}">
+              <button onClick="{{ c.toggle }}" aria-label="Remover presença" style="width:28px;height:28px;border:none;border-radius:999px;background:transparent;color:#8a8a8a;cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="background:#2a1a1a;color:#f87171">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="8" r="4"></circle><path d="M2 21a7 7 0 0 1 14 0M17 11h5"></path></svg>
+              </button>
+            </sc-if>
+          </div>
+        </sc-for>
+        <sc-if value="{{ noConf }}" hint-placeholder-val="{{ true }}">
+          <div style="padding:28px 14px;text-align:center;font-size:13px;color:#8a8a8a">Ninguém confirmou ainda.</div>
+        </sc-if>
+      </div>
+
+      <div style="border:1px solid #2a2a2a;border-radius:12px;overflow:hidden">
+        <div style="display:flex;align-items:center;gap:8px;padding:8px 8px 8px 14px;border-bottom:1px solid #2a2a2a;background:#1e1e1e;min-height:47px">
+          <span style="width:8px;height:8px;border-radius:999px;background:#525252"></span>
+          <span style="font-size:14px;font-weight:600">Não confirmados</span>
+          <span style="font-size:13px;color:#8a8a8a">{{ pendCount }}</span>
+          <sc-if value="{{ showConfirmAll }}" hint-placeholder-val="{{ true }}">
+            <button onClick="{{ confirmAll }}" style="margin-left:auto;height:30px;padding:0 12px;border-radius:999px;border:1px solid #2e2e2e;background:transparent;color:#fafafa;font-size:13px;font-weight:500;font-family:inherit;cursor:pointer;white-space:nowrap" style-hover="background:#262626">Confirmar todos</button>
+          </sc-if>
+        </div>
+        <sc-for list="{{ pendList }}" as="c" hint-placeholder-count="8">
+          <div style="display:flex;align-items:center;gap:10px;padding:9px 14px;border-bottom:1px solid #242424">
+            <span style="width:30px;height:30px;border-radius:999px;background:#262626;color:#a3a3a3;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0">{{ c.initials }}</span>
+            <span style="font-size:14px;color:#d4d4d4;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ c.name }}</span>
+            <span style="font-size:10px;font-weight:600;letter-spacing:.03em;padding:2px 7px;border-radius:999px;background:#242424;color:#a3a3a3">{{ c.pos }}</span>
+            <span style="margin-left:auto;font-size:11px;letter-spacing:1px"><span style="color:#a16207">{{ c.on }}</span><span style="color:#333">{{ c.off }}</span></span>
+            <sc-if value="{{ isAdminView }}" hint-placeholder-val="{{ true }}">
+              <button onClick="{{ c.toggle }}" aria-label="Confirmar jogador" style="width:28px;height:28px;border:none;border-radius:999px;background:transparent;color:#8a8a8a;cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="background:#14301d;color:#4ade80">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="8" r="4"></circle><path d="M2 21a7 7 0 0 1 14 0M19 8v6M16 11h6"></path></svg>
+              </button>
+            </sc-if>
+          </div>
+        </sc-for>
+        <sc-if value="{{ noPend }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:28px 14px;text-align:center;font-size:13px;color:#8a8a8a">Todos os membros confirmaram.</div>
+        </sc-if>
+      </div>
+    </section>
+
+    </sc-if>
+    </section>
+
+    <section style="display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+        <h2 style="margin:0;font-size:16px;font-weight:600">Times</h2>
+        <sc-if value="{{ hasTeams }}" hint-placeholder-val="{{ false }}">
+          <sc-if value="{{ isAdminView }}" hint-placeholder-val="{{ true }}">
+            <button onClick="{{ sortTeams }}" style="display:flex;align-items:center;gap:6px;height:34px;padding:0 14px;border-radius:999px;border:1px solid #2e2e2e;background:transparent;color:#fafafa;font-size:14px;font-weight:500;font-family:inherit;cursor:pointer" style-hover="background:#262626">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5"></path></svg>Sortear de novo
+            </button>
+          </sc-if>
+        </sc-if>
+      </div>
+      <sc-if value="{{ noTeams }}" hint-placeholder-val="{{ true }}">
+        <div style="border:1px dashed #333;border-radius:14px;padding:28px 20px;display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#737373" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5"></path></svg>
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <span style="font-size:15px;font-weight:600">Sem times ainda</span>
+            <span style="font-size:13px;color:#a3a3a3;max-width:380px;text-wrap:pretty">{{ teamsHint }}</span>
+          </div>
+          <sc-if value="{{ isAdminView }}" hint-placeholder-val="{{ true }}">
+            <button onClick="{{ sortTeams }}" disabled="{{ cantSort }}" style="display:flex;align-items:center;gap:8px;height:38px;padding:0 18px;border-radius:999px;border:none;background:{{ sortBg }};color:{{ sortFg }};font-size:14px;font-weight:600;font-family:inherit;cursor:{{ sortCursor }}">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5"></path></svg>Sortear times
+            </button>
+          </sc-if>
+        </div>
+      </sc-if>
+      <sc-if value="{{ hasTeams }}" hint-placeholder-val="{{ false }}">
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px">
+          <sc-for list="{{ drawnTeams }}" as="tm" hint-placeholder-count="4">
+            <div style="border:1px solid #2a2a2a;border-radius:12px;background:#1e1e1e;overflow:hidden">
+              <div style="display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid #2a2a2a;background:#212121">
+                <span style="width:12px;height:12px;border-radius:999px;background:{{ tm.color }};border:1px solid #4a4a4a"></span>
+                <span style="font-size:15px;font-weight:600;flex:1">{{ tm.name }}</span>
+                <span style="font-size:12px;font-weight:600;color:#eab308">{{ tm.avg }} ★</span>
+              </div>
+              <div style="padding:6px 14px">
+                <sc-for list="{{ tm.players }}" as="tp" hint-placeholder-count="5">
+                  <div style="display:flex;align-items:center;gap:10px;padding:7px 0">
+                    <span style="width:28px;height:28px;border-radius:999px;background:#2e2e2e;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0">{{ tp.initials }}</span>
+                    <span style="flex:1;font-size:14px;font-weight:500;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ tp.name }}</span>
+                    <span style="font-size:12px;letter-spacing:1px"><span style="color:#eab308">{{ tp.on }}</span><span style="color:#3a3a3a">{{ tp.off }}</span></span>
+                    <sc-if value="{{ isAdminView }}" hint-placeholder-val="{{ true }}">
+                      <button aria-label="Trocar jogador" style="width:26px;height:26px;border:1px solid #2e2e2e;border-radius:999px;background:transparent;color:#8a8a8a;cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="background:#262626;color:#fafafa">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3l4 4-4 4M20 7H4M8 21l-4-4 4-4M4 17h16"></path></svg>
+                      </button>
+                    </sc-if>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
+    </section>
+    </sc-if>
+
+    <sc-if value="{{ isLive }}" hint-placeholder-val="{{ false }}">
+    <section style="border:1px solid #1f4d2e;border-radius:14px;background:linear-gradient(180deg,#15241a,#1a1f1b);padding:20px;display:flex;flex-wrap:wrap;align-items:center;gap:20px">
+      <div style="flex:1;min-width:240px;display:flex;flex-direction:column;gap:6px">
+        <span style="display:flex;align-items:center;gap:8px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#4ade80"><span style="width:8px;height:8px;border-radius:999px;background:#22c55e;box-shadow:0 0 0 4px rgba(34,197,94,.18)"></span>Sessão ao vivo</span>
+        <span style="font-size:22px;font-weight:700">{{ liveTitle }}</span>
+        <span style="font-size:13px;color:#a3c9b0;text-wrap:pretty;max-width:520px">Lance os placares conforme os jogos acabam. No fim, finalize a sessão para calcular prêmios, ranking e estatísticas.</span>
+      </div>
+      <sc-if value="{{ isAdminView }}" hint-placeholder-val="{{ true }}">
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button disabled="{{ cantFinalize }}" style="height:40px;padding:0 16px;border-radius:999px;border:1px solid #2e4a37;background:transparent;color:{{ finFg }};font-size:14px;font-weight:500;font-family:inherit;cursor:{{ finCursor }};white-space:nowrap">Finalizar sessão</button>
+          <button onClick="{{ openDlg }}" style="display:flex;align-items:center;gap:8px;height:40px;padding:0 18px;border-radius:999px;border:none;background:linear-gradient(90deg,#15803d,#16a34a);color:#fff;font-size:14px;font-weight:600;font-family:inherit;cursor:pointer;white-space:nowrap">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>Lançar resultados
+          </button>
+        </div>
+      </sc-if>
+    </section>
+
+    <section style="display:grid;grid-template-columns:{{ attCols }};gap:16px;align-items:start">
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <h2 style="margin:0;font-size:16px;font-weight:600">Classificação ao vivo</h2>
+        <div style="border:1px solid #2a2a2a;border-radius:12px;overflow:hidden">
+          <div style="display:grid;grid-template-columns:28px minmax(0,1fr) 30px 30px 30px 30px 36px 40px;align-items:center;padding:10px 12px;font-size:12px;color:#8a8a8a;background:#1e1e1e;border-bottom:1px solid #2a2a2a">
+            <span>#</span><span>Time</span><span style="text-align:center">J</span><span style="text-align:center">V</span><span style="text-align:center">E</span><span style="text-align:center">D</span><span style="text-align:center">SG</span><span style="text-align:center;color:#fafafa">Pts</span>
+          </div>
+          <sc-for list="{{ liveTable }}" as="l" hint-placeholder-count="4">
+            <div style="display:grid;grid-template-columns:28px minmax(0,1fr) 30px 30px 30px 30px 36px 40px;align-items:center;padding:11px 12px;font-size:14px;border-bottom:1px solid #242424">
+              <span style="font-weight:700;color:#8a8a8a">{{ l.rank }}</span>
+              <span style="display:flex;align-items:center;gap:8px;font-weight:500;min-width:0"><span style="width:10px;height:10px;border-radius:999px;flex-shrink:0;background:{{ l.color }};border:1px solid #4a4a4a"></span>{{ l.name }}</span>
+              <span style="text-align:center">{{ l.j }}</span><span style="text-align:center">{{ l.v }}</span><span style="text-align:center">{{ l.e }}</span><span style="text-align:center">{{ l.d }}</span>
+              <span style="text-align:center;color:{{ l.sgColor }}">{{ l.sg }}</span>
+              <span style="text-align:center;font-weight:700">{{ l.pts }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <h2 style="margin:0;font-size:16px;font-weight:600">Partidas lançadas</h2>
+        <sc-if value="{{ noSaved }}" hint-placeholder-val="{{ true }}">
+          <div style="border:1px dashed #333;border-radius:12px;padding:32px 16px;text-align:center;font-size:13px;color:#8a8a8a">Nenhuma partida lançada ainda.</div>
+        </sc-if>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <sc-for list="{{ savedList }}" as="sm" hint-placeholder-count="0">
+            <div style="border:1px solid #2a2a2a;border-radius:12px;background:#1e1e1e;padding:12px 14px;display:flex;flex-direction:column;gap:6px">
+              <div style="display:grid;grid-template-columns:24px minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:10px">
+                <span style="font-size:12px;color:#737373">#{{ sm.n }}</span>
+                <span style="display:flex;align-items:center;gap:8px;font-weight:{{ sm.w1 }};min-width:0"><span style="width:9px;height:9px;border-radius:999px;background:{{ sm.c1 }};border:1px solid #4a4a4a;flex-shrink:0"></span>{{ sm.t1 }}</span>
+                <span style="font-size:18px;font-weight:700;font-variant-numeric:tabular-nums">{{ sm.s1 }} – {{ sm.s2 }}</span>
+                <span style="display:flex;align-items:center;justify-content:flex-end;gap:8px;font-weight:{{ sm.w2 }};min-width:0">{{ sm.t2 }}<span style="width:9px;height:9px;border-radius:999px;background:{{ sm.c2 }};border:1px solid #4a4a4a;flex-shrink:0"></span></span>
+              </div>
+              <span style="font-size:12px;color:#a3a3a3;padding-left:34px">{{ sm.scorers }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </section>
+
+    <section style="display:flex;flex-direction:column;gap:12px">
+      <h2 style="margin:0;font-size:16px;font-weight:600">Times</h2>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px">
+        <sc-for list="{{ liveTeams }}" as="tm" hint-placeholder-count="4">
+          <div style="border:1px solid #2a2a2a;border-radius:12px;background:#1e1e1e;overflow:hidden">
+            <div style="display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid #2a2a2a;background:#212121">
+              <span style="width:12px;height:12px;border-radius:999px;background:{{ tm.color }};border:1px solid #4a4a4a"></span>
+              <span style="font-size:15px;font-weight:600">{{ tm.name }}</span>
+            </div>
+            <div style="padding:6px 14px">
+              <sc-for list="{{ tm.players }}" as="tp" hint-placeholder-count="5">
+                <div style="display:flex;align-items:center;gap:10px;padding:6px 0">
+                  <span style="width:26px;height:26px;border-radius:999px;background:#2e2e2e;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;flex-shrink:0">{{ tp.initials }}</span>
+                  <span style="font-size:14px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ tp.name }}</span>
+                  <span style="font-size:12px;color:#a3a3a3">{{ tp.line }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </section>
+    </sc-if>
+
+    <sc-if value="{{ dlgOpen }}" hint-placeholder-val="{{ false }}">
+      <div onClick="{{ closeDlg }}" style="position:fixed;inset:0;z-index:70;background:rgba(0,0,0,.7)"></div>
+      <div role="dialog" aria-label="Resultados das partidas" style="position:fixed;z-index:71;left:{{ dlgLeft }};top:{{ dlgTop }};bottom:{{ dlgBottom }};transform:{{ dlgTf }};width:{{ dlgW }};max-height:{{ dlgMaxH }};display:flex;flex-direction:column;background:#1c1c1c;border:1px solid #2e2e2e;border-radius:{{ dlgRadius }};box-shadow:0 24px 60px rgba(0,0,0,.6)">
+        <div style="display:flex;align-items:flex-start;gap:12px;padding:{{ dlgHeadPad }}">
+          <div style="flex:1;display:flex;flex-direction:column;gap:4px">
+            <span style="font-size:18px;font-weight:700">Lançar resultados</span>
+            <span style="font-size:13px;color:#a3a3a3">Marque os times, o placar e, se quiser, quem fez os gols e as assistências.</span>
+          </div>
+          <button onClick="{{ closeDlg }}" aria-label="Fechar" style="width:32px;height:32px;border:none;border-radius:999px;background:transparent;color:#a3a3a3;cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="background:#262626;color:#fafafa">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"></path></svg>
+          </button>
+        </div>
+        <div style="flex:1;overflow-y:auto;padding:{{ dlgPad }};display:flex;flex-direction:column;gap:12px">
+          <sc-for list="{{ draftMatches }}" as="m" hint-placeholder-count="1">
+            <div style="border:1px solid #2a2a2a;border-radius:12px;background:#212121;padding:{{ mPad }};display:flex;flex-direction:column;gap:14px">
+              <div style="display:flex;align-items:center;justify-content:space-between">
+                <span style="font-size:14px;font-weight:600">Partida {{ m.n }}</span>
+                <sc-if value="{{ m.canRemove }}" hint-placeholder-val="{{ false }}">
+                  <button onClick="{{ m.remove }}" aria-label="Remover partida" style="width:30px;height:30px;border:none;border-radius:999px;background:transparent;color:#8a8a8a;cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="background:#2a1a1a;color:#f87171">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"></path></svg>
+                  </button>
+                </sc-if>
+              </div>
+              <div style="display:grid;grid-template-columns:{{ statCols }};gap:14px">
+                <div style="display:flex;flex-direction:column;gap:8px"><span style="font-size:12px;color:#8a8a8a">Time 1</span><div style="display:flex;flex-wrap:{{ chipWrap }};overflow-x:auto;gap:6px;scrollbar-width:none">
+                    <sc-for list="{{ m.chips1 }}" as="ch" hint-placeholder-count="4">
+                      <button onClick="{{ ch.select }}" style="display:flex;align-items:center;gap:6px;height:32px;padding:0 10px;border-radius:999px;border:1px solid {{ ch.border }};background:{{ ch.bg }};opacity:{{ ch.op }};color:#fafafa;font-size:13px;font-weight:500;font-family:inherit;cursor:pointer;flex-shrink:0;white-space:nowrap"><span style="width:9px;height:9px;border-radius:999px;background:{{ ch.color }};border:1px solid #4a4a4a"></span>{{ ch.name }}</button>
+                    </sc-for>
+                  </div></div>
+                <div style="display:flex;flex-direction:column;gap:8px"><span style="font-size:12px;color:#8a8a8a">Time 2</span><div style="display:flex;flex-wrap:{{ chipWrap }};overflow-x:auto;gap:6px;scrollbar-width:none">
+                    <sc-for list="{{ m.chips2 }}" as="ch" hint-placeholder-count="4">
+                      <button onClick="{{ ch.select }}" style="display:flex;align-items:center;gap:6px;height:32px;padding:0 10px;border-radius:999px;border:1px solid {{ ch.border }};background:{{ ch.bg }};opacity:{{ ch.op }};color:#fafafa;font-size:13px;font-weight:500;font-family:inherit;cursor:pointer;flex-shrink:0;white-space:nowrap"><span style="width:9px;height:9px;border-radius:999px;background:{{ ch.color }};border:1px solid #4a4a4a"></span>{{ ch.name }}</button>
+                    </sc-for>
+                  </div></div>
+              </div>
+              <sc-if value="{{ isDesktop }}" hint-placeholder-val="{{ true }}">
+              <div style="display:flex;align-items:center;justify-content:center;gap:16px;flex-wrap:wrap;padding:6px 0">
+                <span style="display:flex;align-items:center;gap:8px;font-size:15px;font-weight:600;min-width:90px;justify-content:flex-end"><span style="width:10px;height:10px;border-radius:999px;background:{{ m.c1 }};border:1px solid #4a4a4a"></span>{{ m.t1 }}</span>
+                <div style="display:flex;align-items:center;gap:10px"><button onClick="{{ m.dec1 }}" aria-label="Diminuir" style="width:36px;height:36px;border-radius:999px;border:1px solid #333;background:transparent;color:#d4d4d4;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;font-family:inherit;line-height:1" style-hover="background:#2a2a2a">−</button><span style="min-width:28px;text-align:center;font-size:24px;font-weight:700;font-variant-numeric:tabular-nums">{{ m.s1 }}</span><button onClick="{{ m.inc1 }}" aria-label="Aumentar" style="width:36px;height:36px;border-radius:999px;border:1px solid #333;background:transparent;color:#d4d4d4;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;font-family:inherit;line-height:1" style-hover="background:#2a2a2a">+</button></div>
+                <span style="font-size:14px;color:#737373">x</span>
+                <div style="display:flex;align-items:center;gap:10px"><button onClick="{{ m.dec2 }}" aria-label="Diminuir" style="width:36px;height:36px;border-radius:999px;border:1px solid #333;background:transparent;color:#d4d4d4;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;font-family:inherit;line-height:1" style-hover="background:#2a2a2a">−</button><span style="min-width:28px;text-align:center;font-size:24px;font-weight:700;font-variant-numeric:tabular-nums">{{ m.s2 }}</span><button onClick="{{ m.inc2 }}" aria-label="Aumentar" style="width:36px;height:36px;border-radius:999px;border:1px solid #333;background:transparent;color:#d4d4d4;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;font-family:inherit;line-height:1" style-hover="background:#2a2a2a">+</button></div>
+                <span style="display:flex;align-items:center;gap:8px;font-size:15px;font-weight:600;min-width:90px">{{ m.t2 }}<span style="width:10px;height:10px;border-radius:999px;background:{{ m.c2 }};border:1px solid #4a4a4a"></span></span>
+              </div>
+              </sc-if>
+              <sc-if value="{{ isMobile }}" hint-placeholder-val="{{ false }}">
+                <div style="display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:6px;background:#1a1a1a;border-radius:12px;padding:12px 6px">
+                  <div style="display:flex;flex-direction:column;align-items:center;gap:8px;min-width:0">
+                    <span style="display:flex;align-items:center;gap:6px;font-size:14px;font-weight:600;max-width:100%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis"><span style="width:9px;height:9px;border-radius:999px;flex-shrink:0;background:{{ m.c1 }};border:1px solid #4a4a4a"></span>{{ m.t1 }}</span>
+                    <div style="display:flex;align-items:center;gap:8px"><button onClick="{{ m.dec1 }}" aria-label="Diminuir" style="width:40px;height:40px;border-radius:999px;border:1px solid #333;background:transparent;color:#d4d4d4;cursor:pointer;font-size:18px;font-family:inherit">−</button><span style="min-width:28px;text-align:center;font-size:28px;font-weight:700;font-variant-numeric:tabular-nums">{{ m.s1 }}</span><button onClick="{{ m.inc1 }}" aria-label="Aumentar" style="width:40px;height:40px;border-radius:999px;border:1px solid #333;background:transparent;color:#d4d4d4;cursor:pointer;font-size:18px;font-family:inherit">+</button></div>
+                  </div>
+                  <span style="font-size:13px;color:#737373;padding-top:26px">x</span>
+                  <div style="display:flex;flex-direction:column;align-items:center;gap:8px;min-width:0">
+                    <span style="display:flex;align-items:center;gap:6px;font-size:14px;font-weight:600;max-width:100%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis"><span style="width:9px;height:9px;border-radius:999px;flex-shrink:0;background:{{ m.c2 }};border:1px solid #4a4a4a"></span>{{ m.t2 }}</span>
+                    <div style="display:flex;align-items:center;gap:8px"><button onClick="{{ m.dec2 }}" aria-label="Diminuir" style="width:40px;height:40px;border-radius:999px;border:1px solid #333;background:transparent;color:#d4d4d4;cursor:pointer;font-size:18px;font-family:inherit">−</button><span style="min-width:28px;text-align:center;font-size:28px;font-weight:700;font-variant-numeric:tabular-nums">{{ m.s2 }}</span><button onClick="{{ m.inc2 }}" aria-label="Aumentar" style="width:40px;height:40px;border-radius:999px;border:1px solid #333;background:transparent;color:#d4d4d4;cursor:pointer;font-size:18px;font-family:inherit">+</button></div>
+                  </div>
+                </div>
+              </sc-if>
+              <div style="border-top:1px solid #2a2a2a;padding-top:12px;display:flex;flex-direction:column;gap:12px">
+                <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                  <button onClick="{{ m.toggleStats }}" style="display:flex;align-items:center;gap:8px;border:none;background:transparent;color:#d4d4d4;font-size:14px;font-weight:500;font-family:inherit;cursor:pointer;padding:4px 0">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="transform:{{ m.chev }};transition:transform .15s"><path d="m9 18 6-6-6-6"></path></svg>Gols e assistências
+                  </button>
+                  <span style="margin-left:auto;font-size:12px;font-weight:500;color:{{ m.checkColor }}">{{ m.check }}</span>
+                </div>
+                <sc-if value="{{ m.statsOpen }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:grid;grid-template-columns:{{ statCols }};gap:14px">
+                    <sc-for list="{{ m.sides }}" as="sd" hint-placeholder-count="2">
+                      <div style="display:flex;flex-direction:column;gap:2px">
+                        <div style="display:flex;align-items:center;gap:8px;padding-bottom:6px"><span style="width:9px;height:9px;border-radius:999px;background:{{ sd.color }};border:1px solid #4a4a4a"></span><span style="font-size:12px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:#a3a3a3">{{ sd.name }}</span><span style="margin-left:auto;font-size:11px;color:#737373">{{ gaLabel }}</span></div>
+                        <sc-for list="{{ sd.players }}" as="pl" hint-placeholder-count="5">
+                          <div style="display:flex;flex-wrap:{{ rowWrap }};align-items:center;gap:{{ rowGap }};padding:{{ rowPad }};border-top:1px solid #2a2a2a">
+                            <span style="flex:{{ nameFlex }};min-width:0;font-size:13px;font-weight:500;line-height:1.25;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:break-word">{{ pl.name }}</span>
+                            <span style="font-size:12px;color:#8a8a8a">{{ gLbl }}</span><div style="display:flex;align-items:center;gap:6px"><button onClick="{{ pl.decG }}" aria-label="Diminuir" style="width:24px;height:24px;border-radius:999px;border:1px solid #333;background:transparent;color:#d4d4d4;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;font-family:inherit;line-height:1" style-hover="background:#2a2a2a">−</button><span style="min-width:18px;text-align:center;font-size:14px;font-weight:700;font-variant-numeric:tabular-nums">{{ pl.g }}</span><button onClick="{{ pl.incG }}" aria-label="Aumentar" style="width:24px;height:24px;border-radius:999px;border:1px solid #333;background:transparent;color:#d4d4d4;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;font-family:inherit;line-height:1" style-hover="background:#2a2a2a">+</button></div>
+                            <span style="width:1px;height:16px;background:#333"></span>
+                            <span style="font-size:12px;color:#8a8a8a">{{ aLbl }}</span><div style="display:flex;align-items:center;gap:6px"><button onClick="{{ pl.decA }}" aria-label="Diminuir" style="width:24px;height:24px;border-radius:999px;border:1px solid #333;background:transparent;color:#d4d4d4;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;font-family:inherit;line-height:1" style-hover="background:#2a2a2a">−</button><span style="min-width:18px;text-align:center;font-size:14px;font-weight:700;font-variant-numeric:tabular-nums">{{ pl.a }}</span><button onClick="{{ pl.incA }}" aria-label="Aumentar" style="width:24px;height:24px;border-radius:999px;border:1px solid #333;background:transparent;color:#d4d4d4;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;font-family:inherit;line-height:1" style-hover="background:#2a2a2a">+</button></div>
+                          </div>
+                        </sc-for>
+                      </div>
+                    </sc-for>
+                  </div>
+                </sc-if>
+              </div>
+            </div>
+          </sc-for>
+          <button onClick="{{ addMatch }}" style="display:flex;align-items:center;justify-content:center;gap:8px;height:44px;border-radius:12px;border:1px dashed #3a3a3a;background:transparent;color:#d4d4d4;font-size:14px;font-weight:500;font-family:inherit;cursor:pointer;flex-shrink:0" style-hover="background:#222;color:#fafafa">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>Adicionar partida
+          </button>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:{{ dlgFootPad }};border-top:1px solid #2a2a2a">
+          <sc-if value="{{ isDesktop }}" hint-placeholder-val="{{ true }}"><span style="margin-right:auto;font-size:13px;color:#8a8a8a">{{ draftSummary }}</span></sc-if>
+          <button onClick="{{ closeDlg }}" style="flex:{{ btnFlex }};height:42px;padding:0 16px;border-radius:999px;border:1px solid #2e2e2e;background:transparent;color:#fafafa;font-size:14px;font-weight:500;font-family:inherit;cursor:pointer" style-hover="background:#262626">Cancelar</button>
+          <button onClick="{{ saveResults }}" style="flex:{{ btnFlex }};height:42px;padding:0 18px;white-space:nowrap;border-radius:999px;border:none;background:linear-gradient(90deg,#15803d,#16a34a);color:#fff;font-size:14px;font-weight:600;font-family:inherit;cursor:pointer">Salvar resultados</button>
+        </div>
+      </div>
+    </sc-if>
+   </div>
+  </main>
+
+  <sc-if value="{{ showChatFab }}" hint-placeholder-val="{{ false }}">
+    <button onClick="{{ toggleChat }}" aria-label="Abrir chat" style="position:fixed;right:16px;bottom:16px;z-index:40;width:54px;height:54px;border-radius:999px;border:none;background:linear-gradient(135deg,#15803d,#16a34a);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(0,0,0,.45)">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22z"></path></svg>
+    </button>
+  </sc-if>
+  <sc-if value="{{ chatPanelOpen }}" hint-placeholder-val="{{ false }}">
+    <div role="dialog" aria-label="Chat da pelada" style="position:fixed;right:24px;top:72px;bottom:86px;width:360px;max-width:calc(100% - 48px);z-index:45;background:#1e1e1e;border:1px solid #2e2e2e;border-radius:14px;box-shadow:0 20px 50px rgba(0,0,0,.55);display:flex;flex-direction:column;overflow:hidden">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 8px 10px 16px;border-bottom:1px solid #2a2a2a">
+        <div style="display:flex;flex-direction:column">
+          <span style="font-size:15px;font-weight:600">Chat</span>
+          <span style="font-size:12px;color:#8a8a8a">{{ current.name }} · 20 membros</span>
+        </div>
+        <button onClick="{{ closeChat }}" aria-label="Fechar chat" style="width:34px;height:34px;border:none;border-radius:999px;background:transparent;color:#a3a3a3;cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="background:#262626;color:#fafafa">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"></path></svg>
+        </button>
+      </div>
+      <div style="flex:1;display:flex;align-items:center;justify-content:center;font-size:14px;color:#8a8a8a">Nenhuma mensagem ainda.</div>
+      <div style="padding:12px;border-top:1px solid #2a2a2a;display:flex;gap:8px">
+        <input placeholder="Escreva uma mensagem…" style="flex:1;min-width:0;height:38px;border-radius:8px;border:1px solid #2e2e2e;background:#1a1a1a;color:#fafafa;padding:0 12px;font-size:14px;font-family:inherit;outline:none"></input>
+        <button style="height:38px;padding:0 14px;border-radius:999px;border:none;background:linear-gradient(90deg,#15803d,#16a34a);color:#fff;font-weight:600;font-size:14px;cursor:pointer;font-family:inherit">Enviar</button>
+      </div>
+    </div>
+  </sc-if>
+  <sc-if value="{{ chatOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeChat }}" style="position:fixed;inset:0;z-index:55;background:rgba(0,0,0,.6)"></div>
+    <div style="position:fixed;left:0;right:0;bottom:0;z-index:60;height:78%;background:#1e1e1e;border-top:1px solid #2e2e2e;border-radius:16px 16px 0 0;display:flex;flex-direction:column">
+      <div style="display:flex;justify-content:center;padding:8px 0 0"><div style="width:40px;height:4px;border-radius:999px;background:#3a3a3a"></div></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 8px 10px 16px;border-bottom:1px solid #2a2a2a">
+        <span style="font-size:15px;font-weight:600">Chat</span>
+        <button onClick="{{ closeChat }}" aria-label="Fechar chat" style="width:36px;height:36px;border:none;border-radius:999px;background:transparent;color:#a3a3a3;cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="background:#262626">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"></path></svg>
+        </button>
+      </div>
+      <div style="flex:1;display:flex;align-items:center;justify-content:center;font-size:14px;color:#8a8a8a">Nenhuma mensagem ainda.</div>
+      <div style="padding:12px;border-top:1px solid #2a2a2a;display:flex;gap:8px">
+        <input placeholder="Escreva uma mensagem…" style="flex:1;min-width:0;height:44px;border-radius:10px;border:1px solid #2e2e2e;background:#1a1a1a;color:#fafafa;padding:0 12px;font-size:16px;font-family:inherit;outline:none"></input>
+        <button style="height:44px;padding:0 16px;border-radius:999px;border:none;background:linear-gradient(90deg,#15803d,#16a34a);color:#fff;font-weight:600;font-size:14px;cursor:pointer;font-family:inherit">Enviar</button>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;status&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;SCHEDULED&quot;,&quot;IN_COURSE&quot;,&quot;FINISHED&quot;],&quot;default&quot;:&quot;FINISHED&quot;,&quot;tsType&quot;:&quot;\&quot;FINISHED\&quot; | \&quot;SCHEDULED\&quot;&quot;},&quot;viewport&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;auto&quot;,&quot;mobile&quot;],&quot;default&quot;:&quot;auto&quot;,&quot;tsType&quot;:&quot;\&quot;auto\&quot; | \&quot;mobile\&quot;&quot;},&quot;sidebarCollapsed&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;},&quot;isAdmin&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;}}">
+class Component extends DCLogic {
+  state = { active: 0, tab: "Membros", collapsed: null };
+  peladas = [
+    { name: "Jogasse onde", initials: "JO", img: "assets/jogasse-onde.jpg", day: "Sábado", time: "08:00 · 2h", address: "Rua das Chuteiras, 123", reference: "Campo Society da esquina", next: "Sáb, 11/10 · 08:00", g: "linear-gradient(180deg,#06b6d4,#0e5a6b)" },
+    { name: "Fut de Quinta", initials: "FQ", day: "Quinta", time: "20:00 · 1.5h", address: "Av. Paulista, 900", reference: "Quadra 3", next: "Qui, 09/10 · 20:00", g: "linear-gradient(180deg,#8b5cf6,#3b2a6b)" },
+    { name: "Racha do Escritório", initials: "RE", day: "Terça", time: "19:00 · 1h", address: "Rua Augusta, 410", reference: "Arena Augusta", next: "Sem sessão agendada", g: "linear-gradient(180deg,#f59e0b,#6b4a0e)" },
+    { name: "Várzea FC", initials: "VF", day: "Domingo", time: "09:00 · 2h", address: "Parque do Ibirapuera", reference: "Campo 2", next: "Dom, 12/10 · 09:00", g: "linear-gradient(180deg,#22c55e,#14532d)" }
+  ];
+  rows = [["Tuca",23,1,17,2],["Souto",23,2,16,2],["Pirro",23,2,14,9],["Dudu",23,1,12,4],["27",19,4,10,6],["Thiago",23,2,9,0],["Diego",23,3,8,6],["Lui",19,2,8,6],["Tão",23,2,8,4],["Vuzzi",21,3,7,3]];
+  members = [["Leal","ATACANTE",5],["Souto","ATACANTE",5],["Ferraz","ZAGUEIRO",1],["Lui","MEIO",5],["Tuca","ATACANTE",4],["Gone","ATACANTE",5],["Thiago","MEIO",4],["Tão","MEIO",3],["Lobo","MEIO",2],["Dudu","ATACANTE",4],["Miguel","MEIO",2],["Neto","ATACANTE",2],["Vuzzi","ATACANTE",3],["27","MEIO",2],["Nando","GOLEIRO",1],["Abreu","ATACANTE",1],["Leudo","MEIO",2],["Diego","ATACANTE",3],["Pirro","MEIO",3],["André","ATACANTE",4]];
+  posLabels = { GOLEIRO: "Goleiro", ZAGUEIRO: "Zagueiro", MEIO: "Meio", ATACANTE: "Atacante" };
+  membersVals() {
+    const q = (this.state.q || "").toLowerCase();
+    const pos = this.state.pos || "ALL";
+    const hues = [160, 45, 300, 265, 15, 200];
+    const all = this.members.map(([name, p, s], i) => {
+      const r = this.rows.find(x => x[0] === name);
+      return { name, pos: p, posLabel: this.posLabels[p].toUpperCase(), initials: name.slice(0, 2).toUpperCase(), color: `oklch(0.58 0.14 ${hues[i % hues.length]})`, starsOn: "★".repeat(s), starsOff: "★".repeat(5 - s), isAdmin: i === 0, j: r ? r[1] : 23 - (i % 3) * 2, g: r ? r[3] : (i * 3) % 7, a: r ? r[4] : (i * 5) % 6 };
+    });
+    const list = all.filter(m => (pos === "ALL" || m.pos === pos) && m.name.toLowerCase().includes(q));
+    const f = (key, label) => ({ label, count: key === "ALL" ? all.length : all.filter(m => m.pos === key).length, bg: pos === key ? "#fafafa" : "transparent", fg: pos === key ? "#171717" : "#d4d4d4", border: pos === key ? "#fafafa" : "#2e2e2e", select: () => this.setState({ pos: key }) });
+    return {
+      memberQuery: this.state.q || "",
+      setQuery: e => this.setState({ q: e.target.value }),
+      posFilters: [f("ALL", "Todos"), f("GOLEIRO", "Goleiro"), f("ZAGUEIRO", "Zagueiro"), f("MEIO", "Meio"), f("ATACANTE", "Atacante")],
+      memberCards: list,
+      noMembers: list.length === 0,
+      memberSummary: `${list.length} de ${all.length} membros · 1 admin`
+    };
+  }
+  sessionsVals() {
+    const data = [["Setembro 2026", [[27, 20, 4, true, "assets/campeao-27-09.jpeg"], [20, 20, 4, true], [13, 15, 3, false], [6, 20, 4, true]], "setembro"], ["Agosto 2026", [[30, 20, 4, true], [23, 15, 3, true], [16, 20, 4, false]], "agosto"]];
+    return data.map(([label, items, mes]) => ({ label, items: items.map(([d, pl, t, ph, src]) => ({ photoBg: src ? `url("${src}") center 55% / cover no-repeat` : "repeating-linear-gradient(135deg,#262626 0 6px,#2c2c2c 6px 12px)", photoText: src ? "" : "foto", day: String(d).padStart(2, "0"), wd: "Dom", title: `Domingo, ${d} de ${mes}`, meta: `08:00 · ${t} times · 6 partidas`, players: pl, hasPhoto: ph, noPhoto: !ph })) }));
+  }
+  liveVals() {
+    const status = this.props.status ?? "FINISHED";
+    const live = status === "IN_COURSE";
+    const w = this.state.w ?? 1440;
+    const isMobile = (this.props.viewport ?? "auto") === "mobile" || w < 768;
+    const T = [
+      ["Vermelho", "#ef4444", ["DuduSocaFofo", "Gone", "Lucas Scavuzzi", "Renato", "Thiago"]],
+      ["Amarelo", "#eab308", ["Davi Medeiros", "Guibarros", "lesk araujo", "luimanso", "Miguel"]],
+      ["Branco", "#f5f5f5", ["André", "Diegotze", "Gaules", "Leudo", "Lobão"]],
+      ["Preto", "#1e293b", ["gabrielfferraz", "Leal", "leo (leal)", "Souto", "Tuca"]]
+    ];
+    const pairs = [[0, 1], [2, 3], [0, 2], [1, 3], [0, 3], [1, 2]];
+    const saved = this.state.saved || [];
+    const newM = k => { const p = pairs[k % 6]; return { t1: p[0], t2: p[1], s1: 0, s2: 0, open: false, st: {} }; };
+    const draft = this.state.draft || [newM(saved.length)];
+    const upd = (i, fn) => this.setState(s => {
+      const d = (s.draft || [newM((s.saved || []).length)]).map(m => ({ ...m, st: { ...m.st } }));
+      fn(d[i]); return { draft: d };
+    });
+    const ini = n => n.replace(/[^\p{L}\d ]/gu, "").slice(0, 2).toUpperCase();
+    const sumG = (m, side) => T[side === 1 ? m.t1 : m.t2][2].reduce((a, n) => a + ((m.st[n] || [0, 0])[0]), 0);
+    const draftMatches = draft.map((m, i) => {
+      const chips = side => T.map((t, k) => {
+        const mine = side === 1 ? m.t1 : m.t2, other = side === 1 ? m.t2 : m.t1;
+        return { name: t[0], color: t[1], bg: k === mine ? "#333" : "transparent", border: k === mine ? "#a3a3a3" : "#2e2e2e", op: k === other ? 0.35 : 1,
+          select: () => k !== other && upd(i, x => { if (side === 1) x.t1 = k; else x.t2 = k; x.st = {}; }) };
+      });
+      const g1 = sumG(m, 1), g2 = sumG(m, 2);
+      const ok = g1 === m.s1 && g2 === m.s2;
+      const step = (side, d) => () => upd(i, x => { const k = side === 1 ? "s1" : "s2"; x[k] = Math.max(0, x[k] + d); });
+      const sides = [1, 2].map(side => {
+        const t = T[side === 1 ? m.t1 : m.t2];
+        return { name: t[0], color: t[1], players: t[2].map(n => {
+          const v = m.st[n] || [0, 0];
+          const ch = (j, d) => () => upd(i, x => { const c = (x.st[n] || [0, 0]).slice(); c[j] = Math.max(0, c[j] + d); x.st[n] = c; });
+          return { name: n, g: v[0], a: v[1], incG: ch(0, 1), decG: ch(0, -1), incA: ch(1, 1), decA: ch(1, -1) };
+        }) };
+      });
+      return {
+        n: saved.length + i + 1, canRemove: draft.length > 1,
+        remove: () => this.setState(s => ({ draft: (s.draft || draft).filter((_, j) => j !== i) })),
+        chips1: chips(1), chips2: chips(2),
+        t1: T[m.t1][0], c1: T[m.t1][1], t2: T[m.t2][0], c2: T[m.t2][1], s1: m.s1, s2: m.s2,
+        inc1: step(1, 1), dec1: step(1, -1), inc2: step(2, 1), dec2: step(2, -1),
+        statsOpen: m.open, chev: m.open ? "rotate(90deg)" : "none",
+        toggleStats: () => upd(i, x => { x.open = !x.open; }),
+        check: g1 + g2 === 0 && m.s1 + m.s2 > 0 ? "Gols não atribuídos" : "Gols atribuídos: " + g1 + "/" + m.s1 + " · " + g2 + "/" + m.s2,
+        checkColor: ok ? (m.s1 + m.s2 > 0 ? "#4ade80" : "#737373") : "#fbbf24",
+        sides
+      };
+    });
+    const tbl = T.map(t => ({ name: t[0], color: t[1], j: 0, v: 0, e: 0, d: 0, gp: 0, gc: 0 }));
+    saved.forEach(m => {
+      const a = tbl[m.t1], b = tbl[m.t2];
+      a.j++; b.j++; a.gp += m.s1; a.gc += m.s2; b.gp += m.s2; b.gc += m.s1;
+      if (m.s1 > m.s2) { a.v++; b.d++; } else if (m.s2 > m.s1) { b.v++; a.d++; } else { a.e++; b.e++; }
+    });
+    const liveTable = tbl.map(r => ({ ...r, pts: r.v * 3 + r.e, sgN: r.gp - r.gc })).sort((x, y) => y.pts - x.pts || y.sgN - x.sgN || y.gp - x.gp)
+      .map((r, i) => ({ ...r, rank: i + 1, sg: (r.sgN > 0 ? "+" : "") + r.sgN, sgColor: r.sgN > 0 ? "#4ade80" : r.sgN < 0 ? "#f87171" : "#a3a3a3" }));
+    const tot = {};
+    saved.forEach(m => Object.entries(m.st).forEach(([n, v]) => { tot[n] = tot[n] || [0, 0]; tot[n][0] += v[0]; tot[n][1] += v[1]; }));
+    const savedList = saved.map((m, i) => {
+      const sc = Object.entries(m.st).filter(([, v]) => v[0] > 0).map(([n, v]) => n + (v[0] > 1 ? " (" + v[0] + ")" : ""));
+      return { n: i + 1, t1: T[m.t1][0], c1: T[m.t1][1], t2: T[m.t2][0], c2: T[m.t2][1], s1: m.s1, s2: m.s2, w1: m.s1 > m.s2 ? 700 : 400, w2: m.s2 > m.s1 ? 700 : 400, scorers: sc.length ? "Gols: " + sc.join(", ") : "Sem gols atribuídos" };
+    }).reverse();
+    const out = {
+      isLive: live,
+      dlgOpen: live && !!this.state.dlg,
+      openDlg: () => this.setState({ dlg: true, dayMenu: false }),
+      closeDlg: () => this.setState({ dlg: false, draft: null }),
+      addMatch: () => this.setState(s => { const d = s.draft || draft; return { draft: d.concat(newM((s.saved || []).length + d.length)) }; }),
+      saveResults: () => this.setState(s => ({ saved: (s.saved || []).concat(s.draft || draft), draft: null, dlg: false })),
+      draftMatches,
+      dlgLeft: isMobile ? "0" : "50%", dlgTop: isMobile ? "auto" : "50%", dlgBottom: isMobile ? "0" : "auto",
+      dlgTf: isMobile ? "none" : "translate(-50%,-50%)", dlgW: isMobile ? "100%" : "min(720px,calc(100% - 24px))",
+      dlgMaxH: isMobile ? "calc(100% - 24px)" : "calc(100vh - 32px)", dlgRadius: isMobile ? "18px 18px 0 0" : "16px",
+      dlgPad: isMobile ? "0 12px 12px" : "0 20px 16px", dlgHeadPad: isMobile ? "16px 12px 12px 16px" : "20px 20px 14px",
+      dlgFootPad: isMobile ? "12px" : "14px 20px", mPad: isMobile ? "12px" : "16px", chipWrap: isMobile ? "nowrap" : "wrap",
+      rowWrap: "nowrap", nameFlex: "1", rowGap: isMobile ? "6px" : "8px", rowPad: isMobile ? "8px 0" : "6px 0",
+      gLbl: "", aLbl: "",
+      gaLabel: "Gols · Assist.", btnFlex: isMobile ? "1" : "none",
+      draftSummary: draft.length === 1 ? "1 partida" : draft.length + " partidas",
+      statCols: isMobile ? "minmax(0,1fr)" : "minmax(0,1fr) minmax(0,1fr)",
+      liveTitle: saved.length === 0 ? "Nenhuma partida lançada" : saved.length === 1 ? "1 partida lançada" : saved.length + " partidas lançadas",
+      cantFinalize: saved.length === 0, finFg: saved.length ? "#fafafa" : "#5f7a68", finCursor: saved.length ? "pointer" : "not-allowed",
+      liveTable, savedList, noSaved: saved.length === 0,
+      liveTeams: T.map(t => ({ name: t[0], color: t[1], players: t[2].map(n => ({ name: n, initials: ini(n), line: tot[n] ? tot[n][0] + " G · " + tot[n][1] + " A" : "" })) }))
+    };
+    if (live) Object.assign(out, {
+      isFinished: false, isScheduled: false,
+      dTitle: "Quinta-feira, 15 de outubro", dTime: "08:00", dPlayersMeta: "20 jogadores · 4 times",
+      badgeLabel: "Em andamento", badgeBg: "#33290a", badgeFg: "#fcd34d", badgeDot: "#f59e0b"
+    });
+    return out;
+  }
+  scheduledVals() {
+    const status = this.props.status ?? "FINISHED";
+    const sch = status === "SCHEDULED";
+    const w = this.state.w ?? 1440;
+    const isMobile = (this.props.viewport ?? "auto") === "mobile" || w < 768;
+    const conf = this.state.conf || [];
+    const labels = { GOLEIRO: "GOLEIRO", ZAGUEIRO: "ZAGUEIRO", MEIO: "MEIO", ATACANTE: "ATACANTE" };
+    const toggle = n => this.setState(s => { const c = s.conf || []; return { conf: c.includes(n) ? c.filter(x => x !== n) : c.concat(n), drawn: false }; });
+    const all = this.members.map(([name, pos, st]) => ({ name, pos: labels[pos], st, initials: name.slice(0, 2).toUpperCase(), on: "★".repeat(st), off: "★".repeat(5 - st), toggle: () => toggle(name) })).sort((a, b) => a.name.localeCompare(b.name));
+    const cl = all.filter(m => conf.includes(m.name));
+    const pl = all.filter(m => !conf.includes(m.name));
+    const full = cl.length === 20;
+    const drawn = full && !!this.state.drawn;
+    const TN = [["Vermelho", "#ef4444"], ["Amarelo", "#eab308"], ["Branco", "#f5f5f5"], ["Preto", "#1e293b"]];
+    const seed = this.state.seed || 0;
+    const pool = cl.slice().sort((a, b) => b.st - a.st || ((a.name.charCodeAt(0) * (seed + 3)) % 7) - ((b.name.charCodeAt(0) * (seed + 3)) % 7));
+    const buckets = [[], [], [], []];
+    pool.forEach((p, i) => { const r = Math.floor(i / 4), k = i % 4; buckets[r % 2 ? 3 - k : k].push(p); });
+    return {
+      isFinished: !sch, isScheduled: sch,
+      dTitle: sch ? "Quinta-feira, 15 de outubro" : "Quinta-feira, 1 de outubro",
+      dTime: sch ? "08:00" : "21:00",
+      dPlayersMeta: sch ? "4 times de 5" : "20 jogadores · 4 times",
+      badgeLabel: sch ? "Agendada" : "Finalizada",
+      badgeBg: sch ? "#1e293b" : "#2a2a2a", badgeFg: sch ? "#93c5fd" : "#d4d4d4", badgeDot: sch ? "#3b82f6" : "#a3a3a3",
+      attCols: isMobile || w < 1100 ? "minmax(0,1fr)" : "minmax(0,1fr) minmax(0,1fr)",
+      confCount: cl.length, pendCount: pl.length,
+      confPct: (cl.length / 20 * 100) + "%",
+      confHint: full ? "Lista completa. Os times já podem ser sorteados." : "Faltam " + (20 - cl.length) + " para fechar 4 times de 5.",
+      meConfirmed: conf.includes("Gone"), meNotConfirmed: !conf.includes("Gone"),
+      toggleMe: () => toggle("Gone"),
+      confList: cl, pendList: pl, noConf: cl.length === 0, noPend: pl.length === 0,
+      showConfirmAll: (this.props.isAdmin ?? true) && pl.length > 0,
+      confirmAll: () => this.setState({ conf: this.members.map(m => m[0]) }),
+      hasTeams: drawn, noTeams: !drawn,
+      attOpen: this.state.attOpen ?? !drawn,
+      attChev: (this.state.attOpen ?? !drawn) ? "rotate(90deg)" : "none",
+      attToggleLabel: (this.state.attOpen ?? !drawn) ? "Recolher" : "Expandir",
+      toggleAtt: () => this.setState(st => ({ attOpen: !(st.attOpen ?? !(cl.length === 20 && !!st.drawn)) })),
+      teamsHint: full ? "Lista fechada. Sorteie para equilibrar os times pelas estrelas." : "É preciso ter exatamente 20 confirmados (4 × 5) para sortear. Hoje são " + cl.length + ".",
+      cantSort: !full, sortBg: full ? "linear-gradient(90deg,#15803d,#16a34a)" : "#262626", sortFg: full ? "#fff" : "#737373", sortCursor: full ? "pointer" : "not-allowed",
+      sortTeams: () => full && this.setState(s => ({ drawn: true, attOpen: false, seed: (s.seed || 0) + 1 })),
+      drawnTeams: TN.map(([name, color], i) => ({ name, color, avg: buckets[i].length ? (buckets[i].reduce((a, p) => a + p.st, 0) / buckets[i].length).toFixed(2) : "0.00", players: buckets[i] }))
+    };
+  }
+  dailyVals() {
+    const w = this.state.w ?? 1440;
+    const isMobile = (this.props.viewport ?? "auto") === "mobile" || w < 768;
+    const C = { Vermelho: "#ef4444", Amarelo: "#eab308", Branco: "#f5f5f5", Preto: "#1e293b" };
+    const P = [["luimanso","Amarelo",5,0,9,6,3],["DuduSocaFofo","Vermelho",4,3,10,7,1],["Gone","Vermelho",3,3,10,7,5],["Thiago","Vermelho",3,1,10,7,4],["Diegotze","Branco",3,2,8,3,1],["Miguel","Amarelo",3,4,9,6,5],["André","Branco",3,0,8,3,1],["Renato","Vermelho",2,3,10,7,3],["Davi Medeiros","Amarelo",2,1,9,6,3],["Leal","Preto",2,0,7,1,5],["Lucas Scavuzzi","Vermelho",2,2,10,7,3],["lesk araujo","Amarelo",2,2,9,6,3],["Guibarros","Amarelo",1,4,9,6,4],["Gaules","Branco",1,2,8,3,5],["Lobão","Branco",1,0,8,3,3],["leo (leal)","Preto",1,0,7,1,3],["Leudo","Branco",0,1,8,3,3],["gabrielfferraz","Preto",0,1,7,1,3],["Souto","Preto",0,1,7,1,5],["Tuca","Preto",0,0,7,1,1]];
+    const ini = n => n.replace(/[^\p{L}\d ]/gu, "").slice(0, 2).toUpperCase();
+    const key = this.state.psort || "g";
+    const idx = { g: 2, a: 3, p: 4, v: 5 }[key];
+    const sorted = P.slice().sort((x, y) => y[idx] - x[idx] || y[2] - x[2]);
+    const tabKey = this.state.dtab || "Classificação";
+    const L = [["Vermelho",7,0,3,14,8],["Amarelo",6,0,3,13,9],["Branco",3,0,5,8,11],["Preto",1,0,6,3,10]];
+    const medal = ["#eab308", "#a3a3a3", "#c2410c", "#737373"];
+    const M = [["Vermelho",2,0,"Branco","DuduSocaFofo, Thiago","Renato"],["Amarelo",1,0,"Preto","luimanso","Miguel"],["Vermelho",1,2,"Amarelo","Gone · luimanso, Miguel","Guibarros"],["Branco",1,0,"Preto","André","Diegotze"],["Vermelho",2,1,"Preto","Gone, Lucas Scavuzzi · Leal","DuduSocaFofo"],["Amarelo",0,1,"Branco","Diegotze","Gaules"]];
+    return {
+      isMobile, mainPad: isMobile ? "16px" : "28px 32px",
+      showChat: false, showChatFab: false, chatPanelOpen: false, chatOpen: false,
+      titleSize: isMobile ? "22px" : "28px",
+      heroCols: isMobile || w < 1100 ? "minmax(0,1fr)" : "minmax(0,1.6fr) minmax(300px,1fr)",
+      photoH: isMobile ? "220px" : "340px",
+      dayMenuOpen: !!this.state.dayMenu,
+      toggleDayMenu: () => this.setState(s => ({ dayMenu: !s.dayMenu })),
+      closeDayMenu: () => this.setState({ dayMenu: false }),
+      champPlayers: P.filter(p => p[1] === "Vermelho").map(p => ({ name: p[0], initials: ini(p[0]), line: p[2] + " G · " + p[3] + " A" })),
+      awards: [
+        { title: "Artilheiro", glyph: "◎", color: "#22c55e", tint: "#14301d", detail: "5 gols", winners: "luimanso", initials: "LU" },
+        { title: "Garçom", glyph: "↗", color: "#38bdf8", tint: "#0f2a38", detail: "4 assist.", winners: "Miguel, Guibarros", initials: "+2" },
+        { title: "Puskás", glyph: "✦", color: "#eab308", tint: "#33290a", detail: "gol mais bonito", winners: "Leal", initials: "LE" },
+        { title: "Bola Murcha", glyph: "↓", color: "#ef4444", tint: "#3a1515", detail: "votação", winners: "Souto", initials: "SO" }
+      ],
+      dTabs: ["Classificação", "Partidas", "Jogadores", "Times"].map(l => ({ label: l, bg: l === tabKey ? "#1a1a1a" : "transparent", fg: l === tabKey ? "#fafafa" : "#a3a3a3", select: () => this.setState({ dtab: l }) })),
+      tabTable: tabKey === "Classificação", tabMatches: tabKey === "Partidas", tabPlayers: tabKey === "Jogadores", tabTeams: tabKey === "Times",
+      leagueCols: isMobile ? "24px minmax(0,1fr) 24px 24px 24px 28px 28px 30px 32px" : "44px minmax(0,1fr) 56px 56px 56px 56px 56px 56px 64px",
+      league: L.map(([name, v, e, d, gp, gc], i) => { const sg = gp - gc; return { name, v, e, d, gp, gc, sg: (sg > 0 ? "+" : "") + sg, sgColor: sg > 0 ? "#4ade80" : sg < 0 ? "#f87171" : "#a3a3a3", pts: v * 3 + e, rank: i + 1 + "º", rankColor: medal[i], color: C[name], weight: i === 0 ? 700 : 500, bg: i === 0 ? "#231f12" : "transparent" }; }),
+      matches: M.map(([t1, s1, s2, t2, goals, assists], i) => ({ n: i + 1, t1, s1, s2, t2, goals, assists, c1: C[t1], c2: C[t2], w1: s1 > s2 ? 700 : 400, w2: s2 > s1 ? 700 : 400 })),
+      playerCols: isMobile ? "minmax(0,1fr) 44px 48px 52px 52px" : "minmax(0,1fr) 90px 90px 90px 90px",
+      sortHeads: [["g", "Gols"], ["a", "Assist."], ["p", "Partidas"], ["v", "Vitórias"]].map(([k, l]) => ({ label: l + (k === key ? " ↓" : ""), fg: k === key ? "#fafafa" : "#8a8a8a", weight: k === key ? 600 : 400, select: () => this.setState({ psort: k }) })),
+      playerRows: sorted.map(p => ({ name: p[0], initials: ini(p[0]), color: C[p[1]], g: p[2], a: p[3], p: p[4], v: p[5], wg: key === "g" ? 600 : 400, wa: key === "a" ? 600 : 400, wp: key === "p" ? 600 : 400, wv: key === "v" ? 600 : 400 })),
+      teams: L.map(([name], i) => { const ps = P.filter(p => p[1] === name).sort((x, y) => x[0].localeCompare(y[0])); return { name, color: C[name], pos: i + 1 + "º lugar", avg: (ps.reduce((s, p) => s + p[6], 0) / ps.length).toFixed(2), players: ps.map(p => ({ name: p[0], initials: ini(p[0]), on: "★".repeat(p[6]), off: "★".repeat(5 - p[6]) })) }; })
+    };
+  }
+  componentDidMount() {
+    this.onResize = () => this.setState({ w: window.innerWidth });
+    window.addEventListener("resize", this.onResize);
+    this.onResize();
+  }
+  componentWillUnmount() { window.removeEventListener("resize", this.onResize); }
+  renderVals() {
+    const w = this.state.w ?? 1440;
+    const forced = (this.props.viewport ?? "auto") === "mobile";
+    const isMobile = forced || w < 768;
+    const expanded = isMobile ? true : (this.state.collapsed === null ? !(this.props.sidebarCollapsed ?? false) : !this.state.collapsed);
+    const cur = this.peladas[this.state.active];
+    const medals = ["#eab308", "#a3a3a3", "#c2410c"];
+    const chatOn = this.props.showChat ?? true;
+    const showChat = !isMobile && chatOn && w - (expanded ? 264 : 64) - 48 >= 1000;
+    const mm = !!this.state.mobileMenu;
+    return {
+      expanded,
+      isMobile,
+      isDesktop: !isMobile,
+      tabOverflow: isMobile ? "visible" : "auto", tabDisplay: isMobile ? "flex" : "inline-flex", tabWidth: isMobile ? "100%" : "auto",
+      tabFlex: isMobile ? "1 1 0" : "none", tabPad: isMobile ? "7px 6px" : "6px 14px", tabFont: isMobile ? "13px" : "14px",
+      frameW: forced ? "390px" : "100%",
+      frameH: forced ? "100vh" : "auto",
+      frameOverflow: forced ? "auto" : "visible",
+      frameTransform: forced ? "translateZ(0)" : "none",
+      frameBorder: forced ? "1px solid #2a2a2a" : "none",
+      rootDir: isMobile ? "column" : "row",
+      asidePos: isMobile ? "fixed" : "sticky",
+      asideZ: isMobile ? 60 : 1,
+      asideTransform: isMobile && !mm ? "translateX(-105%)" : "none",
+      mobileMenuOpen: isMobile && mm,
+      openMobileMenu: () => this.setState({ mobileMenu: true }),
+      closeMobileMenu: () => this.setState({ mobileMenu: false, menuOpen: false }),
+      toggleLabel: isMobile ? "Fechar menu" : "Recolher menu",
+      menuLeft: isMobile ? "8px" : "calc(100% + 8px)",
+      menuBottom: isMobile ? "calc(100% + 4px)" : "8px",
+      rankCols: isMobile ? "26px minmax(0,1fr) 28px 30px 26px 40px 44px" : "44px minmax(0,1fr) 40px 64px 64px 64px 64px",
+      rankPad: isMobile ? "10px 6px" : "10px 12px",
+      rankMinW: isMobile ? "0" : "520px",
+      mainPad: isMobile ? "16px" : "24px",
+      mainGap: isMobile ? "20px" : "24px",
+      bannerH: isMobile ? "190px" : "230px",
+      showChatFab: !showChat && !(isMobile && this.state.chatOpen),
+      chatOpen: isMobile && !!this.state.chatOpen,
+      chatPanelOpen: !isMobile && !showChat && !!this.state.chatOpen,
+      toggleChat: () => this.setState(s => ({ chatOpen: !s.chatOpen })),
+      closeChat: () => this.setState({ chatOpen: false }),
+      justify: expanded ? "flex-start" : "center",
+      itemPad: expanded ? "8px" : "4px",
+      plusMargin: expanded ? "0 4px 0 auto" : "0 auto",
+      menuOpen: !!this.state.menuOpen,
+      menuBg: this.state.menuOpen ? "#262626" : "transparent",
+      toggleMenu: () => this.setState(s => ({ menuOpen: !s.menuOpen })),
+      closeMenu: () => this.setState({ menuOpen: false }),
+      sidebarW: expanded ? "264px" : "64px",
+      toggleSidebar: () => isMobile ? this.setState({ mobileMenu: false, menuOpen: false }) : this.setState({ collapsed: expanded }),
+      peladaItems: this.peladas.map((p, i) => ({ ...p, gradient: p.img ? `url(${p.img}) center 18% / cover no-repeat` : p.g, avatarText: p.img ? "" : p.initials, bg: i === this.state.active ? "#262626" : "transparent", select: () => this.setState({ active: i, mobileMenu: false }) })),
+      current: cur,
+      bannerGradient: cur.img ? `url(${cur.img}) center 22% / cover no-repeat` : cur.g,
+      bannerInitials: cur.img ? "" : cur.initials,
+      tabs: ["Membros", "Sessões", "Ranking", "Prêmios"].map(l => ({ label: l, bg: l === this.state.tab ? "#1a1a1a" : "transparent", fg: l === this.state.tab ? "#fafafa" : "#a3a3a3", select: () => this.setState({ tab: l }) })),
+      isRanking: this.state.tab === "Ranking",
+      isMembers: this.state.tab === "Membros",
+      isSessions: this.state.tab === "Sessões",
+      isAwards: this.state.tab === "Prêmios",
+      ...this.membersVals(),
+      sessionMonths: this.sessionsVals(),
+      hasNext: (this.props.hasNextSession ?? true) && cur.next !== "Sem sessão agendada",
+      noNext: !((this.props.hasNextSession ?? true) && cur.next !== "Sem sessão agendada"),
+      isAdminView: this.props.isAdmin ?? true,
+      noNextHint: (this.props.isAdmin ?? true) ? "Crie a próxima sessão ou ative a criação automática nas configurações da pelada." : "Quando um admin agendar a próxima sessão, ela aparece aqui.",
+      tabLabel: this.state.tab,
+      showChat,
+      gridCols: showChat ? "minmax(0,1fr) 320px" : "minmax(0,1fr)",
+      ranking: this.rows.map(([name, j, v, g, a], i) => ({ name, j, v, g, a, initials: name.slice(0, 2).toUpperCase(), rankLabel: i < 3 ? "🏆".slice(0,0) + ["1º","2º","3º"][i] : String(i + 1), rankColor: i < 3 ? medals[i] : "#8a8a8a", rankWeight: i < 3 ? 700 : 400 })),
+      ...this.dailyVals(),
+      ...this.scheduledVals(),
+      ...this.liveVals()
+    };
+  }
+}
+</script>
+</body>
+</html>

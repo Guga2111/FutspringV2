@@ -28,6 +28,52 @@
     --chart-2: 217 91% 60%;
     /* stars, trophies, crowns */
     --gold: 43 96% 46%;
+    --gold-muted: 55 92% 95.3%;
+    --silver: 215 20% 65.1%;
+    --bronze: 17 88% 40.4%;
+
+    /* surfaces */
+    --card-elevated: 210 40% 96.1%;
+    --row-hover: 210 40% 98%;
+    --avatar-fallback: 214 32% 91.4%;
+    --subtle-foreground: 215 16% 46.9%;
+    --faint-foreground: 215 20% 65.1%;
+    /* ring around team color dots, so white and black teams show on both themes */
+    --team-dot-border: 213 27% 83.9%;
+
+    /* feedback */
+    --success: 142 72% 29.2%;
+    --success-strong: 142 76% 36.3%;
+    --success-soft: 143 64% 24.1%;
+    --success-muted: 141 84% 92.5%;
+    --success-border: 142 77% 73.1%;
+    --warning: 32 95% 43.7%;
+    --destructive-soft: 0 72% 50.6%;
+    --destructive-muted: 0 86% 97.3%;
+    --info: 200 98% 39.4%;
+    --info-muted: 204 94% 93.7%;
+
+    /* daily status badges (status-live is also the "Admin" pill) */
+    --status-scheduled: 214 95% 92.7%;
+    --status-scheduled-foreground: 224 76% 48%;
+    --status-scheduled-dot: 217 91% 59.8%;
+    --status-live: 48 96% 88.8%;
+    --status-live-foreground: 26 90% 37.1%;
+    --status-live-dot: 38 92% 50.2%;
+
+    /* live session card */
+    --live-from: 138 76% 97%;
+    --live-to: 0 0% 100%;
+    --live-foreground: 143 64% 24.1%;
+    --live-border: 142 77% 73.1%;
+
+    /* member avatars without a photo, picked by id */
+    --avatar-1: 158 100% 28.7%;
+    --avatar-2: 20 64% 44.8%;
+    --avatar-3: 263 42% 57.3%;
+    --avatar-4: 222 55% 56%;
+    --avatar-5: 353 46% 53.3%;
+    --avatar-6: 184 100% 30.3%;
   }
 
   .dark {
@@ -53,6 +99,39 @@
     --chart-1: 142 69% 45%;
     --chart-2: 213 94% 68%;
     --gold: 45 93% 58%;
+    --gold-muted: 46 32% 10.4%;
+    --silver: 0 0% 63.9%;
+    --bronze: 17 88% 40.4%;
+
+    --card-elevated: 0 0% 17%;
+    --row-hover: 0 0% 14%;
+    --avatar-fallback: 0 0% 22%;
+    --subtle-foreground: 0 0% 54.1%;
+    --faint-foreground: 0 0% 45.1%;
+    --team-dot-border: 0 0% 29%;
+
+    --success: 142 69% 58%;
+    --success-strong: 142 71% 45.3%;
+    --success-soft: 142 77% 73.1%;
+    --success-muted: 139 41% 13.3%;
+    --success-border: 140 43% 21.2%;
+    --warning: 43 96% 56.3%;
+    --destructive-soft: 0 91% 70.8%;
+    --destructive-muted: 0 24% 13.3%;
+    --info: 198 93% 59.6%;
+    --info-muted: 200 58% 13.9%;
+
+    --status-scheduled: 217 33% 17.5%;
+    --status-scheduled-foreground: 212 96% 78.4%;
+    --status-scheduled-dot: 217 91% 59.8%;
+    --status-live: 45 67% 12%;
+    --status-live-foreground: 46 97% 64.5%;
+    --status-live-dot: 38 92% 50.2%;
+
+    --live-from: 140 26% 11.2%;
+    --live-to: 132 9% 11.2%;
+    --live-foreground: 141 26% 71.4%;
+    --live-border: 139 23% 23.5%;
   }
 }
 
@@ -107,6 +186,42 @@
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+}
+
+/* Next-session date block (brand green, darker at the bottom) */
+.bg-gradient-date {
+  background: linear-gradient(180deg, #15803d, #14532d);
+}
+
+/* Live session card */
+.bg-gradient-live {
+  background: linear-gradient(180deg, hsl(var(--live-from)), hsl(var(--live-to)));
+}
+
+/* Award leader row */
+.bg-gradient-leader {
+  background: linear-gradient(90deg, hsl(var(--gold) / 0.14), hsl(var(--gold) / 0.03));
+}
+
+/* Photo overlays: they sit on images, so they are the same in both themes */
+.bg-banner-overlay {
+  background: linear-gradient(180deg, rgb(0 0 0 / 0) 30%, rgb(0 0 0 / 0.7) 100%);
+}
+
+.bg-photo-overlay {
+  background: linear-gradient(180deg, rgb(0 0 0 / 0) 55%, rgb(0 0 0 / 0.65) 100%);
+}
+
+.bg-hero-overlay {
+  background: linear-gradient(90deg, rgb(14 14 14 / 0.95) 0%, rgb(14 14 14 / 0.75) 45%, rgb(14 14 14 / 0.25) 100%);
+}
+
+/* Horizontal carousels and chip rows */
+.scrollbar-none {
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
 }
 
 .page-enter {
