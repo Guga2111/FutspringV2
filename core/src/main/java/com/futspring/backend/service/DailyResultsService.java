@@ -127,9 +127,13 @@ public class DailyResultsService {
             // Delete existing stats for this match (single DELETE statement)
             playerMatchStatRepository.deleteByMatch(savedMatch);
 
-            // Save stats for all confirmed players (batch INSERT)
+            // Save stats only for players on the two teams playing this match (batch INSERT),
+            // so matchesPlayed counts the matches a player actually played
+            Set<User> matchPlayers = new LinkedHashSet<>();
+            matchPlayers.addAll(t1.getPlayers());
+            matchPlayers.addAll(t2.getPlayers());
             List<PlayerMatchStat> statsToSave = new ArrayList<>();
-            for (User player : daily.getConfirmedPlayers()) {
+            for (User player : matchPlayers) {
                 MatchResultDTO.PlayerStatInputDTO input = statsByUserId.get(player.getId());
                 int goals = input != null ? input.getGoals() : 0;
                 int assists = input != null ? input.getAssists() : 0;

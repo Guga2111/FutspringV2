@@ -9,6 +9,7 @@ import com.futspring.backend.repository.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
@@ -112,6 +113,39 @@ class DailyResultsServiceTest {
         assertThat(response).hasSize(1);
         assertThat(response.get(0).getTeam1Score()).isEqualTo(2);
         assertThat(response.get(0).getTeam2Score()).isEqualTo(1);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void submitResults_savesStatsOnlyForPlayersOfTheTwoTeams() {
+        User benched = User.builder().id(3L).email("bench@example.com").username("bench").password("hash").stars(2).build();
+        Team team3 = Team.builder().id(3L).name("Green").color("#00FF00").players(new HashSet<>(Set.of(benched))).build();
+        inCourseDaily.getConfirmedPlayers().add(benched);
+
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
+        when(dailyRepository.findById(100L)).thenReturn(Optional.of(inCourseDaily));
+        when(teamRepository.findByDaily(inCourseDaily)).thenReturn(List.of(team1, team2, team3));
+        Match savedMatch = Match.builder().id(50L).daily(inCourseDaily).team1(team1).team2(team2)
+                .team1Score(1).team2Score(0).winner(team1).build();
+        when(matchRepository.save(any(Match.class))).thenReturn(savedMatch);
+        when(teamRepository.findByDailyWithPlayers(inCourseDaily)).thenReturn(List.of(team1, team2, team3));
+        when(matchRepository.findByDaily(inCourseDaily)).thenReturn(List.of(savedMatch));
+        when(leagueTableEntryRepository.findByDailyOrderByPositionAsc(inCourseDaily)).thenReturn(List.of());
+
+        MatchResultDTO result = new MatchResultDTO(null, 1L, 2L, 1, 0,
+                List.of(new MatchResultDTO.PlayerStatInputDTO(1L, 1, 0)));
+
+        resultsService.submitResults(100L, List.of(result), "admin@example.com");
+
+        ArgumentCaptor<List<PlayerMatchStat>> captor = ArgumentCaptor.forClass(List.class);
+        verify(playerMatchStatRepository).saveAll(captor.capture());
+        assertThat(captor.getValue())
+                .extracting(stat -> stat.getUser().getId())
+                .containsExactlyInAnyOrder(1L, 2L);
+        assertThat(captor.getValue())
+                .filteredOn(stat -> stat.getUser().getId().equals(1L))
+                .extracting(PlayerMatchStat::getGoals)
+                .containsExactly(1);
     }
 
     @Test
