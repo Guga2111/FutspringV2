@@ -1,24 +1,20 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-} from "../ui/dialog";
+} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "../ui/select";
-import { Skeleton } from "../ui/skeleton";
-import { getUser } from "@/api/users";
-import { getPlayerPeladaStats } from "@/api/peladas";
-import {
-  ComparablePlayerStatsCard,
-  type PlayerCompareData,
-} from "./ComparablePlayerStatsCard";
+} from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
+import { ComparablePlayerStatsCard } from "@/components/pelada/ComparablePlayerStatsCard";
+import { useComparePlayers } from "@/components/pelada/hooks/useComparePlayers";
 import type { PeladaMember } from "@/types/pelada";
 
 interface ComparePlayersDialogProps {
@@ -26,7 +22,6 @@ interface ComparePlayersDialogProps {
   onOpenChange: (open: boolean) => void;
   peladaId: number;
   members: PeladaMember[];
-  getFileUrl: (path: string | null | undefined) => string | undefined;
 }
 
 export function ComparePlayersDialog({
@@ -34,61 +29,25 @@ export function ComparePlayersDialog({
   onOpenChange,
   peladaId,
   members,
-  getFileUrl,
 }: ComparePlayersDialogProps) {
   const [playerAId, setPlayerAId] = useState<number | null>(null);
   const [playerBId, setPlayerBId] = useState<number | null>(null);
-  const [playerAData, setPlayerAData] = useState<PlayerCompareData | null>(null);
-  const [playerBData, setPlayerBData] = useState<PlayerCompareData | null>(null);
-  const [loading, setLoading] = useState(false);
+  const { loading, playerA: playerAData, playerB: playerBData } = useComparePlayers(peladaId, playerAId, playerBId);
 
-  // Reset state when dialog closes
-  useEffect(() => {
-    if (!open) {
+  // Start empty the next time the dialog opens
+  function handleOpenChange(next: boolean) {
+    if (!next) {
       setPlayerAId(null);
       setPlayerBId(null);
-      setPlayerAData(null);
-      setPlayerBData(null);
     }
-  }, [open]);
-
-  // Fetch both players when both are selected
-  useEffect(() => {
-    if (playerAId === null || playerBId === null) return;
-
-    let cancelled = false;
-    setLoading(true);
-    setPlayerAData(null);
-    setPlayerBData(null);
-
-    Promise.all([
-      getUser(playerAId),
-      getPlayerPeladaStats(peladaId, playerAId),
-      getUser(playerBId),
-      getPlayerPeladaStats(peladaId, playerBId),
-    ])
-      .then(([profileA, statsA, profileB, statsB]) => {
-        if (cancelled) return;
-        setPlayerAData({ profile: profileA, stats: statsA });
-        setPlayerBData({ profile: profileB, stats: statsB });
-      })
-      .catch(() => {
-        // silently fail — user can reselect
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [playerAId, playerBId, peladaId]);
+    onOpenChange(next);
+  }
 
   const membersForA = members.filter((m) => m.id !== playerBId);
   const membersForB = members.filter((m) => m.id !== playerAId);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-xl bg-zinc-950 border-zinc-800 text-white">
         <DialogHeader>
           <DialogTitle className="text-white">Comparar Jogadores</DialogTitle>
@@ -176,7 +135,6 @@ export function ComparePlayersDialog({
               <ComparablePlayerStatsCard
                 playerA={playerAData}
                 playerB={playerBData}
-                getFileUrl={getFileUrl}
               />
             ) : null}
           </div>

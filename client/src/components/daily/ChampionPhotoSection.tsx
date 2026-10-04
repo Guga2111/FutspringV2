@@ -1,7 +1,7 @@
 import type { RefObject } from 'react'
-import type { DailyDetail } from '../../types/daily'
-import { getFileUrl } from '../../lib/utils'
-import { Button } from '../ui/button'
+import type { DailyDetail } from '@/types/daily'
+import { getFileUrl } from '@/lib/utils'
+import { Button } from '@/components/ui/button'
 import { Upload } from 'lucide-react'
 
 interface ChampionPhotoSectionProps {

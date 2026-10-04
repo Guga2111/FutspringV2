@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { Skeleton } from "@/components/ui/skeleton"
-import { getFileUrl } from "@/lib/utils"
+import { getFileUrl, getInitials } from "@/lib/utils"
 import type { PeladaAwards, AwardCategory, AwardWinner } from "@/types/pelada"
 
 const ICON_MAP: Record<string, React.ElementType> = {
@@ -16,7 +16,7 @@ const ICON_MAP: Record<string, React.ElementType> = {
 }
 
 const PLACE_COLORS = [
-  "text-yellow-500",
+  "text-gold",
   "text-slate-400",
   "text-amber-700",
 ]
@@ -27,7 +27,7 @@ interface AwardsTabProps {
 }
 
 function WinnerRow({ winner, place }: { winner: AwardWinner; place: number }) {
-  const initials = winner.username.slice(0, 2).toUpperCase()
+  const initials = getInitials(winner.username)
   const imgUrl = getFileUrl(winner.userImage)
   return (
     <div className="flex items-center gap-3 py-2">
@@ -123,7 +123,7 @@ function SummaryBar({ awards }: { awards: PeladaAwards }) {
             <Avatar key={p.userId} className="h-8 w-8 border-2 border-background">
               {imgUrl && <AvatarImage src={imgUrl} alt={p.username} />}
               <AvatarFallback className="text-xs font-semibold">
-                {p.username.slice(0, 2).toUpperCase()}
+                {getInitials(p.username)}
               </AvatarFallback>
             </Avatar>
           )

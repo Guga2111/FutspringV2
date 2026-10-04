@@ -1,9 +1,10 @@
+import { getInitials, getFileUrl } from "@/lib/utils"
 import { Link } from "react-router-dom";
 import { Trophy, ChevronUp, ChevronDown, ChevronsUpDown, History } from "lucide-react";
-import { Button } from "../ui/button";
-import { Skeleton } from "../ui/skeleton";
-import { Avatar, AvatarImage, AvatarFallback } from "../ui/avatar";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ui/table";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { RankingDTO } from "@/types/daily";
 
 interface RankingTabProps {
@@ -14,7 +15,6 @@ interface RankingTabProps {
     dir: "asc" | "desc";
   };
   onSort: (col: "goals" | "assists" | "matchesPlayed" | "wins") => void;
-  getFileUrl: (path: string | null | undefined) => string | undefined;
   onOpenHistory: (userId: number) => void;
 }
 
@@ -23,7 +23,6 @@ export function RankingTable({
   isLoading,
   sortConfig,
   onSort,
-  getFileUrl,
   onOpenHistory,
 }: RankingTabProps) {
   return (
@@ -80,12 +79,12 @@ export function RankingTable({
           </TableHeader>
           <TableBody>
             {ranking.map((row, idx) => {
-              const initials = row.username.slice(0, 2).toUpperCase();
+              const initials = getInitials(row.username);
               return (
                 <TableRow key={row.userId} className="last:border-0">
                   <TableCell className="py-2 px-2 text-center">
                     {idx === 0 ? (
-                      <Trophy className="h-4 w-4 text-yellow-500 mx-auto" />
+                      <Trophy className="h-4 w-4 text-gold mx-auto" />
                     ) : idx === 1 ? (
                       <Trophy className="h-4 w-4 text-slate-400 mx-auto" />
                     ) : idx === 2 ? (

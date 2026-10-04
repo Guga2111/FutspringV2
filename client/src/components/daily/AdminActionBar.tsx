@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { CheckCircle, Play, XCircle, ClipboardList, FlagTriangleRight, Pencil, ShieldCheck, FileText, Trash2 } from 'lucide-react'
-import type { DailyDetail } from '../../types/daily'
-import { Button } from '../ui/button'
+import type { DailyDetail } from '@/types/daily'
+import { Button } from '@/components/ui/button'
 import DeleteDailyDialog from './DeleteDailyDialog'
 
 interface AdminActionBarProps {

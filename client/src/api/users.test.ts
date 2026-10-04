@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-vi.mock('./client', () => ({ default: { post: vi.fn() } }))
+vi.mock('./client', () => ({ default: { post: vi.fn(), get: vi.fn() } }))
 
 import apiClient from './client'
-import { uploadUserImage, uploadBackgroundImage } from './users'
+import { uploadUserImage, uploadBackgroundImage, getUserPeladas } from './users'
 
 const mockPost = vi.mocked(apiClient.post)
 
@@ -43,5 +43,17 @@ describe('uploadBackgroundImage', () => {
     expect(url).toBe('/api/v1/users/1/background-image')
     expect(body).toBeInstanceOf(FormData)
     expect((body as FormData).get('file')).toBe(file)
+  })
+})
+
+describe('getUserPeladas', () => {
+  it('calls the shared peladas endpoint', async () => {
+    const mockGet = vi.mocked(apiClient.get)
+    mockGet.mockResolvedValue({ data: [{ id: 1 }] })
+
+    const result = await getUserPeladas(7)
+
+    expect(mockGet).toHaveBeenCalledWith('/api/v1/users/7/peladas')
+    expect(result).toEqual([{ id: 1 }])
   })
 })

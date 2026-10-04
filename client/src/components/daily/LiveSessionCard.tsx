@@ -1,5 +1,5 @@
-import type { DailyDetail } from '../../types/daily'
-import { Button } from '../ui/button'
+import type { DailyDetail } from '@/types/daily'
+import { Button } from '@/components/ui/button'
 
 interface LiveSessionCardProps {
   daily: DailyDetail

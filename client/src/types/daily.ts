@@ -1,3 +1,19 @@
+// mirrors the backend DailyStatus enum
+export type DailyStatus = "SCHEDULED" | "CONFIRMED" | "IN_COURSE" | "FINISHED" | "CANCELED"
+
+export const dailyStatusLabel: Record<DailyStatus, string> = {
+  SCHEDULED: "Agendada",
+  CONFIRMED: "Confirmada",
+  IN_COURSE: "Em andamento",
+  FINISHED: "Finalizada",
+  CANCELED: "Cancelada",
+}
+
+// Attendance and teams can only change before the session starts (backend: DailyStatus.LOCKED)
+export function isDailyOpen(status: DailyStatus): boolean {
+  return status === "SCHEDULED" || status === "CONFIRMED"
+}
+
 export interface PlayerDTO {
   id: number
   username: string
@@ -74,7 +90,7 @@ export interface DailyListItem {
   id: number
   dailyDate: string
   dailyTime: string
-  status: string
+  status: DailyStatus
   confirmedPlayerCount: number
   isFinished: boolean
 }
@@ -83,7 +99,7 @@ export interface DailyDetail {
   id: number
   dailyDate: string
   dailyTime: string
-  status: string
+  status: DailyStatus
   isFinished: boolean
   championImage: string | null
   confirmedPlayers: PlayerDTO[]

@@ -4,7 +4,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-} from "../ui/dialog";
+} from "@/components/ui/dialog";
 import { UserMinus } from "lucide-react";
 import type { PeladaMember } from "@/types/pelada";
 

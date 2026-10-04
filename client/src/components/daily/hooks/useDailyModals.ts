@@ -1,14 +1,13 @@
 import { useRef, useState } from 'react'
+import type { DailyStatus } from '@/types/daily'
 
-type StatusDialog = { targetStatus: string; description: string; title: string; variant?: 'destructive' | 'default' | 'gradient' }
+export type StatusDialog = { targetStatus: DailyStatus; description: string; title: string; variant?: 'destructive' | 'default' | 'gradient' }
 
 export function useDailyModals() {
   const [resultsOpen, setResultsOpen] = useState(false)
   const [finalizeOpen, setFinalizeOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
-  const [uploadLoading, setUploadLoading] = useState(false)
   const [statusDialog, setStatusDialog] = useState<StatusDialog | null>(null)
-  const [statusLoading, setStatusLoading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   return {
@@ -21,12 +20,8 @@ export function useDailyModals() {
     importOpen,
     openImport: () => setImportOpen(true),
     closeImport: () => setImportOpen(false),
-    uploadLoading,
-    setUploadLoading,
     statusDialog,
     setStatusDialog,
-    statusLoading,
-    setStatusLoading,
     fileInputRef,
   }
 }

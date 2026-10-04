@@ -1,10 +1,11 @@
 import { useRef, useState } from 'react'
 import { ArrowLeftRight, ChevronDown, ChevronRight } from 'lucide-react'
-import type { DailyDetail, TeamDTO, PlayerDTO } from '../../types/daily'
-import { getFileUrl } from '../../lib/utils'
-import { Button } from '../ui/button'
-import { Avatar, AvatarImage, AvatarFallback } from '../ui/avatar'
-import StarRating from './StarRating'
+import type { DailyDetail, TeamDTO, PlayerDTO } from '@/types/daily'
+import { getFileUrl, getInitials } from '@/lib/utils'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
+import StarRating from '@/components/daily/StarRating'
 
 interface TeamsSectionProps {
   daily: DailyDetail
@@ -110,9 +111,11 @@ export default function TeamsSection({
                 <div className="px-4 py-2 flex items-center justify-between gap-2 bg-muted/50">
                   <div className="flex items-center gap-2 min-w-0 flex-1">
                     {canEditColor && (
+                      // shadcn has no color picker: a label around a visually hidden native color input
                       <label className="cursor-pointer flex-shrink-0" title="Alterar cor do time">
-                        <input
+                        <Input
                           type="color"
+                          aria-label={`Cor do ${team.name}`}
                           className="sr-only"
                           defaultValue={team.color ?? '#6b7280'}
                           onChange={(e) => handleColorChange(team.id, e.target.value)}
@@ -124,9 +127,11 @@ export default function TeamsSection({
                       </label>
                     )}
                     {isEditing ? (
-                      <input
+                      <Input
                         ref={nameInputRef}
-                        className="font-semibold bg-transparent border-b border-current outline-none w-full min-w-0"
+                        aria-label="Nome do time"
+                        maxLength={30}
+                        className="h-7 min-w-0 w-full font-semibold"
                         value={editingName}
                         onChange={(e) => setEditingName(e.target.value)}
                         onBlur={() => commitEdit(team.id, team.name)}
@@ -147,7 +152,7 @@ export default function TeamsSection({
                       </h3>
                     )}
                   </div>
-                  <span className="text-xs text-yellow-400 flex-shrink-0">
+                  <span className="text-xs text-gold flex-shrink-0">
                     {team.averageStars.toFixed(2)} ★
                   </span>
                 </div>
@@ -164,7 +169,7 @@ export default function TeamsSection({
                             <AvatarImage src={getFileUrl(player.image)} alt={player.username} />
                           ) : null}
                           <AvatarFallback className="text-xs font-semibold">
-                            {player.username.slice(0, 2).toUpperCase()}
+                            {getInitials(player.username)}
                           </AvatarFallback>
                         </Avatar>
                         <div className="flex-1 min-w-0">

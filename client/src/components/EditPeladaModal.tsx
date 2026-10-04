@@ -1,3 +1,5 @@
+import { getErrorMessage } from "@/lib/errors"
+import { DAYS_OF_WEEK } from "@/lib/constants"
 import { useState, useRef } from "react"
 import { toast } from "sonner"
 import { updatePelada, uploadPeladaImage } from "@/api/peladas"
@@ -7,33 +9,14 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from "@/components/ui/sheet"
 
-const DAYS_OF_WEEK = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sabado", "Domingo"]
 
 interface EditPeladaModalProps {
   pelada: PeladaDetail
   onClose: () => void
   onUpdated: () => void
-}
-
-function extractErrorMessage(err: unknown): string | null {
-  if (
-    err &&
-    typeof err === "object" &&
-    "response" in err &&
-    err.response &&
-    typeof err.response === "object" &&
-    "data" in err.response &&
-    err.response.data &&
-    typeof err.response.data === "object" &&
-    "message" in err.response.data &&
-    typeof (err.response.data as { message: unknown }).message === "string"
-  ) {
-    return (err.response.data as { message: string }).message
-  }
-  return null
 }
 
 export default function EditPeladaModal({ pelada, onClose, onUpdated }: EditPeladaModalProps) {
@@ -89,9 +72,8 @@ export default function EditPeladaModal({ pelada, onClose, onUpdated }: EditPela
       toast.success("Pelada atualizada!")
       onUpdated()
       onClose()
-    } catch (err: unknown) {
-      const message = extractErrorMessage(err) ?? "Falha ao atualizar pelada"
-      toast.error(message)
+    } catch (error) {
+      toast.error(getErrorMessage(error, "Não foi possível atualizar a pelada"))
     } finally {
       setLoading(false)
     }
@@ -125,16 +107,18 @@ export default function EditPeladaModal({ pelada, onClose, onUpdated }: EditPela
             <div className="space-y-2">
               <Label htmlFor="ep-dayOfWeek">Dia da Semana *</Label>
               <Select
-                value={form.dayOfWeek ?? "Segunda"}
+                value={form.dayOfWeek}
                 onValueChange={(value) => setForm((prev) => ({ ...prev, dayOfWeek: value }))}
               >
                 <SelectTrigger id="ep-dayOfWeek">
                   <SelectValue placeholder="Selecione um dia" />
                 </SelectTrigger>
                 <SelectContent>
-                  {DAYS_OF_WEEK.map((day) => (
-                    <SelectItem key={day} value={day}>{day}</SelectItem>
-                  ))}
+                  <SelectGroup>
+                    {DAYS_OF_WEEK.map((day) => (
+                      <SelectItem key={day.value} value={day.value}>{day.label}</SelectItem>
+                    ))}
+                  </SelectGroup>
                 </SelectContent>
               </Select>
             </div>

@@ -1,11 +1,29 @@
-import { useState, useRef } from 'react'
-import { toast } from 'sonner'
-import { updateUser, uploadUserImage, uploadBackgroundImage } from '../../api/users'
-import { getFileUrl } from '../../lib/utils'
-import type { ProfileDTO } from '../../types/user'
-import { Button } from '../ui/button'
-
-const POSITIONS = ['GOLEIRO', 'ZAGUEIRO', 'MEIO', 'ATACANTE'] as const
+import { useState } from "react"
+import { Controller, useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { Camera, Star } from "lucide-react"
+import { toast } from "sonner"
+import { updateUser, uploadBackgroundImage, uploadUserImage } from "@/api/users"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Button } from "@/components/ui/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
+import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { getErrorMessage } from "@/lib/errors"
+import { applyServerErrors } from "@/lib/form-errors"
+import { cn, getFileUrl, getInitials } from "@/lib/utils"
+import { IMAGE_ACCEPT, validateImageFile } from "@/schemas/upload"
+import { profileSchema, type ProfileValues } from "@/schemas/user"
+import { EDITABLE_POSITIONS, positionLabel, type ProfileDTO } from "@/types/user"
 
 interface EditProfileModalProps {
   profile: ProfileDTO
@@ -13,181 +31,200 @@ interface EditProfileModalProps {
   onProfileUpdated: (updated: ProfileDTO) => void
 }
 
+// Select can't hold an empty value, so "no position" uses a sentinel
+const NO_POSITION = "__none__"
+
+function toFormPosition(position: string | null): ProfileValues["position"] {
+  return (EDITABLE_POSITIONS as readonly string[]).includes(position ?? "")
+    ? (position as ProfileValues["position"])
+    : ""
+}
+
 export default function EditProfileModal({ profile, onClose, onProfileUpdated }: EditProfileModalProps) {
-  const [username, setUsername] = useState(profile.username)
-  const [position, setPosition] = useState(profile.position ?? '')
-  const [stars, setStars] = useState(profile.stars)
-  const [usernameError, setUsernameError] = useState('')
-  const [saving, setSaving] = useState(false)
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(
-    profile.image ? getFileUrl(profile.image)! : null,
-  )
-  const [bgPreview, setBgPreview] = useState<string | null>(
-    profile.backgroundImage ? getFileUrl(profile.backgroundImage)! : null,
-  )
-  const avatarInputRef = useRef<HTMLInputElement>(null)
-  const bgInputRef = useRef<HTMLInputElement>(null)
+  const [uploading, setUploading] = useState<"avatar" | "background" | null>(null)
+  const [current, setCurrent] = useState(profile)
+  const form = useForm<ProfileValues>({
+    resolver: zodResolver(profileSchema),
+    defaultValues: {
+      username: profile.username,
+      position: toFormPosition(profile.position),
+      stars: profile.stars,
+    },
+  })
 
-  const initials = profile.username
-    .split(' ')
-    .map((w) => w[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2)
-
-  async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
+  async function handleImage(kind: "avatar" | "background", file: File | undefined) {
     if (!file) return
-    try {
-      const updated = await uploadUserImage(profile.id, file)
-      setAvatarPreview(updated.image ? getFileUrl(updated.image)! : null)
-      onProfileUpdated(updated)
-    } catch {
-      toast.error('Falha ao atualizar avatar')
+    const invalid = validateImageFile(file)
+    if (invalid) {
+      toast.error(invalid)
+      return
     }
-    e.target.value = ''
-  }
-
-  async function handleBgChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
+    setUploading(kind)
     try {
-      const updated = await uploadBackgroundImage(profile.id, file)
-      setBgPreview(updated.backgroundImage ? getFileUrl(updated.backgroundImage)! : null)
+      const updated = kind === "avatar"
+        ? await uploadUserImage(profile.id, file)
+        : await uploadBackgroundImage(profile.id, file)
+      setCurrent(updated)
       onProfileUpdated(updated)
-    } catch {
-      toast.error('Falha ao enviar imagem de fundo')
-    }
-    e.target.value = ''
-  }
-
-  async function handleSave() {
-    setUsernameError('')
-    setSaving(true)
-    try {
-      const updated = await updateUser(profile.id, {
-        username,
-        position,
-        stars,
-      })
-      onProfileUpdated(updated)
-      onClose()
-      toast.success('Perfil atualizado!')
-    } catch (err: unknown) {
-      const axiosErr = err as { response?: { status?: number } }
-      if (axiosErr?.response?.status === 409) {
-        setUsernameError('Nome de usuário já em uso!')
-      } else {
-        toast.error('Falha ao atualizar perfil')
-      }
+    } catch (error) {
+      toast.error(getErrorMessage(error, "Não foi possível enviar a imagem"))
     } finally {
-      setSaving(false)
+      setUploading(null)
     }
   }
+
+  async function onSubmit(values: ProfileValues) {
+    try {
+      const updated = await updateUser(profile.id, values)
+      form.reset(values)
+      onProfileUpdated(updated)
+      toast.success("Perfil atualizado")
+      onClose()
+    } catch (error) {
+      applyServerErrors(form, error, "Não foi possível salvar o perfil")
+    }
+  }
+
+  const submitting = form.formState.isSubmitting
+  const backgroundUrl = getFileUrl(current.backgroundImage)
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50">
-      <div className="bg-background rounded-t-2xl sm:rounded-lg w-full sm:max-w-md overflow-hidden">
-        {/* Background image area */}
-        <label
-          htmlFor="bg-input"
-          className="w-full h-[120px] relative cursor-pointer group block"
-          style={
-            bgPreview
-              ? { backgroundImage: `url(${bgPreview})`, backgroundSize: 'cover', backgroundPosition: 'center' }
-              : { background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }
-          }
-        >
-          <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-            <span className="text-white text-sm font-medium">Alterar fundo</span>
-          </div>
-        </label>
-        <input id="bg-input" ref={bgInputRef} type="file" accept="image/*" className="hidden" onChange={handleBgChange} />
-
-        {/* Avatar */}
-        <div className="px-6 -mt-10 mb-4">
+    <Dialog open onOpenChange={(open) => !open && !submitting && onClose()}>
+      <DialogContent className="max-w-md gap-0 overflow-hidden p-0">
+        <div className="relative h-[120px] bg-gradient-primary">
+          {backgroundUrl && (
+            <img src={backgroundUrl} alt="" className="absolute inset-0 size-full object-cover" />
+          )}
           <label
-            htmlFor="avatar-input"
-            className="relative h-20 w-20 rounded-full border-4 border-background cursor-pointer group block"
+            htmlFor="background-input"
+            className="absolute bottom-2 right-2 flex cursor-pointer items-center gap-1 rounded-full bg-background/80 px-3 py-1 text-xs font-medium text-foreground backdrop-blur hover:bg-background"
           >
-            {avatarPreview ? (
-              <img src={avatarPreview} alt={profile.username} className="h-full w-full rounded-full object-cover" />
-            ) : (
-              <div className="h-full w-full rounded-full bg-muted flex items-center justify-center text-lg font-bold">
-                {initials}
-              </div>
-            )}
-            <div className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-              <span className="text-white text-xs font-medium">Editar</span>
-            </div>
+            <Camera className="size-3.5" />
+            {uploading === "background" ? "Enviando..." : "Alterar fundo"}
           </label>
-          <input id="avatar-input" ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
+          <Input
+            id="background-input"
+            type="file"
+            accept={IMAGE_ACCEPT}
+            className="sr-only"
+            disabled={uploading !== null}
+            onChange={(e) => {
+              void handleImage("background", e.target.files?.[0])
+              e.target.value = ""
+            }}
+          />
         </div>
 
-        {/* Form fields */}
-        <div className="px-6 pb-6 space-y-4">
-          <div>
-            <label className="text-sm font-medium block mb-1">Nome de usuário</label>
-            <input
-              type="text"
-              value={username}
-              onChange={(e) => { setUsername(e.target.value); setUsernameError('') }}
-              minLength={3}
-              maxLength={30}
-              className="w-full border rounded-md px-3 py-2 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+        <div className="-mt-10 px-6">
+          <label htmlFor="avatar-input" className="group relative block w-fit cursor-pointer" aria-label="Alterar foto">
+            <Avatar className="size-20 border-4 border-background">
+              <AvatarImage src={getFileUrl(current.image)} alt={current.username} />
+              <AvatarFallback className="text-lg font-bold">{getInitials(current.username)}</AvatarFallback>
+            </Avatar>
+            <span className="absolute bottom-0 right-0 flex size-7 items-center justify-center rounded-full border bg-background">
+              <Camera className="size-3.5" />
+            </span>
+          </label>
+          <Input
+            id="avatar-input"
+            type="file"
+            accept={IMAGE_ACCEPT}
+            className="sr-only"
+            disabled={uploading !== null}
+            onChange={(e) => {
+              void handleImage("avatar", e.target.files?.[0])
+              e.target.value = ""
+            }}
+          />
+        </div>
+
+        <form onSubmit={form.handleSubmit(onSubmit)} noValidate className="flex flex-col gap-6 p-6 pt-4">
+          <DialogHeader>
+            <DialogTitle>Editar perfil</DialogTitle>
+            <DialogDescription className="sr-only">Nome de usuário, posição e estrelas</DialogDescription>
+          </DialogHeader>
+          <FieldGroup className="gap-5">
+            <Controller
+              name="username"
+              control={form.control}
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor="username">Nome de usuário</FieldLabel>
+                  <Input {...field} id="username" autoComplete="username" aria-invalid={fieldState.invalid} />
+                  <FieldError errors={[fieldState.error]} />
+                </Field>
+              )}
             />
-            {usernameError && <p className="text-destructive text-xs mt-1">{usernameError}</p>}
-          </div>
-
-          <div>
-            <label className="text-sm font-medium block mb-1">Posição</label>
-            <select
-              value={position}
-              onChange={(e) => setPosition(e.target.value)}
-              className="w-full border rounded-md px-3 py-2 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-            >
-              <option value="">Sem posição</option>
-              {POSITIONS.map((p) => (
-                <option key={p} value={p}>{p.charAt(0) + p.slice(1).toLowerCase()}</option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="text-sm font-medium block mb-1">Estrelas</label>
-            <div className="flex gap-1">
-              {[1, 2, 3, 4, 5].map((i) => (
-                <button
-                  key={i}
-                  type="button"
-                  onClick={() => setStars(i)}
-                  className="text-2xl text-yellow-400 hover:scale-110 transition-transform"
-                >
-                  {i <= stars ? '★' : '☆'}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="flex gap-3 pt-2">
-            <Button
-              onClick={onClose}
-              className="flex-1 px-4 py-2 border rounded-full text-sm hover:bg-muted transition-colors"
-              variant="outline"
-            >
+            <Controller
+              name="position"
+              control={form.control}
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor="position">Posição</FieldLabel>
+                  <Select
+                    value={field.value === "" ? NO_POSITION : field.value}
+                    onValueChange={(value) => field.onChange(value === NO_POSITION ? "" : value)}
+                  >
+                    <SelectTrigger id="position" aria-invalid={fieldState.invalid}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        <SelectItem value={NO_POSITION}>Sem posição</SelectItem>
+                        {EDITABLE_POSITIONS.map((p) => (
+                          <SelectItem key={p} value={p}>
+                            {positionLabel[p]}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                  <FieldError errors={[fieldState.error]} />
+                </Field>
+              )}
+            />
+            <Controller
+              name="stars"
+              control={form.control}
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel id="stars-label">Estrelas</FieldLabel>
+                  <div role="radiogroup" aria-labelledby="stars-label" className="flex gap-1">
+                    {[1, 2, 3, 4, 5].map((i) => (
+                      <Button
+                        key={i}
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        role="radio"
+                        aria-checked={field.value === i}
+                        aria-label={`${i} estrela${i > 1 ? "s" : ""}`}
+                        onClick={() => field.onChange(i)}
+                      >
+                        <Star className={cn("size-6 text-gold", i <= field.value && "fill-current")} />
+                      </Button>
+                    ))}
+                  </div>
+                  <FieldError errors={[fieldState.error]} />
+                </Field>
+              )}
+            />
+          </FieldGroup>
+          {form.formState.errors.root && (
+            <Alert variant="destructive">
+              <AlertDescription>{form.formState.errors.root.message}</AlertDescription>
+            </Alert>
+          )}
+          <DialogFooter className="gap-2">
+            <Button type="button" variant="outline" onClick={onClose} disabled={submitting}>
               Cancelar
             </Button>
-            <Button
-              onClick={handleSave}
-              disabled={saving}
-              variant="gradient"
-              className="flex-1 px-4 py-2 rounded-full text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
-            >
-              {saving ? 'Salvando...' : 'Salvar'}
+            <Button type="submit" variant="gradient" disabled={submitting || !form.formState.isDirty}>
+              {submitting ? "Salvando..." : "Salvar"}
             </Button>
-          </div>
-        </div>
-      </div>
-    </div>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   )
 }

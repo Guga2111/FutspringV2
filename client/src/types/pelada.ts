@@ -20,6 +20,8 @@ export interface PeladaResponse {
   memberCount: number
   numberOfTeams: number
   playersPerTeam: number
+  // next SCHEDULED/CONFIRMED session from today; only sent by /peladas/my and /users/{id}/peladas
+  nextDailyDate?: string | null
 }
 
 export interface PeladaDetail extends PeladaResponse {

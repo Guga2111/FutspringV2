@@ -1,6 +1,6 @@
-import { Avatar, AvatarImage, AvatarFallback } from "../ui/avatar";
-import { Badge } from "../ui/badge";
-import { getPeladaGradient } from "@/lib/utils";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { getPeladaGradient, getInitials, getFileUrl } from "@/lib/utils";
 import type { ProfileDTO } from "@/types/user";
 import type { PlayerPeladaStatsDTO } from "@/types/pelada";
 
@@ -12,13 +12,12 @@ export interface PlayerCompareData {
 interface ComparablePlayerStatsCardProps {
   playerA: PlayerCompareData;
   playerB: PlayerCompareData;
-  getFileUrl: (path: string | null | undefined) => string | undefined;
 }
 
 function Stars({ count }: { count: number }) {
   const clamped = Math.min(Math.max(Math.round(count), 0), 5);
   return (
-    <span className="text-yellow-400 text-xs tracking-tight">
+    <span className="text-gold text-xs tracking-tight">
       {"★".repeat(clamped)}
       <span className="text-zinc-600">{"★".repeat(5 - clamped)}</span>
     </span>
@@ -75,15 +74,13 @@ function StatBar({ valueA, valueB, label }: StatRow) {
 function PlayerColumn({
   data,
   stats,
-  getFileUrl,
   side,
 }: {
   data: PlayerCompareData;
   stats: PlayerPeladaStatsDTO;
-  getFileUrl: (path: string | null | undefined) => string | undefined;
   side: "A" | "B";
 }) {
-  const initials = data.profile.username.slice(0, 2).toUpperCase();
+  const initials = getInitials(data.profile.username);
   const ringColor = side === "A" ? "ring-green-500/40" : "ring-amber-500/40";
 
   return (
@@ -123,7 +120,6 @@ function PlayerColumn({
 export function ComparablePlayerStatsCard({
   playerA,
   playerB,
-  getFileUrl,
 }: ComparablePlayerStatsCardProps) {
   const stats: StatRow[] = [
     { label: "Gols", valueA: playerA.stats.goals, valueB: playerB.stats.goals },
@@ -144,13 +140,13 @@ export function ComparablePlayerStatsCard({
     <div className="rounded-xl bg-zinc-900 border border-zinc-800 p-4 space-y-4">
       {/* Player headers */}
       <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4">
-        <PlayerColumn data={playerA} stats={playerA.stats} getFileUrl={getFileUrl} side="A" />
+        <PlayerColumn data={playerA} stats={playerA.stats} side="A" />
 
         <div className="flex flex-col items-center">
           <span className="text-xl font-black text-zinc-600 tracking-tight">VS</span>
         </div>
 
-        <PlayerColumn data={playerB} stats={playerB.stats} getFileUrl={getFileUrl} side="B" />
+        <PlayerColumn data={playerB} stats={playerB.stats} side="B" />
       </div>
 
       {/* Divider */}

@@ -1,4 +1,4 @@
-import type { DailyDetail } from '../../types/daily'
+import type { DailyDetail } from '@/types/daily'
 import { Trophy, Medal } from 'lucide-react'
 
 interface LeagueTableSectionProps {
@@ -36,7 +36,7 @@ export default function LeagueTableSection({ daily }: LeagueTableSectionProps) {
                 >
                   <td className="py-2 pr-2 text-muted-foreground">
                     {entry.position === 1 ? (
-                      <Trophy className="h-4 w-4 text-yellow-500" />
+                      <Trophy className="h-4 w-4 text-gold" />
                     ) : entry.position === 2 ? (
                       <Medal className="h-4 w-4 text-slate-400" />
                     ) : entry.position === 3 ? (

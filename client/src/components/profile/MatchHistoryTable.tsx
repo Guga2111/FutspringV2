@@ -10,8 +10,8 @@ import {
   useReactTable,
 } from '@tanstack/react-table'
 import { ArrowUpDown, ArrowUp, ArrowDown, ChevronDown } from 'lucide-react'
-import { Button } from '../ui/button'
-import { Skeleton } from '../ui/skeleton'
+import { Button } from '@/components/ui/button'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
   Table,
   TableBody,
@@ -19,14 +19,14 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '../ui/table'
+} from '@/components/ui/table'
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuTrigger,
-} from '../ui/dropdown-menu'
-import type { MatchHistoryRow } from '../../types/stats'
+} from '@/components/ui/dropdown-menu'
+import type { MatchHistoryRow } from '@/types/stats'
 
 interface MatchHistoryTableProps {
   matchHistory: MatchHistoryRow[]
@@ -45,7 +45,7 @@ function ResultBadge({ result }: { result: string }) {
     upper === 'WIN'
       ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
       : upper === 'DRAW'
-        ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
+        ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-gold'
         : 'bg-muted text-muted-foreground'
   const label = upper === 'WIN' ? 'VITÓRIA' : upper === 'DRAW' ? 'EMPATE' : upper
   return (

@@ -1,3 +1,5 @@
+import { getErrorMessage } from "@/lib/errors"
+import { DAYS_OF_WEEK } from "@/lib/constants"
 import { useState, useRef } from "react"
 import { useNavigate } from "react-router-dom"
 import { toast } from "sonner"
@@ -8,32 +10,13 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from "@/components/ui/sheet"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { MapPin } from "lucide-react"
 
-const DAYS_OF_WEEK = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sabado", "Domingo"]
 
 interface CreatePeladaModalProps {
   onClose: () => void
   onCreated: () => void
-}
-
-function extractErrorMessage(err: unknown): string | null {
-  if (
-    err &&
-    typeof err === "object" &&
-    "response" in err &&
-    err.response &&
-    typeof err.response === "object" &&
-    "data" in err.response &&
-    err.response.data &&
-    typeof err.response.data === "object" &&
-    "message" in err.response.data &&
-    typeof (err.response.data as { message: unknown }).message === "string"
-  ) {
-    return (err.response.data as { message: string }).message
-  }
-  return null
 }
 
 export default function CreatePeladaModal({ onClose, onCreated }: CreatePeladaModalProps) {
@@ -42,7 +25,7 @@ export default function CreatePeladaModal({ onClose, onCreated }: CreatePeladaMo
 
   const [form, setForm] = useState<CreatePeladaData>({
     name: "",
-    dayOfWeek: "Segunda",
+    dayOfWeek: "MONDAY",
     timeOfDay: "",
     duration: 1,
     address: "",
@@ -94,9 +77,8 @@ export default function CreatePeladaModal({ onClose, onCreated }: CreatePeladaMo
       toast.success("Pelada criada!")
       onCreated()
       navigate(`/pelada/${pelada.id}`)
-    } catch (err: unknown) {
-      const message = extractErrorMessage(err) ?? "Falha ao criar pelada"
-      toast.error(message)
+    } catch (error) {
+      toast.error(getErrorMessage(error, "Não foi possível criar a pelada"))
     } finally {
       setLoading(false)
     }
@@ -141,9 +123,11 @@ export default function CreatePeladaModal({ onClose, onCreated }: CreatePeladaMo
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {DAYS_OF_WEEK.map((day) => (
-                      <SelectItem key={day} value={day}>{day}</SelectItem>
-                    ))}
+                    <SelectGroup>
+                      {DAYS_OF_WEEK.map((day) => (
+                        <SelectItem key={day.value} value={day.value}>{day.label}</SelectItem>
+                      ))}
+                    </SelectGroup>
                   </SelectContent>
                 </Select>
               </div>

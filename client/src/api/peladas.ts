@@ -1,7 +1,7 @@
 import apiClient from "./client"
-import type { PeladaResponse, PeladaDetail, PeladaAwards, PlayerPeladaHistoryDTO, PlayerPeladaStatsDTO } from "../types/pelada"
-import type { UserResponseDTO } from "../types/auth"
-import type { RankingDTO } from "../types/daily"
+import type { PeladaResponse, PeladaDetail, PeladaAwards, PlayerPeladaHistoryDTO, PlayerPeladaStatsDTO } from "@/types/pelada"
+import type { PublicUser } from "@/types/user"
+import type { RankingDTO } from "@/types/daily"
 
 export interface CreatePeladaData {
   name: string
@@ -68,8 +68,9 @@ export async function uploadPeladaImage(peladaId: number, file: File): Promise<P
   return response.data
 }
 
-export async function searchUsers(q: string): Promise<UserResponseDTO[]> {
-  const response = await apiClient.get<UserResponseDTO[]>("/api/v1/users/search", { params: { q } })
+// q needs at least 3 characters (400 otherwise); matches username or email, returns public fields only
+export async function searchUsers(q: string): Promise<PublicUser[]> {
+  const response = await apiClient.get<PublicUser[]>("/api/v1/users/search", { params: { q } })
   return response.data
 }
 

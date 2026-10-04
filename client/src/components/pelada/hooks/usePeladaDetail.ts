@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
-import { getPelada, getRanking, getPeladaAwards } from "../../../api/peladas";
-import { getDailiesForPelada } from "../../../api/dailies";
-import type { PeladaDetail, PeladaAwards } from "../../../types/pelada";
-import type { DailyListItem, RankingDTO } from "../../../types/daily";
+import { getPelada, getRanking, getPeladaAwards } from "@/api/peladas";
+import { getDailiesForPelada } from "@/api/dailies";
+import { getErrorStatus } from "@/lib/errors";
+import type { PeladaDetail, PeladaAwards } from "@/types/pelada";
+import type { DailyListItem, RankingDTO } from "@/types/daily";
 
 export function usePeladaDetail(id: string | undefined) {
   const [pelada, setPelada] = useState<PeladaDetail | null>(null);
@@ -20,74 +21,68 @@ export function usePeladaDetail(id: string | undefined) {
   const [awards, setAwards] = useState<PeladaAwards | null>(null);
   const [awardsLoading, setAwardsLoading] = useState(true);
 
-  const fetchPelada = useCallback(() => {
+  // Each fetch returns its promise so callers can await the reload
+  const fetchPelada = useCallback(async () => {
     if (!id) return;
-    setLoading(true);
-    getPelada(Number(id))
+    return getPelada(Number(id))
       .then((data) => {
         setPelada(data);
         setError(null);
         setAccessDenied(false);
       })
       .catch((err) => {
-        if (err?.response?.status === 403) {
+        if (getErrorStatus(err) === 403) {
           setAccessDenied(true);
         } else {
           setError(err);
-          toast.error("Falha ao carregar pelada");
+          toast.error("Não foi possível carregar a pelada");
         }
       })
       .finally(() => setLoading(false));
   }, [id]);
 
-  const fetchDailies = useCallback(() => {
+  const fetchDailies = useCallback(async () => {
     if (!id) return;
-    setDailiesLoading(true);
-    getDailiesForPelada(Number(id))
+    return getDailiesForPelada(Number(id))
       .then(setDailies)
-      .catch(() => toast.error("Failed to load sessions"))
+      .catch(() => { toast.error("Não foi possível carregar as sessões"); })
       .finally(() => setDailiesLoading(false));
   }, [id]);
 
-  const fetchRanking = useCallback(() => {
+  const fetchRanking = useCallback(async () => {
     if (!id) return;
-    setRankingLoading(true);
-    getRanking(Number(id))
+    return getRanking(Number(id))
       .then(setRanking)
-      .catch(() => toast.error("Failed to load ranking"))
+      .catch(() => { toast.error("Não foi possível carregar o ranking"); })
       .finally(() => setRankingLoading(false));
   }, [id]);
 
-  const fetchAwards = useCallback(() => {
+  const fetchAwards = useCallback(async () => {
     if (!id) return;
-    setAwardsLoading(true);
-    getPeladaAwards(Number(id))
+    return getPeladaAwards(Number(id))
       .then(setAwards)
-      .catch(() => toast.error("Failed to load awards"))
+      .catch(() => { toast.error("Não foi possível carregar os prêmios"); })
       .finally(() => setAwardsLoading(false));
   }, [id]);
 
   useEffect(() => {
-    fetchPelada();
+    void fetchPelada();
   }, [fetchPelada]);
 
   useEffect(() => {
-    fetchDailies();
+    void fetchDailies();
   }, [fetchDailies]);
 
   useEffect(() => {
-    fetchRanking();
+    void fetchRanking();
   }, [fetchRanking]);
 
   useEffect(() => {
-    fetchAwards();
+    void fetchAwards();
   }, [fetchAwards]);
 
-  const refetch = useCallback(() => {
-    fetchPelada();
-    fetchDailies();
-    fetchRanking();
-    fetchAwards();
+  const refetch = useCallback(async () => {
+    await Promise.all([fetchPelada(), fetchDailies(), fetchRanking(), fetchAwards()]);
   }, [fetchPelada, fetchDailies, fetchRanking, fetchAwards]);
 
   return {

@@ -37,7 +37,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { cn, getFileUrl, getPeladaInitials } from "@/lib/utils"
+import { cn, getFileUrl, getInitials } from "@/lib/utils"
 import { usePlayerPeladaHistory } from "@/components/pelada/hooks/usePlayerPeladaHistory"
 import type { PeladaMember, PlayerPeladaHistoryRow } from "@/types/pelada"
 
@@ -171,7 +171,7 @@ function PlayerHistoryContent({
                       <AvatarImage src={getFileUrl(member.image)} alt="" />
                     )}
                     <AvatarFallback className="text-[10px]">
-                      {getPeladaInitials(member.username)}
+                      {getInitials(member.username)}
                     </AvatarFallback>
                   </Avatar>
                   {member.username}

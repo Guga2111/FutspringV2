@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Users, CalendarPlus, UserPlus, UserMinus, Home, User, History } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { Button } from "../ui/button";
+import { Button } from "@/components/ui/button";
 import {
   CommandDialog,
   CommandEmpty,
@@ -22,7 +22,6 @@ import type { PeladaMember } from "@/types/pelada";
 interface RankingCommandButtonProps {
   peladaId: number;
   members: PeladaMember[];
-  getFileUrl: (path: string | null | undefined) => string | undefined;
   isAdmin?: boolean;
   onCreateSession?: () => void;
   onAddPlayer?: () => void;
@@ -33,7 +32,6 @@ interface RankingCommandButtonProps {
 export function RankingCommandButton({
   peladaId,
   members,
-  getFileUrl,
   isAdmin = false,
   onCreateSession,
   onAddPlayer,
@@ -194,7 +192,6 @@ export function RankingCommandButton({
         onOpenChange={setCompareOpen}
         peladaId={peladaId}
         members={members}
-        getFileUrl={getFileUrl}
       />
     </>
   );

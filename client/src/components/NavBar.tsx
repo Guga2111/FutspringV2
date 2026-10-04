@@ -1,8 +1,8 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Sun, Moon, Menu, User, Bell, LogOut } from 'lucide-react'
 import { useState, useEffect } from 'react'
-import { useAuth } from '../hooks/useAuth'
-import { Button } from './ui/button'
+import { useAuth } from '@/hooks/useAuth'
+import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,15 +10,15 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from './ui/dropdown-menu'
-import { Avatar, AvatarImage, AvatarFallback } from './ui/avatar'
-import { getFileUrl } from '../lib/utils'
+} from '@/components/ui/dropdown-menu'
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
+import { getFileUrl, getInitials } from '@/lib/utils'
 import {
   Sheet,
   SheetContent,
   SheetTrigger,
   SheetClose,
-} from './ui/sheet'
+} from '@/components/ui/sheet'
 
 export default function NavBar() {
   const { logout, user } = useAuth()
@@ -50,7 +50,7 @@ export default function NavBar() {
   }
 
   const initials = user
-    ? user.username.slice(0, 2).toUpperCase()
+    ? getInitials(user.username)
     : '?'
 
   const isHomeActive = location.pathname === '/home'
@@ -172,7 +172,7 @@ export default function NavBar() {
 
             {/* Dark mode toggle */}
             <button
-              className="flex items-center gap-2 text-base font-medium text-foreground hover:text-green-500 transition-colors"
+              className="flex items-center gap-2 text-base font-medium text-foreground hover:text-primary transition-colors"
               onClick={() => { handleToggleDark(); setSheetOpen(false) }}
               aria-label="Toggle dark mode"
             >
@@ -184,7 +184,7 @@ export default function NavBar() {
             <SheetClose asChild>
               <Link
                 to={`/profile/${user?.id}`}
-                className="flex items-center gap-2 text-base font-medium text-foreground hover:text-green-500 transition-colors"
+                className="flex items-center gap-2 text-base font-medium text-foreground hover:text-primary transition-colors"
               >
                 <User className="h-4 w-4" />
                 Perfil
@@ -192,19 +192,20 @@ export default function NavBar() {
             </SheetClose>
 
             {/* Notifications */}
-            <button className="flex items-center gap-2 text-base font-medium text-foreground hover:text-green-500 transition-colors">
-              <Bell className="h-4 w-4" />
-              Notificações
-            </button>
+            <Button variant="ghost" disabled className="h-auto justify-start gap-2 p-0 text-base font-medium">
+              <Bell className="size-4" />
+              Notificações (em breve)
+            </Button>
 
             {/* Logout */}
-            <button
-              className="flex items-center gap-2 text-left text-base font-medium text-destructive hover:opacity-80 transition-opacity"
+            <Button
+              variant="ghost"
+              className="h-auto justify-start gap-2 p-0 text-base font-medium text-destructive hover:bg-transparent hover:text-destructive/80"
               onClick={() => { setSheetOpen(false); handleLogout() }}
             >
-              <LogOut className="h-4 w-4" />
+              <LogOut className="size-4" />
               Sair
-            </button>
+            </Button>
           </SheetContent>
         </Sheet>
       </div>

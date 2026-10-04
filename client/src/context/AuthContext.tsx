@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import type { ReactNode } from "react"
-import type { UserResponseDTO } from "../types/auth"
-import apiClient from "../api/client"
+import type { UserResponseDTO } from "@/types/auth"
+import apiClient from "@/api/client"
 import { AuthContext } from "./auth-context-value"
 
 const TOKEN_KEY = "futspring_token"
