@@ -20,8 +20,8 @@ import {
   DrawerTitle,
 } from "@/components/ui/drawer";
 import { SessionsTable } from "@/components/pelada/SessionTable";
-import { MembersTable } from "@/components/pelada/MembersTable";
-import { RankingTable } from "@/components/pelada/RankingTable";
+import { MembersGrid } from "@/components/pelada/MembersGrid";
+import { RankingTable, type RankingCol } from "@/components/pelada/RankingTable";
 import { AwardsTab } from "@/components/pelada/AwardsTab";
 import { PeladaBanner } from "@/components/pelada/PeladaBanner";
 import { ChatSidebar } from "@/components/pelada/ChatSidebar";
@@ -64,10 +64,10 @@ export default function PeladaDetailPage() {
   const [confirmRemoveMember, setConfirmRemoveMember] =
     useState<PeladaMember | null>(null);
   const [showCreateSession, setShowCreateSession] = useState(false);
-  const [rankingSort, setRankingSort] = useState<{
-    col: "goals" | "assists" | "matchesPlayed" | "wins";
-    dir: "asc" | "desc";
-  }>({ col: "goals", dir: "desc" });
+  const [rankingSort, setRankingSort] = useState<{ col: RankingCol; dir: "asc" | "desc" }>({
+    col: "goals",
+    dir: "desc",
+  });
   const [chatCollapsed, setChatCollapsed] = useState(false);
   const [showMobileChat, setShowMobileChat] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -79,8 +79,6 @@ export default function PeladaDetailPage() {
     setHistoryMounted(true);
     setHistoryOpen(true);
   };
-
-  type RankingCol = "goals" | "assists" | "matchesPlayed" | "wins";
 
   const handleRankingSort = (col: RankingCol) => {
     setRankingSort((prev) =>
@@ -131,8 +129,7 @@ export default function PeladaDetailPage() {
           </p>
         </div>
       ) : pelada ? (
-        <main>
-          {/* Header image / banner */}
+        <main className="flex flex-col gap-5 p-4 md:gap-6 md:p-6">
           <PeladaBanner
             pelada={pelada}
             isCurrentUserAdmin={isCurrentUserAdmin}
@@ -141,40 +138,20 @@ export default function PeladaDetailPage() {
             onDelete={() => setShowDeleteConfirm(true)}
           />
 
-          <div className="container max-w-6xl mx-auto px-4 py-6 flex gap-6">
-            <div className="flex-1 min-w-0">
-              <Tabs defaultValue="members" className="mt-4 flex flex-col gap-4">
-                <TabsList className="rounded-full bg-muted p-1 mx-auto w-fit flex">
-                  <TabsTrigger
-                    value="members"
-                    className="rounded-full data-[state=active]:bg-background data-[state=active]:shadow-sm"
-                  >
-                    Membros
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="sessions"
-                    className="rounded-full data-[state=active]:bg-background data-[state=active]:shadow-sm"
-                  >
-                    Sessões
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="ranking"
-                    className="rounded-full data-[state=active]:bg-background data-[state=active]:shadow-sm"
-                  >
-                    Ranking
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="awards"
-                    className="rounded-full data-[state=active]:bg-background data-[state=active]:shadow-sm"
-                  >
-                    Prêmios
-                  </TabsTrigger>
+          <div className="flex gap-6">
+            <div className="min-w-0 flex-1">
+              <Tabs defaultValue="members" className="flex flex-col gap-5">
+                <TabsList variant="pill" className="self-start">
+                  <TabsTrigger variant="pill" value="members">Membros</TabsTrigger>
+                  <TabsTrigger variant="pill" value="sessions">Sessões</TabsTrigger>
+                  <TabsTrigger variant="pill" value="ranking">Ranking</TabsTrigger>
+                  <TabsTrigger variant="pill" value="awards">Prêmios</TabsTrigger>
                 </TabsList>
 
-                {/* Members tab */}
-                <TabsContent value="members">
-                  <MembersTable
+                <TabsContent value="members" className="mt-0">
+                  <MembersGrid
                     members={pelada.members}
+                    ranking={ranking}
                     creatorId={pelada.creatorId}
                     isCurrentUserAdmin={isCurrentUserAdmin}
                     togglingAdmin={togglingAdmin}
@@ -184,8 +161,7 @@ export default function PeladaDetailPage() {
                   />
                 </TabsContent>
 
-                {/* Sessions tab */}
-                <TabsContent value="sessions">
+                <TabsContent value="sessions" className="mt-0">
                   <SessionsTable
                     dailies={dailies}
                     isLoading={dailiesLoading}
@@ -195,16 +171,15 @@ export default function PeladaDetailPage() {
                   />
                 </TabsContent>
 
-                {/* Ranking tab */}
-                <TabsContent value="ranking">
-                  <div className="flex items-center justify-between mb-3 mt-2">
+                <TabsContent value="ranking" className="mt-0 flex flex-col gap-3">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
                     <span className="text-sm text-muted-foreground">
                       Top jogadores · {sortedRanking.length} classificados
                     </span>
                     <RankingCommandButton
                       peladaId={pelada.id}
                       members={pelada.members}
-                                isAdmin={isCurrentUserAdmin}
+                      isAdmin={isCurrentUserAdmin}
                       onCreateSession={() => setShowCreateSession(true)}
                       onAddPlayer={() => setShowAddPlayer(true)}
                       onRemovePlayer={setConfirmRemoveMember}
@@ -216,12 +191,11 @@ export default function PeladaDetailPage() {
                     isLoading={rankingLoading}
                     sortConfig={rankingSort}
                     onSort={handleRankingSort}
-                            onOpenHistory={openPlayerHistory}
+                    onOpenHistory={openPlayerHistory}
                   />
                 </TabsContent>
 
-                {/* Awards tab */}
-                <TabsContent value="awards">
+                <TabsContent value="awards" className="mt-0">
                   <AwardsTab awards={awards} isLoading={awardsLoading} />
                 </TabsContent>
               </Tabs>

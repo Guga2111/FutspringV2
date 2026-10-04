@@ -56,7 +56,7 @@ client/
     ├── components/
     │   ├── ui/           shadcn primitives (owned code, see shadcn rules)
     │   ├── ConfirmActionDialog.tsx   shared AlertDialog for confirmations
-    │   ├── pelada/       pelada detail feature (Banner, MembersTable, SessionTable, RankingTable, AwardsTab, ChatSidebar, dialogs…)
+    │   ├── pelada/       pelada detail feature (PeladaBanner, MembersGrid + MemberCard, SessionTable, RankingTable, AwardsTab, ChatSidebar, dialogs…)
     │   │   └── hooks/    usePeladaDetail, usePeladaActions, usePeladaChat, usePlayerPeladaHistory, useComparePlayers, useUserSearch
     │   ├── daily/        session detail feature (AdminActionBar, TeamsSection, MatchResultsSection, LeagueTableSection, DailyStatusBadge, modals…)
     │   │   └── hooks/    useDailyDetail, useDailyActions, useDailyModals, useMatchResults, usePlayerSelection
@@ -64,6 +64,7 @@ client/
     │   │   └── hooks/    useProfile
     │   ├── layout/       AppLayout (shell + MyPeladasContext provider), AppSidebar, SidebarPeladaItem, UserMenu, MobileTopBar
     │   ├── PeladaAvatar.tsx   pelada photo or gradient with initials (sidebar, cards, banner)
+    │   ├── PlayerAvatar.tsx, StarRow.tsx   round player avatar (photo / initials, `colorId` for per-player colors) and ★ rating
     │   ├── PrivateRoute.tsx, ErrorBoundary.tsx, ScrollToTop.tsx
     │   └── CreatePeladaModal.tsx, EditPeladaModal.tsx   Sheet-based forms
     ├── context/          AuthContext.tsx (provider, token storage, axios interceptors), auth-context-value.ts, my-peladas-context-value.ts
@@ -77,7 +78,7 @@ client/
     ├── pages/            LandingPage, AuthPage, HomePage, PeladaDetailPage, DailyDetailPage, ProfilePage, NotFoundPage
     ├── schemas/          zod schemas mirroring request DTOs: daily.ts, user.ts, upload.ts
     ├── types/            API DTO types: auth, pelada, daily (DailyStatus), stats, user (PublicUser, Position), chat
-    └── utils/            pure functions: matchStats, matchPlayers, parseSessionMessage (WhatsApp text → teams/matches), dates (local date parsing, short pt-BR labels)
+    └── utils/            pure functions: matchStats, matchPlayers, parseSessionMessage (WhatsApp text → teams/matches), dates (local date parsing, short pt-BR labels), memberFilters (position normalization, counts, search)
 ```
 
 Where new code goes:
@@ -92,7 +93,7 @@ Where new code goes:
 | `/` | `LandingPage` (redirects to `/home` when logged in) | public |
 | `/auth` (`?tab=login\|register`) | `AuthPage` — returns to `location.state.from` after login | public |
 | `/home` | `HomePage` — the user's peladas and next sessions | private |
-| `/pelada/:id` | `PeladaDetailPage` — banner, tabs (sessions, members, ranking, awards), chat (sidebar on `lg`, Drawer on mobile). Ranking rows have a history button and the ⌘K menu has "Histórico do Jogador" (⌘I); both open `PlayerHistoryDialog` (lazy-loaded: summary, goals/assists chart, sessions linking to `/daily/:id`) | private |
+| `/pelada/:id` | `PeladaDetailPage` — banner card, pill tabs (members grid with search and position chips, stats from the ranking already loaded; sessions; ranking; awards), chat (sidebar on `lg`, Drawer on mobile). Ranking rows have a history button and the ⌘K menu has "Histórico do Jogador" (⌘I); both open `PlayerHistoryDialog` (lazy-loaded: summary, goals/assists chart, sessions linking to `/daily/:id`) | private |
 | `/daily/:id` | `DailyDetailPage` — attendance, teams, results, league table, stats, awards, champion photo, admin actions | private |
 | `/profile/:id` | `ProfilePage` — KPIs, charts, match history, peladas in common, edit profile (own). Another user's profile is only visible when you share a pelada (403 → message) | private |
 | `*` | `NotFoundPage` | public |
@@ -220,7 +221,7 @@ Before UI work, load the `shadcn` skill. Run its CLI from `client/` (where `comp
 | Feedback / status | `Skeleton`, `Badge`, `Progress`, `Alert`, toasts via `sonner` |
 | Data display | `Card`, `Table`, `Avatar`, `Separator`, `chart` |
 
-Installed today: alert, alert-dialog, avatar, badge, button, calendar, card, chart, checkbox, collapsible, command, dialog, drawer, dropdown-menu, field, input, label, popover, select, separator, sheet, sidebar, skeleton, table, tabs, textarea, tooltip. `progress` is not installed yet — add it with the CLI when first needed. `sidebar.tsx` was adapted: 264/64 px widths, no cookie (AppLayout persists the state), `useSidebar`/context in `sidebar-context.ts`, `useIsMobile` from `src/hooks/useIsMobile.ts`; `SheetContent` takes an `overlayClassName`. `field.tsx` was adapted to Tailwind 3 (no container-query orientation). Variants live in `button-variants.ts` / `badge-variants.ts` so the component files only export components.
+Installed today: alert, alert-dialog, avatar, badge, button, calendar, card, chart, checkbox, collapsible, command, dialog, drawer, dropdown-menu, field, input, label, popover, select, separator, sheet, sidebar, skeleton, table, tabs, textarea, toggle, toggle-group, tooltip. Redesign variants: `Tabs` `variant="pill"` (on `TabsList` and `TabsTrigger`; full-width equal tabs below md) in `tabs-variants.ts`, toggle `variant="chip" size="chip"` (filter chips) in `toggle-variants.ts`, Badge `variant="status"`. `progress` is not installed yet — add it with the CLI when first needed. `sidebar.tsx` was adapted: 264/64 px widths, no cookie (AppLayout persists the state), `useSidebar`/context in `sidebar-context.ts`, `useIsMobile` from `src/hooks/useIsMobile.ts`; `SheetContent` takes an `overlayClassName`. `field.tsx` was adapted to Tailwind 3 (no container-query orientation). Variants live in `button-variants.ts` / `badge-variants.ts` so the component files only export components.
 
 Not in scope: layout and text elements (`div`, `section`, `main`, `header`, `h1`–`h6`, `p`, `ul`, `img`) and the native `<form>`. Keep those as semantic HTML styled with tokens.
 

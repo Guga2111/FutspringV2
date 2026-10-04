@@ -52,6 +52,7 @@ export default {
   			'subtle-foreground': 'hsl(var(--subtle-foreground))',
   			'faint-foreground': 'hsl(var(--faint-foreground))',
   			'team-dot-border': 'hsl(var(--team-dot-border))',
+  			'star-off': 'hsl(var(--star-off))',
   			avatar: {
   				'1': 'hsl(var(--avatar-1))',
   				'2': 'hsl(var(--avatar-2))',

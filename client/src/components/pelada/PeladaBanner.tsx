@@ -1,95 +1,87 @@
+import { Bookmark, Calendar, Clock, MapPin, Pencil, Trash2 } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { dayOfWeekLabel } from "@/lib/constants"
-import { Calendar, Clock, MapPin, Bookmark, Pencil, Trash2 } from "lucide-react";
-import { getInitials, getPeladaGradient, getFileUrl } from "@/lib/utils";
-import type { PeladaDetail } from "@/types/pelada";
+import { cn, getFileUrl, getInitials, getPeladaGradient } from "@/lib/utils"
+import type { PeladaDetail } from "@/types/pelada"
 
 interface PeladaBannerProps {
-  pelada: PeladaDetail;
-  isCurrentUserAdmin: boolean;
-  isCurrentUserCreator: boolean;
-  onEdit: () => void;
-  onDelete: () => void;
+  pelada: PeladaDetail
+  isCurrentUserAdmin: boolean
+  isCurrentUserCreator: boolean
+  onEdit: () => void
+  onDelete: () => void
 }
 
-export function PeladaBanner({
-  pelada,
-  isCurrentUserAdmin,
-  isCurrentUserCreator,
-  onEdit,
-  onDelete,
-}: PeladaBannerProps) {
+// Text and buttons sit on the photo/gradient, so they stay white in both themes
+const overlayButton = "size-[34px] rounded-full bg-black/35 text-white hover:bg-black/55 hover:text-white [&_svg]:size-[15px]"
+
+export function PeladaBanner({ pelada, isCurrentUserAdmin, isCurrentUserCreator, onEdit, onDelete }: PeladaBannerProps) {
+  const imageUrl = getFileUrl(pelada.image)
   return (
-    <div className="relative h-72">
-      {pelada.image ? (
-        <img
-          src={getFileUrl(pelada.image)}
-          alt={pelada.name}
-          className="h-full w-full object-cover"
-        />
+    <section
+      className={cn(
+        "relative flex min-h-[190px] flex-col justify-end overflow-hidden rounded-tile md:min-h-[230px]",
+        !imageUrl && getPeladaGradient(pelada.name),
+      )}
+    >
+      {imageUrl ? (
+        <img src={imageUrl} alt="" className="absolute inset-0 size-full object-cover" style={{ objectPosition: "center 22%" }} />
       ) : (
-        <div
-          className={`h-full w-full ${getPeladaGradient(pelada.name)} flex items-center justify-center`}
+        <span
+          aria-hidden
+          className="absolute inset-0 flex select-none items-center justify-center pb-10 text-[56px] font-extrabold tracking-[0.02em] text-white/55"
         >
-          <span className="text-6xl font-extrabold text-white tracking-wide select-none">
-            {getInitials(pelada.name)}
-          </span>
+          {getInitials(pelada.name)}
+        </span>
+      )}
+      <div className="bg-banner-overlay absolute inset-0" />
+
+      {(isCurrentUserAdmin || isCurrentUserCreator) && (
+        <div className="absolute right-3 top-3 z-10 flex gap-2">
+          {isCurrentUserAdmin && (
+            <Button variant="ghost" size="icon" aria-label="Editar pelada" className={overlayButton} onClick={onEdit}>
+              <Pencil />
+            </Button>
+          )}
+          {isCurrentUserCreator && (
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Excluir pelada"
+              className={cn(overlayButton, "hover:bg-destructive/80")}
+              onClick={onDelete}
+            >
+              <Trash2 />
+            </Button>
+          )}
         </div>
       )}
-      
-      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
 
-      {/* Metadata overlay — bottom */}
-      <div className="absolute bottom-0 left-0 right-0 px-4 pb-4">
-        <h1 className="text-2xl font-bold text-white mb-1">
-          {pelada.name}
-        </h1>
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-white/80">
-          <span className="flex items-center gap-1">
-            <Calendar className="h-3.5 w-3.5 shrink-0" />
+      <div className="relative flex flex-col gap-2 px-[22px] py-5 text-white">
+        <h1 className="text-2xl font-bold">{pelada.name}</h1>
+        <div className="flex flex-wrap gap-x-4 gap-y-1 text-[13px] text-white/90 [&_svg]:size-3.5 [&_svg]:shrink-0">
+          <span className="flex items-center gap-1.5">
+            <Calendar />
             {dayOfWeekLabel(pelada.dayOfWeek)}
           </span>
-          <span className="flex items-center gap-1">
-            <Clock className="h-3.5 w-3.5 shrink-0" />
+          <span className="flex items-center gap-1.5">
+            <Clock />
             {pelada.timeOfDay} · {pelada.duration}h
           </span>
           {pelada.address && (
-            <span className="flex items-center gap-1">
-              <MapPin className="h-3.5 w-3.5 shrink-0" />
+            <span className="flex items-center gap-1.5">
+              <MapPin />
               {pelada.address}
             </span>
           )}
           {pelada.reference && (
-            <span className="flex items-center gap-1">
-              <Bookmark className="h-3.5 w-3.5 shrink-0" />
+            <span className="flex items-center gap-1.5">
+              <Bookmark />
               {pelada.reference}
             </span>
           )}
         </div>
       </div>
-
-      {/* Admin/Creator Controls */}
-      {(isCurrentUserAdmin || isCurrentUserCreator) && (
-        <div className="absolute top-3 right-3 flex items-center gap-2">
-          {isCurrentUserAdmin && (
-            <button
-              aria-label="Edit pelada"
-              className="p-2 rounded-full bg-black/40 text-white hover:bg-black/60 transition-colors"
-              onClick={onEdit}
-            >
-              <Pencil className="h-4 w-4" />
-            </button>
-          )}
-          {isCurrentUserCreator && (
-            <button
-              aria-label="Delete pelada"
-              className="p-2 rounded-full bg-black/40 text-white hover:bg-black/60 transition-colors"
-              onClick={onDelete}
-            >
-              <Trash2 className="h-4 w-4" />
-            </button>
-          )}
-        </div>
-      )}
-    </div>
-  );
+    </section>
+  )
 }

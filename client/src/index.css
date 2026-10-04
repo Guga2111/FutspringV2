@@ -36,6 +36,7 @@
     --card-elevated: 210 40% 96.1%;
     --row-hover: 210 40% 98%;
     --avatar-fallback: 214 32% 91.4%;
+    --star-off: 214 32% 84%;
     --subtle-foreground: 215 16% 46.9%;
     --faint-foreground: 215 20% 65.1%;
     /* ring around team color dots, so white and black teams show on both themes */
@@ -116,6 +117,7 @@
     --card-elevated: 0 0% 17%;
     --row-hover: 0 0% 14%;
     --avatar-fallback: 0 0% 22%;
+    --star-off: 0 0% 27%;
     --subtle-foreground: 0 0% 54.1%;
     --faint-foreground: 0 0% 45.1%;
     --team-dot-border: 0 0% 29%;
