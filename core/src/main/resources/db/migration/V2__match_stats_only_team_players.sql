@@ -6,9 +6,8 @@
 -- match and rebuilds matches_played the same way finalizeDaily does.
 --
 -- Rows with goals or assists are kept, so no goal/assist is lost if one was typed for a player
--- outside the match. Postgres only. Take a Supabase backup before running (destructive).
-
-BEGIN;
+-- outside the match. Destructive: take a Supabase backup before deploying. Idempotent, and a no-op
+-- on an empty database. Flyway runs it in one transaction.
 
 -- 1. Drop stat rows of players who were not on either team of the match
 DELETE FROM player_match_stats pms
@@ -49,5 +48,3 @@ SET matches_played = COALESCE((
   FROM user_daily_stats uds
   WHERE uds.user_id = s.user_id
 ), 0);
-
-COMMIT;
