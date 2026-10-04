@@ -1,0 +1,147 @@
+name: CD - Deploy to Production
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  backend:
+    name: CI Backend
+    uses: ./.github/workflows/ci-backend.yml
+
+  frontend:
+    name: CI Frontend
+    uses: ./.github/workflows/ci-frontend.yml
+
+  deploy:
+    name: Deploy to VPS
+    needs: [backend, frontend]
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: ${{ vars.APP_URL }}
+
+    env:
+      VPS_IP: ${{ vars.VPS_IP }}
+      VPS_USER: ${{ vars.VPS_USER || 'root' }}
+      APP_URL: ${{ vars.APP_URL }}
+      VITE_API_URL: ${{ vars.API_URL || vars.APP_URL }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Check required variables
+        run: |
+          set -euo pipefail
+          for var in VPS_IP APP_URL; do
+            if [[ -z "${!var}" ]]; then
+              echo "Missing required variable: ${var}"
+              echo "   Configure in Settings > Secrets and variables > Actions > Repository variables."
+              exit 1
+            fi
+          done
+
+      - name: Configure SSH key
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.VPS_SSH_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.VPS_SSH_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${SSH_PRIVATE_KEY}" ]]; then
+            echo "Missing required secret: VPS_SSH_KEY"
+            exit 1
+          fi
+          umask 077
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/id_deploy
+
+          if [[ -n "${SSH_KNOWN_HOSTS}" ]]; then
+            printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          else
+            ssh-keyscan -H "$VPS_IP" >> ~/.ssh/known_hosts 2>/dev/null
+          fi
+
+          cat > ~/.ssh/config << EOF
+          Host $VPS_IP
+            User $VPS_USER
+            IdentityFile ~/.ssh/id_deploy
+            IdentitiesOnly yes
+            BatchMode yes
+            StrictHostKeyChecking yes
+          EOF
+
+      - name: Write .env from secrets
+        env:
+          DB_URL: ${{ secrets.DB_URL }}
+          DB_USERNAME: ${{ secrets.DB_USERNAME }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          PG_DUMP_URL: ${{ secrets.PG_DUMP_URL }}
+          JWT_EXPIRATION_MS: ${{ vars.JWT_EXPIRATION_MS || '604800000' }}
+          ALLOWED_ORIGINS: ${{ vars.ALLOWED_ORIGINS || vars.APP_URL }}
+          API_PORT: ${{ vars.API_PORT || '8081' }}
+        run: |
+          set -euo pipefail
+          umask 077
+
+          for var in DB_URL DB_USERNAME DB_PASSWORD JWT_SECRET; do
+            if [[ -z "${!var}" ]]; then
+              echo "Missing required secret: ${var}"
+              echo "   Configure in Settings > Secrets and variables > Actions > Repository secrets."
+              exit 1
+            fi
+          done
+
+          if [[ -z "${PG_DUMP_URL}" ]]; then
+            echo "::warning::PG_DUMP_URL not set: deploying without a database backup before the Flyway migrations."
+          fi
+
+          # DDL_AUTO is intentionally not written: the schema is owned by Flyway and Hibernate runs with validate
+          {
+            printf 'DB_URL=%s\n' "$DB_URL"
+            printf 'DB_USERNAME=%s\n' "$DB_USERNAME"
+            printf 'DB_PASSWORD=%s\n' "$DB_PASSWORD"
+            printf 'JWT_SECRET=%s\n' "$JWT_SECRET"
+            printf 'JWT_EXPIRATION_MS=%s\n' "$JWT_EXPIRATION_MS"
+            printf 'ALLOWED_ORIGINS=%s\n' "$ALLOWED_ORIGINS"
+            printf 'API_PORT=%s\n' "$API_PORT"
+            printf 'PG_DUMP_URL=%s\n' "$PG_DUMP_URL"
+          } > .env
+
+      - name: Run deploy.sh
+        run: ./scripts/deploy.sh
+
+      # No health endpoint, so probe the public file route for a file that doesn't exist: the app
+      # answers 404 only once it is up (Flyway migrated, Hibernate validated the schema) AND the
+      # request reached /api/v1/files. A wrong API_URL prefix lands on a protected path (401) and
+      # a stopped API gives 502, so both fail here. A protected route can't be used: Spring
+      # Security answers 401 on any unknown path, so it wouldn't catch a wrong prefix.
+      - name: Smoke test
+        run: |
+          set -uo pipefail
+          for attempt in $(seq 1 12); do
+            web=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "${APP_URL}/" || true)
+            api=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "${VITE_API_URL}/api/v1/files/__smoke-test__.png" || true)
+            if [[ "$web" == "200" && "$api" == "404" ]]; then
+              echo "Frontend 200 and API 404 on /api/v1/files/__smoke-test__.png (attempt ${attempt})."
+              exit 0
+            fi
+            echo "Not ready yet: web=${web} api=${api} (attempt ${attempt}/12), retrying in 10s..."
+            sleep 10
+          done
+          echo "Smoke test failed after 2 minutes."
+          exit 1
+
+      - name: Clean up secrets from runner
+        if: always()
+        run: |
+          shred -u .env ~/.ssh/id_deploy 2>/dev/null || rm -f .env ~/.ssh/id_deploy

@@ -1,0 +1,40 @@
+name: CI Backend
+
+on:
+  push:
+    branches: [main, dev]
+    paths: [core/**, .github/workflows/ci-backend.yml]
+  pull_request:
+    branches: [main, dev]
+    paths: [core/**, .github/workflows/ci-backend.yml]
+  workflow_call:
+
+concurrency:
+  group: ci-backend-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: core
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+          cache: maven
+          cache-dependency-path: core/pom.xml
+
+      - name: Make mvnw executable
+        run: chmod +x mvnw
+
+      # Runs every test, including FlywayMigrationTest (Testcontainers, Postgres 17:
+      # applies all migrations to an empty database and validates them against the entities)
+      - name: Test and build
+        run: ./mvnw -B verify

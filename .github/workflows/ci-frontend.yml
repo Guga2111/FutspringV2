@@ -1,0 +1,39 @@
+name: CI Frontend
+
+on:
+  push:
+    branches: [main, dev]
+    paths: [client/**, .github/workflows/ci-frontend.yml]
+  pull_request:
+    branches: [main, dev]
+    paths: [client/**, .github/workflows/ci-frontend.yml]
+  workflow_call:
+
+concurrency:
+  group: ci-frontend-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: client
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Lint
+        run: bun run lint
+
+      - name: Build (tsc -b + vite build)
+        run: bun run build
+
+      - name: Test
+        run: bun run test
