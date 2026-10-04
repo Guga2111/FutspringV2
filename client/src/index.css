@@ -29,6 +29,7 @@
     /* stars, trophies, crowns */
     --gold: 43 96% 46%;
     --gold-muted: 55 92% 95.3%;
+    --gold-foreground: 0 0% 10.2%;
     --silver: 215 20% 65.1%;
     --bronze: 17 88% 40.4%;
 
@@ -111,6 +112,7 @@
     --chart-2: 213 94% 68%;
     --gold: 45 93% 58%;
     --gold-muted: 46 32% 10.4%;
+    --gold-foreground: 0 0% 10.2%;
     --silver: 0 0% 63.9%;
     --bronze: 17 88% 40.4%;
 
@@ -200,6 +202,10 @@
 .bg-gradient-primary:hover {
   filter: brightness(1.12);
   transform: scale(1.03);
+}
+
+.text-on-brand-muted {
+  color: #bbf7d0;
 }
 
 .text-gradient-primary {

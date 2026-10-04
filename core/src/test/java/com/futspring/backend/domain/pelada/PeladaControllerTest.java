@@ -106,7 +106,9 @@ class PeladaControllerTest extends BaseIntegrationTest {
     void getPeladaDetail_asMember() throws Exception {
         mockMvc.perform(get("/api/v1/peladas/" + pelada.getId())
                 .header("Authorization", bearerToken(member.getId(), member.getEmail())))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.numberOfTeams").value(pelada.getNumberOfTeams()))
+                .andExpect(jsonPath("$.playersPerTeam").value(pelada.getPlayersPerTeam()));
     }
 
     @Test

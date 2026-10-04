@@ -314,7 +314,7 @@ All routes are under `/api/v1`. "Auth" is the relationship checked (see the matr
 |--------|------|------|------|----------|
 | POST | `/peladas` | `CreatePeladaRequestDTO` (`dayOfWeek` `MONDAY`..`SUNDAY`, `timeOfDay` `HH:mm`, 2–10 teams, 2–20 players per team) | any | 201 `PeladaResponseDTO` |
 | GET | `/peladas/my` | — | self | `List<PeladaResponseDTO>` with `memberCount`, `isAdmin` (the caller administers it) and `nextDaily` (`{id, date, time, status, confirmedCount, capacity, isConfirmed}`: the next `SCHEDULED`/`CONFIRMED` session from today, or null; `capacity` = `numberOfTeams × playersPerTeam`, `isConfirmed` is the caller's attendance). Grouped queries, constant count |
-| GET | `/peladas/{id}` | — | member | `PeladaDetailResponseDTO` |
+| GET | `/peladas/{id}` | — | member | `PeladaDetailResponseDTO` (includes `numberOfTeams`, `playersPerTeam` and `members` with `isAdmin`) |
 | PUT | `/peladas/{id}` | `UpdatePeladaRequestDTO` (partial; `dayOfWeek` `MONDAY`..`SUNDAY`, `timeOfDay` `HH:mm`) | admin | `PeladaResponseDTO` |
 | DELETE | `/peladas/{id}` | — | creator | 204; deletes dailies (results, teams, attendance, photos), messages and rankings, then rebuilds the players' global Stats |
 | POST | `/peladas/{id}/players` | `AddPlayerRequestDTO {userId}` | admin | 200; 409 if already a member |

@@ -41,7 +41,8 @@ export interface NextDaily {
   isConfirmed: boolean
 }
 
-export interface PeladaDetail extends PeladaResponse {
+// mirrors PeladaDetailResponseDTO: no caller flags (isAdmin comes from members[]) and no next session
+export interface PeladaDetail extends Omit<PeladaResponse, "isAdmin" | "nextDaily"> {
   creatorId: number | null
   members: PeladaMember[]
 }

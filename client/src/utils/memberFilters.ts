@@ -35,11 +35,14 @@ export function countByPosition(members: PeladaMember[]): Record<PositionFilter,
   return counts
 }
 
+// Sorted by name: the API returns members in no particular order
 export function filterMembers(members: PeladaMember[], query: string, position: PositionFilter): PeladaMember[] {
   const q = query.trim().toLocaleLowerCase("pt-BR")
-  return members.filter(
-    (m) =>
-      (position === "ALL" || normalizePosition(m.position) === position) &&
-      m.username.toLocaleLowerCase("pt-BR").includes(q),
-  )
+  return members
+    .filter(
+      (m) =>
+        (position === "ALL" || normalizePosition(m.position) === position) &&
+        m.username.toLocaleLowerCase("pt-BR").includes(q),
+    )
+    .sort((a, b) => a.username.localeCompare(b.username, "pt-BR", { sensitivity: "base" }))
 }

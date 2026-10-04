@@ -1,8 +1,7 @@
 import { lazy, Suspense, useMemo, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import type { PeladaMember } from "@/types/pelada";
 import { useAuth } from "@/hooks/useAuth";
-import { Button } from "@/components/ui/button";
 import { usePeladaDetail } from "@/components/pelada/hooks/usePeladaDetail";
 import { usePeladaActions } from "@/components/pelada/hooks/usePeladaActions";
 import EditPeladaModal from "@/components/EditPeladaModal";
@@ -12,19 +11,14 @@ import {
   TabsTrigger,
   TabsContent,
 } from "@/components/ui/tabs";
-import { MessageCircle } from "lucide-react";
-import {
-  Drawer,
-  DrawerContent,
-  DrawerHeader,
-  DrawerTitle,
-} from "@/components/ui/drawer";
-import { SessionsTable } from "@/components/pelada/SessionTable";
+import { NextSessionCard } from "@/components/pelada/NextSessionCard";
+import { SessionHistoryList } from "@/components/pelada/SessionHistoryList";
+import { PeladaChat } from "@/components/pelada/PeladaChat";
+import { pickNextSession } from "@/utils/sessions";
 import { MembersGrid } from "@/components/pelada/MembersGrid";
 import { RankingTable, type RankingCol } from "@/components/pelada/RankingTable";
 import { AwardsTab } from "@/components/pelada/AwardsTab";
 import { PeladaBanner } from "@/components/pelada/PeladaBanner";
-import { ChatSidebar } from "@/components/pelada/ChatSidebar";
 import { DetailSkeleton } from "@/components/pelada/DetailSkeleton";
 import { AddPlayerDialog } from "@/components/pelada/AddPlayerDialog";
 import { ConfirmRemoveDialog } from "@/components/pelada/ConfirmRemoveDialog";
@@ -41,7 +35,6 @@ const PlayerHistoryDialog = lazy(() =>
 
 export default function PeladaDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
   const { user: currentUser } = useAuth();
 
   const {
@@ -56,6 +49,7 @@ export default function PeladaDetailPage() {
     accessDenied,
     refetchPelada,
     refetchDailies,
+    mergeDaily,
   } = usePeladaDetail(id);
 
   const [showAddPlayer, setShowAddPlayer] = useState(false);
@@ -68,8 +62,6 @@ export default function PeladaDetailPage() {
     col: "goals",
     dir: "desc",
   });
-  const [chatCollapsed, setChatCollapsed] = useState(false);
-  const [showMobileChat, setShowMobileChat] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [historyMounted, setHistoryMounted] = useState(false);
   const [historyUserId, setHistoryUserId] = useState<number | null>(null);
@@ -103,8 +95,22 @@ export default function PeladaDetailPage() {
   const isCurrentUserCreator =
     currentUser != null && creatorId === currentUser.id;
 
-  const { deleting, removing, togglingAdmin, removePeladaAndLeave, removeMember, toggleAdmin } =
-    usePeladaActions(pelada, refetchPelada);
+  const {
+    deleting,
+    removing,
+    togglingAdmin,
+    attendancePending,
+    removePeladaAndLeave,
+    removeMember,
+    toggleAdmin,
+    toggleAttendance,
+  } = usePeladaActions(pelada, refetchPelada, mergeDaily);
+
+  const nextSession = useMemo(() => pickNextSession(dailies), [dailies]);
+  const pastSessions = useMemo(
+    () => dailies.filter((d) => d.id !== nextSession?.id),
+    [dailies, nextSession],
+  );
 
   const handleDelete = async () => {
     if (!(await removePeladaAndLeave())) setShowDeleteConfirm(false);
@@ -138,8 +144,7 @@ export default function PeladaDetailPage() {
             onDelete={() => setShowDeleteConfirm(true)}
           />
 
-          <div className="flex gap-6">
-            <div className="min-w-0 flex-1">
+          <div className="min-w-0">
               <Tabs defaultValue="members" className="flex flex-col gap-5">
                 <TabsList variant="pill" className="self-start">
                   <TabsTrigger variant="pill" value="members">Membros</TabsTrigger>
@@ -161,13 +166,21 @@ export default function PeladaDetailPage() {
                   />
                 </TabsContent>
 
-                <TabsContent value="sessions" className="mt-0">
-                  <SessionsTable
-                    dailies={dailies}
+                <TabsContent value="sessions" className="mt-0 flex flex-col gap-5">
+                  {!dailiesLoading && (
+                    <NextSessionCard
+                      daily={nextSession}
+                      capacity={pelada.numberOfTeams * pelada.playersPerTeam}
+                      isAdmin={isCurrentUserAdmin}
+                      attendancePending={attendancePending}
+                      onToggleAttendance={toggleAttendance}
+                    />
+                  )}
+                  <SessionHistoryList
+                    dailies={pastSessions}
                     isLoading={dailiesLoading}
                     isAdmin={isCurrentUserAdmin}
                     onOpenCreate={() => setShowCreateSession(true)}
-                    onNavigate={(id) => navigate(`/daily/${id}`)}
                   />
                 </TabsContent>
 
@@ -199,47 +212,14 @@ export default function PeladaDetailPage() {
                   <AwardsTab awards={awards} isLoading={awardsLoading} />
                 </TabsContent>
               </Tabs>
-            </div>
-            {/* end flex-1 main content */}
-
-            {/* Chat sidebar — desktop only */}
-            <div className="hidden lg:block w-80 flex-shrink-0 sticky top-4 self-start h-[calc(100vh-6rem)]">
-              <ChatSidebar
-                peladaId={pelada.id}
-                currentUserId={currentUser?.id ?? null}
-                collapsed={chatCollapsed}
-                onToggle={() => setChatCollapsed((v) => !v)}
-              />
-            </div>
           </div>
 
-          {/* Mobile floating chat button */}
-          <Button
-            variant="gradient"
-            size="icon"
-            aria-label="Abrir chat"
-            className="fixed bottom-6 right-6 z-40 size-12 shadow-lg lg:hidden"
-            onClick={() => setShowMobileChat((v) => !v)}
-          >
-            <MessageCircle className="size-6" />
-          </Button>
-
-          {/* Mobile chat drawer */}
-          <Drawer open={showMobileChat} onOpenChange={setShowMobileChat}>
-            <DrawerContent className="lg:hidden h-[70vh] flex flex-col">
-              <DrawerHeader className="sr-only">
-                <DrawerTitle>Chat</DrawerTitle>
-              </DrawerHeader>
-              <div className="flex-1 min-h-0 pt-2">
-                <ChatSidebar
-                  peladaId={pelada.id}
-                  currentUserId={currentUser?.id ?? null}
-                  collapsed={false}
-                  onToggle={() => setShowMobileChat(false)}
-                />
-              </div>
-            </DrawerContent>
-          </Drawer>
+          <PeladaChat
+            peladaId={pelada.id}
+            peladaName={pelada.name}
+            memberCount={pelada.members.length}
+            currentUserId={currentUser?.id ?? null}
+          />
         </main>
       ) : (
         <div className="flex items-center justify-center py-24">

@@ -34,7 +34,7 @@ CI (`.github/workflows/ci-frontend.yml`) runs `bun install --frozen-lockfile`, l
 ## Environment
 
 - `VITE_API_URL` — backend base URL, read at build time (production: `https://futspring.luisgosampaio.com/api` — nginx strips `/api` before proxying, so requests go to `/api/api/v1/...`; locally it is unset). Falls back to `http://localhost:8080`. The only place that reads it is `src/lib/config.ts` (`API_BASE`), used by `api/client.ts` and `getFileUrl`.
-- The chat opens `new SockJS("/ws")` (relative, `components/pelada/ChatSidebar.tsx:94`): it works through the Vite dev proxy (`vite.config.ts`) and in production because the app and the API share an origin behind the reverse proxy.
+- The chat opens `new SockJS("/ws")` (relative, `components/pelada/hooks/usePeladaChat.ts`): it works through the Vite dev proxy (`vite.config.ts`) and in production because the app and the API share an origin behind the reverse proxy.
 - `vite.config.ts` defines `global: 'globalThis'` (needed by sockjs-client).
 - The backend's CORS allows `ALLOWED_ORIGINS` (default `http://localhost:5173`), so keep the dev server on that port or set `ALLOWED_ORIGINS` for the API.
 - The chat needs a valid token (CONNECT without one is rejected) and only members can subscribe to a pelada's topic; send errors arrive on `/user/queue/errors`.
@@ -46,7 +46,7 @@ client/
 ├── docs/                 this file
 ├── public/               static files (gerrard.png logo/favicon, pele.jpg, ronaldo.jpg)
 └── src/
-    ├── main.tsx          applies the saved theme, StrictMode > BrowserRouter > AuthProvider > App + <Toaster/>
+    ├── main.tsx          applies the saved theme, StrictMode > BrowserRouter > AuthProvider > App + <Toaster position="top-center"/> (bottom-right would cover the chat button)
     ├── App.tsx           routes, React.lazy pages, one <Suspense>, an <ErrorBoundary> per route
     ├── index.css         Tailwind layers, design tokens (:root / .dark), brand gradient classes, landing animations
     ├── api/              one module per backend domain; typed async functions returning response.data
@@ -56,7 +56,7 @@ client/
     ├── components/
     │   ├── ui/           shadcn primitives (owned code, see shadcn rules)
     │   ├── ConfirmActionDialog.tsx   shared AlertDialog for confirmations
-    │   ├── pelada/       pelada detail feature (PeladaBanner, MembersGrid + MemberCard, SessionTable, RankingTable, AwardsTab, ChatSidebar, dialogs…)
+    │   ├── pelada/       pelada detail feature (PeladaBanner, MembersGrid + MemberCard, NextSessionCard, SessionHistoryList, RankingTable, AwardsTab, PeladaChat + ChatPanel, dialogs…)
     │   │   └── hooks/    usePeladaDetail, usePeladaActions, usePeladaChat, usePlayerPeladaHistory, useComparePlayers, useUserSearch
     │   ├── daily/        session detail feature (AdminActionBar, TeamsSection, MatchResultsSection, LeagueTableSection, DailyStatusBadge, modals…)
     │   │   └── hooks/    useDailyDetail, useDailyActions, useDailyModals, useMatchResults, usePlayerSelection
@@ -78,7 +78,7 @@ client/
     ├── pages/            LandingPage, AuthPage, HomePage, PeladaDetailPage, DailyDetailPage, ProfilePage, NotFoundPage
     ├── schemas/          zod schemas mirroring request DTOs: daily.ts, user.ts, upload.ts
     ├── types/            API DTO types: auth, pelada, daily (DailyStatus), stats, user (PublicUser, Position), chat
-    └── utils/            pure functions: matchStats, matchPlayers, parseSessionMessage (WhatsApp text → teams/matches), dates (local date parsing, short pt-BR labels), memberFilters (position normalization, counts, search)
+    └── utils/            pure functions: matchStats, matchPlayers, parseSessionMessage (WhatsApp text → teams/matches), dates (local date parsing, short pt-BR labels), sessions (next session, month groups, pt-BR session labels), memberFilters (position normalization, counts, search)
 ```
 
 Where new code goes:
@@ -93,7 +93,7 @@ Where new code goes:
 | `/` | `LandingPage` (redirects to `/home` when logged in) | public |
 | `/auth` (`?tab=login\|register`) | `AuthPage` — returns to `location.state.from` after login | public |
 | `/home` | `HomePage` — the user's peladas and next sessions | private |
-| `/pelada/:id` | `PeladaDetailPage` — banner card, pill tabs (members grid with search and position chips, stats from the ranking already loaded; sessions; ranking; awards), chat (sidebar on `lg`, Drawer on mobile). Ranking rows have a history button and the ⌘K menu has "Histórico do Jogador" (⌘I); both open `PlayerHistoryDialog` (lazy-loaded: summary, goals/assists chart, sessions linking to `/daily/:id`) | private |
+| `/pelada/:id` | `PeladaDetailPage` — banner card, pill tabs (members grid with search and position chips, stats from the ranking already loaded; sessions: next-session card with confirm/withdraw + history grouped by month; ranking; awards with the leader highlighted), chat from a floating button (Popover panel on desktop, Drawer on mobile). Ranking rows have a history button and the ⌘K menu has "Histórico do Jogador" (⌘I); both open `PlayerHistoryDialog` (lazy-loaded: summary, goals/assists chart, sessions linking to `/daily/:id`) | private |
 | `/daily/:id` | `DailyDetailPage` — attendance, teams, results, league table, stats, awards, champion photo, admin actions | private |
 | `/profile/:id` | `ProfilePage` — KPIs, charts, match history, peladas in common, edit profile (own). Another user's profile is only visible when you share a pelada (403 → message) | private |
 | `*` | `NotFoundPage` | public |
@@ -132,8 +132,8 @@ When an endpoint or DTO changes, update the module, `src/types/*` and this table
 
 Data flows **api → hook → page/component**. A hook owns the request state; the page renders it.
 
-- `usePeladaDetail(id)` — loads pelada, dailies, ranking and awards in parallel, each with its own loading flag; exposes `accessDenied` (403), `error`, `refetch*` (each returns its promise). Results are keyed by pelada id and responses for another pelada are dropped, so navigating between peladas shows the skeletons, never the previous pelada's data.
-- `usePeladaActions(pelada, refetchPelada)` — delete pelada, remove member, toggle admin.
+- `usePeladaDetail(id)` — loads pelada, dailies, ranking and awards in parallel, each with its own loading flag; exposes `accessDenied` (403), `error`, `refetch*` (each returns its promise) and `mergeDaily(item)` to merge a mutation result into the sessions list. Results are keyed by pelada id and responses for another pelada are dropped, so navigating between peladas shows the skeletons, never the previous pelada's data.
+- `usePeladaActions(pelada, refetchPelada, mergeDaily)` — delete pelada, remove member, toggle admin, and confirm/withdraw the caller in the next session (merged into the sessions list and the sidebar through `updateNextDaily`).
 - `usePeladaChat(peladaId, token)` — chat history + STOMP connection with backoff, `send`, error queue toasts.
 - `useMyPeladas()` (in `src/hooks/`, called once by `AppLayout`; read it with `useMyPeladasContext()`) — the sidebar and home list (one request; each item has `isAdmin` and `nextDaily` with the caller's attendance).
 - `useUserSearch(query)` — debounced search, keyed by query, `tooShort` below 3 characters.
@@ -221,7 +221,7 @@ Before UI work, load the `shadcn` skill. Run its CLI from `client/` (where `comp
 | Feedback / status | `Skeleton`, `Badge`, `Progress`, `Alert`, toasts via `sonner` |
 | Data display | `Card`, `Table`, `Avatar`, `Separator`, `chart` |
 
-Installed today: alert, alert-dialog, avatar, badge, button, calendar, card, chart, checkbox, collapsible, command, dialog, drawer, dropdown-menu, field, input, label, popover, select, separator, sheet, sidebar, skeleton, table, tabs, textarea, toggle, toggle-group, tooltip. Redesign variants: `Tabs` `variant="pill"` (on `TabsList` and `TabsTrigger`; full-width equal tabs below md) in `tabs-variants.ts`, toggle `variant="chip" size="chip"` (filter chips) in `toggle-variants.ts`, Badge `variant="status"`. `progress` is not installed yet — add it with the CLI when first needed. `sidebar.tsx` was adapted: 264/64 px widths, no cookie (AppLayout persists the state), `useSidebar`/context in `sidebar-context.ts`, `useIsMobile` from `src/hooks/useIsMobile.ts`; `SheetContent` takes an `overlayClassName`. `field.tsx` was adapted to Tailwind 3 (no container-query orientation). Variants live in `button-variants.ts` / `badge-variants.ts` so the component files only export components.
+Installed today: alert, alert-dialog, avatar, badge, button, calendar, card, chart, checkbox, collapsible, command, dialog, drawer, dropdown-menu, field, input, label, popover, select, separator, sheet, sidebar, skeleton, table, tabs, textarea, toggle, toggle-group, tooltip, progress (`indicatorClassName`, e.g. `bg-gradient-primary`). Redesign variants: `Tabs` `variant="pill"` (on `TabsList` and `TabsTrigger`; full-width equal tabs below md) in `tabs-variants.ts`, toggle `variant="chip" size="chip"` (filter chips) in `toggle-variants.ts`, Badge `variant="status"`. `sidebar.tsx` was adapted: 264/64 px widths, no cookie (AppLayout persists the state), `useSidebar`/context in `sidebar-context.ts`, `useIsMobile` from `src/hooks/useIsMobile.ts`; `SheetContent` takes an `overlayClassName`. `field.tsx` was adapted to Tailwind 3 (no container-query orientation). Variants live in `button-variants.ts` / `badge-variants.ts` so the component files only export components.
 
 Not in scope: layout and text elements (`div`, `section`, `main`, `header`, `h1`–`h6`, `p`, `ul`, `img`) and the native `<form>`. Keep those as semantic HTML styled with tokens.
 

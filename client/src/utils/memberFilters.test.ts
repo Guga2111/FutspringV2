@@ -42,6 +42,10 @@ describe("filterMembers", () => {
     expect(filterMembers(members, "x", "ALL")).toEqual([])
   })
 
+  it("sorts by name", () => {
+    expect(filterMembers(members, "", "ALL").map((m) => m.username)).toEqual(["Leal", "Lui", "Nando", "Sem Posição", "Souto"])
+  })
+
   it("keeps members without a position only in ALL", () => {
     expect(filterMembers(members, "sem", "ALL")).toHaveLength(1)
     expect(filterMembers(members, "sem", "MEIO")).toHaveLength(0)
