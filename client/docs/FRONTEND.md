@@ -1,6 +1,6 @@
 # Frontend Documentation — Futspring Client
 
-React single-page app in `frontend/`. UI text is in Portuguese (pt-BR); code identifiers are in English.
+React single-page app in `client/`. UI text is in Portuguese (pt-BR); code identifiers are in English.
 
 ## Stack
 
@@ -13,12 +13,12 @@ React single-page app in `frontend/`. UI text is in Portuguese (pt-BR); code ide
 - Charts: recharts through shadcn `ui/chart.tsx`; tables: `@tanstack/react-table` v8 + shadcn `Table`
 - `date-fns`, `react-day-picker` (shadcn `Calendar`), `cmdk` (shadcn `Command`), `vaul` (shadcn `Drawer`)
 - Realtime chat: `@stomp/stompjs` + `sockjs-client`
-- Forms (target, see [Forms](#forms-mandatory)): `react-hook-form` + `zod` + `@hookform/resolvers` + shadcn `Field`. Not installed yet: add them (`bun add react-hook-form zod @hookform/resolvers`, `bunx shadcn@latest add field`) with the first form you build or migrate
+- Forms (see [Forms](#forms-mandatory)): `react-hook-form` + `zod` 4 + `@hookform/resolvers` + shadcn `Field`
 - No server-state library (no react-query): data is fetched in hooks with `useState`/`useEffect`
 
 ## Commands
 
-Run from `frontend/`:
+Run from `client/`:
 
 ```bash
 bun install
@@ -29,21 +29,22 @@ bun run test         # vitest run
 bunx shadcn@latest add <component>   # add a shadcn component to src/components/ui
 ```
 
-CI (`.github/workflows/ci-frontend.yml`) runs `bun install --frozen-lockfile`, lint, build and test on pushes and PRs to `main`/`dev` that touch `client/`; the deploy on `main` waits for it (see CI/CD in `BACKEND.md`). Lint is **not blocking yet** (`continue-on-error`) because of pre-existing `react-hooks/set-state-in-effect` / `only-export-components` errors; make it blocking once they are fixed. Before finishing a change run `bun run lint && bun run build && bun run test`.
+CI (`.github/workflows/ci-frontend.yml`) runs `bun install --frozen-lockfile`, lint, build and test on pushes and PRs to `main`/`dev` that touch `client/`; the deploy on `main` waits for it (see CI/CD in `BACKEND.md`). Lint is blocking (0 errors; two `react-hooks/incompatible-library` warnings from TanStack Table remain). Before finishing a change run `bun run lint && bun run build && bun run test`.
 
 ## Environment
 
-- `VITE_API_URL` — backend base URL, read at build time (production: `https://futspring.luisgosampaio.com/api` — nginx strips `/api` before proxying, so requests go to `/api/api/v1/...`; locally it is unset). Falls back to `http://localhost:8080`; the fallback is duplicated in `src/api/client.ts:4` and `src/lib/utils.ts:8` (`API_BASE` for `getFileUrl`). Keep one source if you touch them.
+- `VITE_API_URL` — backend base URL, read at build time (production: `https://futspring.luisgosampaio.com/api` — nginx strips `/api` before proxying, so requests go to `/api/api/v1/...`; locally it is unset). Falls back to `http://localhost:8080`. The only place that reads it is `src/lib/config.ts` (`API_BASE`), used by `api/client.ts` and `getFileUrl`.
 - The chat opens `new SockJS("/ws")` (relative, `components/pelada/ChatSidebar.tsx:94`): it works through the Vite dev proxy (`vite.config.ts`) and in production because the app and the API share an origin behind the reverse proxy.
 - `vite.config.ts` defines `global: 'globalThis'` (needed by sockjs-client).
-- The backend's CORS allows `http://localhost:5173`, so keep the dev server on that port.
+- The backend's CORS allows `ALLOWED_ORIGINS` (default `http://localhost:5173`), so keep the dev server on that port or set `ALLOWED_ORIGINS` for the API.
+- The chat needs a valid token (CONNECT without one is rejected) and only members can subscribe to a pelada's topic; send errors arrive on `/user/queue/errors`.
 
 ## Folder structure
 
 ```
-frontend/
-├── documentation/        this file
-├── public/               static files (gerrard.png logo/favicon, player photos)
+client/
+├── docs/                 this file
+├── public/               static files (gerrard.png logo/favicon, pele.jpg, ronaldo.jpg)
 └── src/
     ├── main.tsx          applies the saved theme, StrictMode > BrowserRouter > AuthProvider > App + <Toaster/>
     ├── App.tsx           routes, React.lazy pages, one <Suspense>, an <ErrorBoundary> per route
@@ -54,25 +55,33 @@ frontend/
     │   └── *.test.ts     vitest tests for api modules
     ├── components/
     │   ├── ui/           shadcn primitives (owned code, see shadcn rules)
+    │   ├── ConfirmActionDialog.tsx   shared AlertDialog for confirmations
     │   ├── pelada/       pelada detail feature (Banner, MembersTable, SessionTable, RankingTable, AwardsTab, ChatSidebar, dialogs…)
-    │   │   └── hooks/    usePeladaDetail
-    │   ├── daily/        session detail feature (AdminActionBar, TeamsSection, MatchResultsSection, LeagueTableSection, modals…)
-    │   │   └── hooks/    useDailyDetail, useDailyModals, useMatchResults, usePlayerSelection
+    │   │   └── hooks/    usePeladaDetail, usePeladaActions, usePeladaChat, usePlayerPeladaHistory, useComparePlayers, useUserSearch, useMyPeladas
+    │   ├── daily/        session detail feature (AdminActionBar, TeamsSection, MatchResultsSection, LeagueTableSection, DailyStatusBadge, modals…)
+    │   │   └── hooks/    useDailyDetail, useDailyActions, useDailyModals, useMatchResults, usePlayerSelection
     │   ├── profile/      profile feature (KpiCard, charts, MatchHistoryTable, EditProfileModal…) + index.ts barrel
+    │   │   └── hooks/    useProfile
     │   ├── NavBar.tsx, PrivateRoute.tsx, ErrorBoundary.tsx, ScrollToTop.tsx
     │   └── CreatePeladaModal.tsx, EditPeladaModal.tsx   Sheet-based forms
     ├── context/          AuthContext.tsx (provider, token storage, axios interceptors), auth-context-value.ts
     ├── hooks/useAuth.ts  reads AuthContext
-    ├── lib/utils.ts      cn(), getFileUrl(), getPeladaInitials(), getPeladaGradient()
+    ├── lib/
+    │   ├── config.ts     API_BASE (the only reader of VITE_API_URL)
+    │   ├── utils.ts      cn(), getFileUrl(), getInitials(), getPeladaGradient()
+    │   ├── errors.ts     getErrorMessage(), getErrorStatus(), getApiErrorBody()
+    │   ├── form-errors.ts applyServerErrors() for react-hook-form
+    │   └── constants.ts  DAYS_OF_WEEK (API value + pt-BR label), dayOfWeekLabel()
     ├── pages/            LandingPage, AuthPage, HomePage, PeladaDetailPage, DailyDetailPage, ProfilePage, NotFoundPage
-    ├── types/            API DTO types: auth, pelada, daily, stats, user, chat
+    ├── schemas/          zod schemas mirroring request DTOs: daily.ts, user.ts, upload.ts
+    ├── types/            API DTO types: auth, pelada, daily (DailyStatus), stats, user (PublicUser, Position), chat
     └── utils/            pure functions: matchStats, matchPlayers, parseSessionMessage (WhatsApp text → teams/matches)
 ```
 
 Where new code goes:
 - A feature's components go in `components/<feature>/`, its hooks in `components/<feature>/hooks/`. Hooks used by more than one feature go in `src/hooks/`.
-- Pure helpers (no React) go in `src/utils/` or `src/lib/`; form schemas in `src/schemas/<domain>.ts` (create the folder with the first schema).
-- Import with the `@/` alias (`@/` → `src/`, configured in `tsconfig*.json`, `vite.config.ts`, `vitest.config.ts`). Don't add new `../` imports.
+- Pure helpers (no React) go in `src/utils/` or `src/lib/`; form schemas in `src/schemas/<domain>.ts`.
+- Import with the `@/` alias (`@/` → `src/`, configured in `tsconfig*.json`, `vite.config.ts`, `vitest.config.ts`). There are no `../` imports; don't add any.
 
 ## Routing (`App.tsx`)
 
@@ -83,7 +92,7 @@ Where new code goes:
 | `/home` | `HomePage` — the user's peladas and next sessions | private |
 | `/pelada/:id` | `PeladaDetailPage` — banner, tabs (sessions, members, ranking, awards), chat (sidebar on `lg`, Drawer on mobile). Ranking rows have a history button and the ⌘K menu has "Histórico do Jogador" (⌘I); both open `PlayerHistoryDialog` (lazy-loaded: summary, goals/assists chart, sessions linking to `/daily/:id`) | private |
 | `/daily/:id` | `DailyDetailPage` — attendance, teams, results, league table, stats, awards, champion photo, admin actions | private |
-| `/profile/:id` | `ProfilePage` — KPIs, charts, match history, edit profile | private |
+| `/profile/:id` | `ProfilePage` — KPIs, charts, match history, peladas in common, edit profile (own). Another user's profile is only visible when you share a pelada (403 → message) | private |
 | `*` | `NotFoundPage` | public |
 
 - Every page is `React.lazy` with a default export; the route element is `<ErrorBoundary>` → `<PrivateRoute>` (when private) → page.
@@ -102,14 +111,14 @@ Where new code goes:
 
 ### API modules (`src/api/*.ts`)
 
-Each module exports typed async functions that return `response.data`, plus the request payload types (`CreatePeladaData`, `MatchResultInput`, `PopulateDailyInput`…). Response types live in `src/types/` and mirror the backend DTOs in `backend/documentation/BACKEND.md`.
+Each module exports typed async functions that return `response.data`, plus the request payload types (`CreatePeladaData`, `MatchResultInput`, `PopulateDailyInput`…). Response types live in `src/types/` and mirror the backend DTOs in `core/docs/BACKEND.md`.
 
 | File | Endpoints |
 |------|-----------|
 | `auth.ts` | `/api/v1/auth/register`, `/api/v1/auth/login` |
-| `peladas.ts` | `/api/v1/peladas` (my, detail, create, update, delete, image, players, admin, ranking, awards, member stats, member history), `/api/v1/users/search` |
+| `peladas.ts` | `/api/v1/peladas` (my, detail, create, update, delete, image, players, admin, ranking, awards, member stats, member history), `/api/v1/users/search` (`PublicUser`, q ≥ 3 chars) |
 | `dailies.ts` | `/api/v1/peladas/{id}/dailies`, `/api/v1/dailies/{id}` (detail, confirm, admin confirm, sort/swap teams, team name/color, status, results, finalize, populate, champion image, delete) |
-| `users.ts` | `/api/v1/users/{id}` (profile, update, image, background, stats, timeline, matches) |
+| `users.ts` | `/api/v1/users/{id}` (profile, update, image, background, stats, timeline, matches, peladas in common) |
 | `chat.ts` | `/api/v1/peladas/{id}/messages` (paged history) |
 
 When an endpoint or DTO changes, update the module, `src/types/*` and this table in the same change as the backend.
@@ -118,14 +127,21 @@ When an endpoint or DTO changes, update the module, `src/types/*` and this table
 
 Data flows **api → hook → page/component**. A hook owns the request state; the page renders it.
 
-- `usePeladaDetail(id)` — loads pelada, dailies, ranking and awards in parallel, each with its own loading flag; exposes `accessDenied` (403), `error`, `refetch*`.
-- `useDailyDetail(id)` — loads the daily detail; exposes `setDaily` to merge a mutation's response without refetching.
+- `usePeladaDetail(id)` — loads pelada, dailies, ranking and awards in parallel, each with its own loading flag; exposes `accessDenied` (403), `error`, `refetch*` (each returns its promise).
+- `usePeladaActions(pelada, refetchPelada)` — delete pelada, remove member, toggle admin.
+- `usePeladaChat(peladaId, token)` — chat history + STOMP connection with backoff, `send`, error queue toasts.
+- `useMyPeladas()` — the home list (one request; cards use `nextDailyDate`).
+- `useUserSearch(query)` — debounced search, keyed by query, `tooShort` below 3 characters.
+- `useComparePlayers(peladaId, a, b)` — profile + pelada stats of two players, keyed by the pair.
+- `useProfile(userId)` — profile page data keyed by user id; `status` is `loading | ready | forbidden | notFound | error`.
+- `useDailyDetail(id)` — loads the daily detail; exposes `setDaily` to merge a mutation's response and `refetch` (returns a promise, doesn't show the skeleton again).
+- `useDailyActions({ daily, setDaily, refetch })` — every mutation of the session page with its pending flag.
 - `useDailyModals` — open/close state of the daily page's dialogs.
 - `useMatchResults` — the results form rows and submit.
 - `usePlayerSelection` — shared multi-select of players (finalize and results modals).
 - `usePlayerPeladaHistory(peladaId, userId | null, limit | null)` — loads `getPlayerPeladaHistory` (`?limit=`, server-side) for the player history dialog; returns `{ rows, totalSessions, loading, fetching, error, retry }` (rows newest first). `loading` is only true until the first response for that player; changing the limit keeps the previous rows on screen with `fetching` (the dialog dims them). The dialog's period selector (last 5 / 10 / 20 / all, default 5) sets the limit, and the summary tiles, chart and table are derived from the returned rows. Results are keyed by request (no `setState` in the effect body), so switching player never shows the previous player's data. Reference for new fetch hooks under the `react-hooks/set-state-in-effect` lint rule.
 
-Mutations: `try { await api…; toast.success(…) } catch { toast.error(message) }`, keep an `isPending` flag that disables the button, then either merge the returned DTO into state (`setDaily`) or refetch. Prefer merging when the endpoint returns the updated resource.
+Mutations: `try { await api…; toast.success(…) } catch (error) { toast.error(getErrorMessage(error, "…")) }`, keep an `isPending` flag that disables the button, then either merge the returned DTO into state (`setDaily`) or refetch. Prefer merging when the endpoint returns the updated resource.
 
 ## Auth & permissions in the UI
 
@@ -139,7 +155,7 @@ Mutations: `try { await api…; toast.success(…) } catch { toast.error(message
 - `src/types/*` — API response DTOs, matching the backend field names exactly.
 - `src/api/*` — request payload types next to the function that sends them.
 - Component prop types and view models stay next to the component/hook that owns them.
-- Status values are currently `string` (`DailyDetail.status`) compared with literals across components. For new code, use a union type and typed maps:
+- Status values use a union type and typed maps (`types/daily.ts`, `DailyStatusBadge`); do the same for new enum-like fields:
 
 ```ts
 export type DailyStatus = "SCHEDULED" | "CONFIRMED" | "IN_COURSE" | "FINISHED" | "CANCELED"
@@ -159,7 +175,7 @@ export const dailyStatusLabel: Record<DailyStatus, string> = {
 
 - **Tokens:** CSS variables in `src/index.css` as bare HSL triplets (`--primary: 222.2 47.4% 11.2%`) for `:root` (light, stock slate) and `.dark` (custom neutral grays), exposed through `tailwind.config.js` as `hsl(var(--x))`. Use the semantic classes: `bg-background`, `bg-card`, `text-foreground`, `text-muted-foreground`, `border-border`, `bg-primary`, `text-destructive`, `bg-accent`…
 - **Brand green** (`#15803d` → `#16a34a`) lives only in the `.bg-gradient-primary`, `.text-gradient-primary` and `.checkbox-gradient` classes in `index.css`. Use those classes or the Button `variant="gradient"`; never retype the hex. If a solid brand color is needed, add a `--brand` token (light + dark) to `index.css` and `tailwind.config.js` first.
-- **Chart colors:** `--chart-1` (green) and `--chart-2` (blue), light and dark, exposed as `chart-1`/`chart-2` in Tailwind. In a `ChartConfig` use `color: "hsl(var(--chart-1))"` and reference series as `var(--color-<key>)` (reference: `components/pelada/PlayerHistoryDialog.tsx`).
+- **Chart colors:** `--chart-1` (green) and `--chart-2` (blue), light and dark, exposed as `chart-1`/`chart-2` in Tailwind. `--gold` (`text-gold`) is for stars, trophies and crowns. In a `ChartConfig` use `color: "hsl(var(--chart-1))"` and reference series as `var(--color-<key>)` (reference: `components/pelada/PlayerHistoryDialog.tsx`).
 - **New colors** (status badges, positions, more chart series): add tokens to both `:root` and `.dark` (e.g. `--chart-1…5`, `--success`) and use them; don't scatter `bg-green-100 text-green-800` maps without dark variants.
 - **Dark mode** is class-based (`.dark` on `<html>`); the choice is saved in `localStorage.theme`, applied in `main.tsx` and toggled in `NavBar`. Every new UI must work in both themes.
 - **Composition:** `cn()` from `@/lib/utils` for class names; `cva` variants for repeated styles (`components/ui/button-variants.ts` has `default`, `destructive`, `outline`, `secondary`, `ghost`, `link`, `gradient`).
@@ -169,7 +185,7 @@ export const dailyStatusLabel: Record<DailyStatus, string> = {
 
 ### shadcn/ui usage rules (mandatory)
 
-Before UI work, load the `shadcn` skill. Run its CLI from `frontend/` (where `components.json` lives).
+Before UI work, load the `shadcn` skill. Run its CLI from `client/` (where `components.json` lives).
 
 **1. Scope.** Every element in these categories must use the matching component from `@/components/ui`:
 
@@ -177,13 +193,13 @@ Before UI work, load the `shadcn` skill. Run its CLI from `frontend/` (where `co
 |----------|-----------|
 | Actions | `Button` (icon-only: `size="icon"` + `aria-label`; links styled as buttons: `<Button asChild><Link/></Button>`) |
 | Form fields | `Input`, `Textarea`, `Select`, `Checkbox`, `Calendar`/`Popover` for dates |
-| Form structure | `Field`, `FieldLabel`, `FieldError`, `FieldGroup` (after adding `field`); `Label` until then |
+| Form structure | `Field`, `FieldLabel`, `FieldError`, `FieldGroup`, `FieldSet`/`FieldLegend` |
 | Overlays | `Dialog`, `AlertDialog`, `Sheet`, `Drawer`, `Popover`, `DropdownMenu`, `Command`, `Tooltip` |
 | Disclosure / navigation | `Tabs`, `Collapsible`, `Accordion` |
 | Feedback / status | `Skeleton`, `Badge`, `Progress`, `Alert`, toasts via `sonner` |
 | Data display | `Card`, `Table`, `Avatar`, `Separator`, `chart` |
 
-Installed today: avatar, badge, button, calendar, card, chart, checkbox, collapsible, command, dialog, drawer, dropdown-menu, input, label, popover, select, separator, sheet, skeleton, table, tabs, textarea (plus unused accordion, input-group). `alert`, `alert-dialog`, `tooltip`, `progress` and `field` are not installed yet — add them with the CLI when first needed.
+Installed today: alert, alert-dialog, avatar, badge, button, calendar, card, chart, checkbox, collapsible, command, dialog, drawer, dropdown-menu, field, input, label, popover, select, separator, sheet, skeleton, table, tabs, textarea. `tooltip` and `progress` are not installed yet — add them with the CLI when first needed. `field.tsx` was adapted to Tailwind 3 (no container-query orientation). Variants live in `button-variants.ts` / `badge-variants.ts` so the component files only export components.
 
 Not in scope: layout and text elements (`div`, `section`, `main`, `header`, `h1`–`h6`, `p`, `ul`, `img`) and the native `<form>`. Keep those as semantic HTML styled with tokens.
 
@@ -197,7 +213,7 @@ Not in scope: layout and text elements (`div`, `section`, `main`, `header`, `h1`
 
 ## Forms (mandatory)
 
-Every new form, and every existing form you substantially change, uses **react-hook-form + a zod schema + shadcn `Field`**. Don't validate with `useState`, hand-written `validate()` functions or `FieldErrors` objects. Today every form uses `useState` (`AuthPage`, `CreatePeladaModal`, `EditPeladaModal`, `CreateSessionDialog`, `EditProfileModal`, `ResultsForm`, `FinalizeModal`, `ImportFromMessageModal`, `AddPlayerDialog`); migrate them as they are touched.
+Every new form, and every existing form you substantially change, uses **react-hook-form + a zod schema + shadcn `Field`**. Don't validate with `useState`, hand-written `validate()` functions or `FieldErrors` objects. References: `CreateSessionDialog` (`schemas/daily.ts`, zod input/output types for a nullable date) and `EditProfileModal` (`schemas/user.ts`, `schemas/upload.ts`). Still on `useState`: `AuthPage`, `CreatePeladaModal`, `EditPeladaModal`, `ResultsForm`, `FinalizeModal`, `ImportFromMessageModal`; migrate them as they are touched.
 
 Rules:
 
@@ -206,8 +222,8 @@ Rules:
 3. **`useForm` + `zodResolver(schema)`** with complete `defaultValues` (never `undefined`).
 4. **Fields go through `Controller` + `Field`**: `data-invalid` on `Field`, `aria-invalid` on the control, `FieldLabel htmlFor` matching the control `id`, `FieldError` for the message, correct `type`/`autoComplete`.
 5. **Native `<form onSubmit={form.handleSubmit(onSubmit)} noValidate>`**, submit `Button type="submit" disabled={form.formState.isSubmitting}`. Use `formState.isDirty`/`isSubmitting` and `form.reset(values)` instead of extra `isLoading`/`hasChanges` state.
-6. **Map backend errors**: the validation 400 body is `{status, message, timestamp, errors: {field: message}}`; other errors are `{status, message, timestamp}`. Put field errors on the fields (`form.setError(field, { message })`) and the rest on `root`, shown in an `Alert variant="destructive"`. Do it with one shared helper (`lib/form-errors.ts`, `applyServerErrors(form, error, fallback)`) and one shared `getErrorMessage(error, fallback)` (`lib/errors.ts`) — not per-component casts.
-7. **File inputs** validate size (5 MB) and type (`image/jpeg`, `image/png`, `image/webp`) in the schema, matching `FileUploadService`.
+6. **Map backend errors**: the validation 400 body is `{status, message, timestamp, errors: {field: message}}`; other errors are `{status, message, timestamp}`. Put field errors on the fields and the rest on `root`, shown in an `Alert variant="destructive"`, with `applyServerErrors(form, error, fallback)` (`lib/form-errors.ts`); outside forms use `getErrorMessage(error, fallback)` (`lib/errors.ts`) — never per-component casts.
+7. **File inputs** validate size (5 MB) and type (`image/jpeg`, `image/png`, `image/webp`) with `schemas/upload.ts` (`validateImageFile`, `IMAGE_ACCEPT`), matching `FileUploadService`.
 
 ```ts
 // src/schemas/user.ts
@@ -265,7 +281,7 @@ return (
 ## Performance
 
 - **Code splitting:** every page is `React.lazy`; keep heavy libraries (recharts, tanstack table) inside the pages that use them. A dialog that pulls a heavy library into a page is lazy-loaded on first open (reference: `PlayerHistoryDialog` in `PeladaDetailPage`).
-- **Requests:** never fetch in a loop per item. `HomePage` calls `getDailiesForPelada` once per pelada and `ProfilePage` calls `getPelada(id)` once per pelada; ask the backend for an endpoint that returns what the screen needs instead.
+- **Requests:** never fetch in a loop per item; ask the backend for an endpoint that returns what the screen needs (as `nextDailyDate` and `/users/{id}/peladas` do).
 - Don't load every tab up front when a tab is expensive; fetch on first open.
 - After a mutation, merge the returned DTO into state instead of refetching the whole detail when the endpoint already returns it.
 - `await` only functions that return a promise; a refetch must return its promise if the caller waits for it.
@@ -281,9 +297,9 @@ return (
 - Formatting: the codebase mixes styles; new and touched files use double quotes, no semicolons, 2-space indent. Add Prettier (`prettier` + `prettier-plugin-tailwindcss`) with that config when convenient and format only files you touch.
 - TypeScript strict with `noUnusedLocals`, `noUnusedParameters`, `verbatimModuleSyntax`: use `import type` for type-only imports; no `any`, no `!` non-null assertions to silence errors.
 - All user-facing strings in Portuguese, including toasts and `aria-label`s.
-- Shared helpers instead of inline repeats: initials (`getPeladaInitials` or a `getInitials` in `lib/utils.ts`), file URLs (`getFileUrl`, imported where needed — not passed as a prop).
+- Shared helpers instead of inline repeats: initials (`getInitials`), file URLs (`getFileUrl`, imported where needed — not passed as a prop), days of the week (`DAYS_OF_WEEK`), positions (`getPositionLabel`).
 - Stable `key`s from ids; index keys only for skeleton placeholders.
-- Tests: pure logic in `src/utils/` and `src/api/` gets Vitest tests next to the file (`*.test.ts`).
+- Tests: pure logic in `src/utils/`, `src/lib/`, `src/schemas/` and `src/api/` gets Vitest tests next to the file (`*.test.ts`).
 
 ## Patterns
 
@@ -304,7 +320,7 @@ export async function getMyPeladas(): Promise<PeladaResponse[]> {
 const { pelada, dailies, ranking, awards, loading, accessDenied, refetch } = usePeladaDetail(id)
 ```
 
-Reference: `src/api/peladas.ts`, `components/pelada/hooks/usePeladaDetail.ts`, `components/daily/hooks/useDailyDetail.ts`.
+Reference: `src/api/peladas.ts`, `components/pelada/hooks/usePeladaDetail.ts`, `components/daily/hooks/useDailyDetail.ts`, `components/profile/hooks/useProfile.ts` (results keyed by id, no `setState` in effect bodies).
 
 ### 2. Handle every async state
 
@@ -337,7 +353,7 @@ async function handleConfirm() {
 
 ### 4. Extract hooks from big pages
 
-When a page passes ~250 lines or ~8 `useState`s, move state and handlers into `components/<feature>/hooks/` (reference: `useDailyModals`, `useMatchResults`, `usePlayerSelection`).
+When a page passes ~250 lines or ~8 `useState`s, move state and handlers into `components/<feature>/hooks/` (reference: `useDailyActions`, `usePeladaActions`, `useMatchResults`).
 
 ### 5. Side forms in a Sheet
 
@@ -361,30 +377,30 @@ Don't introduce these. Some exist already ("Found in", paths under `src/`); fix 
 
 | # | Don't | Do instead | Found in |
 |---|-------|-----------|----------|
-| 1 | Hand-rolled modals (`fixed inset-0 bg-black/50`): no focus trap, Esc or aria | `Dialog` / `AlertDialog` / `Sheet` | `pelada/CreateSessionDialog`, `pelada/DeletePeladaDialog`, `pelada/AddPlayerDialog`, `pelada/ConfirmRemoveDialog`, `daily/StatusConfirmDialog`, `daily/FinalizeModal`, `daily/ResultsForm`, `daily/ImportFromMessageModal`, `profile/EditProfileModal` |
-| 2 | Raw `<button>`, `<input>`, `<select>`, `<textarea>`, `<label>` | `Button`, `Input`, `Select`, `Textarea`, `Label`/`FieldLabel` | `ResultsForm.tsx`, `ImportFromMessageModal.tsx`, `EditProfileModal.tsx`, many `<button>`s across features |
-| 3 | Raw palette colors, hex values, `text-white`/`bg-black` on surfaces, screens hardcoded to one theme | Semantic tokens; new tokens in `index.css` for light and dark | `pelada/ComparePlayersDialog.tsx` (always dark), `ProfilePage.tsx` `POSITION_COLORS`, `DailyDetailPage.tsx` status badges, `profile/StatsOverTimeChart.tsx`, `profile/ProfilePieChart.tsx`, `HomePage.tsx:82`, `PeladaDetailPage.tsx` chat FAB |
-| 4 | Retyping the brand gradient instead of the variant | `<Button variant="gradient">` | `AuthPage.tsx:285` |
-| 5 | Forms with `useState` per field and hand-written validation | react-hook-form + zod + `Field` ([Forms](#forms-mandatory)) | every current form |
-| 6 | Casting errors inline (`err as { response?: { data?: { message?: string } } }`) or copying an `extractErrorMessage` per file | One `getErrorMessage(error, fallback)` in `lib/errors.ts`; `applyServerErrors` for forms | `DailyDetailPage.tsx` (10×), `PeladaDetailPage.tsx` (3×), `useMatchResults.ts`; `extractErrorMessage` in `AuthPage.tsx`, `CreatePeladaModal.tsx`, `EditPeladaModal.tsx` |
-| 7 | Copy-pasted helpers/constants | One helper in `lib/` or `utils/` | initials logic (~13 places: `NavBar`, `RankingTable`, `MembersTable`, `AwardsTab`, `ChatSidebar`…), `DAYS_OF_WEEK` in both pelada modals, `localhost:8080` fallback in `api/client.ts` and `lib/utils.ts` |
-| 8 | Calling `src/api/*` from presentational components or inline `useEffect` fetches in pages | A feature hook that exposes `{ data, loading, error }` | `HomePage.tsx`, `ProfilePage.tsx`, `ChatSidebar`, `ComparePlayersDialog`, `CreateSessionDialog`, `EditProfileModal`, `FinalizeModal`, `ImportFromMessageModal`, `AddPlayerDialog` |
-| 9 | Fetching once per item in a loop | A backend endpoint shaped for the screen | `HomePage.tsx` (dailies per pelada), `ProfilePage.tsx` (pelada per id, and it uses the viewer's peladas, not the profile owner's) |
-| 10 | `await` on a function that returns `void` (toast fires before the reload finishes) | Return the promise from refetch functions | `DailyDetailPage.tsx` `await fetchDaily()` |
-| 11 | Effects with missing dependencies / unstable functions | `useCallback` or move the function inside the effect | `HomePage.tsx` `fetchPeladas` effect |
-| 12 | English user-facing text | Portuguese | toasts in `usePeladaDetail.ts`, `ProfilePage.tsx`, `ChatSidebar.tsx`, `PeladaDetailPage.tsx` |
+| 1 | Hand-rolled modals (`fixed inset-0 bg-black/50`): no focus trap, Esc or aria | `Dialog` / `AlertDialog` / `Sheet` | — |
+| 2 | Raw `<button>`, `<input>`, `<select>`, `<textarea>`, `<label>` | `Button`, `Input`, `Select`, `Textarea`, `Label`/`FieldLabel` | — |
+| 3 | Raw palette colors, hex values, `text-white`/`bg-black` on surfaces, screens hardcoded to one theme | Semantic tokens; new tokens in `index.css` for light and dark | `pelada/ComparePlayersDialog.tsx` (always dark), `profile/StatsOverTimeChart.tsx`, `ProfilePage.tsx` KPI icon colors, `HomePage.tsx` hero, `LeagueTableSection`/`MatchHistoryTable`/`AwardsTab` highlight backgrounds, focus rings in the pelada modals, `LandingPage.tsx` (`neutral-*`) |
+| 4 | Retyping the brand gradient instead of the variant | `<Button variant="gradient">` | — |
+| 5 | Forms with `useState` per field and hand-written validation | react-hook-form + zod + `Field` ([Forms](#forms-mandatory)) | `AuthPage`, `CreatePeladaModal`, `EditPeladaModal`, `ResultsForm`, `FinalizeModal`, `ImportFromMessageModal` |
+| 6 | Casting errors inline (`err as { response?: { data?: { message?: string } } }`) or copying an `extractErrorMessage` per file | One `getErrorMessage(error, fallback)` in `lib/errors.ts`; `applyServerErrors` for forms | — |
+| 7 | Copy-pasted helpers/constants | One helper in `lib/` or `utils/` | — |
+| 8 | Calling `src/api/*` from presentational components or inline `useEffect` fetches in pages | A feature hook that exposes `{ data, loading, error }` | `CreateSessionDialog`, `EditProfileModal`, `FinalizeModal`, `ImportFromMessageModal`, `CreatePeladaModal`, `EditPeladaModal` (submit handlers call `src/api` directly) |
+| 9 | Fetching once per item in a loop | A backend endpoint shaped for the screen | — |
+| 10 | `await` on a function that returns `void` (toast fires before the reload finishes) | Return the promise from refetch functions | — |
+| 11 | Effects with missing dependencies / unstable functions | `useCallback` or move the function inside the effect | — |
+| 12 | English user-facing text | Portuguese | — |
 | 13 | `window.location.href` for in-app navigation | `useNavigate()` / `<Link>` (the 401 interceptor is the accepted exception today) | `context/AuthContext.tsx:46` |
 | 14 | Reading/writing `futspring_token`/`futspring_user` outside AuthContext | `useAuth()` | — |
 | 15 | Importing `axios` or calling `fetch` outside `src/api` | Add a function to an `api/*` module | — |
 | 16 | Hardcoding the backend URL | `import.meta.env.VITE_API_URL` through `apiClient` / `getFileUrl` | — |
 | 17 | Client-only permission checks treated as security | Backend checks; UI only hides | — |
-| 18 | Status/position magic strings compared across components | Union types + `Record` maps in `types/` | `DailyDetail.status` usages, `ProfilePage.tsx` |
-| 19 | Relative `../` imports in new code | `@/` alias | 54 files today |
-| 20 | `any`, non-null assertions, loose index signatures | Proper types and narrowing | `ProfilePage.tsx` `getFileUrl(...)!` |
-| 21 | Index keys on real content | Stable ids | `daily/MatchResultsSection.tsx` |
-| 22 | Placeholder links / fake UI | Real routes, or disabled with "Em breve" | `LandingPage.tsx` GitHub/LinkedIn links, Google sign-in stub in `AuthPage.tsx` |
-| 23 | Dead files and components | Delete them | `App.css`, `components/ui/accordion.tsx` and `input-group.tsx` (unused), `assets/hero.png`, `assets/react.svg`, `assets/vite.svg`, `public/arnold` |
+| 18 | Status/position magic strings compared across components | Union types + `Record` maps in `types/` | — |
+| 19 | Relative `../` imports in new code | `@/` alias | — |
+| 20 | `any`, non-null assertions, loose index signatures | Proper types and narrowing | — |
+| 21 | Index keys on real content | Stable ids | — |
+| 22 | Placeholder links / fake UI | Real routes, or disabled with "Em breve" | `LandingPage.tsx` GitHub/LinkedIn links |
+| 23 | Dead files and components | Delete them | — |
 | 24 | Mixing icon libraries | lucide-react only | — |
 | 25 | `npm install` / a second lockfile | `bun install`; delete `package-lock.json` | — |
-| 26 | Prop-drilling plain imports | Import the helper where it's used | `getFileUrl` passed as a prop in `PeladaDetailPage.tsx` |
-| 27 | Chart configs that disagree with the data colors | One color source (tokens) for config and data | `profile/ProfilePieChart.tsx` |
+| 26 | Prop-drilling plain imports | Import the helper where it's used | — |
+| 27 | Chart configs that disagree with the data colors | One color source (tokens) for config and data | `profile/StatsOverTimeChart.tsx` (hex colors) |
