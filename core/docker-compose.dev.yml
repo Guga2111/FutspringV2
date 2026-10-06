@@ -12,6 +12,10 @@ services:
       DB_USERNAME: futspringuser
       DB_PASSWORD: futspringpassword
       JWT_SECRET: dev-local-secret-change-me-in-production
+      # From core/.env (gitignored), next to this file; empty key = e-mails are only logged (NoopEmailSender)
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      MAIL_FROM: ${MAIL_FROM:-Futspring <no-reply@futspring.luisgosampaio.com>}
+      APP_URL: ${APP_URL:-http://localhost:5173}
     volumes:
       - ./uploads:/app/uploads
     depends_on:
