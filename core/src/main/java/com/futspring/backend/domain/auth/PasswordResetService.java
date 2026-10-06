@@ -45,6 +45,8 @@ public class PasswordResetService {
 
         User user = token.getUser();
         user.setPassword(passwordEncoder.encode(newPassword));
+        // Revokes every JWT issued before (AccessTokenVerifier): the old sessions are logged out
+        user.setTokenVersion(user.getTokenVersion() + 1);
         // Marks this token and any other pending one as used
         tokenRepository.invalidateActiveTokens(user, now);
     }

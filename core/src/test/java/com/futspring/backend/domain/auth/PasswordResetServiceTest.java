@@ -100,6 +100,7 @@ class PasswordResetServiceTest {
         service.resetPassword("raw", "newpassword");
 
         assertThat(passwordEncoder.matches("newpassword", user.getPassword())).isTrue();
+        assertThat(user.getTokenVersion()).isEqualTo(1);
         verify(tokenRepository).invalidateActiveTokens(eq(user), any());
     }
 
@@ -112,6 +113,7 @@ class PasswordResetServiceTest {
                 .isInstanceOf(AppException.class)
                 .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.BAD_REQUEST));
         assertThat(user.getPassword()).isEqualTo(oldHash);
+        assertThat(user.getTokenVersion()).isZero();
         verify(tokenRepository, never()).invalidateActiveTokens(any(), any());
     }
 }

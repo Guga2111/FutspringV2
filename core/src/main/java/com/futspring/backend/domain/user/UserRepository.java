@@ -13,6 +13,10 @@ import java.util.Optional;
 public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByEmail(String email);
 
+    // Runs on every authenticated request (AccessTokenVerifier): reads one column through the unique email index
+    @Query("SELECT u.tokenVersion FROM User u WHERE u.email = :email")
+    Optional<Integer> findTokenVersionByEmail(@Param("email") String email);
+
     // Usernames aren't unique in the database (production has legacy duplicates), so check with exists, never a single-result find
     boolean existsByUsernameIgnoreCase(String username);
 

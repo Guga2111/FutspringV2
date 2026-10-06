@@ -11,18 +11,23 @@ import org.springframework.stereotype.Service;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
 public class JwtService {
 
+    // User.tokenVersion at issue time; AccessTokenVerifier rejects the token once it changes
+    static final String VERSION_CLAIM = "ver";
+
     private final JwtConfig jwtConfig;
 
-    public String generateToken(Long userId, String email) {
+    public String generateToken(Long userId, String email, int tokenVersion) {
         return Jwts.builder()
                 .setSubject(email)
                 .claim("userId", userId)
                 .claim("email", email)
+                .claim(VERSION_CLAIM, tokenVersion)
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + jwtConfig.getExpirationMs()))
                 .signWith(
@@ -40,16 +45,13 @@ public class JwtService {
                 .getBody();
     }
 
-    public boolean isTokenValid(String token) {
+    // Signature and expiry only; the session check (token version) is in AccessTokenVerifier
+    public Optional<Claims> parseClaims(String token) {
         try {
-            extractAllClaims(token);
-            return true;
+            return Optional.of(extractAllClaims(token));
         } catch (JwtException | IllegalArgumentException e) {
-            return false;
+            return Optional.empty();
         }
     }
 
-    public String extractEmail(String token) {
-        return extractAllClaims(token).getSubject();
-    }
 }

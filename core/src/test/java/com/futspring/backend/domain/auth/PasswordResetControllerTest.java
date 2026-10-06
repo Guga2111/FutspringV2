@@ -14,6 +14,7 @@ import java.time.LocalDateTime;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -83,6 +84,36 @@ class PasswordResetControllerTest extends BaseIntegrationTest {
         postJson("/api/v1/auth/reset-password", body)
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value(PasswordResetService.INVALID_LINK_MESSAGE));
+    }
+
+    @Test
+    void resetPassword_logsOutEverySessionOpenedBefore() throws Exception {
+        String oldSession = bearerToken(user.getId(), user.getEmail());
+        mockMvc.perform(get("/api/v1/users/" + user.getId()).header("Authorization", oldSession))
+                .andExpect(status().isOk());
+        saveToken("valid-token", LocalDateTime.now().plusMinutes(30));
+
+        postJson("/api/v1/auth/reset-password", Map.of("token", "valid-token", "newPassword", "newpassword"))
+                .andExpect(status().isNoContent());
+
+        mockMvc.perform(get("/api/v1/users/" + user.getId()).header("Authorization", oldSession))
+                .andExpect(status().isUnauthorized());
+        String newToken = objectMapper.readTree(
+                postJson("/api/v1/auth/login", Map.of("email", "reset@example.com", "password", "newpassword"))
+                        .andExpect(status().isOk())
+                        .andReturn().getResponse().getContentAsString())
+                .get("token").asText();
+        mockMvc.perform(get("/api/v1/users/" + user.getId()).header("Authorization", "Bearer " + newToken))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void tokenOfADeletedUser_returns401() throws Exception {
+        String session = bearerToken(user.getId(), user.getEmail());
+        userRepository.delete(user);
+
+        mockMvc.perform(get("/api/v1/users/" + user.getId()).header("Authorization", session))
+                .andExpect(status().isUnauthorized());
     }
 
     @Test

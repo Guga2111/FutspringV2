@@ -25,8 +25,9 @@ public abstract class BaseIntegrationTest {
     @Autowired
     protected JwtService jwtService;
 
+    // Users saved by the tests keep the default tokenVersion (0)
     protected String generateToken(Long userId, String email) {
-        return jwtService.generateToken(userId, email);
+        return jwtService.generateToken(userId, email, 0);
     }
 
     protected String bearerToken(Long userId, String email) {
