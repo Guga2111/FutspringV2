@@ -7,6 +7,8 @@ import { AppLayout } from "@/components/layout/AppLayout"
 
 const LandingPage = lazy(() => import("@/pages/LandingPage"))
 const AuthPage = lazy(() => import("@/pages/AuthPage"))
+const ForgotPasswordPage = lazy(() => import("@/pages/ForgotPasswordPage"))
+const ResetPasswordPage = lazy(() => import("@/pages/ResetPasswordPage"))
 const HomePage = lazy(() => import("@/pages/HomePage"))
 const PeladaDetailPage = lazy(() => import("@/pages/PeladaDetailPage"))
 const DailyDetailPage = lazy(() => import("@/pages/DailyDetailPage"))
@@ -23,6 +25,8 @@ function App() {
         <Routes>
           <Route path="/" element={<ErrorBoundary><LandingPage /></ErrorBoundary>} />
           <Route path="/auth" element={<ErrorBoundary><AuthPage /></ErrorBoundary>} />
+          <Route path="/forgot-password" element={<ErrorBoundary><ForgotPasswordPage /></ErrorBoundary>} />
+          <Route path="/reset-password" element={<ErrorBoundary><ResetPasswordPage /></ErrorBoundary>} />
           {/* Private pages share the sidebar shell */}
           <Route element={<ErrorBoundary><PrivateRoute><AppLayout /></PrivateRoute></ErrorBoundary>}>
             <Route path="/home" element={<ErrorBoundary><HomePage /></ErrorBoundary>} />

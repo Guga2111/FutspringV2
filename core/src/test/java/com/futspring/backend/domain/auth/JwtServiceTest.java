@@ -28,47 +28,47 @@ class JwtServiceTest {
 
     @Test
     void generateToken_returnsNonNull() {
-        String token = jwtService.generateToken(1L, "user@example.com");
+        String token = jwtService.generateToken(1L, "user@example.com", 0);
         assertThat(token).isNotNull().isNotBlank();
     }
 
     @Test
     void generateToken_subjectIsEmail() {
-        String token = jwtService.generateToken(1L, "user@example.com");
-        assertThat(jwtService.extractEmail(token)).isEqualTo("user@example.com");
+        String token = jwtService.generateToken(1L, "user@example.com", 0);
+        assertThat(jwtService.extractAllClaims(token).getSubject()).isEqualTo("user@example.com");
     }
 
     @Test
     void generateToken_userIdClaimIsCorrect() {
-        String token = jwtService.generateToken(77L, "user@example.com");
+        String token = jwtService.generateToken(77L, "user@example.com", 0);
         assertThat(jwtService.extractAllClaims(token).get("userId", Long.class)).isEqualTo(77L);
     }
 
     @Test
     void generateToken_emailClaimIsCorrect() {
-        String token = jwtService.generateToken(1L, "test@domain.com");
+        String token = jwtService.generateToken(1L, "test@domain.com", 0);
         Claims claims = jwtService.extractAllClaims(token);
         assertThat(claims.get("email", String.class)).isEqualTo("test@domain.com");
     }
 
     @Test
     void generateToken_isValidImmediately() {
-        String token = jwtService.generateToken(1L, "user@example.com");
-        assertThat(jwtService.isTokenValid(token)).isTrue();
+        String token = jwtService.generateToken(1L, "user@example.com", 0);
+        assertThat(jwtService.parseClaims(token)).isPresent();
     }
 
     // --- extractAllClaims ---
 
     @Test
     void extractAllClaims_validToken_returnsClaims() {
-        String token = jwtService.generateToken(5L, "a@b.com");
+        String token = jwtService.generateToken(5L, "a@b.com", 0);
         Claims claims = jwtService.extractAllClaims(token);
         assertThat(claims.getSubject()).isEqualTo("a@b.com");
     }
 
     @Test
     void extractAllClaims_tamperedToken_throwsJwtException() {
-        String token = jwtService.generateToken(1L, "user@example.com");
+        String token = jwtService.generateToken(1L, "user@example.com", 0);
         String tampered = token.substring(0, token.length() - 4) + "XXXX";
         assertThatThrownBy(() -> jwtService.extractAllClaims(tampered))
                 .isInstanceOf(JwtException.class);
@@ -82,7 +82,7 @@ class JwtServiceTest {
         ReflectionTestUtils.setField(otherConfig, "expirationMs", 3600000L);
         JwtService otherService = new JwtService(otherConfig);
 
-        String token = otherService.generateToken(1L, "user@example.com");
+        String token = otherService.generateToken(1L, "user@example.com", 0);
         assertThatThrownBy(() -> jwtService.extractAllClaims(token))
                 .isInstanceOf(JwtException.class);
     }
@@ -95,52 +95,58 @@ class JwtServiceTest {
         ReflectionTestUtils.setField(expiredConfig, "expirationMs", -1000L);
         JwtService expiredService = new JwtService(expiredConfig);
 
-        String token = expiredService.generateToken(1L, "user@example.com");
+        String token = expiredService.generateToken(1L, "user@example.com", 0);
         assertThatThrownBy(() -> jwtService.extractAllClaims(token))
                 .isInstanceOf(JwtException.class);
     }
 
-    // --- isTokenValid ---
+    // --- parseClaims ---
 
     @Test
-    void isTokenValid_validToken_returnsTrue() {
-        String token = jwtService.generateToken(1L, "user@example.com");
-        assertThat(jwtService.isTokenValid(token)).isTrue();
+    void parseClaims_validToken_returnsClaims() {
+        String token = jwtService.generateToken(1L, "user@example.com", 0);
+        assertThat(jwtService.parseClaims(token)).isPresent();
     }
 
     @Test
-    void isTokenValid_expiredToken_returnsFalse() {
+    void parseClaims_expiredToken_returnsEmpty() {
         JwtConfig expiredConfig = new JwtConfig();
         ReflectionTestUtils.setField(expiredConfig, "secret",
                 "test-secret-key-that-is-at-least-32-characters-long");
         ReflectionTestUtils.setField(expiredConfig, "expirationMs", -1000L);
         JwtService expiredService = new JwtService(expiredConfig);
 
-        String token = expiredService.generateToken(1L, "user@example.com");
-        assertThat(jwtService.isTokenValid(token)).isFalse();
+        String token = expiredService.generateToken(1L, "user@example.com", 0);
+        assertThat(jwtService.parseClaims(token)).isEmpty();
     }
 
     @Test
-    void isTokenValid_malformedToken_returnsFalse() {
-        assertThat(jwtService.isTokenValid("not.a.valid.jwt")).isFalse();
+    void parseClaims_malformedToken_returnsEmpty() {
+        assertThat(jwtService.parseClaims("not.a.valid.jwt")).isEmpty();
     }
 
     @Test
-    void isTokenValid_emptyString_returnsFalse() {
-        assertThat(jwtService.isTokenValid("")).isFalse();
+    void parseClaims_emptyString_returnsEmpty() {
+        assertThat(jwtService.parseClaims("")).isEmpty();
     }
 
-    // --- extractEmail / extractUserId ---
+    // --- claims ---
 
     @Test
-    void extractEmail_returnsCorrectEmail() {
-        String token = jwtService.generateToken(1L, "extract@test.com");
-        assertThat(jwtService.extractEmail(token)).isEqualTo("extract@test.com");
+    void subject_returnsCorrectEmail() {
+        String token = jwtService.generateToken(1L, "extract@test.com", 0);
+        assertThat(jwtService.extractAllClaims(token).getSubject()).isEqualTo("extract@test.com");
     }
 
     @Test
     void userIdClaim_returnsCorrectId() {
-        String token = jwtService.generateToken(123L, "user@example.com");
+        String token = jwtService.generateToken(123L, "user@example.com", 0);
         assertThat(jwtService.extractAllClaims(token).get("userId", Long.class)).isEqualTo(123L);
+    }
+
+    @Test
+    void generateToken_carriesTheTokenVersion() {
+        String token = jwtService.generateToken(1L, "user@example.com", 4);
+        assertThat(jwtService.extractAllClaims(token).get(JwtService.VERSION_CLAIM, Integer.class)).isEqualTo(4);
     }
 }

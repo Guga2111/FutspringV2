@@ -56,6 +56,8 @@ client/
     ├── components/
     │   ├── ui/           shadcn primitives (owned code, see shadcn rules)
     │   ├── ConfirmActionDialog.tsx   shared AlertDialog for confirmations
+│   ├── auth/         AuthLayout (shell of the public auth screens: logo, centered card, photo from lg), ResetLinkSent, ResetPasswordForm
+│   │   └── hooks/    useForgotPasswordForm, useResetPasswordForm
     │   ├── pelada/       pelada detail feature (PeladaBanner, MembersGrid + MemberCard, NextSessionCard, SessionHistoryList, RankingTable, AwardsTab, PeladaChat + ChatPanel, dialogs…)
     │   │   └── hooks/    usePeladaDetail, usePeladaActions, usePeladaChat, usePlayerPeladaHistory, useComparePlayers, useUserSearch
     │   ├── daily/        session detail feature (DailyHeader with the admin actions, AttendanceSummaryCard, AttendanceList, TeamsSection + TeamCard/TeamColorDot, LiveSessionCard, LiveLeagueTable, SavedMatchesList, LiveTeamsSection, ResultsDialog + ResultsMatchCard + ScoreStepper, ChampionHero, DailyAwardsGrid, FinishedSessionTabs, DailyStatusBadge, modals…)
@@ -76,8 +78,8 @@ client/
     │   ├── errors.ts     getErrorMessage(), getErrorStatus(), getApiErrorBody()
     │   ├── form-errors.ts applyServerErrors() for react-hook-form
     │   └── constants.ts  DAYS_OF_WEEK (API value + pt-BR label), dayOfWeekLabel()
-    ├── pages/            LandingPage, AuthPage, HomePage, PeladaDetailPage, DailyDetailPage, ProfilePage, NotFoundPage
-    ├── schemas/          zod schemas mirroring request DTOs: daily.ts, user.ts, upload.ts
+    ├── pages/            LandingPage, AuthPage, ForgotPasswordPage, ResetPasswordPage, HomePage, PeladaDetailPage, DailyDetailPage, ProfilePage, NotFoundPage
+    ├── schemas/          zod schemas mirroring request DTOs: auth.ts, daily.ts, user.ts, upload.ts
     ├── types/            API DTO types: auth, pelada, daily (DailyStatus), stats, user (PublicUser, Position), chat
     └── utils/            pure functions: matchStats, matchPlayers, parseSessionMessage (WhatsApp text → teams/matches), dates (local date parsing, short pt-BR labels), liveSession (player totals, scorers line, matchup rotation, goal check), attendance (confirmed/pending split, sort rule and hints), finishedSession (champion summary, match stat names, player sort, award detail), home (greeting, card dates, upcoming sessions, KPIs), sessions (next session, month groups, pt-BR session labels), memberFilters (position normalization, counts, search)
 ```
@@ -92,7 +94,9 @@ Where new code goes:
 | Path | Page | Access |
 |------|------|--------|
 | `/` | `LandingPage` (redirects to `/home` when logged in) | public |
-| `/auth` (`?tab=login\|register`) | `AuthPage` — returns to `location.state.from` after login | public |
+| `/auth` (`?tab=login\|register`) | `AuthPage` — returns to `location.state.from` after login; "Esqueceu a senha?" link next to the password | public |
+| `/forgot-password` | `ForgotPasswordPage` — e-mail form; on 204 shows `ResetLinkSent` (same text whether or not the account exists) from `formState.isSubmitSuccessful` | public |
+| `/reset-password?token=` | `ResetPasswordPage` — the link from the e-mail; new password + confirmation. Success logs out the local session (the backend revoked every token), toasts and goes to `/auth?tab=login`; a bad/expired link shows the API message with "Pedir um novo link". Without `token`: "Link incompleto" card | public |
 | `/home` | `HomePage` — greeting banner (pending confirmations), next sessions with quick confirm/withdraw (carousel on mobile), "Seus números" (`GET /users/{id}/stats`, wins = match wins) and the user's peladas + create card; peladas come from `MyPeladasContext` | private |
 | `/pelada/:id` | `PeladaDetailPage` — banner card, pill tabs (members grid with search and position chips, stats from the ranking already loaded; sessions: next-session card with confirm/withdraw + history grouped by month; ranking; awards with the leader highlighted), chat from a floating button (Popover panel on desktop, Drawer on mobile). Ranking rows have a history button and the ⌘K menu has "Histórico do Jogador" (⌘I); both open `PlayerHistoryDialog` (lazy-loaded: summary, goals/assists chart, sessions linking to `/daily/:id`) | private |
 | `/daily/:id` | `DailyDetailPage` — header (back link, date, status, metadata, admin actions + ⋯ menu); before the session: attendance card (confirm / withdraw), collapsible attendance list (confirmed / pending, admin confirm/remove/confirm all) and teams (sort, swap, rename, color); live: live card (finalize / lançar resultados), live league table, saved matches, teams with goals and assists; the results dialog (Dialog on desktop, Drawer on mobile: team chips, score steppers, goals/assists with a goal check that only warns); finished: champion photo + champion team card, awards, pill tabs (final table, match cards, sortable players table, teams with final position) | private |
@@ -121,7 +125,7 @@ Each module exports typed async functions that return `response.data`, plus the 
 
 | File | Endpoints |
 |------|-----------|
-| `auth.ts` | `/api/v1/auth/register`, `/api/v1/auth/login` |
+| `auth.ts` | `/api/v1/auth/register`, `/api/v1/auth/login`, `/api/v1/auth/forgot-password` (`requestPasswordReset`), `/api/v1/auth/reset-password` (`resetPassword`, `ResetPasswordData`) |
 | `peladas.ts` | `/api/v1/peladas` (my, detail, create, update, delete, image, players, admin, ranking, awards, member stats, member history), `/api/v1/users/search` (`PublicUser`, q ≥ 3 chars) |
 | `dailies.ts` | `/api/v1/peladas/{id}/dailies`, `/api/v1/dailies/{id}` (detail, confirm, admin confirm, confirm all, sort/swap teams, team name/color, status, results, finalize, populate, champion image, delete) |
 | `users.ts` | `/api/v1/users/{id}` (profile, update, image, background, stats, timeline, matches, peladas in common) |
@@ -145,6 +149,7 @@ Data flows **api → hook → page/component**. A hook owns the request state; t
 - `useDailyModals` — open/close state of the daily page's dialogs, plus `attendanceOpen` (null = open until the teams are sorted; the page sets it to false after a successful sort).
 - `useResultsForm(daily, mode, onSaved)` — the results dialog's react-hook-form + `useFieldArray` (`makeResultsSchema(teams)` in `schemas/daily.ts`). `mode` `add` (live session: new matches, numbered after the saved ones, with the next matchup suggested by `suggestPairing`) or `edit` (every saved match). It always sends the full list: the backend treats it as the session's full set of matches and deletes saved matches that were left out, so `add` sends the saved matches too. Reloads the detail after saving (league table and stats are recomputed server-side).
 - `usePlayerSelection` — shared multi-select of players (finalize and results modals).
+- `useForgotPasswordForm()` / `useResetPasswordForm(token)` (`components/auth/hooks/`) — react-hook-form + zod (`schemas/auth.ts`) and the submit; the pages only render. The forgot form's success state is `formState.isSubmitSuccessful` (`form.reset()` goes back); the reset calls `logout()` after success because the backend ends every session.
 - `usePlayerPeladaHistory(peladaId, userId | null, limit | null)` — loads `getPlayerPeladaHistory` (`?limit=`, server-side) for the player history dialog; returns `{ rows, totalSessions, loading, fetching, error, retry }` (rows newest first). `loading` is only true until the first response for that player; changing the limit keeps the previous rows on screen with `fetching` (the dialog dims them). The dialog's period selector (last 5 / 10 / 20 / all, default 5) sets the limit, and the summary tiles, chart and table are derived from the returned rows. Results are keyed by request (no `setState` in the effect body), so switching player never shows the previous player's data. Reference for new fetch hooks under the `react-hooks/set-state-in-effect` lint rule.
 
 Mutations: `try { await api…; toast.success(…) } catch (error) { toast.error(getErrorMessage(error, "…")) }`, keep an `isPending` flag that disables the button, then either merge the returned DTO into state (`setDaily`) or refetch. Prefer merging when the endpoint returns the updated resource.
@@ -236,7 +241,7 @@ Not in scope: layout and text elements (`div`, `section`, `main`, `header`, `h1`
 
 ## Forms (mandatory)
 
-Every new form, and every existing form you substantially change, uses **react-hook-form + a zod schema + shadcn `Field`**. Don't validate with `useState`, hand-written `validate()` functions or `FieldErrors` objects. References: `CreateSessionDialog` (`schemas/daily.ts`, zod input/output types for a nullable date) and `EditProfileModal` (`schemas/user.ts`, `schemas/upload.ts`). Still on `useState`: `AuthPage`, `CreatePeladaModal`, `EditPeladaModal`, `FinalizeModal`, `ImportFromMessageModal`; migrate them as they are touched. `ResultsDialog` (`useResultsForm`) is the reference for a form with a field array.
+Every new form, and every existing form you substantially change, uses **react-hook-form + a zod schema + shadcn `Field`**. Don't validate with `useState`, hand-written `validate()` functions or `FieldErrors` objects. References: `ResetPasswordForm` + `useResetPasswordForm` (`schemas/auth.ts`, client-only confirmation with `.refine`), `CreateSessionDialog` (`schemas/daily.ts`, zod input/output types for a nullable date) and `EditProfileModal` (`schemas/user.ts`, `schemas/upload.ts`). Still on `useState`: `AuthPage`, `CreatePeladaModal`, `EditPeladaModal`, `FinalizeModal`, `ImportFromMessageModal`; migrate them as they are touched. `ResultsDialog` (`useResultsForm`) is the reference for a form with a field array.
 
 Rules:
 

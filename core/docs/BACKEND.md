@@ -39,9 +39,10 @@ CI (`.github/workflows/ci-backend.yml`) runs `./mvnw -B verify` (every test, inc
 |--------|------|-------|
 | secret | `VPS_SSH_KEY`, `VPS_SSH_KNOWN_HOSTS` | deploy key; `ssh-keyscan -H <ip>` (falls back to keyscan when empty) |
 | secret | `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, `JWT_SECRET` | required |
+| secret | `RESEND_API_KEY` | optional for now; without it the API sends no e-mails (the deploy warns) |
 | secret | `PG_DUMP_URL` | optional; libpq URL on the Supabase session pooler (5432) for the pre-migration backup |
 | variable | `VPS_IP`, `APP_URL` | required |
-| variable | `VPS_USER` (`root`), `API_URL` (baked in as `VITE_API_URL`, defaults to `APP_URL`; production is `https://futspring.luisgosampaio.com/api` because nginx's `location /api/` strips the prefix before proxying to `:8081`), `ALLOWED_ORIGINS` (defaults to `APP_URL`), `API_PORT` (`8081`), `JWT_EXPIRATION_MS` | optional |
+| variable | `VPS_USER` (`root`), `API_URL` (baked in as `VITE_API_URL`, defaults to `APP_URL`; production is `https://futspring.luisgosampaio.com/api` because nginx's `location /api/` strips the prefix before proxying to `:8081`), `ALLOWED_ORIGINS` (defaults to `APP_URL`), `API_PORT` (`8081`), `JWT_EXPIRATION_MS`, `MAIL_FROM` (defaults to `Futspring <no-reply@futspring.luisgosampaio.com>`) | optional |
 
 ## Configuration & environment
 
@@ -55,7 +56,12 @@ There is a single `src/main/resources/application.properties`; there are no `app
 | `JWT_EXPIRATION_MS` | access token TTL | `604800000` (7 days) |
 | `DDL_AUTO` | `spring.jpa.hibernate.ddl-auto`; leave unset (the schema is owned by Flyway) | `validate` |
 | `ALLOWED_ORIGINS` | allowed browser origins, comma-separated; used by HTTP CORS (Spring Security `http.cors`) and the STOMP endpoint (`app.cors.allowed-origins`, `CorsConfig`) | `http://localhost:5173` |
+| `APP_URL` | frontend base URL (`app.frontend-url`), used to build links sent by e-mail | `http://localhost:5173` |
+| `RESEND_API_KEY` | Resend API key (`app.mail.resend-api-key`); empty means no e-mail is sent | — |
+| `MAIL_FROM` | sender (`app.mail.from`), must belong to the domain verified in Resend (`futspring.luisgosampaio.com`) | `Futspring <no-reply@futspring.luisgosampaio.com>` |
 | `SPRING_PROFILES_ACTIVE` | `dev` runs the seed (`docker-compose.dev.yml`), `prod` in production | — |
+
+Locally, `docker-compose.dev.yml` passes `RESEND_API_KEY`, `MAIL_FROM` and `APP_URL` from `core/.env` (gitignored, next to the compose file). Compose only uses `.env` to fill `${…}` in the file, so a new variable reaches the container only when it is listed under `environment`.
 
 - Uploads go to `app.uploads.dir=/app/uploads` (container path; override it when running outside Docker). Multipart limit is 10 MB, but `FileUploadService` enforces 5 MB.
 - `server.forward-headers-strategy=framework`: behind nginx, `getRemoteAddr()` is the client IP (rate limiting). The API only listens on `127.0.0.1`.
@@ -71,7 +77,7 @@ Features live under `domain/`, one package per domain (`domain/daily`, `domain/p
 
 ```
 com.futspring.backend
-├── FutSpringApplication        main class, @EnableScheduling
+├── FutSpringApplication        main class, @EnableScheduling, @EnableAsync (e-mails)
 ├── shared/
 │   ├── config/                 SecurityConfig (filter chain, BCrypt), CorsConfig (ALLOWED_ORIGINS + CorsConfigurationSource, used by
 │   │                           SecurityConfig and WebSocketConfig), JwtConfig (@Value secret + TTL), WebSocketConfig (STOMP /ws, SockJS,
@@ -82,9 +88,14 @@ com.futspring.backend
 │   └── entity/EntityIdentity   id-based equals/hashCode for every entity, safe with Hibernate proxies
 ├── domain/                   one package per feature
 │   ├── auth/                       AuthController, AuthService (register / login, issues JWT), JwtService (generate / validate / extract),
-│   │   │                           JwtAuthFilter (Bearer → email principal), AuthRateLimitFilter (10/min per IP on login and register,
-│   │   │                           Bucket4j + Caffeine), JwtChannelInterceptor (authenticates STOMP CONNECT/SUBSCRIBE/SEND)
-│   │   └── dto/                    LoginRequestDTO, RegisterRequestDTO, AuthResponseDTO, UserResponseDTO
+│   │   │                           JwtAuthFilter (Bearer → email principal), AccessTokenVerifier (signature + user's current tokenVersion),
+│   │   │                           AuthRateLimitFilter (10/min per IP on every POST /auth route,
+│   │   │                           Bucket4j + Caffeine), JwtChannelInterceptor (authenticates STOMP CONNECT/SUBSCRIBE/SEND),
+│   │   │                           PasswordResetService (forgot / reset password), PasswordResetToken + repository, ResetTokens
+│   │   │                           (random token + SHA-256), PasswordResetEmailListener (sends the e-mail after commit, @Async),
+│   │   │                           PasswordResetEmail (fills resources/email/password-reset.html), PasswordResetTokenCleanup (daily purge)
+│   │   └── dto/                    LoginRequestDTO, RegisterRequestDTO, AuthResponseDTO, UserResponseDTO,
+│   │                               ForgotPasswordRequestDTO, ResetPasswordRequestDTO
 │   ├── user/                       UserController, UserService (profile get/update, avatar, background image), User, UserRepository
 │   │   └── dto/                    ProfileDTO, PublicUserDTO, UpdateProfileRequest
 │   ├── pelada/                     PeladaController, PeladaService (pelada CRUD, members, admins, user search, image), Pelada, PeladaRepository
@@ -106,6 +117,9 @@ com.futspring.backend
 │   │   └── dto/                    RankingDTO, StatsDTO, PeladaAwardsDTO, PlayerPelada{Stats,History}DTO, UserMatchHistoryDTO, UserStatsTimelineDTO
 │   ├── chat/                       ChatController (STOMP + @MessageExceptionHandler), ChatService (save message, paged history), Message, MessageRepository
 │   │   └── dto/                    MessageDTO, SendMessageRequest
+│   ├── mail/                       EmailSender (interface, takes InlineImage CID attachments), ResendEmailSender (Resend HTTP API through RestClient, 5 s / 10 s
+│   │                               timeouts), NoopEmailSender (no API key: logs recipient + subject only), MailConfig
+│   │                               (picks the sender, exposes app.frontend-url for links)
 │   ├── file/                       FileController (public GET /files/{filename}), FileUploadService (stores/deletes images on local disk,
 │   │                               UUID + extension from the content type, delete after commit)
 └── dev/DataInitializer         dev seed (CommandLineRunner, dev profile only)
@@ -129,7 +143,7 @@ All entities use IDENTITY ids and **LAZY** fetching, Lombok `@Getter @Setter` (n
 
 | Entity | Table | Fields / relations |
 |--------|-------|--------------------|
-| `User` | `users` | `email` (unique), `username` (unique case-insensitively in `AuthService`/`UserService`, not in the DB: production has legacy duplicates, so check with `existsByUsernameIgnoreCase…`, never a single-result find), `password` (BCrypt), `image`, `backgroundImage`, `stars` (default 3), `position` |
+| `User` | `users` | `email` (unique), `username` (unique case-insensitively in `AuthService`/`UserService`, not in the DB: production has legacy duplicates, so check with `existsByUsernameIgnoreCase…`, never a single-result find), `password` (BCrypt), `image`, `backgroundImage`, `stars` (default 3), `position`, `tokenVersion` (default 0, incremented by a password reset to revoke every JWT issued before) |
 | `Pelada` | `peladas` | `name`, `dayOfWeek` (a `java.time.DayOfWeek` name, `MONDAY`..`SUNDAY`, validated on create/update), `timeOfDay`, `duration`, `address`, `reference`, `image`, `autoCreateDailyEnabled`, `numberOfTeams` (2), `playersPerTeam` (5), `createdAt`; `creator` → User; `members` M:N (`pelada_members`); `admins` M:N (`pelada_admins`) |
 | `Daily` | `dailies` | `dailyDate`, `dailyTime`, `status` (`DailyStatus`, default `SCHEDULED`), `isFinished`, `championImage`, `createdAt`; `pelada`; `confirmedPlayers` M:N (`daily_confirmed_players`) |
 | `Team` | `teams` | `name`, `color`; `daily`; `players` M:N (`team_players`) |
@@ -140,6 +154,7 @@ All entities use IDENTITY ids and **LAZY** fetching, Lombok `@Getter @Setter` (n
 | `DailyAward` | `daily_awards` | `daily` (unique); `puskasWinners`, `wiltballWinners`, `artilheiroWinners`, `garcomWinners` (M:N `daily_award_*`) |
 | `Ranking` | `rankings` (unique `pelada_id`+`user_id`) | `goals`, `assists`, `matchesPlayed`, `wins`; `pelada`, `user` |
 | `Stats` | `stats` | `goals`, `assists`, `matchesPlayed`, `wins`, `sessionsPlayed`, `matchWins`, `puskasDates` (`stats_puskas_dates`); `user` (1:1) |
+| `PasswordResetToken` | `password_reset_tokens` | `tokenHash` (SHA-256 hex of the token sent by e-mail, unique), `expiresAt` (30 min), `usedAt`, `createdAt`; `user`. Usable while `usedAt` is null and `expiresAt` is in the future |
 | `Message` | `messages` | `content` (≤ 500), `sentAt`; `pelada`, `sender` |
 
 There are no JPA cascades: deletes are explicit in the services (`DailyService.deleteDailyData`, `PeladaService.deletePelada`).
@@ -170,6 +185,8 @@ New status-like fields must be Java enums stored with `@Enumerated(EnumType.STRI
 | V3 | Indexes every FK and lookup column (`pelada_id`, `daily_id`, `user_id`, `team_id`, `match_id`, award join tables, `messages(pelada_id, sent_at)`); non-destructive |
 | V4 | Drops the production-only legacy columns `daily_awards.puskas_winner_id` / `wiltball_winner_id`; aborts if any row has a value (destructive: back up first) |
 | V5 | Converts Portuguese `peladas.day_of_week` values (`Segunda`, `Sabado`…) to `MONDAY`..`SUNDAY`; unknown values are left as they are |
+| V6 | Creates `password_reset_tokens` (FK to `users` with `ON DELETE CASCADE`, index on `user_id`); non-destructive |
+| V7 | Adds `users.token_version` (`INTEGER NOT NULL DEFAULT 0`); existing sessions stay valid; non-destructive |
 
 ### Migration rules
 
@@ -189,15 +206,15 @@ New status-like fields must be Java enums stored with `@Enumerated(EnumType.STRI
 
 - CSRF disabled, stateless sessions, JSON 401 entry point.
 - Public: `/api/v1/auth/**`, `/api/v1/files/**`, `/ws/**` (the STOMP layer authenticates itself, see WebSocket). Everything else requires a valid token.
-- `JwtAuthFilter` runs before `UsernamePasswordAuthenticationFilter`. An invalid/expired Bearer token returns 401 on **any** path, including the public ones.
+- `JwtAuthFilter` runs before `UsernamePasswordAuthenticationFilter`. It accepts a Bearer token only through `AccessTokenVerifier`: valid signature, not expired, the user still exists and the `ver` claim equals `users.token_version` (one indexed query per authenticated request). Otherwise it returns 401 on **any** path, including the public ones.
 - No roles: authorities are always empty, there is no `@PreAuthorize`/`@EnableMethodSecurity`. **All authorization is done in services** (see [Ownership](#ownership--authorization)).
 - Passwords: BCrypt (strength 10).
 
 ### Tokens (`S/domain/auth/JwtService.java`)
 
-- HS256 JWT, claims `sub` = email, `userId`, `email`, `iat`, `exp`; TTL 7 days by default.
+- HS256 JWT, claims `sub` = email, `userId`, `email`, `ver` (the user's `tokenVersion`; tokens without it count as 0), `iat`, `exp`; TTL 7 days by default.
 - Returned in the body (`AuthResponseDTO {token, user}`); the frontend keeps it in `localStorage`.
-- No refresh token and no revocation. The filter does not check that the user still exists.
+- No refresh token. Revocation is per user: incrementing `User.tokenVersion` (done by a password reset) invalidates every token issued before; a deleted user's tokens stop working too. There is no per-session logout on the server.
 
 ### CORS
 
@@ -206,14 +223,23 @@ New status-like fields must be Java enums stored with `@Enumerated(EnumType.STRI
 
 ### Rate limiting
 
-`AuthRateLimitFilter` (in the security chain): 10 requests per minute per client IP on `POST /api/v1/auth/login` and `POST /api/v1/auth/register`, answering 429 with the usual error body. Buckets live in a Caffeine cache (max 100k entries, evicted 10 min after the last access). The IP is `getRemoteAddr()`, which reflects `X-Forwarded-For` because of `server.forward-headers-strategy=framework`. In memory: one API instance only. New rate limits go into a filter like this one.
+`AuthRateLimitFilter` (in the security chain): 10 requests per minute per client IP on each of `POST /api/v1/auth/login`, `/register`, `/forgot-password` and `/reset-password`, answering 429 with the usual error body. Buckets live in a Caffeine cache (max 100k entries, evicted 10 min after the last access). The IP is `getRemoteAddr()`, which reflects `X-Forwarded-For` because of `server.forward-headers-strategy=framework`. In memory: one API instance only. New rate limits go into a filter like this one.
 
 ### WebSocket (`S/domain/auth/JwtChannelInterceptor.java`)
 
-- `CONNECT` needs `Authorization: Bearer <token>` in the STOMP headers; without a valid token the frame is rejected.
+- `CONNECT` needs `Authorization: Bearer <token>` in the STOMP headers, checked by `AccessTokenVerifier` like HTTP; otherwise the frame is rejected. A chat connection opened before a revocation stays open until it disconnects (SEND/SUBSCRIBE only check the session's principal).
 - `SUBSCRIBE` is allowed only to `/topic/pelada/{id}` when the user is a member of that pelada (`existsByIdAndMembers_Email`), and to the user's own `/user/queue/errors`. Any other destination is rejected.
 - `SEND` needs an authenticated session and a destination under `/app/`; a frame sent straight to a broker prefix (`/topic`, `/queue`, `/user`) is rejected, so every message goes through `ChatController` → `ChatService`.
 - Clients send to `/app/pelada/{peladaId}/send` (`SendMessageRequest {content}`); the server broadcasts `MessageDTO` to `/topic/pelada/{peladaId}`. Errors (`AppException` from `ChatService`) go back to the sender on `/user/queue/errors` as `{status, message, timestamp}`.
+
+### Password reset
+
+- `POST /auth/forgot-password` always answers 204 and does the same work whether or not the e-mail has an account (no user enumeration). For an existing user it invalidates the pending tokens, stores the SHA-256 of a new 256-bit token (30 min) and publishes `PasswordResetRequestedEvent`; at most one e-mail per user per minute.
+- The e-mail is `src/main/resources/email/password-reset.html` (table layout + inline styles + Outlook conditionals, adapted from a Stripo template; placeholders `{{appUrl}}`, `{{link}}`, `{{ttlMinutes}}`, `{{username}}`, the username HTML-escaped). The logo (`resources/email/futspring-logo.png`, 160 px) travels inside the e-mail as a Resend inline attachment (`InlineImage`, `content_id` → `<img src="cid:futspring-logo">`), so it shows locally too and doesn't depend on the web app being deployed.
+- `PasswordResetEmailListener` sends the e-mail with Resend **after the commit** and on another thread (`@Async @TransactionalEventListener`), with the link `${app.frontend-url}/reset-password?token=…`. A Resend failure is only logged (Spring's async handler); the user asks again.
+- `POST /auth/reset-password` finds the token by hash with a row lock (unused, not expired), sets the new BCrypt password and marks every pending token of the user as used. Any invalid token answers 400 "Link inválido ou expirado. Peça um novo.".
+- The reset increments `User.tokenVersion`, so every session opened before (other browsers, a stolen token) gets 401 on its next request and the frontend sends it to `/auth`.
+- `PasswordResetTokenCleanup` deletes tokens expired or used more than a day ago, daily at 04:00.
 
 ### Uploads
 
@@ -273,7 +299,7 @@ Relationships: **creator** (`pelada.creator`), **admin** (`pelada.admins`), **me
 | Gap | Where |
 |-----|-------|
 | No unique constraint on `user_daily_stats(daily_id, user_id)` / `player_match_stats(match_id, user_id)` (the code never writes duplicates, but the database doesn't enforce it). Check production for duplicates before adding them | `V1__baseline.sql` |
-| The JWT is valid for 7 days with no revocation, and the filter doesn't check that the user still exists | `JwtAuthFilter`, `JwtService` |
+| The JWT is valid for 7 days and can only be revoked for all of a user's sessions at once (`tokenVersion`); an open chat connection survives the revocation until it reconnects | `JwtAuthFilter`, `JwtService` |
 
 ## Error handling (`S/shared/exception/GlobalExceptionHandler.java`)
 
@@ -303,6 +329,8 @@ All routes are under `/api/v1`. "Auth" is the relationship checked (see the matr
 |--------|------|------|----------|
 | POST | `/auth/register` | `RegisterRequestDTO` | 201 `AuthResponseDTO {token, user}` |
 | POST | `/auth/login` | `LoginRequestDTO` | 200 `AuthResponseDTO`; 429 after 10/min per IP |
+| POST | `/auth/forgot-password` | `ForgotPasswordRequestDTO {email}` | 204 always (also for unknown e-mails); sends the reset e-mail when the account exists |
+| POST | `/auth/reset-password` | `ResetPasswordRequestDTO {token, newPassword ≥ 8}` | 204; 400 when the token is unknown, used or expired |
 
 ### Files (`FileController`)
 | Method | Path | Auth | Response |
