@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { useNavigate, useSearchParams, useLocation } from "react-router-dom"
+import { Link, useNavigate, useSearchParams, useLocation } from "react-router-dom"
 import { toast } from "sonner"
 import { getErrorMessage } from "@/lib/errors"
 import { registerUser, loginUser } from "@/api/auth"
@@ -11,6 +11,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Separator } from "@/components/ui/separator"
+import { AuthLayout } from "@/components/auth/AuthLayout"
 
 type Tab = "login" | "register"
 
@@ -114,21 +115,7 @@ export default function AuthPage() {
   }
 
   return (
-    <div className="page-enter flex min-h-screen bg-background">
-      {/* Left — form */}
-      <div className="flex flex-1 flex-col px-8 py-8">
-        <div
-          className="flex items-center gap-2 cursor-pointer"
-          onClick={() => navigate("/")}
-        >
-          <img
-            src="/gerrard.png"
-            alt="Gerrard"
-            className="w-8 h-8 rounded-full object-cover shadow"
-          />
-          <span className="text-xl font-bold text-gradient-primary">Futspring</span>
-        </div>
-        <div className="flex flex-1 flex-col items-center justify-center gap-6">
+    <AuthLayout>
         <Card className="w-full max-w-md border-0 shadow-none">
           <CardHeader className="text-center">
             <CardTitle>
@@ -161,7 +148,12 @@ export default function AuthPage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="login-password">Senha</Label>
+                    <div className="flex items-center justify-between gap-2">
+                      <Label htmlFor="login-password">Senha</Label>
+                      <Button asChild variant="link" className="h-auto p-0 text-sm text-muted-foreground hover:text-primary">
+                        <Link to="/forgot-password">Esqueceu a senha?</Link>
+                      </Button>
+                    </div>
                     <Input
                       id="login-password"
                       type="password"
@@ -303,19 +295,7 @@ export default function AuthPage() {
             </Tabs>
           </CardContent>
         </Card>
-
-        </div>
-      </div>
-
-      {/* Right — image */}
-      <div className="hidden lg:block flex-1 relative overflow-hidden">
-        <img
-          src="/pele.jpg"
-          alt="FutSpring"
-          className="absolute inset-0 w-full h-full object-cover"
-        />
-      </div>
-    </div>
+    </AuthLayout>
   )
 }
 

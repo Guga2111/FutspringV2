@@ -36,7 +36,7 @@ public class AuthService {
                 .build();
 
         User saved = userRepository.save(user);
-        String token = jwtService.generateToken(saved.getId(), saved.getEmail());
+        String token = jwtService.generateToken(saved.getId(), saved.getEmail(), saved.getTokenVersion());
         return new AuthResponseDTO(token, UserResponseDTO.from(saved));
     }
 
@@ -48,7 +48,7 @@ public class AuthService {
             throw new AppException(HttpStatus.UNAUTHORIZED, "E-mail ou senha inválidos");
         }
 
-        String token = jwtService.generateToken(user.getId(), user.getEmail());
+        String token = jwtService.generateToken(user.getId(), user.getEmail(), user.getTokenVersion());
         return new AuthResponseDTO(token, UserResponseDTO.from(user));
     }
 }

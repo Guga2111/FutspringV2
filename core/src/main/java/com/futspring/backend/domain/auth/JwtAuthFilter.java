@@ -17,12 +17,13 @@ import java.time.Instant;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 @Component
 @RequiredArgsConstructor
 public class JwtAuthFilter extends OncePerRequestFilter {
 
-    private final JwtService jwtService;
+    private final AccessTokenVerifier tokenVerifier;
     private final ObjectMapper objectMapper;
 
     @Override
@@ -36,16 +37,15 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             return;
         }
 
-        String token = authHeader.substring(7);
-
-        if (!jwtService.isTokenValid(token)) {
-            writeUnauthorizedResponse(response, "Token inválido ou expirado");
+        // Empty for a bad/expired signature, a deleted user or a token revoked by a password reset
+        Optional<String> email = tokenVerifier.verify(authHeader.substring(7));
+        if (email.isEmpty()) {
+            writeUnauthorizedResponse(response, "Sessão inválida ou expirada. Entre novamente.");
             return;
         }
 
-        String email = jwtService.extractEmail(token);
         UsernamePasswordAuthenticationToken authToken =
-                new UsernamePasswordAuthenticationToken(email, null, Collections.emptyList());
+                new UsernamePasswordAuthenticationToken(email.get(), null, Collections.emptyList());
         authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
         SecurityContextHolder.getContext().setAuthentication(authToken);
 

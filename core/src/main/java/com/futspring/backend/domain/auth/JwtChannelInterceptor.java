@@ -19,7 +19,8 @@ import java.util.regex.Pattern;
 
 /**
  * Authenticates and authorizes STOMP frames:
- * CONNECT needs a valid Bearer token; SUBSCRIBE is only allowed to /topic/pelada/{id} for members of that
+ * CONNECT needs a Bearer token that opens a session (AccessTokenVerifier); a session already connected
+ * when the token is revoked stays open until it disconnects; SUBSCRIBE is only allowed to /topic/pelada/{id} for members of that
  * pelada and to the user's own error queue; SEND needs an authenticated session and an /app destination
  * (a SEND straight to /topic or /queue would reach the broker's subscribers without going through ChatService).
  */
@@ -31,7 +32,7 @@ public class JwtChannelInterceptor implements ChannelInterceptor {
     private static final String APP_PREFIX = "/app/";
     private static final Pattern PELADA_TOPIC = Pattern.compile("^/topic/pelada/(\\d+)$");
 
-    private final JwtService jwtService;
+    private final AccessTokenVerifier tokenVerifier;
     private final PeladaRepository peladaRepository;
 
     @Override
@@ -55,12 +56,9 @@ public class JwtChannelInterceptor implements ChannelInterceptor {
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             throw new MessageDeliveryException("Token ausente");
         }
-        String token = authHeader.substring(7);
-        if (!jwtService.isTokenValid(token)) {
-            throw new MessageDeliveryException("Token inválido ou expirado");
-        }
-        accessor.setUser(new UsernamePasswordAuthenticationToken(
-                jwtService.extractEmail(token), null, Collections.emptyList()));
+        String email = tokenVerifier.verify(authHeader.substring(7))
+                .orElseThrow(() -> new MessageDeliveryException("Sessão inválida ou expirada"));
+        accessor.setUser(new UsernamePasswordAuthenticationToken(email, null, Collections.emptyList()));
     }
 
     private void authorizeSubscribe(StompHeaderAccessor accessor) {

@@ -15,6 +15,7 @@ import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 
 import java.util.List;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -23,7 +24,7 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class JwtChannelInterceptorTest {
 
-    @Mock JwtService jwtService;
+    @Mock AccessTokenVerifier tokenVerifier;
     @Mock PeladaRepository peladaRepository;
     @Mock MessageChannel channel;
 
@@ -31,7 +32,7 @@ class JwtChannelInterceptorTest {
 
     @BeforeEach
     void setUp() {
-        interceptor = new JwtChannelInterceptor(jwtService, peladaRepository);
+        interceptor = new JwtChannelInterceptor(tokenVerifier, peladaRepository);
     }
 
     @Test
@@ -42,7 +43,7 @@ class JwtChannelInterceptorTest {
 
     @Test
     void connect_withInvalidToken_isRejected() {
-        when(jwtService.isTokenValid("bad")).thenReturn(false);
+        when(tokenVerifier.verify("bad")).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> interceptor.preSend(frame(StompCommand.CONNECT, "Bearer bad", null, null), channel))
                 .isInstanceOf(MessageDeliveryException.class);
@@ -50,8 +51,7 @@ class JwtChannelInterceptorTest {
 
     @Test
     void connect_withValidToken_setsUser() {
-        when(jwtService.isTokenValid("good")).thenReturn(true);
-        when(jwtService.extractEmail("good")).thenReturn("member@example.com");
+        when(tokenVerifier.verify("good")).thenReturn(Optional.of("member@example.com"));
 
         Message<?> result = interceptor.preSend(frame(StompCommand.CONNECT, "Bearer good", null, null), channel);
 

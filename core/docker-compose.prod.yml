@@ -18,6 +18,9 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS:-604800000}
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}
+      APP_URL: ${APP_URL}
+      RESEND_API_KEY: ${RESEND_API_KEY}
+      MAIL_FROM: ${MAIL_FROM}
       # DDL_AUTO is intentionally absent: Flyway owns the schema, Hibernate validates it
     volumes:
       - /opt/futspring-uploads:/app/uploads

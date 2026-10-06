@@ -38,6 +38,11 @@ public class User {
 
     private String position;
 
+    // Incremented to revoke every JWT issued before (password reset); see AccessTokenVerifier
+    @Column(name = "token_version", nullable = false)
+    @Builder.Default
+    private int tokenVersion = 0;
+
     @Override
     public boolean equals(Object o) {
         return o instanceof User other && EntityIdentity.sameEntity(this, o, getId(), other.getId());
