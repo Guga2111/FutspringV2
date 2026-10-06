@@ -22,7 +22,8 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * 10 requests per minute per client IP on POST /api/v1/auth/login and /register.
+ * 10 requests per minute per client IP on each POST /api/v1/auth/ route (login, register, forgot-password,
+ * reset-password).
  * Buckets live in a bounded, expiring Caffeine cache. The client IP comes from getRemoteAddr(), which
  * reflects X-Forwarded-For because server.forward-headers-strategy=framework (the API only listens on
  * 127.0.0.1 behind nginx). In-memory: one API instance only.
@@ -32,7 +33,9 @@ import java.util.Set;
 public class AuthRateLimitFilter extends OncePerRequestFilter {
 
     static final int REQUESTS_PER_MINUTE = 10;
-    private static final Set<String> LIMITED_PATHS = Set.of("/api/v1/auth/login", "/api/v1/auth/register");
+    private static final Set<String> LIMITED_PATHS = Set.of(
+            "/api/v1/auth/login", "/api/v1/auth/register",
+            "/api/v1/auth/forgot-password", "/api/v1/auth/reset-password");
 
     private final ObjectMapper objectMapper;
 
