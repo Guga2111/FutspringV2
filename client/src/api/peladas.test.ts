@@ -5,7 +5,7 @@ vi.mock('./client', () => ({
 }))
 
 import apiClient from './client'
-import { uploadPeladaImage, searchUsers } from './peladas'
+import { uploadPeladaImage, searchUsers, getPeladaAttendance } from './peladas'
 
 const mockPost = vi.mocked(apiClient.post)
 
@@ -43,5 +43,16 @@ describe('searchUsers', () => {
     await searchUsers('leal')
 
     expect(mockGet).toHaveBeenCalledWith('/api/v1/users/search', { params: { q: 'leal' } })
+  })
+})
+
+describe('getPeladaAttendance', () => {
+  it('requests the pelada attendance ranking', async () => {
+    const mockGet = vi.mocked(apiClient.get)
+    mockGet.mockResolvedValue({ data: { totalSessions: 0, rows: [] } })
+
+    await getPeladaAttendance(7)
+
+    expect(mockGet).toHaveBeenCalledWith('/api/v1/peladas/7/attendance')
   })
 })

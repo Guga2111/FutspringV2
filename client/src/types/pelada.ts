@@ -84,6 +84,23 @@ export interface PlayerPeladaHistoryDTO {
   rows: PlayerPeladaHistoryRow[]
 }
 
+export interface PeladaAttendanceRow {
+  userId: number
+  username: string
+  userImage: string | null
+  sessionsAttended: number
+  // sessionsAttended / totalSessions (0–1), 0 when there are no sessions
+  rate: number
+}
+
+// mirrors PeladaAttendanceDTO (last 6 months, rows best rate first)
+export interface PeladaAttendanceDTO {
+  from: string
+  to: string
+  totalSessions: number
+  rows: PeladaAttendanceRow[]
+}
+
 export interface PlayerPeladaStatsDTO {
   userId: number
   goals: number

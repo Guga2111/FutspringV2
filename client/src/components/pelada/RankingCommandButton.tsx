@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Users, CalendarPlus, UserPlus, UserMinus, Home, User, History } from "lucide-react";
+import { Users, CalendarPlus, CalendarCheck, UserPlus, UserMinus, Home, User, History } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,6 +15,7 @@ import {
 
 const isMac = navigator.platform.toUpperCase().includes("MAC");
 const mod = isMac ? "⌘" : "Ctrl";
+import { AttendanceRankingDialog } from "./AttendanceRankingDialog";
 import { ComparePlayersDialog } from "./ComparePlayersDialog";
 import { RemovePlayerDialog } from "./RemovePlayerDialog";
 import type { PeladaMember } from "@/types/pelada";
@@ -42,6 +43,7 @@ export function RankingCommandButton({
   const [popoverOpen, setPopoverOpen] = useState(false);
   const [compareOpen, setCompareOpen] = useState(false);
   const [removeOpen, setRemoveOpen] = useState(false);
+  const [attendanceOpen, setAttendanceOpen] = useState(false);
 
   const run = (fn: () => void) => {
     setPopoverOpen(false);
@@ -71,6 +73,10 @@ export function RankingCommandButton({
         case "i":
           e.preventDefault();
           run(onOpenHistory);
+          break;
+        case "p":
+          e.preventDefault();
+          run(() => setAttendanceOpen(true));
           break;
         case "a":
           if (isAdmin && onAddPlayer) { e.preventDefault(); run(onAddPlayer); }
@@ -117,6 +123,11 @@ export function RankingCommandButton({
               <History />
               Histórico do Jogador
               <CommandShortcut>{mod}I</CommandShortcut>
+            </CommandItem>
+            <CommandItem onSelect={() => run(() => setAttendanceOpen(true))}>
+              <CalendarCheck />
+              Ranking de Presença
+              <CommandShortcut>{mod}P</CommandShortcut>
             </CommandItem>
             {isAdmin && onAddPlayer && (
               <CommandItem onSelect={() => run(onAddPlayer)}>
@@ -185,6 +196,12 @@ export function RankingCommandButton({
           }}
         />
       )}
+
+      <AttendanceRankingDialog
+        open={attendanceOpen}
+        onOpenChange={setAttendanceOpen}
+        peladaId={peladaId}
+      />
 
       <ComparePlayersDialog
         open={compareOpen}
