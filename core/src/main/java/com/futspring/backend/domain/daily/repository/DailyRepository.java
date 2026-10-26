@@ -19,6 +19,11 @@ public interface DailyRepository extends JpaRepository<Daily, Long> {
 
     List<Daily> findByPelada(Pelada pelada);
 
+    // Sessions of the pelada with `status` dated in [from, to] (attendance ranking denominator)
+    @Query("SELECT COUNT(d) FROM Daily d WHERE d.pelada.id = :peladaId AND d.status = :status AND d.dailyDate BETWEEN :from AND :to")
+    long countByPeladaAndStatusInRange(@Param("peladaId") Long peladaId, @Param("status") DailyStatus status,
+                                       @Param("from") LocalDate from, @Param("to") LocalDate to);
+
     // [dailyId, confirmedPlayerCount] in one query
     @Query("SELECT d.id, SIZE(d.confirmedPlayers) FROM Daily d WHERE d.id IN :ids")
     List<Object[]> countConfirmedByIds(@Param("ids") Collection<Long> ids);

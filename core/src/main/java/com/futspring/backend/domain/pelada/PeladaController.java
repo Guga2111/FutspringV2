@@ -8,8 +8,10 @@ import com.futspring.backend.domain.pelada.dto.PeladaDetailResponseDTO;
 import com.futspring.backend.domain.pelada.dto.PeladaResponseDTO;
 import com.futspring.backend.domain.pelada.dto.SetAdminRequestDTO;
 import com.futspring.backend.domain.pelada.dto.UpdatePeladaRequestDTO;
+import com.futspring.backend.domain.stats.AttendanceService;
 import com.futspring.backend.domain.stats.AwardsService;
 import com.futspring.backend.domain.stats.RankingService;
+import com.futspring.backend.domain.stats.dto.PeladaAttendanceDTO;
 import com.futspring.backend.domain.stats.dto.PeladaAwardsDTO;
 import com.futspring.backend.domain.stats.dto.PlayerPeladaHistoryDTO;
 import com.futspring.backend.domain.stats.dto.PlayerPeladaStatsDTO;
@@ -33,6 +35,7 @@ public class PeladaController {
     private final RankingService rankingService;
     private final ChatService chatService;
     private final AwardsService awardsService;
+    private final AttendanceService attendanceService;
 
     @PostMapping
     public ResponseEntity<PeladaResponseDTO> createPelada(
@@ -129,6 +132,14 @@ public class PeladaController {
             @AuthenticationPrincipal String email
     ) {
         return ResponseEntity.ok(rankingService.getPlayerPeladaHistory(id, userId, limit, email));
+    }
+
+    @GetMapping("/{id}/attendance")
+    public ResponseEntity<PeladaAttendanceDTO> getAttendanceRanking(
+            @PathVariable Long id,
+            @AuthenticationPrincipal String email
+    ) {
+        return ResponseEntity.ok(attendanceService.getAttendanceRanking(id, email));
     }
 
     @GetMapping("/{id}/awards")

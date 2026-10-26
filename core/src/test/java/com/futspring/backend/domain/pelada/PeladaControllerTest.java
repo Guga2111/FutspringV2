@@ -250,6 +250,32 @@ class PeladaControllerTest extends BaseIntegrationTest {
                 .andExpect(status().isNotFound());
     }
 
+    // --- GET /api/v1/peladas/{id}/attendance ---
+
+    @Test
+    void getAttendanceRanking_asMember() throws Exception {
+        mockMvc.perform(get("/api/v1/peladas/" + pelada.getId() + "/attendance")
+                .header("Authorization", bearerToken(member.getId(), member.getEmail())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalSessions").value(0))
+                .andExpect(jsonPath("$.from").value(LocalDate.now().minusMonths(6).toString()))
+                .andExpect(jsonPath("$.rows.length()").value(2));
+    }
+
+    @Test
+    void getAttendanceRanking_asOutsider() throws Exception {
+        mockMvc.perform(get("/api/v1/peladas/" + pelada.getId() + "/attendance")
+                .header("Authorization", bearerToken(outsider.getId(), outsider.getEmail())))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void getAttendanceRanking_unknownPelada() throws Exception {
+        mockMvc.perform(get("/api/v1/peladas/999999/attendance")
+                .header("Authorization", bearerToken(member.getId(), member.getEmail())))
+                .andExpect(status().isNotFound());
+    }
+
     // --- GET /api/v1/peladas/{id}/awards ---
 
     @Test

@@ -1,6 +1,7 @@
 package com.futspring.backend.domain.stats.repository;
 
 import com.futspring.backend.domain.daily.entity.Daily;
+import com.futspring.backend.domain.daily.entity.DailyStatus;
 import com.futspring.backend.domain.daily.repository.DailyRepository;
 import com.futspring.backend.domain.pelada.Pelada;
 import com.futspring.backend.domain.pelada.PeladaRepository;
@@ -190,5 +191,41 @@ class UserDailyStatsRepositoryTest {
 
         assertThat(userDailyStatsRepository.aggregateStatsByUsers(List.of(newPlayer))).isEmpty();
         assertThat(userDailyStatsRepository.sumMatchWinsByUserAndPelada(newPlayer, pelada)).isEqualTo(0);
+    }
+
+    // --- Attendance ranking ---
+
+    @Test
+    void countAttendanceByUser_countsOnlyFinishedSessionsOfThePeladaInRange() {
+        User other = userRepository.save(User.builder()
+                .email("other@example.com").username("other").password("hash").build());
+        Pelada otherPelada = peladaRepository.save(Pelada.builder()
+                .name("Outra").dayOfWeek("MONDAY").timeOfDay("20:00").duration(1f)
+                .creator(other).build());
+
+        Daily finishedA = dailyRepository.save(Daily.builder().pelada(pelada).status(DailyStatus.FINISHED)
+                .dailyDate(LocalDate.of(2025, 3, 7)).dailyTime("18:00").build());
+        Daily finishedB = dailyRepository.save(Daily.builder().pelada(pelada).status(DailyStatus.FINISHED)
+                .dailyDate(LocalDate.of(2025, 3, 14)).dailyTime("18:00").build());
+        Daily inCourse = dailyRepository.save(Daily.builder().pelada(pelada).status(DailyStatus.IN_COURSE)
+                .dailyDate(LocalDate.of(2025, 3, 21)).dailyTime("18:00").build());
+        Daily outOfRange = dailyRepository.save(Daily.builder().pelada(pelada).status(DailyStatus.FINISHED)
+                .dailyDate(LocalDate.of(2024, 12, 27)).dailyTime("18:00").build());
+        Daily otherPeladaDaily = dailyRepository.save(Daily.builder().pelada(otherPelada).status(DailyStatus.FINISHED)
+                .dailyDate(LocalDate.of(2025, 3, 10)).dailyTime("20:00").build());
+
+        for (Daily d : List.of(finishedA, finishedB, inCourse, outOfRange, otherPeladaDaily)) {
+            userDailyStatsRepository.save(UserDailyStats.builder().daily(d).user(player).build());
+        }
+        userDailyStatsRepository.save(UserDailyStats.builder().daily(finishedA).user(other).build());
+
+        List<Object[]> rows = userDailyStatsRepository.countAttendanceByUser(
+                pelada.getId(), DailyStatus.FINISHED, LocalDate.of(2025, 1, 1), LocalDate.of(2025, 3, 31));
+
+        assertThat(rows).extracting(r -> r[0], r -> ((Number) r[1]).longValue())
+                .containsExactlyInAnyOrder(tuple(player.getId(), 2L), tuple(other.getId(), 1L));
+        assertThat(dailyRepository.countByPeladaAndStatusInRange(
+                pelada.getId(), DailyStatus.FINISHED, LocalDate.of(2025, 1, 1), LocalDate.of(2025, 3, 31)))
+                .isEqualTo(2);
     }
 }
