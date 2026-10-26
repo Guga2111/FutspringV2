@@ -110,11 +110,11 @@ com.futspring.backend
 │   │   ├── entity/                 Daily, DailyStatus, Team, Match, PlayerMatchStat, LeagueTableEntry
 │   │   ├── repository/             Daily, Team, Match, PlayerMatchStat, LeagueTableEntry repositories
 │   │   └── dto/                    DailyDetailDTO, DailyListItemDTO, MatchResultDTO, Finalize/Populate/Swap/Update* request DTOs
-│   ├── stats/                      RankingService, AwardsService, StatsService (read-side aggregates),
+│   ├── stats/                      RankingService, AwardsService, StatsService, AttendanceService (read-side aggregates; attendance ranking of the last 6 months),
 │   │   │                           AggregateRebuildService (rebuilds Ranking per pelada and global Stats for a set of players, batch queries)
 │   │   ├── entity/                 Ranking, Stats, UserDailyStats, DailyAward
 │   │   ├── repository/             Ranking, Stats, UserDailyStats, DailyAward repositories (grouped/native aggregate queries)
-│   │   └── dto/                    RankingDTO, StatsDTO, PeladaAwardsDTO, PlayerPelada{Stats,History}DTO, UserMatchHistoryDTO, UserStatsTimelineDTO
+│   │   └── dto/                    RankingDTO, StatsDTO, PeladaAwardsDTO, PeladaAttendanceDTO, PlayerPelada{Stats,History}DTO, UserMatchHistoryDTO, UserStatsTimelineDTO
 │   ├── chat/                       ChatController (STOMP + @MessageExceptionHandler), ChatService (save message, paged history), Message, MessageRepository
 │   │   └── dto/                    MessageDTO, SendMessageRequest
 │   ├── mail/                       EmailSender (interface, takes InlineImage CID attachments), ResendEmailSender (Resend HTTP API through RestClient, 5 s / 10 s
@@ -269,7 +269,7 @@ Relationships: **creator** (`pelada.creator`), **admin** (`pelada.admins`), **me
 | Action | Required |
 |--------|----------|
 | Create pelada | any authenticated user (becomes creator, member and admin) |
-| Read pelada detail, dailies, daily detail, ranking, awards, member stats/history, chat history, send chat, subscribe to the chat topic | member (member stats/history: the target user must also be a member, else 404) |
+| Read pelada detail, dailies, daily detail, ranking, attendance ranking, awards, member stats/history, chat history, send chat, subscribe to the chat topic | member (member stats/history: the target user must also be a member, else 404) |
 | Update pelada, upload pelada image, add/remove player, set/unset admin | admin (the creator can't be removed or demoted; remove/set admin need the target to be a member, else 404) |
 | Delete pelada (cascades dailies, results, teams, attendance, messages, rankings; rebuilds global Stats) | creator |
 | Create daily, change status, delete daily, sort/swap teams, submit results, finalize, populate, champion image | admin of the daily's pelada |
@@ -351,6 +351,7 @@ All routes are under `/api/v1`. "Auth" is the relationship checked (see the matr
 | GET | `/peladas/{id}/ranking` | — | member | `List<RankingDTO>` |
 | GET | `/peladas/{id}/members/{userId}/stats` | — | member (404 if `userId` isn't a member) | `PlayerPeladaStatsDTO` |
 | GET | `/peladas/{id}/members/{userId}/history?limit=` | — | member (404 if `userId` isn't a member) | `PlayerPeladaHistoryDTO {userId, totalSessions, rows: [{dailyId, date, goals, assists, matchesPlayed, wins, wonSession}]}`, newest first, one row per finalized session the player took part in. `limit` (optional, 1–100, else 400) returns only the last N sessions; without it every session is returned. `totalSessions` is always the full count (the count query only runs when the page is full) |
+| GET | `/peladas/{id}/attendance` | — | member | `PeladaAttendanceDTO {from, to, totalSessions, rows: [{userId, username, userImage, sessionsAttended, rate}]}`: the last 6 months (`to` = today). `totalSessions` counts the pelada's `FINISHED` dailies in the period; a player attended a session when they have a `UserDailyStats` row in it (was on a team). One row per current member (former members are left out), `rate` = attended / total (0 when there are no sessions), sorted by rate, then attended, then username. Two queries (count + grouped count), no per-member query |
 | GET | `/peladas/{id}/awards` | — | member | `PeladaAwardsDTO` |
 | GET | `/peladas/{id}/messages?page=0&size=50` | — | member | `List<MessageDTO>` (oldest first); `size` is clamped to 1–100, `page` to ≥ 0 |
 | POST | `/peladas/{id}/image` | multipart `file` | admin | `PeladaResponseDTO` |
@@ -392,7 +393,7 @@ When an endpoint or DTO changes, update this table, the frontend `src/api/*` + `
 ## Performance
 
 - **Fetching:** everything is `LAZY`; keep it that way and load what a use case needs with `JOIN FETCH` or `@EntityGraph` (reference: `TeamRepository.findByDailyWithPlayers`, `PlayerMatchStatRepository.findByMatchInWithUser`). Never switch a relation to `EAGER`.
-- **Read models:** `getMyPeladas` / `getSharedPeladas` use grouped member-count and next-session queries; `getDailiesForPelada` a grouped confirmed-count query; `getDailyDetail` fetches teams with players, matches with teams, stats with users and league entries with teams; ranking, chat and profile history use fetch joins; award counts are single grouped native queries (`DailyAwardRepository`). Keep new read paths at a constant number of queries.
+- **Read models:** `getMyPeladas` / `getSharedPeladas` use grouped member-count and next-session queries; `getDailiesForPelada` a grouped confirmed-count query; `getDailyDetail` fetches teams with players, matches with teams, stats with users and league entries with teams; ranking, chat and profile history use fetch joins; the attendance ranking is one count plus one grouped count (`UserDailyStatsRepository.countAttendanceByUser`); award counts are single grouped native queries (`DailyAwardRepository`). Keep new read paths at a constant number of queries.
 - **Membership checks** use exists queries (`PeladaAccessHelper`), never `members.contains`.
 - **Indexes:** every FK and lookup column is indexed (V3); index new ones in the same migration.
 - **Aggregates:** compute in the DB with grouped queries (as finalize does: `aggregateStatsByUsers`), not by looping and querying per user.
