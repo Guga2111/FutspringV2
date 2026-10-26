@@ -1,5 +1,5 @@
 import apiClient from "./client"
-import type { PeladaResponse, PeladaDetail, PeladaAwards, PlayerPeladaHistoryDTO, PlayerPeladaStatsDTO } from "@/types/pelada"
+import type { PeladaResponse, PeladaDetail, PeladaAwards, PeladaAttendanceDTO, PlayerPeladaHistoryDTO, PlayerPeladaStatsDTO } from "@/types/pelada"
 import type { PublicUser } from "@/types/user"
 import type { RankingDTO } from "@/types/daily"
 
@@ -94,5 +94,11 @@ export async function getPlayerPeladaHistory(peladaId: number, userId: number, l
   const r = await apiClient.get<PlayerPeladaHistoryDTO>(`/api/v1/peladas/${peladaId}/members/${userId}/history`, {
     params: limit !== null ? { limit } : undefined,
   })
+  return r.data
+}
+
+// Attendance ranking of the last 6 months (finalized sessions only)
+export async function getPeladaAttendance(peladaId: number): Promise<PeladaAttendanceDTO> {
+  const r = await apiClient.get<PeladaAttendanceDTO>(`/api/v1/peladas/${peladaId}/attendance`)
   return r.data
 }

@@ -1,6 +1,7 @@
 package com.futspring.backend.domain.stats.repository;
 
 import com.futspring.backend.domain.daily.entity.Daily;
+import com.futspring.backend.domain.daily.entity.DailyStatus;
 import com.futspring.backend.domain.pelada.Pelada;
 import com.futspring.backend.domain.stats.entity.UserDailyStats;
 import com.futspring.backend.domain.user.User;
@@ -98,4 +99,14 @@ public interface UserDailyStatsRepository extends JpaRepository<UserDailyStats, 
 
     @Query("SELECT COUNT(uds) FROM UserDailyStats uds WHERE uds.user.id = :userId AND uds.daily.pelada.id = :peladaId")
     long countHistoryByUserAndPelada(@Param("userId") Long userId, @Param("peladaId") Long peladaId);
+
+    // [userId, sessionsAttended] over the pelada's sessions with `status` dated in [from, to], one grouped query
+    @Query("""
+        SELECT uds.user.id, COUNT(uds) FROM UserDailyStats uds
+        WHERE uds.daily.pelada.id = :peladaId AND uds.daily.status = :status
+          AND uds.daily.dailyDate BETWEEN :from AND :to
+        GROUP BY uds.user.id
+        """)
+    List<Object[]> countAttendanceByUser(@Param("peladaId") Long peladaId, @Param("status") DailyStatus status,
+                                         @Param("from") LocalDate from, @Param("to") LocalDate to);
 }
