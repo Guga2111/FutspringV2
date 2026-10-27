@@ -116,6 +116,18 @@ public class DailyService {
     }
 
     /**
+     * Takes a member who left the pelada out of its sessions that haven't started: attendance and sorted teams.
+     * Locked sessions (live, finished, canceled) are history and stay as they are.
+     */
+    public void removeFromUpcomingSessions(Pelada pelada, User user) {
+        Set<DailyStatus> upcoming = EnumSet.complementOf(EnumSet.copyOf(DailyStatus.LOCKED));
+        for (Daily daily : dailyRepository.findByPeladaAndStatusIn(pelada, upcoming)) {
+            dailyAttendanceService.removeAttendee(daily, user);
+            dailyTeamManagementService.removePlayerFromTeams(daily, user);
+        }
+    }
+
+    /**
      * Deletes a daily and everything that hangs from it (results, teams, attendance, bumps, champion image).
      * Returns the players whose Ranking/Stats must be rebuilt; the caller rebuilds them once.
      */

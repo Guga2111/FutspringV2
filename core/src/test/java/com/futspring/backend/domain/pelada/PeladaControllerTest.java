@@ -11,6 +11,8 @@ import com.futspring.backend.domain.daily.entity.DailyStatus;
 import com.futspring.backend.domain.daily.repository.DailyAttendanceBumpRepository;
 import com.futspring.backend.domain.daily.repository.DailyAttendanceRepository;
 import com.futspring.backend.domain.daily.repository.DailyRepository;
+import com.futspring.backend.domain.daily.repository.TeamRepository;
+import com.futspring.backend.domain.daily.entity.Team;
 import com.futspring.backend.domain.pelada.dto.AddPlayerRequestDTO;
 import com.futspring.backend.domain.pelada.dto.CreatePeladaRequestDTO;
 import com.futspring.backend.domain.pelada.dto.SetAdminRequestDTO;
@@ -42,6 +44,7 @@ class PeladaControllerTest extends BaseIntegrationTest {
     @Autowired private PeladaRepository peladaRepository;
     @Autowired private DailyRepository dailyRepository;
     @Autowired private DailyAttendanceRepository attendanceRepository;
+    @Autowired private TeamRepository teamRepository;
     @Autowired private DailyAttendanceBumpRepository bumpRepository;
     @Autowired private MessageRepository messageRepository;
     @Autowired private RankingRepository rankingRepository;
@@ -152,6 +155,30 @@ class PeladaControllerTest extends BaseIntegrationTest {
         mockMvc.perform(delete("/api/v1/peladas/" + pelada.getId() + "/players/" + member.getId())
                 .header("Authorization", bearerToken(admin.getId(), admin.getEmail())))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    void removePlayer_freesTheirSpotInUpcomingSessionsOnly() throws Exception {
+        Daily upcoming = dailyRepository.save(Daily.builder()
+                .pelada(pelada).dailyDate(LocalDate.now().plusDays(7)).dailyTime("18:00").build());
+        Daily live = dailyRepository.save(Daily.builder()
+                .pelada(pelada).dailyDate(LocalDate.now()).dailyTime("18:00").status(DailyStatus.IN_COURSE).build());
+        for (Daily daily : List.of(upcoming, live)) {
+            attendanceRepository.save(new DailyAttendance(daily, admin, Instant.now()));
+            attendanceRepository.save(new DailyAttendance(daily, member, Instant.now()));
+            teamRepository.save(Team.builder().daily(daily).name("Time 1")
+                    .players(new HashSet<>(Set.of(admin, member))).build());
+        }
+
+        mockMvc.perform(delete("/api/v1/peladas/" + pelada.getId() + "/players/" + member.getId())
+                .header("Authorization", bearerToken(admin.getId(), admin.getEmail())))
+                .andExpect(status().isOk());
+
+        assertThat(attendanceRepository.findUsersByDaily(upcoming)).containsExactly(admin);
+        assertThat(teamRepository.findByDailyWithPlayers(upcoming).get(0).getPlayers()).containsExactly(admin);
+        // A session already under way is history: the player stays where they were
+        assertThat(attendanceRepository.findUsersByDaily(live)).containsExactlyInAnyOrder(admin, member);
+        assertThat(teamRepository.findByDailyWithPlayers(live).get(0).getPlayers()).containsExactlyInAnyOrder(admin, member);
     }
 
     // --- PUT /api/v1/peladas/{id}/players/{userId}/admin ---

@@ -177,6 +177,13 @@ public class DailyTeamManagementService {
     }
 
     /** Deletes every team of the daily (join rows first). Used by sort, import from message and daily delete. */
+    // The team keeps its other players; the admin re-sorts or swaps
+    void removePlayerFromTeams(Daily daily, User user) {
+        for (Team team : teamRepository.findByDailyWithPlayers(daily)) {
+            team.getPlayers().remove(user);
+        }
+    }
+
     void clearTeams(Daily daily) {
         List<Team> teams = teamRepository.findByDaily(daily);
         for (Team team : teams) {

@@ -378,7 +378,7 @@ All routes are under `/api/v1`. "Auth" is the relationship checked (see the matr
 | PUT | `/peladas/{id}` | `UpdatePeladaRequestDTO` (partial; `dayOfWeek` `MONDAY`..`SUNDAY`, `timeOfDay` `HH:mm`, `timeZone` (unknown → 400), `maxMensalistas` ≥ 0 (409 below the current mensalistas or above the capacity)) | admin | `PeladaResponseDTO` |
 | DELETE | `/peladas/{id}` | — | creator | 204; deletes dailies (results, teams, attendance, photos), messages and rankings, then rebuilds the players' global Stats |
 | POST | `/peladas/{id}/players` | `AddPlayerRequestDTO {userId}` | admin | 200; 409 if already a member |
-| DELETE | `/peladas/{id}/players/{userId}` | — | admin | 200; 404 if `userId` isn't a member |
+| DELETE | `/peladas/{id}/players/{userId}` | — | admin | 200; 404 if `userId` isn't a member. Also deletes their stars and mensalista row, and takes them out of the attendance and teams of the pelada's sessions that haven't started (`SCHEDULED`/`CONFIRMED`); live, finished and canceled sessions keep them, and their results, rankings and stats stay |
 | PUT | `/peladas/{id}/players/{userId}/admin` | `SetAdminRequestDTO {isAdmin}` | admin | 200; 404 if `userId` isn't a member |
 | PUT | `/peladas/{id}/players/{userId}/mensalista` | `SetMensalistaRequestDTO {isMensalista}` (`@NotNull`) | admin | `PeladaMemberDTO` with the new type; idempotent; 404 if `userId` isn't a member; 409 when the limit is full |
 | PUT | `/peladas/{id}/players/{userId}/stars` | `UpdatePlayerStarsRequestDTO {stars 1–5}` | admin | `PeladaMemberDTO` with the new stars; 404 if `userId` isn't a member |

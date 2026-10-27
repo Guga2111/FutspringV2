@@ -313,6 +313,7 @@ class PeladaServiceTest {
         assertThat(pelada.getMembers()).doesNotContain(member);
         verify(playerStarsRepository).deleteByPeladaAndUser(pelada, member);
         verify(mensalistaRepository).deleteByPeladaAndUser(pelada, member);
+        verify(dailyService).removeFromUpcomingSessions(pelada, member);
     }
 
     @Test

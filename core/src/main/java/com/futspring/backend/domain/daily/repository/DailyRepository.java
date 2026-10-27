@@ -28,6 +28,8 @@ public interface DailyRepository extends JpaRepository<Daily, Long> {
 
     List<Daily> findByPelada(Pelada pelada);
 
+    List<Daily> findByPeladaAndStatusIn(Pelada pelada, Collection<DailyStatus> statuses);
+
     // Sessions of the pelada with `status` dated in [from, to] (attendance ranking denominator)
     @Query("SELECT COUNT(d) FROM Daily d WHERE d.pelada.id = :peladaId AND d.status = :status AND d.dailyDate BETWEEN :from AND :to")
     long countByPeladaAndStatusInRange(@Param("peladaId") Long peladaId, @Param("status") DailyStatus status,

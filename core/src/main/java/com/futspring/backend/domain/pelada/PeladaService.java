@@ -191,6 +191,8 @@ public class PeladaService {
         // A player who comes back starts again with the default stars, as a diarista
         playerStarsRepository.deleteByPeladaAndUser(pelada, target);
         mensalistaRepository.deleteByPeladaAndUser(pelada, target);
+        // Frees their spot in the sessions that haven't started; past sessions keep their results
+        dailyService.removeFromUpcomingSessions(pelada, target);
         peladaRepository.save(pelada);
     }
 
