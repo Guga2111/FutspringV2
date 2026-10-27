@@ -6,6 +6,7 @@ import {
   adminDisconfirmAttendance,
   confirmAttendance,
   disconfirmAttendance,
+  markBumpsSeen,
   sortTeams,
   swapPlayers,
   updateDailyStatus,
@@ -33,6 +34,7 @@ export function useDailyActions({ daily, setDaily, refetch }: Options) {
   const [uploadLoading, setUploadLoading] = useState(false)
   const [adminToggleLoading, setAdminToggleLoading] = useState<number | null>(null)
   const [confirmAllLoading, setConfirmAllLoading] = useState(false)
+  const [dismissBumpLoading, setDismissBumpLoading] = useState(false)
   const [selectedPlayer, setSelectedPlayer] = useState<{ id: number; teamId: number } | null>(null)
 
   async function run(action: () => Promise<unknown>, success: string, failure: string, reload = true) {
@@ -148,8 +150,24 @@ export function useDailyActions({ daily, setDaily, refetch }: Options) {
     }
   }
 
+  // The caller dismisses their "you lost your spot" alert
+  async function dismissBump() {
+    if (!daily) return
+    setDismissBumpLoading(true)
+    try {
+      await markBumpsSeen(daily.id)
+      setDaily((prev) => (prev ? { ...prev, myBump: null } : prev))
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Não foi possível fechar o aviso'))
+    } finally {
+      setDismissBumpLoading(false)
+    }
+  }
+
   return {
     confirmLoading,
+    dismissBumpLoading,
+    dismissBump,
     sortLoading,
     swapLoading,
     statusLoading,

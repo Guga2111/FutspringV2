@@ -3,6 +3,7 @@ import { CalendarX2, Check } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { DailyStatusBadge } from "@/components/daily/DailyStatusBadge"
+import { SelfConfirmButton } from "@/components/SelfConfirmButton"
 import { parseLocalDate, weekdayShort } from "@/utils/dates"
 import { formatRelativeSessionDay } from "@/utils/sessions"
 import type { DailyListItem } from "@/types/daily"
@@ -11,7 +12,8 @@ const MONTHS_SHORT = ["JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO", "S
 
 interface NextSessionCardProps {
   daily: DailyListItem | null
-  capacity: number
+  // the pelada's zone, to show when the diarista window opens
+  timeZone: string
   isAdmin: boolean
   attendancePending: boolean
   onToggleAttendance: (daily: DailyListItem) => void
@@ -19,7 +21,7 @@ interface NextSessionCardProps {
 
 const label = "text-[11px] font-semibold uppercase tracking-[0.06em] text-subtle-foreground"
 
-export function NextSessionCard({ daily, capacity, isAdmin, attendancePending, onToggleAttendance }: NextSessionCardProps) {
+export function NextSessionCard({ daily, timeZone, isAdmin, attendancePending, onToggleAttendance }: NextSessionCardProps) {
   if (!daily) {
     return (
       <section className="flex flex-wrap items-center gap-5 rounded-tile border border-dashed border-input p-[18px]">
@@ -40,6 +42,7 @@ export function NextSessionCard({ daily, capacity, isAdmin, attendancePending, o
   }
 
   const date = parseLocalDate(daily.dailyDate)
+  const capacity = daily.capacity
   const percent = capacity > 0 ? Math.min(100, (daily.confirmedPlayerCount / capacity) * 100) : 0
 
   return (
@@ -89,9 +92,15 @@ export function NextSessionCard({ daily, capacity, isAdmin, attendancePending, o
             </Button>
           </div>
         ) : (
-          <Button variant="gradient" disabled={attendancePending} onClick={() => onToggleAttendance(daily)} className="h-[38px] px-[18px] font-semibold">
-            Confirmar presença
-          </Button>
+          <SelfConfirmButton
+            confirmOpensAt={daily.confirmOpensAt}
+            confirmedCount={daily.confirmedPlayerCount}
+            capacity={capacity}
+            timeZone={timeZone}
+            pending={attendancePending}
+            onConfirm={() => onToggleAttendance(daily)}
+            className="h-[38px] px-[18px]"
+          />
         )}
       </div>
     </section>

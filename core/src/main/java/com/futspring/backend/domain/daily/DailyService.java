@@ -242,6 +242,7 @@ public class DailyService {
                 .isAdmin(isAdmin)
                 .peladaMembers(peladaMembers)
                 .capacity(pelada.capacity())
+                .timeZone(pelada.getTimeZone())
                 .startsAt(AttendanceWindow.startsAt(daily))
                 .confirmOpensAt(mensalistaIds.contains(caller.getId()) ? null : AttendanceWindow.diaristaOpensAt(daily))
                 .myBump(myBump)

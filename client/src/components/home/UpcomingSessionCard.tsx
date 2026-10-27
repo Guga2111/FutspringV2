@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { DailyStatusBadge } from "@/components/daily/DailyStatusBadge"
 import { PeladaAvatar } from "@/components/PeladaAvatar"
+import { SelfConfirmButton } from "@/components/SelfConfirmButton"
 import { cn } from "@/lib/utils"
 import { formatCardDate } from "@/utils/home"
 import type { NextDaily, PeladaResponse } from "@/types/pelada"
@@ -63,9 +64,15 @@ export function UpcomingSessionCard({ pelada, next, pending, onToggle }: Upcomin
           </Button>
         </div>
       ) : (
-        <Button variant="gradient" disabled={pending} onClick={onToggle} className="h-[38px] w-full font-semibold">
-          Confirmar presença
-        </Button>
+        <SelfConfirmButton
+          confirmOpensAt={next.confirmOpensAt}
+          confirmedCount={next.confirmedCount}
+          capacity={next.capacity}
+          timeZone={pelada.timeZone}
+          pending={pending}
+          onConfirm={onToggle}
+          className="h-[38px] w-full"
+        />
       )}
       <Link to={`/daily/${next.id}`} className="-mt-1 self-center text-[13px] text-muted-foreground transition-colors hover:text-foreground">
         Ver sessão →

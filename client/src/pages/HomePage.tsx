@@ -3,6 +3,7 @@ import { Link } from "react-router-dom"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
+import { BumpAlert } from "@/components/BumpAlert"
 import { HomeBanner } from "@/components/home/HomeBanner"
 import { UpcomingSessionCard } from "@/components/home/UpcomingSessionCard"
 import { CreatePeladaCard, MyPeladaCard } from "@/components/home/MyPeladaCard"
@@ -32,15 +33,29 @@ export default function HomePage() {
   const { user } = useAuth()
   const { peladas, loading, error, reload, openCreatePelada } = useMyPeladasContext()
   const { stats, loading: statsLoading, error: statsError } = useUserStats(user?.id ?? null)
-  const { pendingId, toggle } = useUpcomingAttendance()
+  const { pendingId, toggle, dismissBump } = useUpcomingAttendance()
 
   const upcoming = useMemo(() => upcomingSessions(peladas), [peladas])
   const pendingCount = upcoming.filter((p) => !p.nextDaily.isConfirmed).length
+  const bumped = upcoming.filter((p) => p.nextDaily.bump !== null)
 
   return (
     <div className="page-enter flex flex-1 flex-col">
       <main className="mx-auto flex w-full max-w-[1120px] flex-col gap-9 px-4 py-5 md:p-8">
         <HomeBanner username={user?.username ?? ""} pendingCount={pendingCount} onCreatePelada={openCreatePelada} />
+
+        {bumped.map((pelada) =>
+          pelada.nextDaily.bump ? (
+            <BumpAlert
+              key={pelada.id}
+              bump={pelada.nextDaily.bump}
+              timeZone={pelada.timeZone}
+              peladaName={pelada.name}
+              pending={pendingId === pelada.nextDaily.id}
+              onDismiss={() => dismissBump(pelada.id, pelada.nextDaily)}
+            />
+          ) : null,
+        )}
 
         {error && (
           <Alert variant="destructive" className="flex items-center justify-between gap-4">

@@ -150,6 +150,8 @@ export interface DailyDetail {
   // every member of the pelada, sorted by username
   peladaMembers: PlayerDTO[]
   capacity: number
+  // the pelada's IANA zone; startsAt and confirmOpensAt are shown in it
+  timeZone: string
   startsAt: string
   confirmOpensAt: string | null
   // the caller's bump in this session not dismissed yet

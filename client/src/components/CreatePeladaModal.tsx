@@ -70,7 +70,8 @@ export default function CreatePeladaModal({ onClose, onCreated }: CreatePeladaMo
     e.preventDefault()
     setLoading(true)
     try {
-      const pelada = await createPelada(form)
+      // The sessions' date and time are in the creator's zone; admins can change it in "Editar pelada"
+      const pelada = await createPelada({ ...form, timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone })
       if (imageFile) {
         await uploadPeladaImage(pelada.id, imageFile)
       }

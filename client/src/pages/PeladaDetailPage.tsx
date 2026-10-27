@@ -51,6 +51,7 @@ export default function PeladaDetailPage() {
     refetchPelada,
     refetchDailies,
     mergeDaily,
+    mergeMember,
   } = usePeladaDetail(id);
 
   const [showAddPlayer, setShowAddPlayer] = useState(false);
@@ -101,13 +102,15 @@ export default function PeladaDetailPage() {
     deleting,
     removing,
     togglingAdmin,
+    togglingMensalista,
     attendancePending,
     removePeladaAndLeave,
     removeMember,
     toggleAdmin,
     setMemberStars,
+    setMemberMensalista,
     toggleAttendance,
-  } = usePeladaActions(pelada, refetchPelada, mergeDaily);
+  } = usePeladaActions(pelada, refetchPelada, mergeDaily, mergeMember);
 
   const nextSession = useMemo(() => pickNextSession(dailies), [dailies]);
   const pastSessions = useMemo(
@@ -161,12 +164,15 @@ export default function PeladaDetailPage() {
                     members={pelada.members}
                     ranking={ranking}
                     creatorId={pelada.creatorId}
+                    maxMensalistas={pelada.maxMensalistas}
                     isCurrentUserAdmin={isCurrentUserAdmin}
                     togglingAdmin={togglingAdmin}
+                    togglingMensalista={togglingMensalista}
                     onAddPlayer={() => setShowAddPlayer(true)}
                     onToggleAdmin={toggleAdmin}
                     onRemoveMember={setConfirmRemoveMember}
                     onSetStars={setStarsMember}
+                    onSetMensalista={setMemberMensalista}
                   />
                 </TabsContent>
 
@@ -174,7 +180,7 @@ export default function PeladaDetailPage() {
                   {!dailiesLoading && (
                     <NextSessionCard
                       daily={nextSession}
-                      capacity={pelada.numberOfTeams * pelada.playersPerTeam}
+                      timeZone={pelada.timeZone}
                       isAdmin={isCurrentUserAdmin}
                       attendancePending={attendancePending}
                       onToggleAttendance={toggleAttendance}

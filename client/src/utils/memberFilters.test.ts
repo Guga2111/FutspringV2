@@ -1,15 +1,15 @@
 import { describe, it, expect } from "vitest"
-import { countByPosition, filterMembers, normalizePosition } from "./memberFilters"
+import { countByMembership, countByPosition, filterMembers, normalizePosition } from "./memberFilters"
 import type { PeladaMember } from "@/types/pelada"
 
-const member = (id: number, username: string, position: string | null): PeladaMember => ({
+const member = (id: number, username: string, position: string | null, isMensalista = false): PeladaMember => ({
   id,
   username,
   position,
   image: null,
   stars: 3,
   isAdmin: false,
-  isMensalista: false,
+  isMensalista,
 })
 
 const members = [
@@ -50,5 +50,18 @@ describe("filterMembers", () => {
   it("keeps members without a position only in ALL", () => {
     expect(filterMembers(members, "sem", "ALL")).toHaveLength(1)
     expect(filterMembers(members, "sem", "MEIO")).toHaveLength(0)
+  })
+})
+
+describe("membership filter", () => {
+  const members = [member(1, "Ana", "MEIO", true), member(2, "Bia", "MEIO"), member(3, "Caio", "GOLEIRO", true)]
+
+  it("counts mensalistas and diaristas", () => {
+    expect(countByMembership(members)).toEqual({ ALL: 3, MENSALISTA: 2, DIARISTA: 1 })
+  })
+
+  it("combines with the position filter", () => {
+    expect(filterMembers(members, "", "MEIO", "MENSALISTA").map((m) => m.id)).toEqual([1])
+    expect(filterMembers(members, "", "ALL", "DIARISTA").map((m) => m.id)).toEqual([2])
   })
 })

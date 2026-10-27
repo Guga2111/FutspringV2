@@ -1,12 +1,14 @@
-import { useMemo, type ReactNode } from "react"
+import { useMemo, useState, type ReactNode } from "react"
 import { ChevronRight, UserMinus, UserPlus } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
+import { MembershipBadge } from "@/components/MembershipBadge"
 import { PlayerAvatar } from "@/components/PlayerAvatar"
 import { StarRow } from "@/components/StarRow"
 import { cn } from "@/lib/utils"
-import { splitAttendance } from "@/utils/attendance"
+import { sortByConfirmation, splitAttendance } from "@/utils/attendance"
+import { formatInZone } from "@/utils/dates"
 import { positionShortLabel } from "@/utils/memberFilters"
 import type { DailyDetail, PlayerDTO } from "@/types/daily"
 
@@ -34,10 +36,12 @@ export function AttendanceList({
   onUnconfirm,
   onConfirmAll,
 }: AttendanceListProps) {
-  const { confirmed, pending } = useMemo(
-    () => splitAttendance(daily.peladaMembers, daily.confirmedPlayers),
-    [daily.peladaMembers, daily.confirmedPlayers],
-  )
+  // Confirmed in confirmation order: the ones past the capacity are the last to arrive
+  const { confirmed, pending } = useMemo(() => {
+    const split = splitAttendance(daily.peladaMembers, daily.confirmedPlayers)
+    return { confirmed: sortByConfirmation(daily.confirmedPlayers), pending: split.pending }
+  }, [daily.peladaMembers, daily.confirmedPlayers])
+  const [bumpsOpen, setBumpsOpen] = useState(false)
 
   return (
     <Collapsible open={open} onOpenChange={onOpenChange} className="flex flex-col gap-3">
@@ -60,8 +64,8 @@ export function AttendanceList({
             <p className="px-3.5 py-7 text-center text-[13px] text-subtle-foreground">Ninguém confirmou ainda.</p>
           ) : (
             <ul>
-              {confirmed.map((player) => (
-                <AttendanceRow key={player.id} player={player}>
+              {confirmed.map((player, index) => (
+                <AttendanceRow key={player.id} player={player} overCapacity={index >= daily.capacity}>
                   {canManage && (
                     <Button
                       variant="ghost"
@@ -119,12 +123,43 @@ export function AttendanceList({
             </ul>
           )}
         </div>
+        {daily.bumps.length > 0 && (
+          <Collapsible open={bumpsOpen} onOpenChange={setBumpsOpen} className="overflow-hidden rounded-xl border min-[1100px]:col-span-2">
+            <CollapsibleTrigger className="flex w-full items-center gap-2 bg-card px-3.5 py-3 text-left">
+              <ChevronRight className={cn("size-4 shrink-0 transition-transform duration-150", bumpsOpen && "rotate-90")} />
+              <span className="text-sm font-semibold">Perderam a vaga</span>
+              <span className="text-[13px] text-subtle-foreground">{daily.bumps.length}</span>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <ul className="border-t">
+                {daily.bumps.map((bump) => (
+                  <li
+                    key={`${bump.user.id}-${bump.bumpedAt}`}
+                    className="flex flex-wrap items-center gap-x-2 gap-y-0.5 border-b border-border/60 px-3.5 py-[9px] text-[13px] last:border-b-0"
+                  >
+                    <span className="font-medium">{bump.user.username}</span>
+                    <span className="text-muted-foreground">perdeu a vaga para {bump.bumpedBy.username} (mensalista)</span>
+                    <span className="ml-auto text-xs text-subtle-foreground">{formatInZone(bump.bumpedAt, daily.timeZone)}</span>
+                  </li>
+                ))}
+              </ul>
+            </CollapsibleContent>
+          </Collapsible>
+        )}
       </CollapsibleContent>
     </Collapsible>
   )
 }
 
-function AttendanceRow({ player, muted = false, children }: { player: PlayerDTO; muted?: boolean; children?: ReactNode }) {
+interface AttendanceRowProps {
+  player: PlayerDTO
+  muted?: boolean
+  // confirmed after the session was already full (admin confirmations, mensalistas without a diarista to bump)
+  overCapacity?: boolean
+  children?: ReactNode
+}
+
+function AttendanceRow({ player, muted = false, overCapacity = false, children }: AttendanceRowProps) {
   const position = positionShortLabel(player.position)
   return (
     <li className="flex items-center gap-2.5 border-b border-border/60 px-3.5 py-[9px] last:border-b-0">
@@ -134,11 +169,17 @@ function AttendanceRow({ player, muted = false, children }: { player: PlayerDTO;
         className={cn("size-[30px]", muted && "[&>span]:bg-accent [&>span]:text-muted-foreground")}
       />
       <span className={cn("min-w-0 truncate text-sm", muted ? "text-secondary-foreground" : "font-medium")}>{player.username}</span>
+      <MembershipBadge isMensalista={player.isMensalista ?? false} className="shrink-0 px-[7px] text-[10px]" />
+      {overCapacity && (
+        <Badge variant="status" className="shrink-0 bg-destructive-muted px-[7px] py-0.5 text-[10px] text-destructive-soft">
+          acima do limite
+        </Badge>
+      )}
       {position && (
         <Badge
           variant="status"
           className={cn(
-            "px-[7px] py-0.5 text-[10px] font-semibold uppercase tracking-[0.03em]",
+            "hidden px-[7px] py-0.5 text-[10px] font-semibold uppercase tracking-[0.03em] sm:inline-flex",
             muted ? "bg-accent text-muted-foreground" : "bg-secondary text-secondary-foreground",
           )}
         >

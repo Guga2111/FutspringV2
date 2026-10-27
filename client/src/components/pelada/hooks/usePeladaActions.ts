@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { toast } from "sonner"
-import { deletePelada, removePlayer, setAdmin, setPlayerStars } from "@/api/peladas"
+import { deletePelada, removePlayer, setAdmin, setMensalista, setPlayerStars } from "@/api/peladas"
 import { confirmAttendance, disconfirmAttendance } from "@/api/dailies"
 import { useMyPeladasContext } from "@/hooks/useMyPeladasContext"
 import { getErrorMessage } from "@/lib/errors"
@@ -14,6 +14,7 @@ export function usePeladaActions(
   pelada: PeladaDetail | null,
   refetchPelada: () => Promise<void>,
   mergeDaily: (item: DailyListItem) => void,
+  mergeMember: (member: PeladaMember) => void,
 ) {
   const navigate = useNavigate()
   const { updateNextDaily, reload: reloadMyPeladas } = useMyPeladasContext()
@@ -21,6 +22,7 @@ export function usePeladaActions(
   const [deleting, setDeleting] = useState(false)
   const [removing, setRemoving] = useState(false)
   const [togglingAdmin, setTogglingAdmin] = useState<number | null>(null)
+  const [togglingMensalista, setTogglingMensalista] = useState<number | null>(null)
 
   async function removePeladaAndLeave(): Promise<boolean> {
     if (!pelada) return false
@@ -74,6 +76,19 @@ export function usePeladaActions(
     await refetchPelada()
   }
 
+  async function setMemberMensalista(member: PeladaMember, isMensalista: boolean) {
+    if (!pelada) return
+    setTogglingMensalista(member.id)
+    try {
+      mergeMember(await setMensalista(pelada.id, member.id, isMensalista))
+      toast.success(isMensalista ? `${member.username} agora é mensalista` : `${member.username} agora é diarista`)
+    } catch (error) {
+      toast.error(getErrorMessage(error, "Não foi possível alterar o tipo do jogador"))
+    } finally {
+      setTogglingMensalista(null)
+    }
+  }
+
   async function toggleAttendance(daily: DailyListItem) {
     if (!pelada) return
     setAttendancePending(true)
@@ -99,11 +114,13 @@ export function usePeladaActions(
     deleting,
     removing,
     togglingAdmin,
+    togglingMensalista,
     attendancePending,
     removePeladaAndLeave: removePeladaAndLeaveAndReload,
     removeMember,
     toggleAdmin,
     setMemberStars,
+    setMemberMensalista,
     toggleAttendance,
   }
 }

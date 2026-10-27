@@ -1,6 +1,7 @@
 import { CalendarCheck, Check } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
+import { SelfConfirmButton } from "@/components/SelfConfirmButton"
 import { attendanceHint } from "@/utils/attendance"
 import type { DailyDetail } from "@/types/daily"
 
@@ -12,7 +13,7 @@ interface AttendanceSummaryCardProps {
 }
 
 export function AttendanceSummaryCard({ daily, isConfirmed, pending, onToggle }: AttendanceSummaryCardProps) {
-  const capacity = daily.numberOfTeams * daily.playersPerTeam
+  const capacity = daily.capacity
   const count = daily.confirmedPlayers.length
   return (
     <section className="flex flex-wrap items-center gap-5 rounded-tile border bg-card p-5">
@@ -44,10 +45,18 @@ export function AttendanceSummaryCard({ daily, isConfirmed, pending, onToggle }:
         ) : (
           <>
             <span className="text-[13px] text-muted-foreground">Você ainda não confirmou</span>
-            <Button variant="gradient" disabled={pending} onClick={onToggle} className="h-[42px] gap-2 px-5 text-[15px] font-semibold">
+            <SelfConfirmButton
+              confirmOpensAt={daily.confirmOpensAt}
+              confirmedCount={count}
+              capacity={capacity}
+              timeZone={daily.timeZone}
+              pending={pending}
+              onConfirm={onToggle}
+              className="h-[42px] gap-2 px-5 text-[15px]"
+            >
               <CalendarCheck className="size-4" />
               Confirmar presença
-            </Button>
+            </SelfConfirmButton>
           </>
         )}
       </div>

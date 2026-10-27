@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router-dom"
-import { Crown, MoreHorizontal, ShieldCheck, ShieldOff, Star, Trash2, User } from "lucide-react"
+import { CalendarCheck, CalendarX, Crown, MoreHorizontal, ShieldCheck, ShieldOff, Star, Trash2, User } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -9,6 +9,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { MembershipBadge } from "@/components/MembershipBadge"
 import { PlayerAvatar } from "@/components/PlayerAvatar"
 import { StarRow } from "@/components/StarRow"
 import { positionShortLabel } from "@/utils/memberFilters"
@@ -28,12 +29,26 @@ interface MemberCardProps {
   // any admin sets any member's stars, the creator's and their own included
   canSetStars: boolean
   isToggling: boolean
+  // "Limite atingido (8/8)" when no more mensalistas fit; null when this member can be made one
+  mensalistaLimitHint: string | null
   onToggleAdmin: () => void
   onRemove: () => void
   onSetStars: () => void
+  onToggleMensalista: () => void
 }
 
-export function MemberCard({ member, stats, canManage, canSetStars, isToggling, onToggleAdmin, onRemove, onSetStars }: MemberCardProps) {
+export function MemberCard({
+  member,
+  stats,
+  canManage,
+  canSetStars,
+  isToggling,
+  mensalistaLimitHint,
+  onToggleAdmin,
+  onRemove,
+  onSetStars,
+  onToggleMensalista,
+}: MemberCardProps) {
   const navigate = useNavigate()
   const position = positionShortLabel(member.position)
 
@@ -48,7 +63,8 @@ export function MemberCard({ member, stats, canManage, canSetStars, isToggling, 
             </Link>
             {member.isAdmin && <Crown aria-label="Admin" className="size-3.5 shrink-0 text-gold" />}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <MembershipBadge isMensalista={member.isMensalista} />
             {position && (
               <Badge variant="status" className="bg-secondary px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.03em] text-secondary-foreground">
                 {position}
@@ -78,6 +94,24 @@ export function MemberCard({ member, stats, canManage, canSetStars, isToggling, 
               <DropdownMenuItem onSelect={onSetStars}>
                 <Star className="mr-2 size-4 text-muted-foreground" />
                 Definir estrelas
+              </DropdownMenuItem>
+            )}
+            {canSetStars && (
+              <DropdownMenuItem
+                onSelect={onToggleMensalista}
+                disabled={isToggling || (!member.isMensalista && mensalistaLimitHint !== null)}
+              >
+                {member.isMensalista ? (
+                  <CalendarX className="mr-2 size-4 text-muted-foreground" />
+                ) : (
+                  <CalendarCheck className="mr-2 size-4 text-muted-foreground" />
+                )}
+                <span className="flex flex-col">
+                  {member.isMensalista ? "Tornar diarista" : "Tornar mensalista"}
+                  {!member.isMensalista && mensalistaLimitHint && (
+                    <span className="text-xs text-muted-foreground">{mensalistaLimitHint}</span>
+                  )}
+                </span>
               </DropdownMenuItem>
             )}
             {canManage && (

@@ -40,6 +40,8 @@ public class DailyDetailDTO {
     private List<PlayerDTO> peladaMembers;
     // numberOfTeams × playersPerTeam
     private int capacity;
+    // the pelada's IANA zone (the frontend shows the instants in it)
+    private String timeZone;
     private Instant startsAt;
     // from when the caller may confirm themselves; null for mensalistas
     private Instant confirmOpensAt;

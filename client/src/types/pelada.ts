@@ -25,6 +25,8 @@ export interface PeladaResponse {
   memberCount: number
   numberOfTeams: number
   playersPerTeam: number
+  // IANA zone the sessions' date and time are in (America/Sao_Paulo)
+  timeZone: string
   // whether the caller administers the pelada
   isAdmin: boolean
   // next SCHEDULED/CONFIRMED session from today; only filled by /peladas/my and /users/{id}/peladas
@@ -53,8 +55,6 @@ export interface NextDaily {
 // mirrors PeladaDetailResponseDTO: no caller flags (isAdmin comes from members[]) and no next session
 export interface PeladaDetail extends Omit<PeladaResponse, "isAdmin" | "nextDaily"> {
   creatorId: number | null
-  // IANA zone the sessions' date and time are in (America/Sao_Paulo)
-  timeZone: string
   // how many members can be mensalistas (0 ≤ max ≤ numberOfTeams × playersPerTeam)
   maxMensalistas: number
   members: PeladaMember[]

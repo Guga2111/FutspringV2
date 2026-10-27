@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { toast } from "sonner"
-import { confirmAttendance, disconfirmAttendance } from "@/api/dailies"
+import { confirmAttendance, disconfirmAttendance, markBumpsSeen } from "@/api/dailies"
 import { useMyPeladasContext } from "@/hooks/useMyPeladasContext"
 import { getErrorMessage } from "@/lib/errors"
 import type { NextDaily } from "@/types/pelada"
@@ -23,5 +23,18 @@ export function useUpcomingAttendance() {
     }
   }
 
-  return { pendingId, toggle }
+  // Dismisses the caller's "you lost your spot" alert of that session
+  async function dismissBump(peladaId: number, next: NextDaily) {
+    setPendingId(next.id)
+    try {
+      await markBumpsSeen(next.id)
+      updateNextDaily(peladaId, { bump: null })
+    } catch (error) {
+      toast.error(getErrorMessage(error, "Não foi possível fechar o aviso"))
+    } finally {
+      setPendingId(null)
+    }
+  }
+
+  return { pendingId, toggle, dismissBump }
 }

@@ -15,6 +15,9 @@ export const badgeVariants = cva(
         outline: "text-foreground",
         // colored pills (status, roles): background and text come from className
         status: "whitespace-nowrap border-transparent font-medium",
+        // membership tags (MembershipBadge)
+        mensalista: "whitespace-nowrap border-transparent bg-info-muted font-medium text-info",
+        diarista: "whitespace-nowrap border-border bg-transparent font-medium text-muted-foreground",
       },
     },
     defaultVariants: {

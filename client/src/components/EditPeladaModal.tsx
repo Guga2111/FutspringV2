@@ -1,17 +1,16 @@
-import { getErrorMessage } from "@/lib/errors"
+import { Controller } from "react-hook-form"
 import { DAYS_OF_WEEK } from "@/lib/constants"
-import { useState, useRef } from "react"
-import { toast } from "sonner"
-import { updatePelada, uploadPeladaImage } from "@/api/peladas"
-import type { UpdatePeladaData } from "@/api/peladas"
 import type { PeladaDetail } from "@/types/pelada"
+import { useEditPeladaForm } from "@/components/pelada/hooks/useEditPeladaForm"
+import { TimeZonePicker } from "@/components/TimeZonePicker"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
+import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from "@/components/ui/sheet"
-
+import { IMAGE_ACCEPT } from "@/schemas/upload"
 
 interface EditPeladaModalProps {
   pelada: PeladaDetail
@@ -20,67 +19,14 @@ interface EditPeladaModalProps {
 }
 
 export default function EditPeladaModal({ pelada, onClose, onUpdated }: EditPeladaModalProps) {
-  const fileInputRef = useRef<HTMLInputElement>(null)
-
-  const [form, setForm] = useState<UpdatePeladaData>({
-    name: pelada.name,
-    dayOfWeek: pelada.dayOfWeek,
-    timeOfDay: pelada.timeOfDay,
-    duration: pelada.duration,
-    address: pelada.address ?? "",
-    reference: pelada.reference ?? "",
-    autoCreateDailyEnabled: pelada.autoCreateDailyEnabled,
+  const { form, capacity, mensalistaCount, imageError, pickImage, submit } = useEditPeladaForm(pelada, () => {
+    onUpdated()
+    onClose()
   })
-  const [imageFile, setImageFile] = useState<File | null>(null)
-  const [loading, setLoading] = useState(false)
-
-  function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
-    const { name, value, type } = e.target
-    if (type === "checkbox") {
-      setForm((prev) => ({ ...prev, [name]: (e.target as HTMLInputElement).checked }))
-    } else if (name === "duration") {
-      setForm((prev) => ({ ...prev, duration: parseFloat(value) || 0 }))
-    } else {
-      setForm((prev) => ({ ...prev, [name]: value }))
-    }
-  }
-
-  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("Imagens devem ter no máximo 5MB")
-      e.target.value = ""
-      return
-    }
-    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
-      toast.error("Somente JPEG, PNG, ou WebP são permitidos")
-      e.target.value = ""
-      return
-    }
-    setImageFile(file)
-  }
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    setLoading(true)
-    try {
-      await updatePelada(pelada.id, form)
-      if (imageFile) {
-        await uploadPeladaImage(pelada.id, imageFile)
-      }
-      toast.success("Pelada atualizada!")
-      onUpdated()
-      onClose()
-    } catch (error) {
-      toast.error(getErrorMessage(error, "Não foi possível atualizar a pelada"))
-    } finally {
-      setLoading(false)
-    }
-  }
+  const submitting = form.formState.isSubmitting
 
   return (
-    <Sheet open onOpenChange={(open) => !open && onClose()}>
+    <Sheet open onOpenChange={(open) => !open && !submitting && onClose()}>
       <SheetContent side="right" className="flex flex-col p-0 gap-0 w-full sm:max-w-md">
         <SheetHeader className="px-6 pt-6 pb-4">
           <SheetTitle className="text-xl font-semibold">Editar Pelada</SheetTitle>
@@ -89,125 +35,185 @@ export default function EditPeladaModal({ pelada, onClose, onUpdated }: EditPela
           </SheetDescription>
         </SheetHeader>
 
-        <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
-          <div className="flex-1 overflow-y-auto px-6 space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="ep-name">Nome *</Label>
-              <Input
-                id="ep-name"
+        <form onSubmit={submit} noValidate className="flex flex-col flex-1 overflow-hidden">
+          <div className="flex-1 overflow-y-auto px-6 pb-4">
+            <FieldGroup className="gap-5">
+              <Controller
                 name="name"
-                type="text"
-                required
-                placeholder="Jogasse Onde?"
-                value={form.name ?? ""}
-                onChange={handleChange}
+                control={form.control}
+                render={({ field, fieldState }) => (
+                  <Field data-invalid={fieldState.invalid}>
+                    <FieldLabel htmlFor="ep-name">Nome</FieldLabel>
+                    <Input {...field} id="ep-name" placeholder="Jogasse Onde?" aria-invalid={fieldState.invalid} />
+                    <FieldError errors={[fieldState.error]} />
+                  </Field>
+                )}
               />
-            </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="ep-dayOfWeek">Dia da Semana *</Label>
-              <Select
-                value={form.dayOfWeek}
-                onValueChange={(value) => setForm((prev) => ({ ...prev, dayOfWeek: value }))}
-              >
-                <SelectTrigger id="ep-dayOfWeek">
-                  <SelectValue placeholder="Selecione um dia" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    {DAYS_OF_WEEK.map((day) => (
-                      <SelectItem key={day.value} value={day.value}>{day.label}</SelectItem>
-                    ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="ep-timeOfDay">Horário *</Label>
-              <Input
-                id="ep-timeOfDay"
-                name="timeOfDay"
-                type="time"
-                required
-                value={form.timeOfDay ?? ""}
-                onChange={handleChange}
-                className="[&::-webkit-calendar-picker-indicator]:opacity-70"
+              <Controller
+                name="dayOfWeek"
+                control={form.control}
+                render={({ field, fieldState }) => (
+                  <Field data-invalid={fieldState.invalid}>
+                    <FieldLabel htmlFor="ep-dayOfWeek">Dia da semana</FieldLabel>
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <SelectTrigger id="ep-dayOfWeek" aria-invalid={fieldState.invalid}>
+                        <SelectValue placeholder="Selecione um dia" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectGroup>
+                          {DAYS_OF_WEEK.map((day) => (
+                            <SelectItem key={day.value} value={day.value}>{day.label}</SelectItem>
+                          ))}
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
+                    <FieldError errors={[fieldState.error]} />
+                  </Field>
+                )}
               />
-            </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="ep-duration">Duração (hora) *</Label>
-              <Input
-                id="ep-duration"
-                name="duration"
-                type="number"
-                required
-                min="0.5"
-                step="0.5"
-                placeholder="1.5"
-                value={form.duration ?? ""}
-                onChange={handleChange}
+              <div className="grid grid-cols-2 gap-3">
+                <Controller
+                  name="timeOfDay"
+                  control={form.control}
+                  render={({ field, fieldState }) => (
+                    <Field data-invalid={fieldState.invalid}>
+                      <FieldLabel htmlFor="ep-timeOfDay">Horário</FieldLabel>
+                      <Input {...field} id="ep-timeOfDay" type="time" aria-invalid={fieldState.invalid} />
+                      <FieldError errors={[fieldState.error]} />
+                    </Field>
+                  )}
+                />
+                <Controller
+                  name="duration"
+                  control={form.control}
+                  render={({ field, fieldState }) => (
+                    <Field data-invalid={fieldState.invalid}>
+                      <FieldLabel htmlFor="ep-duration">Duração (h)</FieldLabel>
+                      <Input
+                        id="ep-duration"
+                        type="number"
+                        min="0.5"
+                        step="0.5"
+                        name={field.name}
+                        ref={field.ref}
+                        onBlur={field.onBlur}
+                        value={Number.isNaN(field.value) ? "" : field.value}
+                        onChange={(e) => field.onChange(e.target.valueAsNumber)}
+                        aria-invalid={fieldState.invalid}
+                      />
+                      <FieldError errors={[fieldState.error]} />
+                    </Field>
+                  )}
+                />
+              </div>
+
+              <Controller
+                name="timeZone"
+                control={form.control}
+                render={({ field, fieldState }) => (
+                  <Field data-invalid={fieldState.invalid}>
+                    <FieldLabel htmlFor="ep-timeZone">Fuso horário</FieldLabel>
+                    <TimeZonePicker id="ep-timeZone" value={field.value} onChange={field.onChange} invalid={fieldState.invalid} />
+                    <FieldDescription>A data e o horário das sessões e a janela dos diaristas usam este fuso.</FieldDescription>
+                    <FieldError errors={[fieldState.error]} />
+                  </Field>
+                )}
               />
-            </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="ep-address">Endereço</Label>
-              <Input
-                id="ep-address"
+              <Controller
+                name="maxMensalistas"
+                control={form.control}
+                render={({ field, fieldState }) => (
+                  <Field data-invalid={fieldState.invalid}>
+                    <FieldLabel htmlFor="ep-maxMensalistas">Mensalistas</FieldLabel>
+                    <Input
+                      id="ep-maxMensalistas"
+                      type="number"
+                      min="0"
+                      max={capacity}
+                      step="1"
+                      name={field.name}
+                      ref={field.ref}
+                      onBlur={field.onBlur}
+                      value={Number.isNaN(field.value) ? "" : field.value}
+                      onChange={(e) => field.onChange(e.target.valueAsNumber)}
+                      aria-invalid={fieldState.invalid}
+                    />
+                    <FieldDescription>
+                      {mensalistaCount} {mensalistaCount === 1 ? "mensalista hoje" : "mensalistas hoje"} · máximo {capacity} vagas
+                    </FieldDescription>
+                    <FieldError errors={[fieldState.error]} />
+                  </Field>
+                )}
+              />
+
+              <Controller
                 name="address"
-                type="text"
-                placeholder="Av Agamenon Magalhães"
-                value={form.address ?? ""}
-                onChange={handleChange}
+                control={form.control}
+                render={({ field, fieldState }) => (
+                  <Field data-invalid={fieldState.invalid}>
+                    <FieldLabel htmlFor="ep-address">Endereço</FieldLabel>
+                    <Input {...field} id="ep-address" placeholder="Av Agamenon Magalhães" aria-invalid={fieldState.invalid} />
+                    <FieldError errors={[fieldState.error]} />
+                  </Field>
+                )}
               />
-            </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="ep-reference">Referência</Label>
-              <Input
-                id="ep-reference"
+              <Controller
                 name="reference"
-                type="text"
-                placeholder="Ilha do Retiro"
-                value={form.reference ?? ""}
-                onChange={handleChange}
+                control={form.control}
+                render={({ field, fieldState }) => (
+                  <Field data-invalid={fieldState.invalid}>
+                    <FieldLabel htmlFor="ep-reference">Referência</FieldLabel>
+                    <Input {...field} id="ep-reference" placeholder="Ilha do Retiro" aria-invalid={fieldState.invalid} />
+                    <FieldError errors={[fieldState.error]} />
+                  </Field>
+                )}
               />
-            </div>
 
-            <div className="flex items-center gap-3">
-              <Checkbox
-                id="ep-autoCreate"
-                checked={form.autoCreateDailyEnabled ?? false}
-                onCheckedChange={(checked) =>
-                  setForm((prev) => ({ ...prev, autoCreateDailyEnabled: checked === true }))
-                }
+              <Controller
+                name="autoCreateDailyEnabled"
+                control={form.control}
+                render={({ field }) => (
+                  <Field orientation="horizontal">
+                    <Checkbox id="ep-autoCreate" checked={field.value} onCheckedChange={(checked) => field.onChange(checked === true)} />
+                    <FieldLabel htmlFor="ep-autoCreate" className="cursor-pointer font-normal">
+                      Auto-criar diárias
+                    </FieldLabel>
+                  </Field>
+                )}
               />
-              <Label htmlFor="ep-autoCreate" className="cursor-pointer">
-                Auto-criar diárias
-              </Label>
-            </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="ep-image">Recolocar imagem (opcional)</Label>
-              <Input
-                id="ep-image"
-                ref={fileInputRef}
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                onChange={handleFileChange}
-                className="cursor-pointer file:text-primary"
-              />
-              <p className="text-xs text-muted-foreground">JPEG, PNG, ou WebP · max 5MB</p>
-            </div>
+              <Field data-invalid={imageError !== null}>
+                <FieldLabel htmlFor="ep-image">Recolocar imagem (opcional)</FieldLabel>
+                <Input
+                  id="ep-image"
+                  type="file"
+                  accept={IMAGE_ACCEPT}
+                  onChange={(e) => pickImage(e.target.files?.[0] ?? null)}
+                  aria-invalid={imageError !== null}
+                  className="cursor-pointer file:text-primary"
+                />
+                <FieldDescription>JPEG, PNG ou WebP · máx. 5 MB</FieldDescription>
+                {imageError && <FieldError>{imageError}</FieldError>}
+              </Field>
+            </FieldGroup>
+
+            {form.formState.errors.root && (
+              <Alert variant="destructive" className="mt-5">
+                <AlertDescription>{form.formState.errors.root.message}</AlertDescription>
+              </Alert>
+            )}
           </div>
 
           <SheetFooter className="px-6 py-4 border-t gap-3">
-            <Button type="button" variant="outline" className="flex-1" onClick={onClose} disabled={loading}>
+            <Button type="button" variant="outline" className="flex-1" onClick={onClose} disabled={submitting}>
               Cancelar
             </Button>
-            <Button variant="gradient" type="submit" className="flex-1" disabled={loading}>
-              {loading ? "Salvando..." : "Salvar Mudanças"}
+            <Button variant="gradient" type="submit" className="flex-1" disabled={submitting}>
+              {submitting ? "Salvando..." : "Salvar Mudanças"}
             </Button>
           </SheetFooter>
         </form>

@@ -4,7 +4,7 @@ import { toast } from "sonner"
 import { getPelada, getRanking, getPeladaAwards } from "@/api/peladas"
 import { getDailiesForPelada } from "@/api/dailies"
 import { getErrorStatus } from "@/lib/errors"
-import type { PeladaDetail, PeladaAwards } from "@/types/pelada"
+import type { PeladaDetail, PeladaAwards, PeladaMember } from "@/types/pelada"
 import type { DailyListItem, RankingDTO } from "@/types/daily"
 
 // Results are stored with the pelada id they belong to, so navigating to another pelada shows the skeletons
@@ -120,6 +120,27 @@ export function usePeladaDetail(id: string | undefined) {
     [peladaId],
   )
 
+  // Merge a member returned by a mutation (mensalista toggle) into the pelada on screen
+  const mergeMember = useCallback(
+    (member: PeladaMember) => {
+      setMain((prev) =>
+        prev && prev.peladaId === peladaId && prev.data.pelada
+          ? {
+              peladaId,
+              data: {
+                ...prev.data,
+                pelada: {
+                  ...prev.data.pelada,
+                  members: prev.data.pelada.members.map((m) => (m.id === member.id ? { ...m, ...member } : m)),
+                },
+              },
+            }
+          : prev,
+      )
+    },
+    [peladaId],
+  )
+
   const refetch = useCallback(async () => {
     await Promise.all([fetchPelada(), fetchDailies(), fetchRanking(), fetchAwards()])
   }, [fetchPelada, fetchDailies, fetchRanking, fetchAwards])
@@ -145,5 +166,6 @@ export function usePeladaDetail(id: string | undefined) {
     refetchPelada: fetchPelada,
     refetchDailies: fetchDailies,
     mergeDaily,
+    mergeMember,
   }
 }

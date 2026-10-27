@@ -30,6 +30,8 @@ public class PeladaResponseDTO {
     private int memberCount;
     private int numberOfTeams;
     private int playersPerTeam;
+    // IANA zone of the sessions (the frontend shows startsAt / confirmOpensAt in it)
+    private String timeZone;
     // whether the caller administers the pelada
     @JsonProperty("isAdmin")
     private boolean isAdmin;
@@ -78,6 +80,7 @@ public class PeladaResponseDTO {
                 .memberCount(memberCount)
                 .numberOfTeams(pelada.getNumberOfTeams())
                 .playersPerTeam(pelada.getPlayersPerTeam())
+                .timeZone(pelada.getTimeZone())
                 .isAdmin(isAdmin)
                 .nextDaily(nextDaily)
                 .build();

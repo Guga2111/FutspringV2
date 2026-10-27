@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { formatNextSessionShort, formatWeekdayDayMonth, parseLocalDate } from "./dates"
+import { formatInZone, formatNextSessionShort, formatWeekdayDayMonth, parseLocalDate } from "./dates"
 
 describe("parseLocalDate", () => {
   it("reads the date in local time", () => {
@@ -22,5 +22,16 @@ describe("formatNextSessionShort", () => {
 
   it("says there is no session", () => {
     expect(formatNextSessionShort(null)).toBe("Sem sessão agendada")
+  })
+})
+
+describe("formatInZone", () => {
+  it("shows the same instant in the pelada's zone", () => {
+    expect(formatInZone("2026-10-29T23:00:00Z", "America/Sao_Paulo")).toBe("qui, 29/10 às 20:00")
+    expect(formatInZone("2026-10-29T23:00:00Z", "America/Toronto")).toBe("qui, 29/10 às 19:00")
+  })
+
+  it("crosses midnight into the next day", () => {
+    expect(formatInZone("2026-10-31T02:30:00Z", "America/Sao_Paulo")).toBe("sex, 30/10 às 23:30")
   })
 })

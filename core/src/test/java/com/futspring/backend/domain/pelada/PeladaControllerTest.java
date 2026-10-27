@@ -614,6 +614,7 @@ class PeladaControllerTest extends BaseIntegrationTest {
         mockMvc.perform(get("/api/v1/peladas/my")
                 .header("Authorization", bearerToken(member.getId(), member.getEmail())))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].timeZone").value("America/Sao_Paulo"))
                 .andExpect(jsonPath("$[0].nextDaily.startsAt").value("2099-10-30T23:00:00Z"))
                 .andExpect(jsonPath("$[0].nextDaily.confirmOpensAt").value("2099-10-29T23:00:00Z"))
                 .andExpect(jsonPath("$[0].nextDaily.bump.bumpedBy.id").value(admin.getId()))

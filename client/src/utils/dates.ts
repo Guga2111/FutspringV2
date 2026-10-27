@@ -22,3 +22,19 @@ export function formatWeekdayDayMonth(iso: string): string {
 export function formatNextSessionShort(next: { date: string; time: string } | null): string {
   return next ? `${formatWeekdayDayMonth(next.date)} · ${next.time}` : "Sem sessão agendada"
 }
+
+// "sáb, 31/10 às 20:00": an ISO instant shown in the pelada's zone (same text as the backend's error messages)
+export function formatInZone(iso: string, timeZone: string): string {
+  const parts = new Intl.DateTimeFormat("pt-BR", {
+    timeZone,
+    weekday: "short",
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(new Date(iso))
+  const part = (type: Intl.DateTimeFormatPartTypes) => parts.find((p) => p.type === type)?.value ?? ""
+  const weekday = part("weekday").replace(".", "").toLocaleLowerCase("pt-BR")
+  return `${weekday}, ${part("day")}/${part("month")} às ${part("hour")}:${part("minute")}`
+}

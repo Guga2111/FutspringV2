@@ -35,13 +35,35 @@ export function countByPosition(members: PeladaMember[]): Record<PositionFilter,
   return counts
 }
 
+export type MembershipFilter = "ALL" | "MENSALISTA" | "DIARISTA"
+
+export const MEMBERSHIP_FILTERS: { value: Exclude<MembershipFilter, "ALL">; label: string }[] = [
+  { value: "MENSALISTA", label: "Mensalistas" },
+  { value: "DIARISTA", label: "Diaristas" },
+]
+
+export function countByMembership(members: PeladaMember[]): Record<MembershipFilter, number> {
+  const mensalistas = members.filter((m) => m.isMensalista).length
+  return { ALL: members.length, MENSALISTA: mensalistas, DIARISTA: members.length - mensalistas }
+}
+
+function matchesMembership(member: PeladaMember, membership: MembershipFilter): boolean {
+  return membership === "ALL" || member.isMensalista === (membership === "MENSALISTA")
+}
+
 // Sorted by name: the API returns members in no particular order
-export function filterMembers(members: PeladaMember[], query: string, position: PositionFilter): PeladaMember[] {
+export function filterMembers(
+  members: PeladaMember[],
+  query: string,
+  position: PositionFilter,
+  membership: MembershipFilter = "ALL",
+): PeladaMember[] {
   const q = query.trim().toLocaleLowerCase("pt-BR")
   return members
     .filter(
       (m) =>
         (position === "ALL" || normalizePosition(m.position) === position) &&
+        matchesMembership(m, membership) &&
         m.username.toLocaleLowerCase("pt-BR").includes(q),
     )
     .sort((a, b) => a.username.localeCompare(b.username, "pt-BR", { sensitivity: "base" }))

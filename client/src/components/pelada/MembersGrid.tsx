@@ -4,7 +4,15 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { MemberCard, type MemberStats } from "@/components/pelada/MemberCard"
-import { countByPosition, filterMembers, POSITION_FILTERS, type PositionFilter } from "@/utils/memberFilters"
+import {
+  countByMembership,
+  countByPosition,
+  filterMembers,
+  MEMBERSHIP_FILTERS,
+  POSITION_FILTERS,
+  type MembershipFilter,
+  type PositionFilter,
+} from "@/utils/memberFilters"
 import type { PeladaMember } from "@/types/pelada"
 import type { RankingDTO } from "@/types/daily"
 
@@ -13,12 +21,15 @@ interface MembersGridProps {
   // the ranking the page already loads: games, goals and assists per member
   ranking: RankingDTO[]
   creatorId: number | null
+  maxMensalistas: number
   isCurrentUserAdmin: boolean
   togglingAdmin: number | null
+  togglingMensalista: number | null
   onAddPlayer: () => void
   onToggleAdmin: (member: PeladaMember) => void
   onRemoveMember: (member: PeladaMember) => void
   onSetStars: (member: PeladaMember) => void
+  onSetMensalista: (member: PeladaMember, isMensalista: boolean) => void
 }
 
 const NO_STATS: MemberStats = { matchesPlayed: 0, goals: 0, assists: 0 }
@@ -27,18 +38,30 @@ export function MembersGrid({
   members,
   ranking,
   creatorId,
+  maxMensalistas,
   isCurrentUserAdmin,
   togglingAdmin,
+  togglingMensalista,
   onAddPlayer,
   onToggleAdmin,
   onRemoveMember,
   onSetStars,
+  onSetMensalista,
 }: MembersGridProps) {
   const [query, setQuery] = useState("")
   const [position, setPosition] = useState<PositionFilter>("ALL")
+  const [membership, setMembership] = useState<MembershipFilter>("ALL")
 
   const counts = useMemo(() => countByPosition(members), [members])
-  const visible = useMemo(() => filterMembers(members, query, position), [members, query, position])
+  const membershipCounts = useMemo(() => countByMembership(members), [members])
+  const visible = useMemo(
+    () => filterMembers(members, query, position, membership),
+    [members, query, position, membership],
+  )
+  const limitHint =
+    membershipCounts.MENSALISTA >= maxMensalistas
+      ? `Limite atingido (${membershipCounts.MENSALISTA}/${maxMensalistas})`
+      : null
   const statsById = useMemo(() => new Map(ranking.map((r) => [r.userId, r])), [ranking])
   const adminCount = useMemo(() => members.filter((m) => m.isAdmin).length, [members])
 
@@ -69,6 +92,25 @@ export function MembersGrid({
             <ToggleGroupItem key={f.value} value={f.value} className="group">
               {f.label}
               <span className="text-xs text-subtle-foreground group-data-[state=on]:text-primary-foreground/60">{counts[f.value]}</span>
+            </ToggleGroupItem>
+          ))}
+        </ToggleGroup>
+        {/* deselecting goes back to every member */}
+        <ToggleGroup
+          type="single"
+          variant="chip"
+          size="chip"
+          value={membership === "ALL" ? "" : membership}
+          onValueChange={(value) => setMembership((value || "ALL") as MembershipFilter)}
+          aria-label="Filtrar por tipo"
+          className="flex-wrap justify-start gap-1.5"
+        >
+          {MEMBERSHIP_FILTERS.map((f) => (
+            <ToggleGroupItem key={f.value} value={f.value} className="group">
+              {f.label}
+              <span className="text-xs text-subtle-foreground group-data-[state=on]:text-primary-foreground/60">
+                {membershipCounts[f.value]}
+              </span>
             </ToggleGroupItem>
           ))}
         </ToggleGroup>
@@ -104,10 +146,12 @@ export function MembersGrid({
               stats={statsById.get(member.id) ?? NO_STATS}
               canManage={isCurrentUserAdmin && member.id !== creatorId}
               canSetStars={isCurrentUserAdmin}
-              isToggling={togglingAdmin === member.id}
+              isToggling={togglingAdmin === member.id || togglingMensalista === member.id}
+              mensalistaLimitHint={limitHint}
               onToggleAdmin={() => onToggleAdmin(member)}
               onRemove={() => onRemoveMember(member)}
               onSetStars={() => onSetStars(member)}
+              onToggleMensalista={() => onSetMensalista(member, !member.isMensalista)}
             />
           ))}
         </div>

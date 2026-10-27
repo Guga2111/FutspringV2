@@ -527,6 +527,7 @@ class DailyControllerTest extends BaseIntegrationTest {
                 .header("Authorization", bearerToken(member.getId(), member.getEmail())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.capacity").value(10))
+                .andExpect(jsonPath("$.timeZone").value("America/Sao_Paulo"))
                 .andExpect(jsonPath("$.startsAt").exists())
                 .andExpect(jsonPath("$.confirmOpensAt").exists())
                 .andExpect(jsonPath("$.confirmedPlayers[0].isMensalista").value(true))
