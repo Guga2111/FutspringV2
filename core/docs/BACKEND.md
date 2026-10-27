@@ -81,7 +81,7 @@ com.futspring.backend
 ├── shared/
 │   ├── config/                 SecurityConfig (filter chain, BCrypt), CorsConfig (ALLOWED_ORIGINS + CorsConfigurationSource, used by
 │   │                           SecurityConfig and WebSocketConfig), JwtConfig (@Value secret + TTL), WebSocketConfig (STOMP /ws, SockJS,
-│   │                           broker /topic, app prefix /app, JwtChannelInterceptor)
+│   │                           broker /topic, app prefix /app, JwtChannelInterceptor), TimeConfig (Clock bean, UTC; Clock.fixed in tests)
 │   ├── exception/              AppException (RuntimeException + HttpStatus), ErrorResponse, GlobalExceptionHandler
 │   ├── helper/                 UserAuthenticationHelper (getAuthenticatedUser(email) → User or 404),
 │   │                           PeladaAccessHelper (isMember/isAdmin/isCreator, requireMember/requireAdmin, exists queries)
@@ -98,19 +98,23 @@ com.futspring.backend
 │   │                               ForgotPasswordRequestDTO, ResetPasswordRequestDTO
 │   ├── user/                       UserController, UserService (profile get/update, avatar, background image), User, UserRepository
 │   │   └── dto/                    ProfileDTO, PublicUserDTO, UpdateProfileRequest
-│   ├── pelada/                     PeladaController, PeladaService (pelada CRUD, members, admins, member stars, user search, image), Pelada, PeladaRepository,
-│   │                               PeladaPlayerStars + PeladaPlayerStarsRepository (stars per member, profile average)
-│   │   └── dto/                    Create/UpdatePeladaRequestDTO, DayOfWeekPattern, PeladaResponseDTO, PeladaDetailResponseDTO, PeladaMemberDTO, UpdatePlayerStarsRequestDTO…
+│   ├── pelada/                     PeladaController, PeladaService (pelada CRUD, members, admins, member stars, mensalistas, user search, image), Pelada, PeladaRepository,
+│   │                               PeladaPlayerStars + PeladaPlayerStarsRepository (stars per member, profile average),
+│   │                               PeladaMensalista + PeladaMensalistaRepository (members marked as mensalistas)
+│   │   └── dto/                    Create/UpdatePeladaRequestDTO, DayOfWeekPattern, PeladaResponseDTO, PeladaDetailResponseDTO, PeladaMemberDTO, UpdatePlayerStarsRequestDTO,
+│   │                               SetMensalistaRequestDTO…
 │   ├── daily/                      DailyController and the daily services:
 │   │   │                           DailyService (create, list, status transitions, delete, detail aggregation)
-│   │   │                           DailyAttendanceService (confirm / unconfirm, self and by admin)
+│   │   │                           DailyAttendanceService (confirm / unconfirm, self and by admin; diarista window, capacity, mensalista bump,
+│   │   │                           row lock; bumps seen), AttendanceWindow (session start / diarista window in the pelada's zone),
+│   │   │                           DiaristaBumpedEvent + DiaristaBumpedEmailListener + DiaristaBumpedEmail (bump e-mail after commit, @Async)
 │   │   │                           DailyTeamManagementService (sort teams with LPT balanced by the stars in the pelada, swap, rename, color)
 │   │   │                           DailyResultsService (results, live league table, finalize, champion image, populate, clearResults)
 │   │   │                           DailySchedulerService (hourly cron that auto-creates the next daily), DailyDTOMapper (Player/Team/MatchDTO),
 │   │                           DailyListItemAssembler (DailyListItemDTO with counts and the caller's attendance, grouped queries)
-│   │   ├── entity/                 Daily, DailyStatus, Team, Match, PlayerMatchStat, LeagueTableEntry
-│   │   ├── repository/             Daily, Team, Match, PlayerMatchStat, LeagueTableEntry repositories
-│   │   └── dto/                    DailyDetailDTO, DailyListItemDTO, MatchResultDTO, Finalize/Populate/Swap/Update* request DTOs
+│   │   ├── entity/                 Daily, DailyStatus, DailyAttendance (+ DailyAttendanceId), DailyAttendanceBump, Team, Match, PlayerMatchStat, LeagueTableEntry
+│   │   ├── repository/             Daily, DailyAttendance, DailyAttendanceBump, Team, Match, PlayerMatchStat, LeagueTableEntry repositories
+│   │   └── dto/                    DailyDetailDTO, DailyListItemDTO, AttendanceBumpDTO, MatchResultDTO, Finalize/Populate/Swap/Update* request DTOs
 │   ├── stats/                      RankingService, AwardsService, StatsService, AttendanceService (read-side aggregates; attendance ranking of the last 6 months),
 │   │   │                           AggregateRebuildService (rebuilds Ranking per pelada and global Stats for a set of players, batch queries)
 │   │   ├── entity/                 Ranking, Stats, UserDailyStats, DailyAward
@@ -145,8 +149,11 @@ All entities use IDENTITY ids and **LAZY** fetching, Lombok `@Getter @Setter` (n
 | Entity | Table | Fields / relations |
 |--------|-------|--------------------|
 | `User` | `users` | `email` (unique), `username` (unique case-insensitively in `AuthService`/`UserService`, not in the DB: production has legacy duplicates, so check with `existsByUsernameIgnoreCase…`, never a single-result find), `password` (BCrypt), `image`, `backgroundImage`, `position`, `tokenVersion` (default 0, incremented by a password reset to revoke every JWT issued before). The legacy `users.stars` column is no longer mapped (default 3 since V8) and will be dropped by a later migration |
-| `Pelada` | `peladas` | `name`, `dayOfWeek` (a `java.time.DayOfWeek` name, `MONDAY`..`SUNDAY`, validated on create/update), `timeOfDay`, `duration`, `address`, `reference`, `image`, `autoCreateDailyEnabled`, `numberOfTeams` (2), `playersPerTeam` (5), `createdAt`; `creator` → User; `members` M:N (`pelada_members`); `admins` M:N (`pelada_admins`) |
-| `Daily` | `dailies` | `dailyDate`, `dailyTime`, `status` (`DailyStatus`, default `SCHEDULED`), `isFinished`, `championImage`, `createdAt`; `pelada`; `confirmedPlayers` M:N (`daily_confirmed_players`) |
+| `Pelada` | `peladas` | `name`, `dayOfWeek` (a `java.time.DayOfWeek` name, `MONDAY`..`SUNDAY`, validated on create/update), `timeOfDay`, `duration`, `address`, `reference`, `image`, `autoCreateDailyEnabled`, `numberOfTeams` (2), `playersPerTeam` (5), `timeZone` (IANA region id, default `America/Sao_Paulo`, validated against `ZoneId.getAvailableZoneIds()`), `maxMensalistas` (0; `0 ≤ max ≤ numberOfTeams × playersPerTeam`, `capacity()`), `createdAt`; `creator` → User; `members` M:N (`pelada_members`); `admins` M:N (`pelada_admins`) |
+| `Daily` | `dailies` | `dailyDate`, `dailyTime`, `status` (`DailyStatus`, default `SCHEDULED`), `isFinished`, `championImage`, `createdAt`; `pelada`. Attendance is the `DailyAttendance` entity (no collection on `Daily`) |
+| `DailyAttendance` | `daily_confirmed_players` (PK `daily_id`+`user_id`) | `@EmbeddedId DailyAttendanceId (dailyId, userId)` with `@MapsId` `daily` and `user`; `confirmedAt` (`Instant`, `TIMESTAMPTZ`, set by the server clock). Read through `DailyAttendanceRepository` (confirmed users in confirmation order, grouped counts, the bump victim). Removed through the persistence context (`deleteAllOfDaily`), never a bulk delete: a managed row left in the transaction keeps Hibernate from deleting its daily |
+| `DailyAttendanceBump` | `daily_attendance_bumps` | `daily`, `user` (the bumped diarista), `bumpedBy` (the mensalista), `bumpedAt`, `seenAt` (null until the diarista dismisses the alert). History of the session, shown to every member; deleted with the daily |
+| `PeladaMensalista` | `pelada_mensalistas` (unique `pelada_id`+`user_id`) | `createdAt`; `pelada`, `user`. Having a row = mensalista; every other member is a diarista (creator and admins included). Deleted when the member is removed or the pelada is deleted |
 | `Team` | `teams` | `name`, `color`; `daily`; `players` M:N (`team_players`) |
 | `Match` | `matches` | `team1Score`, `team2Score`; `daily`, `team1`, `team2`, `winner` |
 | `PlayerMatchStat` | `player_match_stats` | `goals`, `assists`; `match`, `user`. One row per player of the **two teams in that match** (`submitResults` and `populateFromMessage`), so `UserDailyStats.matchesPlayed` counts the matches a player actually played |
@@ -163,6 +170,22 @@ There are no JPA cascades: deletes are explicit in the services (`DailyService.d
 
 **Daily status machine** (`DailyStatus.canTransitionTo`): `SCHEDULED → CONFIRMED | CANCELED`, `CONFIRMED → IN_COURSE | CANCELED`. `FINISHED` is reached only through finalize; populate can also move a daily to `IN_COURSE`. Attendance and team changes are blocked while the status is in `DailyStatus.LOCKED` (`IN_COURSE`, `FINISHED`, `CANCELED`).
 
+### Attendance: mensalistas and diaristas
+
+| Who confirms | Mensalista | Diarista |
+|---|---|---|
+| The player themselves (`POST /dailies/{id}/confirm`) | any time while the session isn't locked | only from **24 h before** the start (403 "Diaristas podem confirmar a partir de sáb, 31/10 às 20:00") |
+| Admin (single or "Confirmar todos") | any time | any time |
+
+- **Time:** `AttendanceWindow.startsAt` = `dailyDate` + `dailyTime` in the pelada's `timeZone`; the window opens at `startsAt − 24 h` (real hours, so it can open at a different wall-clock time across a DST change). "Now" is `Instant.now(clock)`; the confirm request has no body and nothing time-related is read from the client. `confirmedAt` is set by the server.
+- **Capacity** (`numberOfTeams × playersPerTeam`): a diarista confirming into a full session gets 409 "Sessão lotada". A **mensalista** confirming into a full session removes the diarista with the latest `confirmedAt` (ties: highest user id; the type is read at that moment, so someone made mensalista after confirming is never a victim), records a `DailyAttendanceBump` and publishes `DiaristaBumpedEvent`; with no diarista confirmed, the mensalista joins over capacity. A diarista confirmed by an admin can be bumped too.
+- **Admins** skip the window and the capacity (they can push a session over the limit) and never bump anyone.
+- **Lock:** every confirmation loads the daily with `DailyRepository.findByIdForUpdate` (`PESSIMISTIC_WRITE`, a database row lock held until commit), so the count and the victim choice never race and it works across API instances; other sessions don't wait. `setMensalista` and a `maxMensalistas` change lock the pelada row the same way.
+- No waiting list: nobody is promoted when someone withdraws; a bumped diarista may confirm again under the normal rules.
+- **Bump e-mail:** `DiaristaBumpedEmailListener` (`@Async @TransactionalEventListener`, after commit) reloads the bump with its users and pelada and sends `resources/email/diarista-bumped.html` (same structure as the reset e-mail; `{{username}}`, `{{bumpedBy}}`, `{{peladaName}}` HTML-escaped; link `${app.frontend-url}/daily/{id}`). A Resend failure is only logged; the in-app alert (`myBump` / `nextDaily.bump` until `bumps/seen`) still shows.
+- **Mensalista limit:** marking past `maxMensalistas` → 409 "Limite de mensalistas atingido (8/8)"; lowering the limit below the current count → 409 "Desmarque 2 mensalistas antes de reduzir o limite" (the system never picks who loses the status); a limit above the capacity → 409 "O limite de mensalistas não pode passar das vagas (10)".
+- Read paths stay at a constant number of queries: mensalista ids per pelada in one query, the caller's mensalista peladas in one query, unseen bumps for `/peladas/my` in one query.
+
 **Positions** (`UpdateProfileRequest`, `@Pattern`): `GOALKEEPER`, `DEFENDER`, `MIDFIELDER`, `FORWARD`, `GOLEIRO`, `ZAGUEIRO`, `MEIO`, `ATACANTE`; an empty string clears it. The web app offers the Portuguese four.
 
 **Awards:** Puskás (best goal), "Wiltball" (shown as "Bola Murcha" in the UI), Artilheiro (top scorer), Garçom (top assists).
@@ -178,7 +201,7 @@ New status-like fields must be Java enums stored with `@Enumerated(EnumType.STRI
 - `spring.flyway.baseline-on-migrate=true` + `baseline-version=1`: a database that already has tables but no `flyway_schema_history` (production, an old dev volume) is marked as V1 without running it, and only later versions run. An empty database runs V1 and builds the whole schema.
 - `V1__baseline.sql` is the schema Hibernate generated from the entities on 2026-10-03 (PostgreSQL 15, `pg_dump --schema-only`), not a dump of production. Production's tables were built by `ddl-auto=update` from the same entities. Checked against a copy of production on 2026-10-04: same columns and constraints, except two leftover nullable columns `daily_awards.puskas_winner_id` / `wiltball_winner_id` (all null, FKs to `users`) that no entity maps; V4 drops them.
 - Production runs PostgreSQL 17 (Supabase); Flyway 9.22 logs "PostgreSQL 17 is newer than this version of Flyway" but works. Upgrading means Flyway 10 + `flyway-database-postgresql`.
-- Tests: H2 `create-drop` with Flyway disabled for the unit/integration tests; `FlywayMigrationTest` (Testcontainers, `postgres:17-alpine` like production, skipped without Docker) runs every migration on an empty Postgres and validates it against the entities; `MigrationDataTest` runs the data-changing migrations (V4, V5) against production-shaped rows.
+- Tests: H2 `create-drop` with Flyway disabled for the unit/integration tests; `FlywayMigrationTest` (Testcontainers, `postgres:17-alpine` like production, skipped without Docker) runs every migration on an empty Postgres and validates it against the entities; `MigrationDataTest` runs the data-changing migrations (V4, V5, V8, V9) against production-shaped rows.
 
 | Version | What it does |
 |---------|--------------|
@@ -190,6 +213,7 @@ New status-like fields must be Java enums stored with `@Enumerated(EnumType.STRI
 | V6 | Creates `password_reset_tokens` (FK to `users` with `ON DELETE CASCADE`, index on `user_id`); non-destructive |
 | V7 | Adds `users.token_version` (`INTEGER NOT NULL DEFAULT 0`); existing sessions stay valid; non-destructive |
 | V8 | Creates `pelada_player_stars` (FKs `ON DELETE CASCADE`, unique `(pelada_id, user_id)`, index on `user_id`), copies each member's `users.stars` into every pelada they belong to, and sets `DEFAULT 3` on `users.stars` (no longer mapped); non-destructive. Pending: a later migration drops `users.stars` (destructive: back up first) |
+| V9 | Adds `peladas.time_zone` (`DEFAULT 'America/Sao_Paulo'`) and `max_mensalistas` (`DEFAULT 0`, `CHECK ≥ 0`); creates `pelada_mensalistas` (unique `(pelada_id, user_id)`) and `daily_attendance_bumps` (indexes on `daily_id`, `bumped_by_id` and unseen `user_id`); adds `daily_confirmed_players.confirmed_at` (`TIMESTAMPTZ`, backfilled with `dailies.created_at`, then `NOT NULL DEFAULT now()`). FKs `ON DELETE CASCADE` as a safety net only; non-destructive |
 
 ### Migration rules
 
@@ -275,11 +299,13 @@ Relationships: **creator** (`pelada.creator`), **admin** (`pelada.admins`), **me
 | Read pelada detail, dailies, daily detail, ranking, attendance ranking, awards, member stats/history, chat history, send chat, subscribe to the chat topic | member (member stats/history: the target user must also be a member, else 404) |
 | Update pelada, upload pelada image, add/remove player, set/unset admin | admin (the creator can't be removed or demoted; remove/set admin need the target to be a member, else 404) |
 | Set a member's stars in the pelada | admin; any member, the creator and the caller included (target must be a member, else 404) |
+| Mark/unmark a member as mensalista | admin; any member, the creator and the caller included (target must be a member, else 404; 409 past `maxMensalistas`) |
 | Delete pelada (cascades dailies, results, teams, attendance, messages, rankings; rebuilds global Stats) | creator |
 | Create daily, change status, delete daily, sort/swap teams, submit results, finalize, populate, champion image | admin of the daily's pelada |
-| Confirm attendance (self) | member |
+| Confirm attendance (self) | member; diaristas only inside their window and while there are spots (see [Attendance](#attendance-mensalistas-and-diaristas)) |
+| Dismiss the bump alert (`bumps/seen`) | member; only the caller's own bumps |
 | Unconfirm (self) | must be confirmed |
-| Confirm/unconfirm another player, confirm every member | admin, target must be a member |
+| Confirm/unconfirm another player, confirm every member | admin, target must be a member; no window, no capacity, never bumps |
 | Rename team | member **and** player on that team (team must belong to the daily) |
 | Change team color | member and (team player or admin) |
 | Update profile, avatar, background | self |
@@ -303,6 +329,8 @@ Relationships: **creator** (`pelada.creator`), **admin** (`pelada.admins`), **me
 | Gap | Where |
 |-----|-------|
 | No unique constraint on `user_daily_stats(daily_id, user_id)` / `player_match_stats(match_id, user_id)` (the code never writes duplicates, but the database doesn't enforce it). Check production for duplicates before adding them | `V1__baseline.sql` |
+| `DailySchedulerService` and `nextDaily`'s "from today" still use the server's zone, not the pelada's `timeZone` | `DailySchedulerService`, `PeladaService.toSummaries` |
+| `UpdatePeladaRequestDTO` can't change `numberOfTeams`/`playersPerTeam`, so the "capacity below `maxMensalistas`" check only runs on create and on a limit change | `PeladaService` |
 | The JWT is valid for 7 days and can only be revoked for all of a user's sessions at once (`tokenVersion`); an open chat connection survives the revocation until it reconnects | `JwtAuthFilter`, `JwtService` |
 
 ## Error handling (`S/shared/exception/GlobalExceptionHandler.java`)
@@ -344,14 +372,15 @@ All routes are under `/api/v1`. "Auth" is the relationship checked (see the matr
 ### Peladas (`PeladaController`, `/peladas`)
 | Method | Path | Body | Auth | Response |
 |--------|------|------|------|----------|
-| POST | `/peladas` | `CreatePeladaRequestDTO` (`dayOfWeek` `MONDAY`..`SUNDAY`, `timeOfDay` `HH:mm`, 2–10 teams, 2–20 players per team) | any | 201 `PeladaResponseDTO` |
-| GET | `/peladas/my` | — | self | `List<PeladaResponseDTO>` with `memberCount`, `isAdmin` (the caller administers it) and `nextDaily` (`{id, date, time, status, confirmedCount, capacity, isConfirmed}`: the next `SCHEDULED`/`CONFIRMED` session from today, or null; `capacity` = `numberOfTeams × playersPerTeam`, `isConfirmed` is the caller's attendance). Grouped queries, constant count |
-| GET | `/peladas/{id}` | — | member | `PeladaDetailResponseDTO` (includes `numberOfTeams`, `playersPerTeam` and `members` with `isAdmin` and their `stars` in this pelada) |
-| PUT | `/peladas/{id}` | `UpdatePeladaRequestDTO` (partial; `dayOfWeek` `MONDAY`..`SUNDAY`, `timeOfDay` `HH:mm`) | admin | `PeladaResponseDTO` |
+| POST | `/peladas` | `CreatePeladaRequestDTO` (`dayOfWeek` `MONDAY`..`SUNDAY`, `timeOfDay` `HH:mm`, 2–10 teams, 2–20 players per team, optional `timeZone` (IANA, default `America/Sao_Paulo`, unknown → 400), `maxMensalistas` ≥ 0 (default 0, above the capacity → 409)) | any | 201 `PeladaResponseDTO` |
+| GET | `/peladas/my` | — | self | `List<PeladaResponseDTO>` with `memberCount`, `isAdmin` (the caller administers it) `timeZone` and `nextDaily` (`{id, date, time, status, confirmedCount, capacity, isConfirmed, startsAt, confirmOpensAt, bump}`: the next `SCHEDULED`/`CONFIRMED` session from today, or null; `capacity` = `numberOfTeams × playersPerTeam`, `isConfirmed` is the caller's attendance, `startsAt` the session start (ISO instant), `confirmOpensAt` from when the caller may confirm themselves (null for mensalistas), `bump` the caller's unseen `AttendanceBumpDTO` or null). Grouped queries, constant count |
+| GET | `/peladas/{id}` | — | member | `PeladaDetailResponseDTO` (includes `numberOfTeams`, `playersPerTeam`, `timeZone`, `maxMensalistas` and `members` with `isAdmin`, `isMensalista` and their `stars` in this pelada) |
+| PUT | `/peladas/{id}` | `UpdatePeladaRequestDTO` (partial; `dayOfWeek` `MONDAY`..`SUNDAY`, `timeOfDay` `HH:mm`, `timeZone` (unknown → 400), `maxMensalistas` ≥ 0 (409 below the current mensalistas or above the capacity)) | admin | `PeladaResponseDTO` |
 | DELETE | `/peladas/{id}` | — | creator | 204; deletes dailies (results, teams, attendance, photos), messages and rankings, then rebuilds the players' global Stats |
 | POST | `/peladas/{id}/players` | `AddPlayerRequestDTO {userId}` | admin | 200; 409 if already a member |
 | DELETE | `/peladas/{id}/players/{userId}` | — | admin | 200; 404 if `userId` isn't a member |
 | PUT | `/peladas/{id}/players/{userId}/admin` | `SetAdminRequestDTO {isAdmin}` | admin | 200; 404 if `userId` isn't a member |
+| PUT | `/peladas/{id}/players/{userId}/mensalista` | `SetMensalistaRequestDTO {isMensalista}` (`@NotNull`) | admin | `PeladaMemberDTO` with the new type; idempotent; 404 if `userId` isn't a member; 409 when the limit is full |
 | PUT | `/peladas/{id}/players/{userId}/stars` | `UpdatePlayerStarsRequestDTO {stars 1–5}` | admin | `PeladaMemberDTO` with the new stars; 404 if `userId` isn't a member |
 | GET | `/peladas/{id}/ranking` | — | member | `List<RankingDTO>` |
 | GET | `/peladas/{id}/members/{userId}/stats` | — | member (404 if `userId` isn't a member) | `PlayerPeladaStatsDTO` (includes the player's `stars` in this pelada) |
@@ -365,11 +394,12 @@ All routes are under `/api/v1`. "Auth" is the relationship checked (see the matr
 | Method | Path | Body | Auth | Response |
 |--------|------|------|------|----------|
 | POST | `/peladas/{peladaId}/dailies` | `CreateDailyRequestDTO` | admin | 201 `DailyListItemDTO` |
-| GET | `/peladas/{peladaId}/dailies` | — | member | `List<DailyListItemDTO>` (`confirmedPlayerCount`, `teamCount`, `matchCount`, `championImage`, `isConfirmed` = the caller's attendance; grouped queries, constant count) |
-| GET | `/dailies/{id}` | — | member | `DailyDetailDTO` (includes `isAdmin` for the caller and `peladaMembers`, every member's public fields, for the attendance list) |
-| POST / DELETE | `/dailies/{id}/confirm` | — | member / confirmed | `DailyListItemDTO` |
+| GET | `/peladas/{peladaId}/dailies` | — | member | `List<DailyListItemDTO>` (`confirmedPlayerCount`, `teamCount`, `matchCount`, `championImage`, `isConfirmed` = the caller's attendance, `capacity`, `startsAt`, `confirmOpensAt` (null for mensalistas); grouped queries, constant count) |
+| GET | `/dailies/{id}` | — | member | `DailyDetailDTO` (includes `isAdmin` for the caller; `peladaMembers`, every member's public fields with `isMensalista`, for the attendance list; `confirmedPlayers` with `isMensalista` and `confirmedAt`; `capacity`, `timeZone`, `startsAt`, `confirmOpensAt` (null for mensalistas); `myBump` (the caller's unseen bump or null) and `bumps` (`[{user, bumpedBy, bumpedAt}]`, public fields, newest first)) |
+| POST / DELETE | `/dailies/{id}/confirm` | — (a body is ignored) | member / confirmed | `DailyListItemDTO`; POST: 403 when a diarista's window isn't open, 409 "Sessão lotada" for a diarista in a full session; a mensalista in a full session bumps the diarista confirmed last |
+| POST | `/dailies/{id}/bumps/seen` | — | member | 204; marks the caller's bumps in that session as seen (other users' untouched) |
 | POST | `/dailies/{id}/confirm/all` | — | admin | `DailyListItemDTO`; confirms every member who hasn't confirmed (400 when the status is locked) |
-| POST / DELETE | `/dailies/{id}/confirm/{userId}` | — | admin | `DailyListItemDTO` |
+| POST / DELETE | `/dailies/{id}/confirm/{userId}` | — | admin | `DailyListItemDTO`; no window or capacity check, never bumps |
 | POST | `/dailies/{id}/sort-teams` | — | admin | `List<TeamDTO>` |
 | PUT | `/dailies/{id}/teams/swap` | `SwapPlayersRequestDTO` | admin | `List<TeamDTO>` |
 | PATCH | `/dailies/{dailyId}/teams/{teamId}/name` | `UpdateTeamNameRequestDTO` | team player | `TeamDTO` |
@@ -414,6 +444,7 @@ Tests live in `src/test/java/com/futspring/backend`, in the same domain packages
 - **Service unit tests** — JUnit 5 + Mockito + AssertJ, one class per service (`PeladaServiceTest`, `DailyServiceTest`, `DailyAttendanceServiceTest`…). Mock repositories and `UserAuthenticationHelper`; build a real `PeladaAccessHelper` over the mocked `PeladaRepository` and call `MembershipStubs.stubMembership(peladaRepository, pelada…)` so the exists queries answer from the entities' member/admin sets.
 - **Controller integration tests** — extend `BaseIntegrationTest` (`@SpringBootTest(RANDOM_PORT)`, `@AutoConfigureMockMvc`, `@Transactional`, real JWTs from `JwtService`).
 - **Repository tests** — `@DataJpaTest` on H2 (`UserRepositoryTest`, `DailyRepositoryTest`, `UserDailyStatsRepositoryTest`, `DailyAwardRepositoryTest` for the native award queries).
+- **Attendance** — `DailyAttendanceServiceTest` uses `Clock.fixed` and `support/InMemoryAttendance` (lenient stubs that back `DailyAttendanceRepository` with an in-memory list); `AttendanceWindowTest` covers zones and the Canadian DST change; `DailyAttendanceRepositoryTest` the victim query; `AttendanceConcurrencyTest` (Testcontainers Postgres, no test transaction, skipped without Docker) races diaristas for the last spot and expects exactly one to get it.
 - **WebSocket** — `JwtChannelInterceptorTest` covers CONNECT/SUBSCRIBE/SEND rules.
 - **Migration tests** — `FlywayMigrationTest` applies every migration to a Postgres container and starts the app with `validate`; `MigrationDataTest` migrates to a version, inserts production-shaped rows and checks what the next migration does. A new migration or entity change must keep them green (needs Docker).
 - When adding an endpoint: a controller test (happy path, validation 400, 403 for non-member/non-admin, 404) and service tests for the rules, including the ownership cases listed in [Rules for new code](#rules-for-new-code).

@@ -1,6 +1,6 @@
 # Mensalistas & diaristas — design
 
-Date: 2026-10-27 · Status: approved · Branch: `feat/mensalistas`
+Date: 2026-10-27 · Status: implemented · Branch: `feat/mensalistas`
 
 ## Goal
 
@@ -141,6 +141,13 @@ Changed behaviour: `POST /dailies/{id}/confirm` (still no body) adds 403 (window
 - `myBump` / `nextDaily.bump`: `{bumpedAt, bumpedBy: PublicUserDTO}` for the caller's unseen bump in that session, or `null`. `bumps[]`: `{user, bumpedBy, bumpedAt}` for the session, public fields only.
 - Read paths keep a constant number of queries (mensalista ids per pelada in one query, unseen bumps grouped per session for `/peladas/my`).
 - Error messages (pt-BR): "Diaristas podem confirmar a partir de sáb, 31/10 às 20:00", "Sessão lotada", "Limite de mensalistas atingido (8/8)", "Desmarque 2 mensalistas antes de reduzir o limite", "O limite de mensalistas não pode passar das vagas (10)".
+
+Implementation notes (deviations from this design):
+- `timeZone` is also sent on `PeladaResponseDTO` and `DailyDetailDTO`: the UI needs the pelada's zone to format `startsAt` / `confirmOpensAt` on Home and the session page.
+- One `AttendanceBumpDTO {user, bumpedBy, bumpedAt}` is used for `myBump`, `nextDaily.bump` and `bumps[]`.
+- The membership tag uses two Badge variants, `mensalista` and `diarista`, instead of one `membership` variant.
+- The "Tornar mensalista" item, when the limit is full, is disabled with the limit written under it rather than a tooltip (a disabled menu item gets no hover).
+- `getSelfConfirmState` also returns `confirmed`, and derives "mensalista" from `confirmOpensAt === null`.
 
 ## Frontend
 
