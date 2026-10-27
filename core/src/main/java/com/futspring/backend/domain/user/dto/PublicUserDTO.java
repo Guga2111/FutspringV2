@@ -16,7 +16,6 @@ public class PublicUserDTO {
     private Long id;
     private String username;
     private String image;
-    private int stars;
     private String position;
 
     public static PublicUserDTO from(User user) {
@@ -24,7 +23,6 @@ public class PublicUserDTO {
                 .id(user.getId())
                 .username(user.getUsername())
                 .image(user.getImage())
-                .stars(user.getStars())
                 .position(user.getPosition())
                 .build();
     }

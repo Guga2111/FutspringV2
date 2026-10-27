@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { createDailySchema } from "./daily"
+import { playerStarsSchema } from "./pelada"
 import { validateImageFile } from "./upload"
 import { profileSchema } from "./user"
 
@@ -13,10 +14,9 @@ describe("createDailySchema (CreateDailyRequestDTO)", () => {
 
 describe("profileSchema (UpdateProfileRequest)", () => {
   it("mirrors the backend constraints", () => {
-    expect(profileSchema.safeParse({ username: "ab", position: "", stars: 3 }).success).toBe(false)
-    expect(profileSchema.safeParse({ username: "ana", position: "LIBERO", stars: 3 }).success).toBe(false)
-    expect(profileSchema.safeParse({ username: "ana", position: "MEIO", stars: 6 }).success).toBe(false)
-    expect(profileSchema.safeParse({ username: "ana", position: "", stars: 5 }).success).toBe(true)
+    expect(profileSchema.safeParse({ username: "ab", position: "" }).success).toBe(false)
+    expect(profileSchema.safeParse({ username: "ana", position: "LIBERO" }).success).toBe(false)
+    expect(profileSchema.safeParse({ username: "ana", position: "" }).success).toBe(true)
   })
 })
 
@@ -26,5 +26,15 @@ describe("validateImageFile (FileUploadService)", () => {
     expect(validateImageFile(new File(["x"], "a.gif", { type: "image/gif" }))).toMatch(/JPEG/)
     const big = new File([new Uint8Array(5 * 1024 * 1024 + 1)], "a.jpg", { type: "image/jpeg" })
     expect(validateImageFile(big)).toMatch(/5 MB/)
+  })
+})
+
+describe("playerStarsSchema (UpdatePlayerStarsRequestDTO)", () => {
+  it("accepts 1 to 5 whole stars", () => {
+    expect(playerStarsSchema.safeParse({ stars: 0 }).success).toBe(false)
+    expect(playerStarsSchema.safeParse({ stars: 6 }).success).toBe(false)
+    expect(playerStarsSchema.safeParse({ stars: 2.5 }).success).toBe(false)
+    expect(playerStarsSchema.safeParse({ stars: 1 }).success).toBe(true)
+    expect(playerStarsSchema.safeParse({ stars: 5 }).success).toBe(true)
   })
 })

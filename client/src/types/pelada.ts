@@ -4,6 +4,7 @@ export interface PeladaMember {
   id: number
   username: string
   image: string | null
+  // the member's stars in this pelada, set by its admins
   stars: number
   position: string | null
   isAdmin: boolean
@@ -103,6 +104,8 @@ export interface PeladaAttendanceDTO {
 
 export interface PlayerPeladaStatsDTO {
   userId: number
+  // the player's stars in this pelada
+  stars: number
   goals: number
   assists: number
   matchesPlayed: number

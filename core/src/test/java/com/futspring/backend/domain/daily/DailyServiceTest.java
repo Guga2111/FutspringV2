@@ -1,5 +1,6 @@
 package com.futspring.backend.domain.daily;
 
+import com.futspring.backend.domain.pelada.PeladaPlayerStarsRepository;
 import com.futspring.backend.domain.daily.dto.CreateDailyRequestDTO;
 import com.futspring.backend.domain.daily.dto.DailyDetailDTO;
 import com.futspring.backend.domain.daily.dto.DailyListItemDTO;
@@ -55,6 +56,9 @@ class DailyServiceTest {
     @Mock LeagueTableEntryRepository leagueTableEntryRepository;
     @Mock DailyAwardRepository dailyAwardRepository;
 
+    @Mock
+    PeladaPlayerStarsRepository playerStarsRepository;
+
     DailyService dailyService;
 
     User admin;
@@ -68,14 +72,14 @@ class DailyServiceTest {
         dailyService = new DailyService(
                 userAuthHelper, new PeladaAccessHelper(peladaRepository), dailyAttendanceService, dailyTeamManagementService,
                 dailyResultsService, aggregateRebuildService, fileUploadService, dailyDTOMapper,
-                dailyRepository, peladaRepository, teamRepository,
+                dailyRepository, peladaRepository, playerStarsRepository, teamRepository,
                 matchRepository, playerMatchStatRepository, userDailyStatsRepository,
                 leagueTableEntryRepository, dailyAwardRepository,
                 new DailyListItemAssembler(dailyRepository, teamRepository, matchRepository));
 
-        admin = User.builder().id(1L).email("admin@example.com").username("admin").password("hash").stars(4).build();
-        member = User.builder().id(2L).email("member@example.com").username("member").password("hash").stars(3).build();
-        outsider = User.builder().id(3L).email("out@example.com").username("out").password("hash").stars(3).build();
+        admin = User.builder().id(1L).email("admin@example.com").username("admin").password("hash").build();
+        member = User.builder().id(2L).email("member@example.com").username("member").password("hash").build();
+        outsider = User.builder().id(3L).email("out@example.com").username("out").password("hash").build();
 
         pelada = Pelada.builder()
                 .id(10L)

@@ -1,12 +1,14 @@
 package com.futspring.backend.domain.pelada.dto;
 
 import com.futspring.backend.domain.pelada.Pelada;
+import com.futspring.backend.domain.pelada.PeladaPlayerStars;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Data
@@ -30,9 +32,11 @@ public class PeladaDetailResponseDTO {
     private int playersPerTeam;
     private List<PeladaMemberDTO> members;
 
-    public static PeladaDetailResponseDTO from(Pelada pelada) {
+    // starsByUserId: PeladaPlayerStarsRepository.findStarsByPelada; members missing from it have the default
+    public static PeladaDetailResponseDTO from(Pelada pelada, Map<Long, Integer> starsByUserId) {
         List<PeladaMemberDTO> memberDTOs = pelada.getMembers().stream()
-                .map(user -> PeladaMemberDTO.from(user, pelada.getAdmins().contains(user)))
+                .map(user -> PeladaMemberDTO.from(user, pelada.getAdmins().contains(user),
+                        starsByUserId.getOrDefault(user.getId(), PeladaPlayerStars.DEFAULT_STARS)))
                 .collect(Collectors.toList());
 
         return PeladaDetailResponseDTO.builder()

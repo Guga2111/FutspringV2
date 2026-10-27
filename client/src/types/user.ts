@@ -5,7 +5,8 @@ export interface ProfileDTO {
   email?: string
   image: string | null
   backgroundImage: string | null
-  stars: number
+  // rounded average of the user's stars in their peladas; absent when they belong to none
+  stars?: number
   position: string | null
 }
 
@@ -14,7 +15,6 @@ export interface PublicUser {
   id: number
   username: string
   image: string | null
-  stars: number
   position: string | null
 }
 

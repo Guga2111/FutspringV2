@@ -48,6 +48,9 @@ class PeladaServiceImageTest {
     @Mock
     UserAuthenticationHelper userAuthHelper;
 
+    @Mock
+    PeladaPlayerStarsRepository playerStarsRepository;
+
     PeladaService peladaService;
 
     User admin;
@@ -56,7 +59,7 @@ class PeladaServiceImageTest {
 
     @BeforeEach
     void setUp() {
-        peladaService = new PeladaService(peladaRepository, userRepository, dailyRepository, rankingRepository, messageRepository,
+        peladaService = new PeladaService(peladaRepository, playerStarsRepository, userRepository, dailyRepository, rankingRepository, messageRepository,
                 fileUploadService, userAuthHelper, new PeladaAccessHelper(peladaRepository), dailyService, aggregateRebuildService);
 
         admin = User.builder().id(1L).email("admin@example.com").username("admin").password("hash").build();

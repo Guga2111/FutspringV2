@@ -4,7 +4,6 @@ export interface UserResponseDTO {
   username: string
   image: string | null
   backgroundImage: string | null
-  stars: number
   position: string | null
 }
 

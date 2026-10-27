@@ -19,18 +19,19 @@ public class ProfileDTO {
     private String email;
     private String image;
     private String backgroundImage;
-    private int stars;
+    // Rounded average of the user's stars in their peladas; null (omitted) when they have none
+    private Integer stars;
     private String position;
 
     // email is only returned to the profile owner
-    public static ProfileDTO from(User user, boolean isSelf) {
+    public static ProfileDTO from(User user, boolean isSelf, Integer stars) {
         return ProfileDTO.builder()
                 .id(user.getId())
                 .username(user.getUsername())
                 .email(isSelf ? user.getEmail() : null)
                 .image(user.getImage())
                 .backgroundImage(user.getBackgroundImage())
-                .stars(user.getStars())
+                .stars(stars)
                 .position(user.getPosition())
                 .build();
     }

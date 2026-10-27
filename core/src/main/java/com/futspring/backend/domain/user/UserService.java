@@ -1,6 +1,7 @@
 package com.futspring.backend.domain.user;
 
 import com.futspring.backend.domain.file.FileUploadService;
+import com.futspring.backend.domain.pelada.PeladaPlayerStarsRepository;
 import com.futspring.backend.shared.exception.AppException;
 import com.futspring.backend.domain.user.dto.ProfileDTO;
 import com.futspring.backend.domain.user.dto.UpdateProfileRequest;
@@ -16,12 +17,13 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final FileUploadService fileUploadService;
+    private final PeladaPlayerStarsRepository playerStarsRepository;
 
     // Public profile; the email is only included for the owner
     @Transactional(readOnly = true)
     public ProfileDTO getProfile(Long id, String callerEmail) {
         User user = findUser(id);
-        return ProfileDTO.from(user, user.getEmail().equals(callerEmail));
+        return toProfile(user, user.getEmail().equals(callerEmail));
     }
 
     @Transactional
@@ -43,11 +45,7 @@ public class UserService {
             user.setPosition(request.getPosition().isEmpty() ? null : request.getPosition());
         }
 
-        if (request.getStars() != null) {
-            user.setStars(request.getStars());
-        }
-
-        return ProfileDTO.from(userRepository.save(user), true);
+        return toProfile(userRepository.save(user), true);
     }
 
     @Transactional
@@ -56,7 +54,7 @@ public class UserService {
         String filename = fileUploadService.uploadImage(file);
         fileUploadService.deleteImageAfterCommit(user.getImage());
         user.setImage(filename);
-        return ProfileDTO.from(userRepository.save(user), true);
+        return toProfile(userRepository.save(user), true);
     }
 
     @Transactional
@@ -65,7 +63,13 @@ public class UserService {
         String filename = fileUploadService.uploadImage(file);
         fileUploadService.deleteImageAfterCommit(user.getBackgroundImage());
         user.setBackgroundImage(filename);
-        return ProfileDTO.from(userRepository.save(user), true);
+        return toProfile(userRepository.save(user), true);
+    }
+
+    // Profile stars: the rounded average of the user's stars in every pelada they belong to
+    private ProfileDTO toProfile(User user, boolean isSelf) {
+        Double average = playerStarsRepository.averageStarsByUser(user.getId());
+        return ProfileDTO.from(user, isSelf, average == null ? null : (int) Math.round(average));
     }
 
     private User findUser(Long id) {

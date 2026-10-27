@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { toast } from "sonner"
-import { deletePelada, removePlayer, setAdmin } from "@/api/peladas"
+import { deletePelada, removePlayer, setAdmin, setPlayerStars } from "@/api/peladas"
 import { confirmAttendance, disconfirmAttendance } from "@/api/dailies"
 import { useMyPeladasContext } from "@/hooks/useMyPeladasContext"
 import { getErrorMessage } from "@/lib/errors"
@@ -67,6 +67,13 @@ export function usePeladaActions(
     }
   }
 
+  // Errors are thrown to the stars dialog, which shows them in its form
+  async function setMemberStars(member: PeladaMember, stars: number) {
+    if (!pelada) return
+    await setPlayerStars(pelada.id, member.id, stars)
+    await refetchPelada()
+  }
+
   async function toggleAttendance(daily: DailyListItem) {
     if (!pelada) return
     setAttendancePending(true)
@@ -96,6 +103,7 @@ export function usePeladaActions(
     removePeladaAndLeave: removePeladaAndLeaveAndReload,
     removeMember,
     toggleAdmin,
+    setMemberStars,
     toggleAttendance,
   }
 }

@@ -15,7 +15,7 @@ export async function getUser(userId: number): Promise<ProfileDTO> {
 
 export async function updateUser(
   userId: number,
-  data: { username?: string; position?: string; stars?: number },
+  data: { username?: string; position?: string },
 ): Promise<ProfileDTO> {
   const response = await apiClient.put<ProfileDTO>(`/api/v1/users/${userId}`, data)
   return response.data

@@ -1,5 +1,6 @@
 package com.futspring.backend.domain.user;
 
+import com.futspring.backend.domain.pelada.PeladaPlayerStarsRepository;
 import com.futspring.backend.domain.file.FileUploadService;
 import com.futspring.backend.shared.exception.AppException;
 import com.futspring.backend.domain.user.dto.ProfileDTO;
@@ -26,20 +27,22 @@ class UserServiceProfileTest {
     @Mock
     FileUploadService fileUploadService;
 
+    @Mock
+    PeladaPlayerStarsRepository playerStarsRepository;
+
     UserService userService;
 
     User user;
 
     @BeforeEach
     void setUp() {
-        userService = new UserService(userRepository, fileUploadService);
+        userService = new UserService(userRepository, fileUploadService, playerStarsRepository);
 
         user = User.builder()
                 .id(1L)
                 .email("alice@example.com")
                 .username("alice")
                 .password("hash")
-                .stars(3)
                 .build();
     }
 
@@ -86,13 +89,11 @@ class UserServiceProfileTest {
         UpdateProfileRequest req = new UpdateProfileRequest();
         req.setUsername("newname");
         req.setPosition("GOALKEEPER");
-        req.setStars(5);
 
         ProfileDTO result = userService.updateProfile(1L, req, "alice@example.com");
 
         assertThat(result.getUsername()).isEqualTo("newname");
         assertThat(result.getPosition()).isEqualTo("GOALKEEPER");
-        assertThat(result.getStars()).isEqualTo(5);
     }
 
     @Test
@@ -204,14 +205,22 @@ class UserServiceProfileTest {
     }
 
     @Test
-    void updateProfile_starsUpdate_persisted() {
+    void getProfile_starsAreTheRoundedAverageOfThePeladas() {
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
-        when(userRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(playerStarsRepository.averageStarsByUser(1L)).thenReturn(3.5);
 
-        UpdateProfileRequest req = new UpdateProfileRequest();
-        req.setStars(5);
+        ProfileDTO result = userService.getProfile(1L, "bob@example.com");
 
-        ProfileDTO result = userService.updateProfile(1L, req, "alice@example.com");
-        assertThat(result.getStars()).isEqualTo(5);
+        assertThat(result.getStars()).isEqualTo(4);
+    }
+
+    @Test
+    void getProfile_withoutPeladas_hasNoStars() {
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(playerStarsRepository.averageStarsByUser(1L)).thenReturn(null);
+
+        ProfileDTO result = userService.getProfile(1L, "bob@example.com");
+
+        assertThat(result.getStars()).isNull();
     }
 }

@@ -98,12 +98,13 @@ com.futspring.backend
 │   │                               ForgotPasswordRequestDTO, ResetPasswordRequestDTO
 │   ├── user/                       UserController, UserService (profile get/update, avatar, background image), User, UserRepository
 │   │   └── dto/                    ProfileDTO, PublicUserDTO, UpdateProfileRequest
-│   ├── pelada/                     PeladaController, PeladaService (pelada CRUD, members, admins, user search, image), Pelada, PeladaRepository
-│   │   └── dto/                    Create/UpdatePeladaRequestDTO, DayOfWeekPattern, PeladaResponseDTO, PeladaDetailResponseDTO, PeladaMemberDTO…
+│   ├── pelada/                     PeladaController, PeladaService (pelada CRUD, members, admins, member stars, user search, image), Pelada, PeladaRepository,
+│   │                               PeladaPlayerStars + PeladaPlayerStarsRepository (stars per member, profile average)
+│   │   └── dto/                    Create/UpdatePeladaRequestDTO, DayOfWeekPattern, PeladaResponseDTO, PeladaDetailResponseDTO, PeladaMemberDTO, UpdatePlayerStarsRequestDTO…
 │   ├── daily/                      DailyController and the daily services:
 │   │   │                           DailyService (create, list, status transitions, delete, detail aggregation)
 │   │   │                           DailyAttendanceService (confirm / unconfirm, self and by admin)
-│   │   │                           DailyTeamManagementService (sort teams with star-balanced LPT, swap, rename, color)
+│   │   │                           DailyTeamManagementService (sort teams with LPT balanced by the stars in the pelada, swap, rename, color)
 │   │   │                           DailyResultsService (results, live league table, finalize, champion image, populate, clearResults)
 │   │   │                           DailySchedulerService (hourly cron that auto-creates the next daily), DailyDTOMapper (Player/Team/MatchDTO),
 │   │                           DailyListItemAssembler (DailyListItemDTO with counts and the caller's attendance, grouped queries)
@@ -143,7 +144,7 @@ All entities use IDENTITY ids and **LAZY** fetching, Lombok `@Getter @Setter` (n
 
 | Entity | Table | Fields / relations |
 |--------|-------|--------------------|
-| `User` | `users` | `email` (unique), `username` (unique case-insensitively in `AuthService`/`UserService`, not in the DB: production has legacy duplicates, so check with `existsByUsernameIgnoreCase…`, never a single-result find), `password` (BCrypt), `image`, `backgroundImage`, `stars` (default 3), `position`, `tokenVersion` (default 0, incremented by a password reset to revoke every JWT issued before) |
+| `User` | `users` | `email` (unique), `username` (unique case-insensitively in `AuthService`/`UserService`, not in the DB: production has legacy duplicates, so check with `existsByUsernameIgnoreCase…`, never a single-result find), `password` (BCrypt), `image`, `backgroundImage`, `position`, `tokenVersion` (default 0, incremented by a password reset to revoke every JWT issued before). The legacy `users.stars` column is no longer mapped (default 3 since V8) and will be dropped by a later migration |
 | `Pelada` | `peladas` | `name`, `dayOfWeek` (a `java.time.DayOfWeek` name, `MONDAY`..`SUNDAY`, validated on create/update), `timeOfDay`, `duration`, `address`, `reference`, `image`, `autoCreateDailyEnabled`, `numberOfTeams` (2), `playersPerTeam` (5), `createdAt`; `creator` → User; `members` M:N (`pelada_members`); `admins` M:N (`pelada_admins`) |
 | `Daily` | `dailies` | `dailyDate`, `dailyTime`, `status` (`DailyStatus`, default `SCHEDULED`), `isFinished`, `championImage`, `createdAt`; `pelada`; `confirmedPlayers` M:N (`daily_confirmed_players`) |
 | `Team` | `teams` | `name`, `color`; `daily`; `players` M:N (`team_players`) |
@@ -155,6 +156,7 @@ All entities use IDENTITY ids and **LAZY** fetching, Lombok `@Getter @Setter` (n
 | `Ranking` | `rankings` (unique `pelada_id`+`user_id`) | `goals`, `assists`, `matchesPlayed`, `wins`; `pelada`, `user` |
 | `Stats` | `stats` | `goals`, `assists`, `matchesPlayed`, `wins`, `sessionsPlayed`, `matchWins`, `puskasDates` (`stats_puskas_dates`); `user` (1:1) |
 | `PasswordResetToken` | `password_reset_tokens` | `tokenHash` (SHA-256 hex of the token sent by e-mail, unique), `expiresAt` (30 min), `usedAt`, `createdAt`; `user`. Usable while `usedAt` is null and `expiresAt` is in the future |
+| `PeladaPlayerStars` | `pelada_player_stars` (unique `pelada_id`+`user_id`) | `stars` (1–5), `updatedAt`; `pelada`, `user`. A member's stars in one pelada, set by its admins; a member without a row has `DEFAULT_STARS` (3). Read in one query per pelada (`findStarsByPelada`); deleted when the member is removed or the pelada is deleted. Used by team sorting, the member/team/player DTOs and the profile average |
 | `Message` | `messages` | `content` (≤ 500), `sentAt`; `pelada`, `sender` |
 
 There are no JPA cascades: deletes are explicit in the services (`DailyService.deleteDailyData`, `PeladaService.deletePelada`).
@@ -187,6 +189,7 @@ New status-like fields must be Java enums stored with `@Enumerated(EnumType.STRI
 | V5 | Converts Portuguese `peladas.day_of_week` values (`Segunda`, `Sabado`…) to `MONDAY`..`SUNDAY`; unknown values are left as they are |
 | V6 | Creates `password_reset_tokens` (FK to `users` with `ON DELETE CASCADE`, index on `user_id`); non-destructive |
 | V7 | Adds `users.token_version` (`INTEGER NOT NULL DEFAULT 0`); existing sessions stay valid; non-destructive |
+| V8 | Creates `pelada_player_stars` (FKs `ON DELETE CASCADE`, unique `(pelada_id, user_id)`, index on `user_id`), copies each member's `users.stars` into every pelada they belong to, and sets `DEFAULT 3` on `users.stars` (no longer mapped); non-destructive. Pending: a later migration drops `users.stars` (destructive: back up first) |
 
 ### Migration rules
 
@@ -271,6 +274,7 @@ Relationships: **creator** (`pelada.creator`), **admin** (`pelada.admins`), **me
 | Create pelada | any authenticated user (becomes creator, member and admin) |
 | Read pelada detail, dailies, daily detail, ranking, attendance ranking, awards, member stats/history, chat history, send chat, subscribe to the chat topic | member (member stats/history: the target user must also be a member, else 404) |
 | Update pelada, upload pelada image, add/remove player, set/unset admin | admin (the creator can't be removed or demoted; remove/set admin need the target to be a member, else 404) |
+| Set a member's stars in the pelada | admin; any member, the creator and the caller included (target must be a member, else 404) |
 | Delete pelada (cascades dailies, results, teams, attendance, messages, rankings; rebuilds global Stats) | creator |
 | Create daily, change status, delete daily, sort/swap teams, submit results, finalize, populate, champion image | admin of the daily's pelada |
 | Confirm attendance (self) | member |
@@ -290,7 +294,7 @@ Relationships: **creator** (`pelada.creator`), **admin** (`pelada.admins`), **me
 2. Every `{id}` route checks the relationship before doing anything else.
 3. **Scope child ids to the parent in the path.** A `matchId`, `teamId` or `userId` in the body/path must be checked to belong to the `dailyId`/`peladaId` of the route (e.g. `team.getDaily().getId().equals(dailyId)`, as `updateTeamName` does). Otherwise an admin of one pelada can touch another pelada's data.
 4. Use `PeladaAccessHelper` (exists queries) instead of loading `members`/`admins` collections just to call `contains`.
-5. Don't expose email or other PII outside the pelada context; public user views return id, username, image, position, stars.
+5. Don't expose email or other PII outside the pelada context; public user views return id, username, image, position.
 6. 403 for "exists but you can't", 404 for "doesn't exist". When even revealing existence matters, answer 404 for both.
 7. Each new `{id}` route gets tests for: not a member (403), member but not admin (403 where admin is required), and a child id from another pelada/daily.
 
@@ -342,14 +346,15 @@ All routes are under `/api/v1`. "Auth" is the relationship checked (see the matr
 |--------|------|------|------|----------|
 | POST | `/peladas` | `CreatePeladaRequestDTO` (`dayOfWeek` `MONDAY`..`SUNDAY`, `timeOfDay` `HH:mm`, 2–10 teams, 2–20 players per team) | any | 201 `PeladaResponseDTO` |
 | GET | `/peladas/my` | — | self | `List<PeladaResponseDTO>` with `memberCount`, `isAdmin` (the caller administers it) and `nextDaily` (`{id, date, time, status, confirmedCount, capacity, isConfirmed}`: the next `SCHEDULED`/`CONFIRMED` session from today, or null; `capacity` = `numberOfTeams × playersPerTeam`, `isConfirmed` is the caller's attendance). Grouped queries, constant count |
-| GET | `/peladas/{id}` | — | member | `PeladaDetailResponseDTO` (includes `numberOfTeams`, `playersPerTeam` and `members` with `isAdmin`) |
+| GET | `/peladas/{id}` | — | member | `PeladaDetailResponseDTO` (includes `numberOfTeams`, `playersPerTeam` and `members` with `isAdmin` and their `stars` in this pelada) |
 | PUT | `/peladas/{id}` | `UpdatePeladaRequestDTO` (partial; `dayOfWeek` `MONDAY`..`SUNDAY`, `timeOfDay` `HH:mm`) | admin | `PeladaResponseDTO` |
 | DELETE | `/peladas/{id}` | — | creator | 204; deletes dailies (results, teams, attendance, photos), messages and rankings, then rebuilds the players' global Stats |
 | POST | `/peladas/{id}/players` | `AddPlayerRequestDTO {userId}` | admin | 200; 409 if already a member |
 | DELETE | `/peladas/{id}/players/{userId}` | — | admin | 200; 404 if `userId` isn't a member |
 | PUT | `/peladas/{id}/players/{userId}/admin` | `SetAdminRequestDTO {isAdmin}` | admin | 200; 404 if `userId` isn't a member |
+| PUT | `/peladas/{id}/players/{userId}/stars` | `UpdatePlayerStarsRequestDTO {stars 1–5}` | admin | `PeladaMemberDTO` with the new stars; 404 if `userId` isn't a member |
 | GET | `/peladas/{id}/ranking` | — | member | `List<RankingDTO>` |
-| GET | `/peladas/{id}/members/{userId}/stats` | — | member (404 if `userId` isn't a member) | `PlayerPeladaStatsDTO` |
+| GET | `/peladas/{id}/members/{userId}/stats` | — | member (404 if `userId` isn't a member) | `PlayerPeladaStatsDTO` (includes the player's `stars` in this pelada) |
 | GET | `/peladas/{id}/members/{userId}/history?limit=` | — | member (404 if `userId` isn't a member) | `PlayerPeladaHistoryDTO {userId, totalSessions, rows: [{dailyId, date, goals, assists, matchesPlayed, wins, wonSession}]}`, newest first, one row per finalized session the player took part in. `limit` (optional, 1–100, else 400) returns only the last N sessions; without it every session is returned. `totalSessions` is always the full count (the count query only runs when the page is full) |
 | GET | `/peladas/{id}/attendance` | — | member | `PeladaAttendanceDTO {from, to, totalSessions, rows: [{userId, username, userImage, sessionsAttended, rate}]}`: the last 6 months (`to` = today). `totalSessions` counts the pelada's `FINISHED` dailies in the period; a player attended a session when they have a `UserDailyStats` row in it (was on a team). One row per current member (former members are left out), `rate` = attended / total (0 when there are no sessions), sorted by rate, then attended, then username. Two queries (count + grouped count), no per-member query |
 | GET | `/peladas/{id}/awards` | — | member | `PeladaAwardsDTO` |
@@ -379,10 +384,10 @@ All routes are under `/api/v1`. "Auth" is the relationship checked (see the matr
 ### Users (`UserController`, `/users`)
 | Method | Path | Body | Auth | Response |
 |--------|------|------|------|----------|
-| GET | `/users/search?q=` | — | any | `List<PublicUserDTO {id, username, image, stars, position}>` (max 10); matches username or email; `q` needs ≥ 3 characters (400) |
-| GET | `/users/{id}` | — | any | `ProfileDTO` (`email` only for self) |
+| GET | `/users/search?q=` | — | any | `List<PublicUserDTO {id, username, image, position}>` (max 10); matches username or email; `q` needs ≥ 3 characters (400) |
+| GET | `/users/{id}` | — | any | `ProfileDTO` (`email` only for self; `stars` = the rounded average of the user's stars in every pelada they belong to, members without a row counting 3, omitted when they belong to none) |
 | GET | `/users/{id}/peladas` | — | any | `List<PeladaResponseDTO>`: peladas the caller and `{id}` both belong to (`isAdmin`/`nextDaily.isConfirmed` refer to the caller) |
-| PUT | `/users/{id}` | `UpdateProfileRequest {username 3–30, position, stars 1–5}` | self | `ProfileDTO` |
+| PUT | `/users/{id}` | `UpdateProfileRequest {username 3–30, position}` (stars are set per pelada by admins) | self | `ProfileDTO` |
 | POST | `/users/{id}/image`, `/users/{id}/background-image` | multipart `file` | self | `ProfileDTO` |
 | GET | `/users/{id}/stats` | — | self or shares a pelada | `StatsDTO` |
 | GET | `/users/{id}/stats/timeline?from&to` | — | self or shares a pelada | `UserStatsTimelineDTO` (other viewers: shared peladas only; `from` after `to` → 400) |

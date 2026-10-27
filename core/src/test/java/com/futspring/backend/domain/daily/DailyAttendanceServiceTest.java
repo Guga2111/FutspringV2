@@ -51,9 +51,9 @@ class DailyAttendanceServiceTest {
         attendanceService = new DailyAttendanceService(userAuthHelper, new PeladaAccessHelper(peladaRepository), dailyRepository, userRepository,
                 new DailyListItemAssembler(dailyRepository, teamRepository, matchRepository));
 
-        admin = User.builder().id(1L).email("admin@example.com").username("admin").password("hash").stars(4).build();
-        member = User.builder().id(2L).email("member@example.com").username("member").password("hash").stars(3).build();
-        outsider = User.builder().id(3L).email("out@example.com").username("out").password("hash").stars(3).build();
+        admin = User.builder().id(1L).email("admin@example.com").username("admin").password("hash").build();
+        member = User.builder().id(2L).email("member@example.com").username("member").password("hash").build();
+        outsider = User.builder().id(3L).email("out@example.com").username("out").password("hash").build();
 
         pelada = Pelada.builder()
                 .id(10L)

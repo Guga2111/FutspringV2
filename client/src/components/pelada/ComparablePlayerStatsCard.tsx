@@ -108,7 +108,7 @@ function PlayerColumn({
             {data.profile.position}
           </Badge>
         )}
-        <Stars count={data.profile.stars} />
+        <Stars count={stats.stars} />
         <span className="text-[10px] text-zinc-500 tabular-nums">
           {stats.matchesPlayed} jogos
         </span>

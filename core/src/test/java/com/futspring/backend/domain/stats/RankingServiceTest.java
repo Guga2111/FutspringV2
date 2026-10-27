@@ -1,5 +1,6 @@
 package com.futspring.backend.domain.stats;
 
+import com.futspring.backend.domain.pelada.PeladaPlayerStarsRepository;
 import com.futspring.backend.domain.daily.entity.Daily;
 import com.futspring.backend.domain.pelada.Pelada;
 import com.futspring.backend.domain.pelada.PeladaRepository;
@@ -49,6 +50,9 @@ class RankingServiceTest {
     @Mock
     UserDailyStatsRepository userDailyStatsRepository;
 
+    @Mock
+    PeladaPlayerStarsRepository playerStarsRepository;
+
     RankingService rankingService;
 
     User admin;
@@ -58,11 +62,11 @@ class RankingServiceTest {
 
     @BeforeEach
     void setUp() {
-        rankingService = new RankingService(peladaRepository, userAuthHelper, new PeladaAccessHelper(peladaRepository), rankingRepository, dailyAwardRepository, userRepository, userDailyStatsRepository);
+        rankingService = new RankingService(peladaRepository, userAuthHelper, new PeladaAccessHelper(peladaRepository), rankingRepository, dailyAwardRepository, userRepository, userDailyStatsRepository, playerStarsRepository);
 
-        admin = User.builder().id(1L).email("admin@example.com").username("admin").password("hash").stars(4).build();
-        player = User.builder().id(2L).email("player@example.com").username("player").password("hash").stars(3).build();
-        outsider = User.builder().id(3L).email("out@example.com").username("out").password("hash").stars(3).build();
+        admin = User.builder().id(1L).email("admin@example.com").username("admin").password("hash").build();
+        player = User.builder().id(2L).email("player@example.com").username("player").password("hash").build();
+        outsider = User.builder().id(3L).email("out@example.com").username("out").password("hash").build();
 
         pelada = Pelada.builder()
                 .id(10L)

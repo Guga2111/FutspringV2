@@ -1,5 +1,6 @@
 package com.futspring.backend.domain.user;
 
+import com.futspring.backend.domain.pelada.PeladaPlayerStarsRepository;
 import com.futspring.backend.domain.file.FileUploadService;
 import com.futspring.backend.shared.exception.AppException;
 import com.futspring.backend.domain.user.dto.ProfileDTO;
@@ -26,13 +27,16 @@ class UserServiceTest {
     @Mock
     FileUploadService fileUploadService;
 
+    @Mock
+    PeladaPlayerStarsRepository playerStarsRepository;
+
     UserService userService;
 
     User user;
 
     @BeforeEach
     void setUp() {
-        userService = new UserService(userRepository, fileUploadService);
+        userService = new UserService(userRepository, fileUploadService, playerStarsRepository);
 
         user = User.builder()
                 .id(1L)

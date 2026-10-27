@@ -12,6 +12,8 @@ import lombok.NoArgsConstructor;
 public class PlayerPeladaStatsDTO {
 
     private Long userId;
+    // The player's stars in this pelada
+    private int stars;
     private int goals;
     private int assists;
     private int matchesPlayed;

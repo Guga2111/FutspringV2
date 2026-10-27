@@ -1,5 +1,5 @@
 import apiClient from "./client"
-import type { PeladaResponse, PeladaDetail, PeladaAwards, PeladaAttendanceDTO, PlayerPeladaHistoryDTO, PlayerPeladaStatsDTO } from "@/types/pelada"
+import type { PeladaResponse, PeladaDetail, PeladaMember, PeladaAwards, PeladaAttendanceDTO, PlayerPeladaHistoryDTO, PlayerPeladaStatsDTO } from "@/types/pelada"
 import type { PublicUser } from "@/types/user"
 import type { RankingDTO } from "@/types/daily"
 
@@ -59,6 +59,12 @@ export async function removePlayer(peladaId: number, userId: number): Promise<vo
 
 export async function setAdmin(peladaId: number, userId: number, isAdmin: boolean): Promise<void> {
   await apiClient.put(`/api/v1/peladas/${peladaId}/players/${userId}/admin`, { isAdmin })
+}
+
+// admin only; returns the member with the new stars
+export async function setPlayerStars(peladaId: number, userId: number, stars: number): Promise<PeladaMember> {
+  const response = await apiClient.put<PeladaMember>(`/api/v1/peladas/${peladaId}/players/${userId}/stars`, { stars })
+  return response.data
 }
 
 export async function uploadPeladaImage(peladaId: number, file: File): Promise<PeladaResponse> {

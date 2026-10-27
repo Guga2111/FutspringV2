@@ -57,6 +57,37 @@ class MigrationDataTest {
     }
 
     @Test
+    void v8_copiesSelfRatedStarsToEveryMembership() throws SQLException {
+        flyway("7").migrate();
+        execute("INSERT INTO users (id, email, username, password, stars) VALUES (1, 'a@a.com', 'a', 'x', 5), (2, 'b@b.com', 'b', 'x', 2)");
+        for (int id = 1; id <= 2; id++) {
+            execute("INSERT INTO peladas (id, name, day_of_week, time_of_day, duration, auto_create_daily_enabled, "
+                    + "number_of_teams, players_per_team, created_at, creator_id) "
+                    + "VALUES (" + id + ", 'p', 'FRIDAY', '18:00', 1, false, 2, 5, now(), 1)");
+        }
+        execute("INSERT INTO pelada_members (pelada_id, user_id) VALUES (1, 1), (1, 2), (2, 1)");
+
+        flyway(null).migrate();
+
+        Map<String, Integer> stars = new LinkedHashMap<>();
+        try (Connection c = connect(); Statement s = c.createStatement();
+             ResultSet rs = s.executeQuery("SELECT pelada_id, user_id, stars FROM pelada_player_stars ORDER BY pelada_id, user_id")) {
+            while (rs.next()) {
+                stars.put(rs.getLong(1) + "-" + rs.getLong(2), rs.getInt(3));
+            }
+        }
+        assertThat(stars).containsExactly(Map.entry("1-1", 5), Map.entry("1-2", 2), Map.entry("2-1", 5));
+
+        // The entity no longer writes users.stars: new users get the default
+        execute("INSERT INTO users (id, email, username, password) VALUES (3, 'c@c.com', 'c', 'x')");
+        try (Connection c = connect(); Statement s = c.createStatement();
+             ResultSet rs = s.executeQuery("SELECT stars FROM users WHERE id = 3")) {
+            rs.next();
+            assertThat(rs.getInt(1)).isEqualTo(3);
+        }
+    }
+
+    @Test
     void v4_dropsEmptyLegacyAwardColumns() throws SQLException {
         flyway("3").migrate();
         execute("ALTER TABLE daily_awards ADD COLUMN puskas_winner_id bigint, ADD COLUMN wiltball_winner_id bigint");

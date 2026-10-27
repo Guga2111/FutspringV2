@@ -7,6 +7,7 @@ import com.futspring.backend.domain.daily.repository.DailyRepository;
 import com.futspring.backend.domain.file.FileUploadService;
 import com.futspring.backend.domain.pelada.dto.CreatePeladaRequestDTO;
 import com.futspring.backend.domain.pelada.dto.PeladaDetailResponseDTO;
+import com.futspring.backend.domain.pelada.dto.PeladaMemberDTO;
 import com.futspring.backend.domain.pelada.dto.PeladaResponseDTO;
 import com.futspring.backend.domain.pelada.dto.UpdatePeladaRequestDTO;
 import com.futspring.backend.shared.exception.AppException;
@@ -56,6 +57,9 @@ class PeladaServiceTest {
     @Mock
     UserAuthenticationHelper userAuthHelper;
 
+    @Mock
+    PeladaPlayerStarsRepository playerStarsRepository;
+
     PeladaService peladaService;
 
     User admin;
@@ -65,7 +69,7 @@ class PeladaServiceTest {
 
     @BeforeEach
     void setUp() {
-        peladaService = new PeladaService(peladaRepository, userRepository, dailyRepository, rankingRepository, messageRepository,
+        peladaService = new PeladaService(peladaRepository, playerStarsRepository, userRepository, dailyRepository, rankingRepository, messageRepository,
                 fileUploadService, userAuthHelper, new PeladaAccessHelper(peladaRepository), dailyService, aggregateRebuildService);
 
         admin = User.builder().id(1L).email("admin@example.com").username("admin").password("hash").build();
@@ -302,6 +306,7 @@ class PeladaServiceTest {
         peladaService.removePlayer(10L, 2L, "admin@example.com");
 
         assertThat(pelada.getMembers()).doesNotContain(member);
+        verify(playerStarsRepository).deleteByPeladaAndUser(pelada, member);
     }
 
     @Test
@@ -444,6 +449,84 @@ class PeladaServiceTest {
         assertThatThrownBy(() -> peladaService.setAdmin(10L, 999L, true, "admin@example.com"))
                 .isInstanceOf(AppException.class)
                 .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.NOT_FOUND));
+    }
+
+    // --- setPlayerStars ---
+
+    @Test
+    void setPlayerStars_newRating_createsRow() {
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
+        when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
+        when(userRepository.findById(2L)).thenReturn(Optional.of(member));
+        when(playerStarsRepository.findByPeladaAndUser(pelada, member)).thenReturn(Optional.empty());
+
+        PeladaMemberDTO result = peladaService.setPlayerStars(10L, 2L, 5, "admin@example.com");
+
+        verify(playerStarsRepository).save(argThat(s ->
+                s.getPelada() == pelada && s.getUser() == member && s.getStars() == 5));
+        assertThat(result.getId()).isEqualTo(2L);
+        assertThat(result.getStars()).isEqualTo(5);
+        assertThat(result.isAdmin()).isFalse();
+    }
+
+    @Test
+    void setPlayerStars_existingRating_updatesIt() {
+        PeladaPlayerStars existing = PeladaPlayerStars.builder().id(7L).pelada(pelada).user(member).stars(4).build();
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
+        when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
+        when(userRepository.findById(2L)).thenReturn(Optional.of(member));
+        when(playerStarsRepository.findByPeladaAndUser(pelada, member)).thenReturn(Optional.of(existing));
+
+        peladaService.setPlayerStars(10L, 2L, 1, "admin@example.com");
+
+        verify(playerStarsRepository).save(existing);
+        assertThat(existing.getStars()).isEqualTo(1);
+    }
+
+    @Test
+    void setPlayerStars_adminRatesThemselves() {
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
+        when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
+        when(userRepository.findById(1L)).thenReturn(Optional.of(admin));
+        when(playerStarsRepository.findByPeladaAndUser(pelada, admin)).thenReturn(Optional.empty());
+
+        PeladaMemberDTO result = peladaService.setPlayerStars(10L, 1L, 5, "admin@example.com");
+
+        assertThat(result.getStars()).isEqualTo(5);
+        assertThat(result.isAdmin()).isTrue();
+    }
+
+    @Test
+    void setPlayerStars_callerNotAdmin_throwsForbidden() {
+        when(userAuthHelper.getAuthenticatedUser("member@example.com")).thenReturn(member);
+        when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
+
+        assertThatThrownBy(() -> peladaService.setPlayerStars(10L, 1L, 5, "member@example.com"))
+                .isInstanceOf(AppException.class)
+                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.FORBIDDEN));
+        verify(playerStarsRepository, never()).save(any());
+    }
+
+    @Test
+    void setPlayerStars_callerNotMember_throwsForbidden() {
+        when(userAuthHelper.getAuthenticatedUser("outsider@example.com")).thenReturn(outsider);
+        when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
+
+        assertThatThrownBy(() -> peladaService.setPlayerStars(10L, 2L, 5, "outsider@example.com"))
+                .isInstanceOf(AppException.class)
+                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.FORBIDDEN));
+    }
+
+    @Test
+    void setPlayerStars_targetNotMember_throwsNotFound() {
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
+        when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
+        when(userRepository.findById(3L)).thenReturn(Optional.of(outsider));
+
+        assertThatThrownBy(() -> peladaService.setPlayerStars(10L, 3L, 5, "admin@example.com"))
+                .isInstanceOf(AppException.class)
+                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.NOT_FOUND));
+        verify(playerStarsRepository, never()).save(any());
     }
 
     // --- searchUsers ---

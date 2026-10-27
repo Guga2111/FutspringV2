@@ -17,7 +17,6 @@ public class UserResponseDTO {
     private String username;
     private String image;
     private String backgroundImage;
-    private int stars;
     private String position;
 
     public static UserResponseDTO from(User user) {
@@ -27,7 +26,6 @@ public class UserResponseDTO {
                 .username(user.getUsername())
                 .image(user.getImage())
                 .backgroundImage(user.getBackgroundImage())
-                .stars(user.getStars())
                 .position(user.getPosition())
                 .build();
     }

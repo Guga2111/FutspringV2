@@ -32,10 +32,6 @@ public class User {
 
     private String backgroundImage;
 
-    @Column(nullable = false)
-    @Builder.Default
-    private int stars = 3;
-
     private String position;
 
     // Incremented to revoke every JWT issued before (password reset); see AccessTokenVerifier

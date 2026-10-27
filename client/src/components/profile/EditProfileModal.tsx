@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { Controller, useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Camera, Star } from "lucide-react"
+import { Camera } from "lucide-react"
 import { toast } from "sonner"
 import { updateUser, uploadBackgroundImage, uploadUserImage } from "@/api/users"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -20,7 +20,7 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { getErrorMessage } from "@/lib/errors"
 import { applyServerErrors } from "@/lib/form-errors"
-import { cn, getFileUrl, getInitials } from "@/lib/utils"
+import { getFileUrl, getInitials } from "@/lib/utils"
 import { IMAGE_ACCEPT, validateImageFile } from "@/schemas/upload"
 import { profileSchema, type ProfileValues } from "@/schemas/user"
 import { EDITABLE_POSITIONS, positionLabel, type ProfileDTO } from "@/types/user"
@@ -48,7 +48,6 @@ export default function EditProfileModal({ profile, onClose, onProfileUpdated }:
     defaultValues: {
       username: profile.username,
       position: toFormPosition(profile.position),
-      stars: profile.stars,
     },
   })
 
@@ -179,32 +178,6 @@ export default function EditProfileModal({ profile, onClose, onProfileUpdated }:
                       </SelectGroup>
                     </SelectContent>
                   </Select>
-                  <FieldError errors={[fieldState.error]} />
-                </Field>
-              )}
-            />
-            <Controller
-              name="stars"
-              control={form.control}
-              render={({ field, fieldState }) => (
-                <Field data-invalid={fieldState.invalid}>
-                  <FieldLabel id="stars-label">Estrelas</FieldLabel>
-                  <div role="radiogroup" aria-labelledby="stars-label" className="flex gap-1">
-                    {[1, 2, 3, 4, 5].map((i) => (
-                      <Button
-                        key={i}
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        role="radio"
-                        aria-checked={field.value === i}
-                        aria-label={`${i} estrela${i > 1 ? "s" : ""}`}
-                        onClick={() => field.onChange(i)}
-                      >
-                        <Star className={cn("size-6 text-gold", i <= field.value && "fill-current")} />
-                      </Button>
-                    ))}
-                  </div>
                   <FieldError errors={[fieldState.error]} />
                 </Field>
               )}

@@ -158,6 +158,62 @@ class PeladaControllerTest extends BaseIntegrationTest {
                 .andExpect(status().isOk());
     }
 
+    // --- PUT /api/v1/peladas/{id}/players/{userId}/stars ---
+
+    @Test
+    void setPlayerStars_asAdmin_isShownInTheDetailAndProfile() throws Exception {
+        mockMvc.perform(put(starsUrl(member))
+                .contentType(MediaType.APPLICATION_JSON)
+                .header("Authorization", bearerToken(admin.getId(), admin.getEmail()))
+                .content("{\"stars\":5}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(member.getId()))
+                .andExpect(jsonPath("$.stars").value(5));
+
+        mockMvc.perform(get("/api/v1/peladas/" + pelada.getId())
+                .header("Authorization", bearerToken(member.getId(), member.getEmail())))
+                .andExpect(jsonPath("$.members[?(@.id == " + member.getId() + ")].stars").value(5))
+                .andExpect(jsonPath("$.members[?(@.id == " + admin.getId() + ")].stars").value(3));
+
+        mockMvc.perform(get("/api/v1/users/" + member.getId())
+                .header("Authorization", bearerToken(member.getId(), member.getEmail())))
+                .andExpect(jsonPath("$.stars").value(5));
+    }
+
+    @Test
+    void setPlayerStars_asNonAdmin_returnsForbidden() throws Exception {
+        mockMvc.perform(put(starsUrl(admin))
+                .contentType(MediaType.APPLICATION_JSON)
+                .header("Authorization", bearerToken(member.getId(), member.getEmail()))
+                .content("{\"stars\":1}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void setPlayerStars_nonMember_returnsNotFound() throws Exception {
+        mockMvc.perform(put(starsUrl(outsider))
+                .contentType(MediaType.APPLICATION_JSON)
+                .header("Authorization", bearerToken(admin.getId(), admin.getEmail()))
+                .content("{\"stars\":4}"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void setPlayerStars_outOfRange_returnsValidationError() throws Exception {
+        for (String body : List.of("{\"stars\":0}", "{\"stars\":6}", "{}")) {
+            mockMvc.perform(put(starsUrl(member))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .header("Authorization", bearerToken(admin.getId(), admin.getEmail()))
+                    .content(body))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.errors.stars").exists());
+        }
+    }
+
+    private String starsUrl(User target) {
+        return "/api/v1/peladas/" + pelada.getId() + "/players/" + target.getId() + "/stars";
+    }
+
     // --- PUT /api/v1/peladas/{id} ---
 
     @Test

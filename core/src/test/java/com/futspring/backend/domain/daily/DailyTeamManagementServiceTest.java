@@ -1,5 +1,6 @@
 package com.futspring.backend.domain.daily;
 
+import com.futspring.backend.domain.pelada.PeladaPlayerStarsRepository;
 import com.futspring.backend.domain.daily.dto.DailyDetailDTO;
 import com.futspring.backend.domain.daily.entity.Daily;
 import com.futspring.backend.domain.daily.entity.DailyStatus;
@@ -16,6 +17,7 @@ import com.futspring.backend.domain.user.User;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
@@ -37,6 +39,9 @@ class DailyTeamManagementServiceTest {
     @Mock TeamRepository teamRepository;
     @Mock DailyDTOMapper dailyDTOMapper;
 
+    @Mock
+    PeladaPlayerStarsRepository playerStarsRepository;
+
     DailyTeamManagementService teamManagementService;
 
     User admin;
@@ -48,11 +53,11 @@ class DailyTeamManagementServiceTest {
     @BeforeEach
     void setUp() {
         teamManagementService = new DailyTeamManagementService(
-                userAuthHelper, new PeladaAccessHelper(peladaRepository), dailyRepository, teamRepository, dailyDTOMapper);
+                userAuthHelper, new PeladaAccessHelper(peladaRepository), dailyRepository, teamRepository, playerStarsRepository, dailyDTOMapper);
 
-        admin = User.builder().id(1L).email("admin@example.com").username("admin").password("hash").stars(4).build();
-        member = User.builder().id(2L).email("member@example.com").username("member").password("hash").stars(3).build();
-        outsider = User.builder().id(3L).email("out@example.com").username("out").password("hash").stars(2).build();
+        admin = User.builder().id(1L).email("admin@example.com").username("admin").password("hash").build();
+        member = User.builder().id(2L).email("member@example.com").username("member").password("hash").build();
+        outsider = User.builder().id(3L).email("out@example.com").username("out").password("hash").build();
 
         pelada = Pelada.builder()
                 .id(10L)
@@ -170,6 +175,30 @@ class DailyTeamManagementServiceTest {
     }
 
     @Test
+    @SuppressWarnings("unchecked")
+    void sortTeams_balancesByTheStarsInThisPelada() {
+        // 5 + 1 vs 4 + 3: player3 has no row, so the default 3 stars
+        User player3 = User.builder().id(4L).email("p3@example.com").username("p3").password("hash").build();
+        User player4 = User.builder().id(5L).email("p4@example.com").username("p4").password("hash").build();
+        pelada.setPlayersPerTeam(2);
+        scheduledDaily.getConfirmedPlayers().addAll(List.of(admin, member, player3, player4));
+
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
+        when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
+        when(teamRepository.findByDaily(scheduledDaily)).thenReturn(List.of());
+        when(teamRepository.save(any(Team.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(teamRepository.saveAll(anyList())).thenAnswer(inv -> inv.getArgument(0));
+        when(playerStarsRepository.findStarsByPelada(pelada)).thenReturn(Map.of(1L, 5, 2L, 4, 5L, 1));
+
+        teamManagementService.sortTeams(100L, "admin@example.com");
+
+        ArgumentCaptor<List<Team>> saved = ArgumentCaptor.forClass(List.class);
+        verify(teamRepository).saveAll(saved.capture());
+        assertThat(saved.getValue()).extracting(Team::getPlayers)
+                .containsExactlyInAnyOrder(Set.of(admin, player4), Set.of(member, player3));
+    }
+
+    @Test
     void sortTeams_success_deletesExistingTeamsAndCreatesNew() {
         scheduledDaily.getConfirmedPlayers().add(admin);
         scheduledDaily.getConfirmedPlayers().add(member);
@@ -186,7 +215,7 @@ class DailyTeamManagementServiceTest {
             return t;
         });
         when(teamRepository.saveAll(anyList())).thenAnswer(inv -> inv.getArgument(0));
-        when(dailyDTOMapper.buildTeamDTO(any(Team.class))).thenReturn(
+        when(dailyDTOMapper.buildTeamDTO(any(Team.class), anyMap())).thenReturn(
                 DailyDetailDTO.TeamDTO.builder().id(1L).name("Team 1").players(List.of()).build());
 
         List<DailyDetailDTO.TeamDTO> result = teamManagementService.sortTeams(100L, "admin@example.com");
@@ -208,7 +237,7 @@ class DailyTeamManagementServiceTest {
         when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
         when(teamRepository.findByDailyWithPlayers(scheduledDaily)).thenReturn(List.of(team1, team2));
         when(teamRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
-        when(dailyDTOMapper.buildTeamDTO(any(Team.class))).thenReturn(
+        when(dailyDTOMapper.buildTeamDTO(any(Team.class), anyMap())).thenReturn(
                 DailyDetailDTO.TeamDTO.builder().id(1L).name("Team").players(List.of()).build());
 
         teamManagementService.swapPlayers(100L, 1L, 2L, "admin@example.com");
