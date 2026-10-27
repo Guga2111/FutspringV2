@@ -3,15 +3,24 @@ package com.futspring.backend.domain.daily.repository;
 import com.futspring.backend.domain.daily.entity.Daily;
 import com.futspring.backend.domain.daily.entity.DailyStatus;
 import com.futspring.backend.domain.pelada.Pelada;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 
 public interface DailyRepository extends JpaRepository<Daily, Long> {
+
+    // Row lock on the session: confirmations of the same session wait for each other (capacity count and
+    // bump victim never race), other sessions don't block. Held until the transaction commits
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT d FROM Daily d WHERE d.id = :id")
+    Optional<Daily> findByIdForUpdate(@Param("id") Long id);
 
     boolean existsByPeladaAndDailyDate(Pelada pelada, LocalDate date);
 

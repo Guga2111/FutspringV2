@@ -1,14 +1,22 @@
 package com.futspring.backend.domain.pelada;
 
 import com.futspring.backend.domain.user.User;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 
 public interface PeladaRepository extends JpaRepository<Pelada, Long> {
+
+    // Row lock on the pelada: two admins marking mensalistas at once can't go past the limit
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT p FROM Pelada p WHERE p.id = :id")
+    Optional<Pelada> findByIdForUpdate(@Param("id") Long id);
 
     List<Pelada> findByMembersContaining(User user);
 

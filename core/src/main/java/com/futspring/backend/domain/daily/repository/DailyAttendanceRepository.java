@@ -4,6 +4,7 @@ import com.futspring.backend.domain.daily.entity.Daily;
 import com.futspring.backend.domain.daily.entity.DailyAttendance;
 import com.futspring.backend.domain.daily.entity.DailyAttendanceId;
 import com.futspring.backend.domain.user.User;
+import org.springframework.data.domain.Limit;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -11,6 +12,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 
 public interface DailyAttendanceRepository extends JpaRepository<DailyAttendance, DailyAttendanceId> {
 
@@ -25,6 +27,20 @@ public interface DailyAttendanceRepository extends JpaRepository<DailyAttendance
     /** The session's confirmed players, in confirmation order. */
     default List<User> findUsersByDaily(Daily daily) {
         return findByDailyWithUser(daily).stream().map(DailyAttendance::getUser).toList();
+    }
+
+    // Confirmed diaristas (no mensalista row in the session's pelada), last confirmed first; ties by highest user id
+    @Query("""
+        SELECT a FROM DailyAttendance a JOIN FETCH a.user u
+        WHERE a.daily = :daily AND NOT EXISTS (
+            SELECT 1 FROM PeladaMensalista m WHERE m.pelada = a.daily.pelada AND m.user = a.user)
+        ORDER BY a.confirmedAt DESC, u.id DESC
+        """)
+    List<DailyAttendance> findDiaristasLastConfirmedFirst(@Param("daily") Daily daily, Limit limit);
+
+    /** The diarista a mensalista bumps from a full session: the one confirmed last. */
+    default Optional<DailyAttendance> findBumpVictim(Daily daily) {
+        return findDiaristasLastConfirmedFirst(daily, Limit.of(1)).stream().findFirst();
     }
 
     // [dailyId, confirmedPlayerCount] in one query (dailies without attendance are missing)

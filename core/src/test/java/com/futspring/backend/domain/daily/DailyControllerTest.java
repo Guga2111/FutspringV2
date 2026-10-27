@@ -26,6 +26,7 @@ import org.springframework.mock.web.MockMultipartFile;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -154,11 +155,23 @@ class DailyControllerTest extends BaseIntegrationTest {
 
     @Test
     void confirmAttendance_self() throws Exception {
+        // Today in the pelada's zone: the diarista window (24 h before the start) is open
+        daily.setDailyDate(LocalDate.now(ZoneId.of(pelada.getTimeZone())));
+        dailyRepository.save(daily);
+
         mockMvc.perform(post("/api/v1/dailies/" + daily.getId() + "/confirm")
                 .header("Authorization", bearerToken(member.getId(), member.getEmail())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.confirmedPlayerCount").value(1))
                 .andExpect(jsonPath("$.isConfirmed").value(true));
+    }
+
+    @Test
+    void confirmAttendance_diaristaBeforeTheWindow_returnsForbidden() throws Exception {
+        mockMvc.perform(post("/api/v1/dailies/" + daily.getId() + "/confirm")
+                .header("Authorization", bearerToken(member.getId(), member.getEmail())))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.startsWith("Diaristas podem confirmar a partir de ")));
     }
 
     @Test

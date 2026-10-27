@@ -57,6 +57,8 @@ public final class InMemoryAttendance {
         });
         lenient().doAnswer(inv -> rows.removeIf(a -> a.getDaily().equals(inv.getArgument(0))))
                 .when(repository).deleteAllOfDaily(any());
+        lenient().doAnswer(inv -> rows.remove(inv.<DailyAttendance>getArgument(0)))
+                .when(repository).delete(any(DailyAttendance.class));
         return attendance;
     }
 
