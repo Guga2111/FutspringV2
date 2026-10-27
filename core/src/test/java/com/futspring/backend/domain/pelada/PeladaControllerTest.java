@@ -51,6 +51,7 @@ class PeladaControllerTest extends BaseIntegrationTest {
     @Autowired private StatsRepository statsRepository;
     @Autowired private DailyResultsService dailyResultsService;
     @Autowired private ChatService chatService;
+    @Autowired private PeladaMensalistaRepository mensalistaRepository;
 
     private User admin;
     private User member;
@@ -344,12 +345,16 @@ class PeladaControllerTest extends BaseIntegrationTest {
 
     @Test
     void getAttendanceRanking_asMember() throws Exception {
+        mensalistaRepository.save(PeladaMensalista.builder().pelada(pelada).user(member).build());
+
         mockMvc.perform(get("/api/v1/peladas/" + pelada.getId() + "/attendance")
                 .header("Authorization", bearerToken(member.getId(), member.getEmail())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalSessions").value(0))
                 .andExpect(jsonPath("$.from").value(LocalDate.now().minusMonths(6).toString()))
-                .andExpect(jsonPath("$.rows.length()").value(2));
+                .andExpect(jsonPath("$.rows.length()").value(2))
+                .andExpect(jsonPath("$.rows[?(@.userId == " + member.getId() + ")].isMensalista").value(true))
+                .andExpect(jsonPath("$.rows[?(@.userId == " + admin.getId() + ")].isMensalista").value(false));
     }
 
     @Test

@@ -1,5 +1,6 @@
 package com.futspring.backend.domain.stats.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -33,5 +34,8 @@ public class PeladaAttendanceDTO {
         private long sessionsAttended;
         // sessionsAttended / totalSessions, 0 when there are no sessions
         private double rate;
+        // the member's current type, not their type at each session of the period
+        @JsonProperty("isMensalista")
+        private boolean isMensalista;
     }
 }

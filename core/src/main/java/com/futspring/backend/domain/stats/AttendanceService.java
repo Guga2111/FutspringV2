@@ -3,6 +3,7 @@ package com.futspring.backend.domain.stats;
 import com.futspring.backend.domain.daily.entity.DailyStatus;
 import com.futspring.backend.domain.daily.repository.DailyRepository;
 import com.futspring.backend.domain.pelada.Pelada;
+import com.futspring.backend.domain.pelada.PeladaMensalistaRepository;
 import com.futspring.backend.domain.pelada.PeladaRepository;
 import com.futspring.backend.domain.stats.dto.PeladaAttendanceDTO;
 import com.futspring.backend.domain.stats.repository.UserDailyStatsRepository;
@@ -19,6 +20,7 @@ import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -32,6 +34,7 @@ public class AttendanceService {
     private final PeladaAccessHelper accessHelper;
     private final DailyRepository dailyRepository;
     private final UserDailyStatsRepository userDailyStatsRepository;
+    private final PeladaMensalistaRepository mensalistaRepository;
 
     // Presence = being on a team of a finalized session (a UserDailyStats row); the denominator is every
     // finalized session of the pelada in the last PERIOD_MONTHS months. Constant number of queries.
@@ -50,6 +53,7 @@ public class AttendanceService {
         Map<Long, Long> attendedByUserId = userDailyStatsRepository
                 .countAttendanceByUser(peladaId, DailyStatus.FINISHED, from, to).stream()
                 .collect(Collectors.toMap(row -> (Long) row[0], row -> ((Number) row[1]).longValue()));
+        Set<Long> mensalistaIds = mensalistaRepository.findUserIdsByPelada(pelada);
 
         // Former members who played in the period are left out
         List<PeladaAttendanceDTO.Row> rows = pelada.getMembers().stream()
@@ -61,6 +65,7 @@ public class AttendanceService {
                             .userImage(member.getImage())
                             .sessionsAttended(attended)
                             .rate(totalSessions == 0 ? 0 : attended / (double) totalSessions)
+                            .isMensalista(mensalistaIds.contains(member.getId()))
                             .build();
                 })
                 .sorted(Comparator.comparingDouble(PeladaAttendanceDTO.Row::getRate).reversed()

@@ -3,6 +3,7 @@ package com.futspring.backend.domain.stats;
 import com.futspring.backend.domain.daily.entity.DailyStatus;
 import com.futspring.backend.domain.daily.repository.DailyRepository;
 import com.futspring.backend.domain.pelada.Pelada;
+import com.futspring.backend.domain.pelada.PeladaMensalistaRepository;
 import com.futspring.backend.domain.pelada.PeladaRepository;
 import com.futspring.backend.domain.stats.dto.PeladaAttendanceDTO;
 import com.futspring.backend.domain.stats.repository.UserDailyStatsRepository;
@@ -37,6 +38,8 @@ class AttendanceServiceTest {
     DailyRepository dailyRepository;
     @Mock
     UserDailyStatsRepository userDailyStatsRepository;
+    @Mock
+    PeladaMensalistaRepository mensalistaRepository;
 
     AttendanceService attendanceService;
 
@@ -49,7 +52,7 @@ class AttendanceServiceTest {
     @BeforeEach
     void setUp() {
         attendanceService = new AttendanceService(peladaRepository, userAuthHelper,
-                new PeladaAccessHelper(peladaRepository), dailyRepository, userDailyStatsRepository);
+                new PeladaAccessHelper(peladaRepository), dailyRepository, userDailyStatsRepository, mensalistaRepository);
 
         ana = User.builder().id(1L).email("ana@example.com").username("ana").password("hash").build();
         bruno = User.builder().id(2L).email("bruno@example.com").username("Bruno").password("hash").build();
@@ -139,13 +142,29 @@ class AttendanceServiceTest {
     }
 
     @Test
+    void getAttendanceRanking_flagsEachMembersCurrentType() {
+        stubCaller(ana);
+        when(dailyRepository.countByPeladaAndStatusInRange(eq(10L), eq(DailyStatus.FINISHED), any(), any()))
+                .thenReturn(1L);
+        when(userDailyStatsRepository.countAttendanceByUser(eq(10L), eq(DailyStatus.FINISHED), any(), any()))
+                .thenReturn(List.of());
+        when(mensalistaRepository.findUserIdsByPelada(pelada)).thenReturn(Set.of(1L));
+
+        PeladaAttendanceDTO result = attendanceService.getAttendanceRanking(10L, "ana@example.com");
+
+        assertThat(result.getRows())
+                .extracting(PeladaAttendanceDTO.Row::getUserId, PeladaAttendanceDTO.Row::isMensalista)
+                .containsExactlyInAnyOrder(tuple(1L, true), tuple(2L, false), tuple(3L, false));
+    }
+
+    @Test
     void getAttendanceRanking_notMember_throwsForbidden() {
         stubCaller(outsider);
 
         assertThatThrownBy(() -> attendanceService.getAttendanceRanking(10L, "out@example.com"))
                 .isInstanceOf(AppException.class)
                 .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.FORBIDDEN));
-        verifyNoInteractions(dailyRepository, userDailyStatsRepository);
+        verifyNoInteractions(dailyRepository, userDailyStatsRepository, mensalistaRepository);
     }
 
     @Test
