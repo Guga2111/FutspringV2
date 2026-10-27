@@ -5,9 +5,11 @@ import com.futspring.backend.domain.chat.dto.MessageDTO;
 import com.futspring.backend.domain.pelada.dto.AddPlayerRequestDTO;
 import com.futspring.backend.domain.pelada.dto.CreatePeladaRequestDTO;
 import com.futspring.backend.domain.pelada.dto.PeladaDetailResponseDTO;
+import com.futspring.backend.domain.pelada.dto.PeladaMemberDTO;
 import com.futspring.backend.domain.pelada.dto.PeladaResponseDTO;
 import com.futspring.backend.domain.pelada.dto.SetAdminRequestDTO;
 import com.futspring.backend.domain.pelada.dto.UpdatePeladaRequestDTO;
+import com.futspring.backend.domain.pelada.dto.UpdatePlayerStarsRequestDTO;
 import com.futspring.backend.domain.stats.AttendanceService;
 import com.futspring.backend.domain.stats.AwardsService;
 import com.futspring.backend.domain.stats.RankingService;
@@ -87,6 +89,16 @@ public class PeladaController {
     ) {
         peladaService.setAdmin(id, userId, request.getIsAdmin(), email);
         return ResponseEntity.ok().build();
+    }
+
+    @PutMapping("/{id}/players/{userId}/stars")
+    public ResponseEntity<PeladaMemberDTO> setPlayerStars(
+            @PathVariable Long id,
+            @PathVariable Long userId,
+            @Valid @RequestBody UpdatePlayerStarsRequestDTO request,
+            @AuthenticationPrincipal String email
+    ) {
+        return ResponseEntity.ok(peladaService.setPlayerStars(id, userId, request.getStars(), email));
     }
 
     @PutMapping("/{id}")

@@ -21,12 +21,13 @@ public class PeladaMemberDTO {
     @JsonProperty("isAdmin")
     private boolean isAdmin;
 
-    public static PeladaMemberDTO from(User user, boolean isAdmin) {
+    // stars: the member's stars in this pelada
+    public static PeladaMemberDTO from(User user, boolean isAdmin, int stars) {
         return PeladaMemberDTO.builder()
                 .id(user.getId())
                 .username(user.getUsername())
                 .image(user.getImage())
-                .stars(user.getStars())
+                .stars(stars)
                 .position(user.getPosition())
                 .isAdmin(isAdmin)
                 .build();

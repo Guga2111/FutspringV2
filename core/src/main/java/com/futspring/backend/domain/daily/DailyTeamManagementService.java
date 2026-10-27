@@ -6,6 +6,8 @@ import com.futspring.backend.domain.daily.entity.Team;
 import com.futspring.backend.domain.daily.repository.DailyRepository;
 import com.futspring.backend.domain.daily.repository.TeamRepository;
 import com.futspring.backend.domain.pelada.Pelada;
+import com.futspring.backend.domain.pelada.PeladaPlayerStars;
+import com.futspring.backend.domain.pelada.PeladaPlayerStarsRepository;
 import com.futspring.backend.shared.exception.AppException;
 import com.futspring.backend.shared.helper.PeladaAccessHelper;
 import com.futspring.backend.shared.helper.UserAuthenticationHelper;
@@ -19,6 +21,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.function.ToIntFunction;
 import java.util.stream.Collectors;
 
 @Service
@@ -29,6 +32,7 @@ public class DailyTeamManagementService {
     private final PeladaAccessHelper accessHelper;
     private final DailyRepository dailyRepository;
     private final TeamRepository teamRepository;
+    private final PeladaPlayerStarsRepository playerStarsRepository;
     private final DailyDTOMapper dailyDTOMapper;
 
     @Transactional
@@ -39,9 +43,13 @@ public class DailyTeamManagementService {
         accessHelper.requireAdmin(pelada, caller);
         requireUnlocked(daily);
 
+        // Each player's stars in this pelada
+        Map<Long, Integer> starsByUserId = playerStarsRepository.findStarsByPelada(pelada);
+        ToIntFunction<User> starsOf = user -> starsByUserId.getOrDefault(user.getId(), PeladaPlayerStars.DEFAULT_STARS);
+
         // Group by star rating, shuffle within each tier, then flatten (desc by stars)
         List<User> players = daily.getConfirmedPlayers().stream()
-                .collect(Collectors.groupingBy(User::getStars))
+                .collect(Collectors.groupingBy(starsOf::applyAsInt))
                 .entrySet().stream()
                 .sorted(Map.Entry.<Integer, List<User>>comparingByKey().reversed())
                 .flatMap(e -> {
@@ -81,12 +89,12 @@ public class DailyTeamManagementService {
                 }
             }
             teams.get(minIdx).getPlayers().add(player);
-            totals[minIdx] += player.getStars();
+            totals[minIdx] += starsOf.applyAsInt(player);
             sizes[minIdx]++;
         }
 
         teamRepository.saveAll(teams);
-        return teams.stream().map(dailyDTOMapper::buildTeamDTO).toList();
+        return teams.stream().map(team -> dailyDTOMapper.buildTeamDTO(team, starsByUserId)).toList();
     }
 
     @Transactional
@@ -129,7 +137,8 @@ public class DailyTeamManagementService {
 
         teamRepository.save(team1);
         teamRepository.save(team2);
-        return teams.stream().map(dailyDTOMapper::buildTeamDTO).toList();
+        Map<Long, Integer> starsByUserId = playerStarsRepository.findStarsByPelada(daily.getPelada());
+        return teams.stream().map(team -> dailyDTOMapper.buildTeamDTO(team, starsByUserId)).toList();
     }
 
     @Transactional
@@ -145,7 +154,7 @@ public class DailyTeamManagementService {
 
         team.setName(name.trim());
         teamRepository.save(team);
-        return dailyDTOMapper.buildTeamDTO(team);
+        return dailyDTOMapper.buildTeamDTO(team, playerStarsRepository.findStarsByPelada(daily.getPelada()));
     }
 
     @Transactional
@@ -162,7 +171,7 @@ public class DailyTeamManagementService {
 
         team.setColor(color);
         teamRepository.save(team);
-        return dailyDTOMapper.buildTeamDTO(team);
+        return dailyDTOMapper.buildTeamDTO(team, playerStarsRepository.findStarsByPelada(pelada));
     }
 
     /** Deletes every team of the daily (join rows first). Used by sort, import from message and daily delete. */

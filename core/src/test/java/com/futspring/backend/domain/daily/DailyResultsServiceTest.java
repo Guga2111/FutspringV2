@@ -82,8 +82,8 @@ class DailyResultsServiceTest {
                 userDailyStatsRepository, leagueTableEntryRepository, dailyAwardRepository,
                 new DailyListItemAssembler(dailyRepository, teamRepository, matchRepository));
 
-        admin = User.builder().id(1L).email("admin@example.com").username("admin").password("hash").stars(4).build();
-        member = User.builder().id(2L).email("member@example.com").username("member").password("hash").stars(3).build();
+        admin = User.builder().id(1L).email("admin@example.com").username("admin").password("hash").build();
+        member = User.builder().id(2L).email("member@example.com").username("member").password("hash").build();
 
         pelada = Pelada.builder()
                 .id(10L)
@@ -206,7 +206,7 @@ class DailyResultsServiceTest {
     @Test
     @SuppressWarnings("unchecked")
     void submitResults_savesStatsOnlyForPlayersOfTheTwoTeams() {
-        User benched = User.builder().id(3L).email("bench@example.com").username("bench").password("hash").stars(2).build();
+        User benched = User.builder().id(3L).email("bench@example.com").username("bench").password("hash").build();
         Team team3 = Team.builder().id(3L).name("Green").color("#00FF00").players(new HashSet<>(Set.of(benched))).build();
         inCourseDaily.getConfirmedPlayers().add(benched);
 

@@ -6,29 +6,32 @@ import com.futspring.backend.domain.daily.dto.DailyDetailDTO.PlayerStatDTO;
 import com.futspring.backend.domain.daily.dto.DailyDetailDTO;
 import com.futspring.backend.domain.daily.entity.Match;
 import com.futspring.backend.domain.daily.entity.Team;
+import com.futspring.backend.domain.pelada.PeladaPlayerStars;
 import com.futspring.backend.domain.user.User;
 import org.springframework.stereotype.Component;
 
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 
 @Component
 public class DailyDTOMapper {
 
-    public PlayerDTO toPlayerDTO(User user) {
+    // starsByUserId: PeladaPlayerStarsRepository.findStarsByPelada of the daily's pelada
+    public PlayerDTO toPlayerDTO(User user, Map<Long, Integer> starsByUserId) {
         return PlayerDTO.builder()
                 .id(user.getId())
                 .username(user.getUsername())
                 .image(user.getImage())
-                .stars(user.getStars())
+                .stars(starsByUserId.getOrDefault(user.getId(), PeladaPlayerStars.DEFAULT_STARS))
                 .position(user.getPosition())
                 .build();
     }
 
-    public DailyDetailDTO.TeamDTO buildTeamDTO(Team team) {
+    public DailyDetailDTO.TeamDTO buildTeamDTO(Team team, Map<Long, Integer> starsByUserId) {
         List<PlayerDTO> playerDTOs = team.getPlayers().stream()
                 .sorted(Comparator.comparing(User::getUsername, String.CASE_INSENSITIVE_ORDER))
-                .map(this::toPlayerDTO)
+                .map(user -> toPlayerDTO(user, starsByUserId))
                 .toList();
         int totalStars = playerDTOs.stream().mapToInt(PlayerDTO::getStars).sum();
         double averageStars = playerDTOs.isEmpty() ? 0.0

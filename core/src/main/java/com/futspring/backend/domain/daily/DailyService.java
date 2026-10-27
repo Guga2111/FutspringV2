@@ -15,6 +15,7 @@ import com.futspring.backend.domain.daily.repository.PlayerMatchStatRepository;
 import com.futspring.backend.domain.daily.repository.TeamRepository;
 import com.futspring.backend.domain.file.FileUploadService;
 import com.futspring.backend.domain.pelada.Pelada;
+import com.futspring.backend.domain.pelada.PeladaPlayerStarsRepository;
 import com.futspring.backend.domain.pelada.PeladaRepository;
 import com.futspring.backend.shared.exception.AppException;
 import com.futspring.backend.shared.helper.PeladaAccessHelper;
@@ -46,6 +47,7 @@ public class DailyService {
     private final DailyDTOMapper dailyDTOMapper;
     private final DailyRepository dailyRepository;
     private final PeladaRepository peladaRepository;
+    private final PeladaPlayerStarsRepository playerStarsRepository;
     private final TeamRepository teamRepository;
     private final MatchRepository matchRepository;
     private final PlayerMatchStatRepository playerMatchStatRepository;
@@ -125,14 +127,15 @@ public class DailyService {
         Pelada pelada = daily.getPelada();
         accessHelper.requireMember(pelada, caller);
         boolean isAdmin = accessHelper.isAdmin(pelada, caller);
+        Map<Long, Integer> starsByUserId = playerStarsRepository.findStarsByPelada(pelada);
 
         List<PlayerDTO> confirmedPlayers = daily.getConfirmedPlayers().stream()
                 .sorted(Comparator.comparing(User::getUsername, String.CASE_INSENSITIVE_ORDER))
-                .map(dailyDTOMapper::toPlayerDTO)
+                .map(user -> dailyDTOMapper.toPlayerDTO(user, starsByUserId))
                 .toList();
 
         List<TeamDTO> teamDTOs = teamRepository.findByDailyWithPlayers(daily).stream()
-                .map(dailyDTOMapper::buildTeamDTO)
+                .map(team -> dailyDTOMapper.buildTeamDTO(team, starsByUserId))
                 .toList();
 
         List<Match> matches = matchRepository.findByDailyWithTeams(daily);
@@ -194,7 +197,7 @@ public class DailyService {
         // Every member sees the attendance list (confirmed and pending); PlayerDTO has public fields only
         List<PlayerDTO> peladaMembers = pelada.getMembers().stream()
                 .sorted(Comparator.comparing(User::getUsername, String.CASE_INSENSITIVE_ORDER))
-                .map(dailyDTOMapper::toPlayerDTO)
+                .map(user -> dailyDTOMapper.toPlayerDTO(user, starsByUserId))
                 .toList();
 
         return DailyDetailDTO.builder()

@@ -8,6 +8,8 @@ import com.futspring.backend.domain.daily.entity.Team;
 import com.futspring.backend.domain.daily.repository.DailyRepository;
 import com.futspring.backend.domain.daily.repository.TeamRepository;
 import com.futspring.backend.domain.pelada.Pelada;
+import com.futspring.backend.domain.pelada.PeladaPlayerStars;
+import com.futspring.backend.domain.pelada.PeladaPlayerStarsRepository;
 import com.futspring.backend.domain.pelada.PeladaRepository;
 import com.futspring.backend.domain.user.User;
 import com.futspring.backend.domain.user.UserRepository;
@@ -39,10 +41,16 @@ public class DataInitializer implements CommandLineRunner {
 
     private final UserRepository userRepository;
     private final PeladaRepository peladaRepository;
+    private final PeladaPlayerStarsRepository playerStarsRepository;
     private final DailyRepository dailyRepository;
     private final TeamRepository teamRepository;
     private final DailyResultsService dailyResultsService;
     private final PasswordEncoder passwordEncoder;
+
+    // Stars in the seed pelada, used to weight who scores
+    private Map<Long, Integer> starsByUserId = Map.of();
+
+    private record SeedUser(User user, int stars) {}
 
     @Override
     public void run(String... args) {
@@ -55,30 +63,31 @@ public class DataInitializer implements CommandLineRunner {
 
         String encodedPassword = passwordEncoder.encode("senha123");
 
-        List<User> users = List.of(
-            buildUser("leal@futspring.com",    "Leal",    encodedPassword, "ATACANTE",  5),
-            buildUser("souto@futspring.com",   "Souto",   encodedPassword, "ATACANTE",  5),
-            buildUser("ferraz@futspring.com",  "Ferraz",  encodedPassword, "ZAGUEIRO",  1),
-            buildUser("lui@futspring.com",     "Lui",     encodedPassword, "MEIO",      5),
-            buildUser("tuca@futspring.com",    "Tuca",    encodedPassword, "ATACANTE",  4),
-            buildUser("gone@futspring.com",    "Gone",    encodedPassword, "ATACANTE",  5),
-            buildUser("thiago@futspring.com",  "Thiago",  encodedPassword, "MEIO",      4),
-            buildUser("tao@futspring.com",     "Tão",     encodedPassword, "MEIO",      3),
-            buildUser("lobo@futspring.com",    "Lobo",    encodedPassword, "MEIO",      2),
-            buildUser("dudu@futspring.com",    "Dudu",    encodedPassword, "ATACANTE",  4),
-            buildUser("miguel@futspring.com",  "Miguel",  encodedPassword, "MEIO",      2),
-            buildUser("neto@futspring.com",    "Neto",    encodedPassword, "ATACANTE",  2),
-            buildUser("vuzzi@futspring.com",   "Vuzzi",   encodedPassword, "ATACANTE",  3),
-            buildUser("27@futspring.com",      "27",      encodedPassword, "MEIO",      2),
-            buildUser("nando@futspring.com",   "Nando",   encodedPassword, "GOLEIRO",   1),
-            buildUser("abreu@futspring.com",   "Abreu",   encodedPassword, "ATACANTE",  1),
-            buildUser("leudo@futspring.com",   "Leudo",   encodedPassword, "MEIO",      2),
-            buildUser("diego@futspring.com",   "Diego",   encodedPassword, "ATACANTE",  3),
-            buildUser("pirro@futspring.com",   "Pirro",   encodedPassword, "MEIO",      3),
-            buildUser("andre@futspring.com",   "André",   encodedPassword, "ATACANTE",  4)
+        // Each seed user with their stars in the seed pelada
+        List<SeedUser> seedUsers = List.of(
+            seedUser("leal@futspring.com",    "Leal",    encodedPassword, "ATACANTE",  5),
+            seedUser("souto@futspring.com",   "Souto",   encodedPassword, "ATACANTE",  5),
+            seedUser("ferraz@futspring.com",  "Ferraz",  encodedPassword, "ZAGUEIRO",  1),
+            seedUser("lui@futspring.com",     "Lui",     encodedPassword, "MEIO",      5),
+            seedUser("tuca@futspring.com",    "Tuca",    encodedPassword, "ATACANTE",  4),
+            seedUser("gone@futspring.com",    "Gone",    encodedPassword, "ATACANTE",  5),
+            seedUser("thiago@futspring.com",  "Thiago",  encodedPassword, "MEIO",      4),
+            seedUser("tao@futspring.com",     "Tão",     encodedPassword, "MEIO",      3),
+            seedUser("lobo@futspring.com",    "Lobo",    encodedPassword, "MEIO",      2),
+            seedUser("dudu@futspring.com",    "Dudu",    encodedPassword, "ATACANTE",  4),
+            seedUser("miguel@futspring.com",  "Miguel",  encodedPassword, "MEIO",      2),
+            seedUser("neto@futspring.com",    "Neto",    encodedPassword, "ATACANTE",  2),
+            seedUser("vuzzi@futspring.com",   "Vuzzi",   encodedPassword, "ATACANTE",  3),
+            seedUser("27@futspring.com",      "27",      encodedPassword, "MEIO",      2),
+            seedUser("nando@futspring.com",   "Nando",   encodedPassword, "GOLEIRO",   1),
+            seedUser("abreu@futspring.com",   "Abreu",   encodedPassword, "ATACANTE",  1),
+            seedUser("leudo@futspring.com",   "Leudo",   encodedPassword, "MEIO",      2),
+            seedUser("diego@futspring.com",   "Diego",   encodedPassword, "ATACANTE",  3),
+            seedUser("pirro@futspring.com",   "Pirro",   encodedPassword, "MEIO",      3),
+            seedUser("andre@futspring.com",   "André",   encodedPassword, "ATACANTE",  4)
         );
 
-        List<User> savedUsers = userRepository.saveAll(users);
+        List<User> savedUsers = userRepository.saveAll(seedUsers.stream().map(SeedUser::user).toList());
 
         User admin = savedUsers.get(0);
 
@@ -99,6 +108,13 @@ public class DataInitializer implements CommandLineRunner {
         pelada.getAdmins().add(admin);
 
         peladaRepository.save(pelada);
+
+        starsByUserId = new HashMap<>();
+        for (SeedUser seed : seedUsers) {
+            playerStarsRepository.save(PeladaPlayerStars.builder()
+                    .pelada(pelada).user(seed.user()).stars(seed.stars()).build());
+            starsByUserId.put(seed.user().getId(), seed.stars());
+        }
 
         log.info("DataInitializer: pelada '{}' criada com {} membros.", pelada.getName(), savedUsers.size());
 
@@ -207,22 +223,22 @@ public class DataInitializer implements CommandLineRunner {
     }
 
     private User pickWeightedByStars(List<User> players, Random random) {
-        int total = players.stream().mapToInt(p -> p.getStars() + 1).sum();
+        int total = players.stream().mapToInt(p -> starsByUserId.get(p.getId()) + 1).sum();
         int roll = random.nextInt(total);
         for (User player : players) {
-            roll -= player.getStars() + 1;
+            roll -= starsByUserId.get(player.getId()) + 1;
             if (roll < 0) return player;
         }
         return players.get(players.size() - 1);
     }
 
-    private User buildUser(String email, String username, String password, String position, int stars) {
-        return User.builder()
+    private SeedUser seedUser(String email, String username, String password, String position, int stars) {
+        User user = User.builder()
                 .email(email)
                 .username(username)
                 .password(password)
                 .position(position)
-                .stars(stars)
                 .build();
+        return new SeedUser(user, stars);
     }
 }

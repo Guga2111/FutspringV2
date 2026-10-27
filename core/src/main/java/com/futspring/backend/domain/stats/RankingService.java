@@ -1,6 +1,8 @@
 package com.futspring.backend.domain.stats;
 
 import com.futspring.backend.domain.pelada.Pelada;
+import com.futspring.backend.domain.pelada.PeladaPlayerStars;
+import com.futspring.backend.domain.pelada.PeladaPlayerStarsRepository;
 import com.futspring.backend.domain.pelada.PeladaRepository;
 import com.futspring.backend.shared.exception.AppException;
 import com.futspring.backend.shared.helper.PeladaAccessHelper;
@@ -38,6 +40,7 @@ public class RankingService {
     private final DailyAwardRepository dailyAwardRepository;
     private final UserRepository userRepository;
     private final UserDailyStatsRepository userDailyStatsRepository;
+    private final PeladaPlayerStarsRepository playerStarsRepository;
 
     @Transactional(readOnly = true)
     public List<RankingDTO> getRanking(Long peladaId, String callerEmail) {
@@ -79,6 +82,9 @@ public class RankingService {
 
         return PlayerPeladaStatsDTO.builder()
                 .userId(userId)
+                .stars(playerStarsRepository.findByPeladaAndUser(pelada, targetUser)
+                        .map(PeladaPlayerStars::getStars)
+                        .orElse(PeladaPlayerStars.DEFAULT_STARS))
                 .goals(ranking != null ? ranking.getGoals() : 0)
                 .assists(ranking != null ? ranking.getAssists() : 0)
                 .matchesPlayed(ranking != null ? ranking.getMatchesPlayed() : 0)

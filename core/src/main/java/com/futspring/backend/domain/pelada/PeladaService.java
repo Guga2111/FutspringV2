@@ -8,6 +8,7 @@ import com.futspring.backend.domain.daily.repository.DailyRepository;
 import com.futspring.backend.domain.file.FileUploadService;
 import com.futspring.backend.domain.pelada.dto.CreatePeladaRequestDTO;
 import com.futspring.backend.domain.pelada.dto.PeladaDetailResponseDTO;
+import com.futspring.backend.domain.pelada.dto.PeladaMemberDTO;
 import com.futspring.backend.domain.pelada.dto.PeladaResponseDTO;
 import com.futspring.backend.domain.pelada.dto.UpdatePeladaRequestDTO;
 import com.futspring.backend.shared.exception.AppException;
@@ -42,6 +43,7 @@ public class PeladaService {
     private static final Set<DailyStatus> UPCOMING_STATUSES = Set.of(DailyStatus.SCHEDULED, DailyStatus.CONFIRMED);
 
     private final PeladaRepository peladaRepository;
+    private final PeladaPlayerStarsRepository playerStarsRepository;
     private final UserRepository userRepository;
     private final DailyRepository dailyRepository;
     private final RankingRepository rankingRepository;
@@ -135,7 +137,7 @@ public class PeladaService {
         User user = userAuthHelper.getAuthenticatedUser(currentUserEmail);
         Pelada pelada = findPelada(id);
         accessHelper.requireMember(pelada, user);
-        return PeladaDetailResponseDTO.from(pelada);
+        return PeladaDetailResponseDTO.from(pelada, playerStarsRepository.findStarsByPelada(pelada));
     }
 
     @Transactional
@@ -166,7 +168,25 @@ public class PeladaService {
 
         pelada.getMembers().remove(target);
         pelada.getAdmins().remove(target);
+        // A player who comes back starts again with the default stars
+        playerStarsRepository.deleteByPeladaAndUser(pelada, target);
         peladaRepository.save(pelada);
+    }
+
+    // Any admin sets any member's stars in this pelada, their own included
+    @Transactional
+    public PeladaMemberDTO setPlayerStars(Long peladaId, Long targetUserId, int stars, String currentUserEmail) {
+        User caller = userAuthHelper.getAuthenticatedUser(currentUserEmail);
+        Pelada pelada = findPelada(peladaId);
+        accessHelper.requireAdmin(pelada, caller);
+
+        User target = findMember(pelada, targetUserId);
+        PeladaPlayerStars rating = playerStarsRepository.findByPeladaAndUser(pelada, target)
+                .orElseGet(() -> PeladaPlayerStars.builder().pelada(pelada).user(target).build());
+        rating.setStars(stars);
+        playerStarsRepository.save(rating);
+
+        return PeladaMemberDTO.from(target, accessHelper.isAdmin(pelada, target), stars);
     }
 
     @Transactional
@@ -236,6 +256,7 @@ public class PeladaService {
         }
         messageRepository.deleteByPelada(pelada);
         rankingRepository.deleteByPelada(pelada);
+        playerStarsRepository.deleteByPelada(pelada);
 
         pelada.getMembers().clear();
         pelada.getAdmins().clear();

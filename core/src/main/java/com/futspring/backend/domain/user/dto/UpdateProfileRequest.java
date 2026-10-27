@@ -1,7 +1,5 @@
 package com.futspring.backend.domain.user.dto;
 
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
@@ -16,8 +14,4 @@ public class UpdateProfileRequest {
     @Pattern(regexp = "^(|GOALKEEPER|DEFENDER|MIDFIELDER|FORWARD|GOLEIRO|ZAGUEIRO|MEIO|ATACANTE)$",
             message = "Posição inválida")
     private String position;
-
-    @Min(value = 1, message = "Mínimo de 1 estrela")
-    @Max(value = 5, message = "Máximo de 5 estrelas")
-    private Integer stars;
 }
