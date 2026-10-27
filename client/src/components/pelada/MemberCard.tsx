@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router-dom"
-import { Crown, MoreHorizontal, ShieldCheck, ShieldOff, Trash2, User } from "lucide-react"
+import { Crown, MoreHorizontal, ShieldCheck, ShieldOff, Star, Trash2, User } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -23,13 +23,17 @@ export interface MemberStats {
 interface MemberCardProps {
   member: PeladaMember
   stats: MemberStats
+  // admin/remove actions (not on the creator's card)
   canManage: boolean
+  // any admin sets any member's stars, the creator's and their own included
+  canSetStars: boolean
   isToggling: boolean
   onToggleAdmin: () => void
   onRemove: () => void
+  onSetStars: () => void
 }
 
-export function MemberCard({ member, stats, canManage, isToggling, onToggleAdmin, onRemove }: MemberCardProps) {
+export function MemberCard({ member, stats, canManage, canSetStars, isToggling, onToggleAdmin, onRemove, onSetStars }: MemberCardProps) {
   const navigate = useNavigate()
   const position = positionShortLabel(member.position)
 
@@ -70,6 +74,12 @@ export function MemberCard({ member, stats, canManage, isToggling, onToggleAdmin
               <User className="mr-2 size-4 text-muted-foreground" />
               Ver perfil
             </DropdownMenuItem>
+            {canSetStars && (
+              <DropdownMenuItem onSelect={onSetStars}>
+                <Star className="mr-2 size-4 text-muted-foreground" />
+                Definir estrelas
+              </DropdownMenuItem>
+            )}
             {canManage && (
               <>
                 <DropdownMenuItem onSelect={onToggleAdmin} disabled={isToggling}>

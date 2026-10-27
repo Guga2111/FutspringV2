@@ -18,6 +18,7 @@ interface MembersGridProps {
   onAddPlayer: () => void
   onToggleAdmin: (member: PeladaMember) => void
   onRemoveMember: (member: PeladaMember) => void
+  onSetStars: (member: PeladaMember) => void
 }
 
 const NO_STATS: MemberStats = { matchesPlayed: 0, goals: 0, assists: 0 }
@@ -31,6 +32,7 @@ export function MembersGrid({
   onAddPlayer,
   onToggleAdmin,
   onRemoveMember,
+  onSetStars,
 }: MembersGridProps) {
   const [query, setQuery] = useState("")
   const [position, setPosition] = useState<PositionFilter>("ALL")
@@ -101,9 +103,11 @@ export function MembersGrid({
               member={member}
               stats={statsById.get(member.id) ?? NO_STATS}
               canManage={isCurrentUserAdmin && member.id !== creatorId}
+              canSetStars={isCurrentUserAdmin}
               isToggling={togglingAdmin === member.id}
               onToggleAdmin={() => onToggleAdmin(member)}
               onRemove={() => onRemoveMember(member)}
+              onSetStars={() => onSetStars(member)}
             />
           ))}
         </div>

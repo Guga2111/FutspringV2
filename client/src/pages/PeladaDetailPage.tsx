@@ -23,6 +23,7 @@ import { DetailSkeleton } from "@/components/pelada/DetailSkeleton";
 import { AddPlayerDialog } from "@/components/pelada/AddPlayerDialog";
 import { ConfirmRemoveDialog } from "@/components/pelada/ConfirmRemoveDialog";
 import { CreateSessionDialog } from "@/components/pelada/CreateSessionDialog";
+import { SetPlayerStarsDialog } from "@/components/pelada/SetPlayerStarsDialog";
 import { DeletePeladaDialog } from "@/components/pelada/DeletePeladaDialog";
 import { RankingCommandButton } from "@/components/pelada/RankingCommandButton";
 
@@ -57,6 +58,7 @@ export default function PeladaDetailPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [confirmRemoveMember, setConfirmRemoveMember] =
     useState<PeladaMember | null>(null);
+  const [starsMember, setStarsMember] = useState<PeladaMember | null>(null);
   const [showCreateSession, setShowCreateSession] = useState(false);
   const [rankingSort, setRankingSort] = useState<{ col: RankingCol; dir: "asc" | "desc" }>({
     col: "goals",
@@ -103,6 +105,7 @@ export default function PeladaDetailPage() {
     removePeladaAndLeave,
     removeMember,
     toggleAdmin,
+    setMemberStars,
     toggleAttendance,
   } = usePeladaActions(pelada, refetchPelada, mergeDaily);
 
@@ -163,6 +166,7 @@ export default function PeladaDetailPage() {
                     onAddPlayer={() => setShowAddPlayer(true)}
                     onToggleAdmin={toggleAdmin}
                     onRemoveMember={setConfirmRemoveMember}
+                    onSetStars={setStarsMember}
                   />
                 </TabsContent>
 
@@ -254,6 +258,14 @@ export default function PeladaDetailPage() {
           onConfirm={handleRemoveConfirm}
           onClose={() => setConfirmRemoveMember(null)}
           loading={removing}
+        />
+      )}
+
+      {starsMember && (
+        <SetPlayerStarsDialog
+          member={starsMember}
+          onClose={() => setStarsMember(null)}
+          onSave={setMemberStars}
         />
       )}
 

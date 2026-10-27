@@ -78,7 +78,11 @@ export default function ProfilePage() {
             </div>
             <div className="flex items-center gap-3 mt-1 flex-wrap">
               {positionLabel && <Badge variant="secondary">{positionLabel}</Badge>}
-              <Stars count={profile.stars} />
+              {profile.stars != null ? (
+                <span title="Média das estrelas nas peladas"><Stars count={profile.stars} /></span>
+              ) : (
+                <span className="text-sm text-muted-foreground">Sem avaliação</span>
+              )}
             </div>
           </div>
         </div>
