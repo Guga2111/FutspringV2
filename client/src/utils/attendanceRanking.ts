@@ -1,6 +1,7 @@
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { parseLocalDate } from "@/utils/dates"
+import { matchesMembership, type MembershipFilter } from "@/utils/memberFilters"
 import type { PeladaAttendanceRow } from "@/types/pelada"
 
 export interface RankedAttendanceRow extends PeladaAttendanceRow {
@@ -18,6 +19,35 @@ export function rankAttendance(rows: PeladaAttendanceRow[]): RankedAttendanceRow
         ? rows.findIndex((r) => r.sessionsAttended === row.sessionsAttended) + 1
         : idx + 1,
   }))
+}
+
+// "desc": most present first (the backend order); "asc": least present first
+export type AttendanceOrder = "desc" | "asc"
+
+export interface AttendanceView {
+  membership: MembershipFilter
+  order: AttendanceOrder
+  query: string
+}
+
+// Case- and accent-insensitive: "André" -> "andre"
+function normalizeName(name: string): string {
+  return name.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLocaleLowerCase("pt-BR").trim()
+}
+
+// Filter by type -> rank inside the group -> reverse when ascending -> search.
+// Positions always belong to the most present; the order and the search only move or hide rows
+export function viewAttendance(rows: PeladaAttendanceRow[], { membership, order, query }: AttendanceView): RankedAttendanceRow[] {
+  let ranked = rankAttendance(rows.filter((row) => matchesMembership(row, membership)))
+  if (order === "asc") {
+    ranked = [...ranked].sort(
+      (a, b) =>
+        a.sessionsAttended - b.sessionsAttended ||
+        a.username.localeCompare(b.username, "pt-BR", { sensitivity: "base" }),
+    )
+  }
+  const q = normalizeName(query)
+  return q ? ranked.filter((row) => normalizeName(row.username).includes(q)) : ranked
 }
 
 // 0.8333 -> "83%"

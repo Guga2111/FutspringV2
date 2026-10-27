@@ -104,6 +104,8 @@ export interface PeladaAttendanceRow {
   sessionsAttended: number
   // sessionsAttended / totalSessions (0–1), 0 when there are no sessions
   rate: number
+  // the member's current type, not their type at each session of the period
+  isMensalista: boolean
 }
 
 // mirrors PeladaAttendanceDTO (last 6 months, rows best rate first)

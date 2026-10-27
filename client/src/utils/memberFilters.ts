@@ -42,12 +42,15 @@ export const MEMBERSHIP_FILTERS: { value: Exclude<MembershipFilter, "ALL">; labe
   { value: "DIARISTA", label: "Diaristas" },
 ]
 
-export function countByMembership(members: PeladaMember[]): Record<MembershipFilter, number> {
+// Members, attendance rows or anything else that carries the member's type
+type HasMembership = { isMensalista: boolean }
+
+export function countByMembership(members: HasMembership[]): Record<MembershipFilter, number> {
   const mensalistas = members.filter((m) => m.isMensalista).length
   return { ALL: members.length, MENSALISTA: mensalistas, DIARISTA: members.length - mensalistas }
 }
 
-function matchesMembership(member: PeladaMember, membership: MembershipFilter): boolean {
+export function matchesMembership(member: HasMembership, membership: MembershipFilter): boolean {
   return membership === "ALL" || member.isMensalista === (membership === "MENSALISTA")
 }
 
