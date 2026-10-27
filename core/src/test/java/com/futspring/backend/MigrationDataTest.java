@@ -88,6 +88,41 @@ class MigrationDataTest {
     }
 
     @Test
+    void v9_backfillsConfirmedAtFromDailyCreatedAt() throws SQLException {
+        flyway("8").migrate();
+        execute("INSERT INTO users (id, email, username, password) VALUES (1, 'a@a.com', 'a', 'x'), (2, 'b@b.com', 'b', 'x')");
+        execute("INSERT INTO peladas (id, name, day_of_week, time_of_day, duration, auto_create_daily_enabled, "
+                + "number_of_teams, players_per_team, created_at, creator_id) VALUES (1, 'p', 'FRIDAY', '18:00', 1, false, 2, 5, now(), 1)");
+        execute("INSERT INTO dailies (id, pelada_id, daily_date, daily_time, status, is_finished, created_at) VALUES "
+                + "(1, 1, '2026-10-02', '18:00', 'FINISHED', true, '2026-09-28 10:00:00'), "
+                + "(2, 1, '2026-10-09', '18:00', 'SCHEDULED', false, '2026-10-05 08:30:00')");
+        execute("INSERT INTO daily_confirmed_players (daily_id, user_id) VALUES (1, 1), (1, 2), (2, 1)");
+
+        flyway(null).migrate();
+
+        try (Connection c = connect(); Statement s = c.createStatement();
+             ResultSet rs = s.executeQuery("SELECT count(*) FROM daily_confirmed_players p JOIN dailies d ON d.id = p.daily_id "
+                     + "WHERE p.confirmed_at = d.created_at")) {
+            rs.next();
+            assertThat(rs.getInt(1)).isEqualTo(3);
+        }
+        try (Connection c = connect(); Statement s = c.createStatement();
+             ResultSet rs = s.executeQuery("SELECT time_zone, max_mensalistas FROM peladas WHERE id = 1")) {
+            rs.next();
+            assertThat(rs.getString(1)).isEqualTo("America/Sao_Paulo");
+            assertThat(rs.getInt(2)).isZero();
+        }
+
+        // The previous API version inserts attendance without confirmed_at during a deploy
+        execute("INSERT INTO daily_confirmed_players (daily_id, user_id) VALUES (2, 2)");
+        try (Connection c = connect(); Statement s = c.createStatement();
+             ResultSet rs = s.executeQuery("SELECT confirmed_at IS NOT NULL FROM daily_confirmed_players WHERE daily_id = 2 AND user_id = 2")) {
+            rs.next();
+            assertThat(rs.getBoolean(1)).isTrue();
+        }
+    }
+
+    @Test
     void v4_dropsEmptyLegacyAwardColumns() throws SQLException {
         flyway("3").migrate();
         execute("ALTER TABLE daily_awards ADD COLUMN puskas_winner_id bigint, ADD COLUMN wiltball_winner_id bigint");

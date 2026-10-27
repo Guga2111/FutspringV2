@@ -5,7 +5,9 @@ import com.futspring.backend.domain.chat.MessageRepository;
 import com.futspring.backend.domain.daily.DailyResultsService;
 import com.futspring.backend.domain.daily.dto.PopulateDailyRequestDTO;
 import com.futspring.backend.domain.daily.entity.Daily;
+import com.futspring.backend.domain.daily.entity.DailyAttendance;
 import com.futspring.backend.domain.daily.entity.DailyStatus;
+import com.futspring.backend.domain.daily.repository.DailyAttendanceRepository;
 import com.futspring.backend.domain.daily.repository.DailyRepository;
 import com.futspring.backend.domain.pelada.dto.AddPlayerRequestDTO;
 import com.futspring.backend.domain.pelada.dto.CreatePeladaRequestDTO;
@@ -22,6 +24,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.List;
@@ -36,6 +39,7 @@ class PeladaControllerTest extends BaseIntegrationTest {
     @Autowired private UserRepository userRepository;
     @Autowired private PeladaRepository peladaRepository;
     @Autowired private DailyRepository dailyRepository;
+    @Autowired private DailyAttendanceRepository attendanceRepository;
     @Autowired private MessageRepository messageRepository;
     @Autowired private RankingRepository rankingRepository;
     @Autowired private StatsRepository statsRepository;
@@ -403,9 +407,8 @@ class PeladaControllerTest extends BaseIntegrationTest {
     @Test
     void getMyPeladas_includesNextSessionAndMemberCount() throws Exception {
         dailyRepository.save(Daily.builder().pelada(pelada).dailyDate(LocalDate.now().plusDays(9)).dailyTime("18:00").build());
-        Daily next = Daily.builder().pelada(pelada).dailyDate(LocalDate.now().plusDays(2)).dailyTime("20:30").build();
-        next.getConfirmedPlayers().add(member);
-        next = dailyRepository.save(next);
+        Daily next = dailyRepository.save(Daily.builder().pelada(pelada).dailyDate(LocalDate.now().plusDays(2)).dailyTime("20:30").build());
+        attendanceRepository.save(new DailyAttendance(next, member, Instant.now()));
         dailyRepository.save(Daily.builder().pelada(pelada).dailyDate(LocalDate.now().plusDays(1)).dailyTime("18:00")
                 .status(DailyStatus.CANCELED).build());
         dailyRepository.save(Daily.builder().pelada(pelada).dailyDate(LocalDate.now().minusDays(7)).dailyTime("18:00").build());

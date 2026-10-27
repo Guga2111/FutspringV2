@@ -20,6 +20,8 @@ import java.util.Set;
 @Builder
 public class Pelada {
 
+    public static final String DEFAULT_TIME_ZONE = "America/Sao_Paulo";
+
     @Id
     @ToString.Include
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -55,6 +57,16 @@ public class Pelada {
     @Builder.Default
     private int playersPerTeam = 5;
 
+    // IANA zone of the sessions' date and time (the diarista confirmation window is computed in it)
+    @Column(name = "time_zone", nullable = false, length = 64)
+    @Builder.Default
+    private String timeZone = DEFAULT_TIME_ZONE;
+
+    // How many members can be mensalistas; 0 ≤ maxMensalistas ≤ numberOfTeams × playersPerTeam
+    @Column(name = "max_mensalistas", nullable = false)
+    @Builder.Default
+    private int maxMensalistas = 0;
+
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -80,6 +92,11 @@ public class Pelada {
     )
     @Builder.Default
     private Set<User> admins = new HashSet<>();
+
+    /** Spots in a session: numberOfTeams × playersPerTeam. */
+    public int capacity() {
+        return numberOfTeams * playersPerTeam;
+    }
 
     @Override
     public boolean equals(Object o) {

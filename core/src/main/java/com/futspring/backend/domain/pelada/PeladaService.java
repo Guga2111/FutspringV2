@@ -4,6 +4,7 @@ import com.futspring.backend.domain.chat.MessageRepository;
 import com.futspring.backend.domain.daily.DailyService;
 import com.futspring.backend.domain.daily.entity.Daily;
 import com.futspring.backend.domain.daily.entity.DailyStatus;
+import com.futspring.backend.domain.daily.repository.DailyAttendanceRepository;
 import com.futspring.backend.domain.daily.repository.DailyRepository;
 import com.futspring.backend.domain.file.FileUploadService;
 import com.futspring.backend.domain.pelada.dto.CreatePeladaRequestDTO;
@@ -44,8 +45,10 @@ public class PeladaService {
 
     private final PeladaRepository peladaRepository;
     private final PeladaPlayerStarsRepository playerStarsRepository;
+    private final PeladaMensalistaRepository mensalistaRepository;
     private final UserRepository userRepository;
     private final DailyRepository dailyRepository;
+    private final DailyAttendanceRepository attendanceRepository;
     private final RankingRepository rankingRepository;
     private final MessageRepository messageRepository;
     private final FileUploadService fileUploadService;
@@ -109,10 +112,10 @@ public class PeladaService {
                         (a, b) -> a.getId() <= b.getId() ? a : b));
         List<Long> nextIds = nextDailies.values().stream().map(Daily::getId).toList();
         Map<Long, Integer> confirmedCounts = nextIds.isEmpty() ? Map.of()
-                : dailyRepository.countConfirmedByIds(nextIds).stream()
+                : attendanceRepository.countConfirmedByIds(nextIds).stream()
                         .collect(Collectors.toMap(row -> (Long) row[0], row -> ((Number) row[1]).intValue()));
         Set<Long> confirmedByCaller = nextIds.isEmpty() ? Set.of()
-                : new HashSet<>(dailyRepository.findConfirmedDailyIds(nextIds, caller.getId()));
+                : new HashSet<>(attendanceRepository.findConfirmedDailyIds(nextIds, caller.getId()));
 
         return peladas.stream()
                 .map(p -> {
@@ -123,7 +126,7 @@ public class PeladaService {
                             .time(next.getDailyTime())
                             .status(next.getStatus())
                             .confirmedCount(confirmedCounts.getOrDefault(next.getId(), 0))
-                            .capacity(p.getNumberOfTeams() * p.getPlayersPerTeam())
+                            .capacity(p.capacity())
                             .isConfirmed(confirmedByCaller.contains(next.getId()))
                             .build();
                     return PeladaResponseDTO.from(p, memberCounts.getOrDefault(p.getId(), 0),
@@ -168,8 +171,9 @@ public class PeladaService {
 
         pelada.getMembers().remove(target);
         pelada.getAdmins().remove(target);
-        // A player who comes back starts again with the default stars
+        // A player who comes back starts again with the default stars, as a diarista
         playerStarsRepository.deleteByPeladaAndUser(pelada, target);
+        mensalistaRepository.deleteByPeladaAndUser(pelada, target);
         peladaRepository.save(pelada);
     }
 
@@ -257,6 +261,7 @@ public class PeladaService {
         messageRepository.deleteByPelada(pelada);
         rankingRepository.deleteByPelada(pelada);
         playerStarsRepository.deleteByPelada(pelada);
+        mensalistaRepository.deleteByPelada(pelada);
 
         pelada.getMembers().clear();
         pelada.getAdmins().clear();

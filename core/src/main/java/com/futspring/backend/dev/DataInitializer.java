@@ -3,8 +3,10 @@ package com.futspring.backend.dev;
 import com.futspring.backend.domain.daily.DailyResultsService;
 import com.futspring.backend.domain.daily.dto.MatchResultDTO;
 import com.futspring.backend.domain.daily.entity.Daily;
+import com.futspring.backend.domain.daily.entity.DailyAttendance;
 import com.futspring.backend.domain.daily.entity.DailyStatus;
 import com.futspring.backend.domain.daily.entity.Team;
+import com.futspring.backend.domain.daily.repository.DailyAttendanceRepository;
 import com.futspring.backend.domain.daily.repository.DailyRepository;
 import com.futspring.backend.domain.daily.repository.TeamRepository;
 import com.futspring.backend.domain.pelada.Pelada;
@@ -20,6 +22,7 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -43,6 +46,7 @@ public class DataInitializer implements CommandLineRunner {
     private final PeladaRepository peladaRepository;
     private final PeladaPlayerStarsRepository playerStarsRepository;
     private final DailyRepository dailyRepository;
+    private final DailyAttendanceRepository attendanceRepository;
     private final TeamRepository teamRepository;
     private final DailyResultsService dailyResultsService;
     private final PasswordEncoder passwordEncoder;
@@ -133,13 +137,18 @@ public class DataInitializer implements CommandLineRunner {
                 .dailyDate(LocalDate.now())
                 .dailyTime("08:00")
                 .status(DailyStatus.SCHEDULED)
-                .confirmedPlayers(new HashSet<>(savedUsers))
                 .build();
 
         dailyRepository.save(daily);
+        confirm(daily, savedUsers);
 
         log.info("DataInitializer: {} dailies finalizados (times, partidas, estatísticas, prêmios) + 1 agendado.",
                 teamsPerSession.length);
+    }
+
+    private void confirm(Daily daily, List<User> players) {
+        Instant now = Instant.now();
+        attendanceRepository.saveAll(players.stream().map(user -> new DailyAttendance(daily, user, now)).toList());
     }
 
     // Creates teams and random results, then runs the real submit + finalize flow so match stats,
@@ -155,8 +164,8 @@ public class DataInitializer implements CommandLineRunner {
                 .dailyDate(date)
                 .dailyTime(pelada.getTimeOfDay())
                 .status(DailyStatus.IN_COURSE)
-                .confirmedPlayers(new HashSet<>(confirmed))
                 .build());
+        confirm(daily, confirmed);
 
         List<Team> teams = new ArrayList<>();
         Map<Long, List<User>> playersByTeamId = new HashMap<>();

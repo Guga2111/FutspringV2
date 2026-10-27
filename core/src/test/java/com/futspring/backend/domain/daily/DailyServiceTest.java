@@ -6,6 +6,8 @@ import com.futspring.backend.domain.daily.dto.DailyDetailDTO;
 import com.futspring.backend.domain.daily.dto.DailyListItemDTO;
 import com.futspring.backend.domain.daily.entity.Daily;
 import com.futspring.backend.domain.daily.entity.DailyStatus;
+import com.futspring.backend.domain.daily.repository.DailyAttendanceBumpRepository;
+import com.futspring.backend.domain.daily.repository.DailyAttendanceRepository;
 import com.futspring.backend.domain.daily.repository.DailyRepository;
 import com.futspring.backend.domain.daily.repository.LeagueTableEntryRepository;
 import com.futspring.backend.domain.daily.repository.MatchRepository;
@@ -20,6 +22,7 @@ import com.futspring.backend.shared.helper.UserAuthenticationHelper;
 import com.futspring.backend.domain.stats.AggregateRebuildService;
 import com.futspring.backend.domain.stats.repository.DailyAwardRepository;
 import com.futspring.backend.domain.stats.repository.UserDailyStatsRepository;
+import com.futspring.backend.support.InMemoryAttendance;
 import com.futspring.backend.support.MembershipStubs;
 import com.futspring.backend.domain.user.User;
 import org.junit.jupiter.api.BeforeEach;
@@ -48,6 +51,8 @@ class DailyServiceTest {
     @Mock DailyResultsService dailyResultsService;
     @Mock DailyDTOMapper dailyDTOMapper;
     @Mock DailyRepository dailyRepository;
+    @Mock DailyAttendanceRepository attendanceRepository;
+    @Mock DailyAttendanceBumpRepository bumpRepository;
     @Mock PeladaRepository peladaRepository;
     @Mock TeamRepository teamRepository;
     @Mock MatchRepository matchRepository;
@@ -60,6 +65,7 @@ class DailyServiceTest {
     PeladaPlayerStarsRepository playerStarsRepository;
 
     DailyService dailyService;
+    InMemoryAttendance attendance;
 
     User admin;
     User member;
@@ -72,10 +78,10 @@ class DailyServiceTest {
         dailyService = new DailyService(
                 userAuthHelper, new PeladaAccessHelper(peladaRepository), dailyAttendanceService, dailyTeamManagementService,
                 dailyResultsService, aggregateRebuildService, fileUploadService, dailyDTOMapper,
-                dailyRepository, peladaRepository, playerStarsRepository, teamRepository,
+                dailyRepository, attendanceRepository, bumpRepository, peladaRepository, playerStarsRepository, teamRepository,
                 matchRepository, playerMatchStatRepository, userDailyStatsRepository,
                 leagueTableEntryRepository, dailyAwardRepository,
-                new DailyListItemAssembler(dailyRepository, teamRepository, matchRepository));
+                new DailyListItemAssembler(attendanceRepository, teamRepository, matchRepository));
 
         admin = User.builder().id(1L).email("admin@example.com").username("admin").password("hash").build();
         member = User.builder().id(2L).email("member@example.com").username("member").password("hash").build();
@@ -100,9 +106,9 @@ class DailyServiceTest {
                 .dailyDate(LocalDate.now().plusDays(3))
                 .dailyTime("18:00")
                 .status(DailyStatus.SCHEDULED)
-                .confirmedPlayers(new HashSet<>())
                 .build();
         MembershipStubs.stubMembership(peladaRepository, pelada);
+        attendance = InMemoryAttendance.stub(attendanceRepository);
     }
 
     // --- createDaily ---
@@ -212,9 +218,9 @@ class DailyServiceTest {
     @Test
     void getDailiesForPelada_returnsDescOrder() {
         Daily older = Daily.builder().id(1L).pelada(pelada).dailyDate(LocalDate.of(2024, 1, 1))
-                .dailyTime("18:00").status(DailyStatus.FINISHED).confirmedPlayers(new HashSet<>()).build();
+                .dailyTime("18:00").status(DailyStatus.FINISHED).build();
         Daily newer = Daily.builder().id(2L).pelada(pelada).dailyDate(LocalDate.of(2024, 3, 1))
-                .dailyTime("18:00").status(DailyStatus.SCHEDULED).confirmedPlayers(new HashSet<>()).build();
+                .dailyTime("18:00").status(DailyStatus.SCHEDULED).build();
 
         when(userAuthHelper.getAuthenticatedUser("member@example.com")).thenReturn(member);
         when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
@@ -374,6 +380,7 @@ class DailyServiceTest {
         verify(aggregateRebuildService).rebuild(pelada, Set.of(member));
         verify(dailyTeamManagementService).clearTeams(scheduledDaily);
         verify(dailyAttendanceService).clearAttendees(scheduledDaily);
+        verify(bumpRepository).deleteByDaily(scheduledDaily);
         verify(dailyRepository).delete(scheduledDaily);
     }
 

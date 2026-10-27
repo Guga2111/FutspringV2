@@ -3,6 +3,7 @@ package com.futspring.backend.domain.daily;
 import com.futspring.backend.domain.daily.dto.DailyDetailDTO;
 import com.futspring.backend.domain.daily.entity.Daily;
 import com.futspring.backend.domain.daily.entity.Team;
+import com.futspring.backend.domain.daily.repository.DailyAttendanceRepository;
 import com.futspring.backend.domain.daily.repository.DailyRepository;
 import com.futspring.backend.domain.daily.repository.TeamRepository;
 import com.futspring.backend.domain.pelada.Pelada;
@@ -31,6 +32,7 @@ public class DailyTeamManagementService {
     private final UserAuthenticationHelper userAuthHelper;
     private final PeladaAccessHelper accessHelper;
     private final DailyRepository dailyRepository;
+    private final DailyAttendanceRepository attendanceRepository;
     private final TeamRepository teamRepository;
     private final PeladaPlayerStarsRepository playerStarsRepository;
     private final DailyDTOMapper dailyDTOMapper;
@@ -48,7 +50,7 @@ public class DailyTeamManagementService {
         ToIntFunction<User> starsOf = user -> starsByUserId.getOrDefault(user.getId(), PeladaPlayerStars.DEFAULT_STARS);
 
         // Group by star rating, shuffle within each tier, then flatten (desc by stars)
-        List<User> players = daily.getConfirmedPlayers().stream()
+        List<User> players = attendanceRepository.findUsersByDaily(daily).stream()
                 .collect(Collectors.groupingBy(starsOf::applyAsInt))
                 .entrySet().stream()
                 .sorted(Map.Entry.<Integer, List<User>>comparingByKey().reversed())

@@ -2,15 +2,12 @@ package com.futspring.backend.domain.daily.entity;
 
 import com.futspring.backend.domain.pelada.Pelada;
 import com.futspring.backend.shared.entity.EntityIdentity;
-import com.futspring.backend.domain.user.User;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.HashSet;
-import java.util.Set;
 
 @Entity
 @Table(name = "dailies")
@@ -41,15 +38,6 @@ public class Daily {
     @Column(nullable = false)
     @Builder.Default
     private DailyStatus status = DailyStatus.SCHEDULED;
-
-    @ManyToMany(fetch = FetchType.LAZY)
-    @JoinTable(
-            name = "daily_confirmed_players",
-            joinColumns = @JoinColumn(name = "daily_id"),
-            inverseJoinColumns = @JoinColumn(name = "user_id")
-    )
-    @Builder.Default
-    private Set<User> confirmedPlayers = new HashSet<>();
 
     @Column(nullable = false)
     @Builder.Default

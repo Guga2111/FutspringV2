@@ -9,6 +9,7 @@ import com.futspring.backend.domain.daily.entity.LeagueTableEntry;
 import com.futspring.backend.domain.daily.entity.Match;
 import com.futspring.backend.domain.daily.entity.PlayerMatchStat;
 import com.futspring.backend.domain.daily.entity.Team;
+import com.futspring.backend.domain.daily.repository.DailyAttendanceRepository;
 import com.futspring.backend.domain.daily.repository.DailyRepository;
 import com.futspring.backend.domain.daily.repository.LeagueTableEntryRepository;
 import com.futspring.backend.domain.daily.repository.MatchRepository;
@@ -27,6 +28,7 @@ import com.futspring.backend.domain.stats.repository.DailyAwardRepository;
 import com.futspring.backend.domain.stats.repository.RankingRepository;
 import com.futspring.backend.domain.stats.repository.StatsRepository;
 import com.futspring.backend.domain.stats.repository.UserDailyStatsRepository;
+import com.futspring.backend.support.InMemoryAttendance;
 import com.futspring.backend.support.MembershipStubs;
 import com.futspring.backend.domain.user.User;
 import com.futspring.backend.domain.user.UserRepository;
@@ -53,6 +55,7 @@ class DailyResultsServiceTest {
     @Mock FileUploadService fileUploadService;
     @Mock UserAuthenticationHelper userAuthHelper;
     @Mock DailyRepository dailyRepository;
+    @Mock DailyAttendanceRepository attendanceRepository;
     @Mock UserRepository userRepository;
     @Mock TeamRepository teamRepository;
     @Mock MatchRepository matchRepository;
@@ -64,6 +67,7 @@ class DailyResultsServiceTest {
     @Mock RankingRepository rankingRepository;
 
     DailyResultsService resultsService;
+    InMemoryAttendance attendance;
 
     User admin;
     User member;
@@ -77,10 +81,10 @@ class DailyResultsServiceTest {
         resultsService = new DailyResultsService(
                 fileUploadService, userAuthHelper, new PeladaAccessHelper(peladaRepository),
                 new AggregateRebuildService(userDailyStatsRepository, dailyAwardRepository, rankingRepository, statsRepository),
-                dailyTeamManagementService, new DailyDTOMapper(), dailyRepository, userRepository,
+                dailyTeamManagementService, new DailyDTOMapper(), dailyRepository, attendanceRepository, userRepository,
                 teamRepository, matchRepository, playerMatchStatRepository,
                 userDailyStatsRepository, leagueTableEntryRepository, dailyAwardRepository,
-                new DailyListItemAssembler(dailyRepository, teamRepository, matchRepository));
+                new DailyListItemAssembler(attendanceRepository, teamRepository, matchRepository));
 
         admin = User.builder().id(1L).email("admin@example.com").username("admin").password("hash").build();
         member = User.builder().id(2L).email("member@example.com").username("member").password("hash").build();
@@ -107,9 +111,10 @@ class DailyResultsServiceTest {
                 .dailyDate(LocalDate.now())
                 .dailyTime("18:00")
                 .status(DailyStatus.IN_COURSE)
-                .confirmedPlayers(new HashSet<>(Set.of(admin, member)))
                 .build();
         MembershipStubs.stubMembership(peladaRepository, pelada);
+        attendance = InMemoryAttendance.stub(attendanceRepository);
+        attendance.confirm(inCourseDaily, admin, member);
     }
 
     // --- submitResults ---
@@ -208,7 +213,7 @@ class DailyResultsServiceTest {
     void submitResults_savesStatsOnlyForPlayersOfTheTwoTeams() {
         User benched = User.builder().id(3L).email("bench@example.com").username("bench").password("hash").build();
         Team team3 = Team.builder().id(3L).name("Green").color("#00FF00").players(new HashSet<>(Set.of(benched))).build();
-        inCourseDaily.getConfirmedPlayers().add(benched);
+        attendance.confirm(inCourseDaily, benched);
 
         when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(dailyRepository.findById(100L)).thenReturn(Optional.of(inCourseDaily));
@@ -398,7 +403,7 @@ class DailyResultsServiceTest {
     void finalizeDaily_usesTeamPlayersNotTheConfirmedList() {
         // member is on team2 but un-confirmed after the sort; bench confirmed after the sort and is on no team
         User bench = User.builder().id(3L).email("bench@example.com").username("bench").password("hash").build();
-        inCourseDaily.setConfirmedPlayers(new HashSet<>(Set.of(admin, bench)));
+        attendance.confirm(inCourseDaily, admin, bench);
         when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(dailyRepository.findById(100L)).thenReturn(Optional.of(inCourseDaily));
 
@@ -433,7 +438,7 @@ class DailyResultsServiceTest {
     @Test
     void finalizeDaily_puskasWinnerNotOnATeam_throwsBadRequest() {
         User bench = User.builder().id(3L).email("bench@example.com").username("bench").password("hash").build();
-        inCourseDaily.getConfirmedPlayers().add(bench);
+        attendance.confirm(inCourseDaily, bench);
         when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(dailyRepository.findById(100L)).thenReturn(Optional.of(inCourseDaily));
         Match match = Match.builder().id(50L).daily(inCourseDaily).team1(team1).team2(team2)

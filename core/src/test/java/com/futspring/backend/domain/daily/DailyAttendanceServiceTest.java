@@ -3,6 +3,7 @@ package com.futspring.backend.domain.daily;
 import com.futspring.backend.domain.daily.dto.DailyListItemDTO;
 import com.futspring.backend.domain.daily.entity.Daily;
 import com.futspring.backend.domain.daily.entity.DailyStatus;
+import com.futspring.backend.domain.daily.repository.DailyAttendanceRepository;
 import com.futspring.backend.domain.daily.repository.DailyRepository;
 import com.futspring.backend.domain.daily.repository.MatchRepository;
 import com.futspring.backend.domain.daily.repository.TeamRepository;
@@ -11,6 +12,7 @@ import com.futspring.backend.domain.pelada.PeladaRepository;
 import com.futspring.backend.shared.exception.AppException;
 import com.futspring.backend.shared.helper.PeladaAccessHelper;
 import com.futspring.backend.shared.helper.UserAuthenticationHelper;
+import com.futspring.backend.support.InMemoryAttendance;
 import com.futspring.backend.support.MembershipStubs;
 import com.futspring.backend.domain.user.User;
 import com.futspring.backend.domain.user.UserRepository;
@@ -37,8 +39,10 @@ class DailyAttendanceServiceTest {
     @Mock UserRepository userRepository;
     @Mock TeamRepository teamRepository;
     @Mock MatchRepository matchRepository;
+    @Mock DailyAttendanceRepository attendanceRepository;
 
     DailyAttendanceService attendanceService;
+    InMemoryAttendance attendance;
 
     User admin;
     User member;
@@ -48,8 +52,9 @@ class DailyAttendanceServiceTest {
 
     @BeforeEach
     void setUp() {
-        attendanceService = new DailyAttendanceService(userAuthHelper, new PeladaAccessHelper(peladaRepository), dailyRepository, userRepository,
-                new DailyListItemAssembler(dailyRepository, teamRepository, matchRepository));
+        attendanceService = new DailyAttendanceService(userAuthHelper, new PeladaAccessHelper(peladaRepository), dailyRepository,
+                attendanceRepository, userRepository, new DailyListItemAssembler(attendanceRepository, teamRepository, matchRepository));
+        attendance = InMemoryAttendance.stub(attendanceRepository);
 
         admin = User.builder().id(1L).email("admin@example.com").username("admin").password("hash").build();
         member = User.builder().id(2L).email("member@example.com").username("member").password("hash").build();
@@ -74,7 +79,6 @@ class DailyAttendanceServiceTest {
                 .dailyDate(LocalDate.now().plusDays(3))
                 .dailyTime("18:00")
                 .status(DailyStatus.SCHEDULED)
-                .confirmedPlayers(new HashSet<>())
                 .build();
         MembershipStubs.stubMembership(peladaRepository, pelada);
     }
@@ -85,11 +89,10 @@ class DailyAttendanceServiceTest {
     void confirmAttendance_success_addsPlayer() {
         when(userAuthHelper.getAuthenticatedUser("member@example.com")).thenReturn(member);
         when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
-        when(dailyRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         DailyListItemDTO result = attendanceService.confirmAttendance(100L, "member@example.com");
 
-        assertThat(scheduledDaily.getConfirmedPlayers()).contains(member);
+        assertThat(attendance.users(scheduledDaily)).contains(member);
         assertThat(result).isNotNull();
     }
 
@@ -136,7 +139,7 @@ class DailyAttendanceServiceTest {
 
     @Test
     void confirmAttendance_alreadyConfirmed_throwsConflict() {
-        scheduledDaily.getConfirmedPlayers().add(member);
+        attendance.confirm(scheduledDaily, member);
         when(userAuthHelper.getAuthenticatedUser("member@example.com")).thenReturn(member);
         when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
 
@@ -149,14 +152,13 @@ class DailyAttendanceServiceTest {
 
     @Test
     void disconfirmAttendance_success_removesPlayer() {
-        scheduledDaily.getConfirmedPlayers().add(member);
+        attendance.confirm(scheduledDaily, member);
         when(userAuthHelper.getAuthenticatedUser("member@example.com")).thenReturn(member);
         when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
-        when(dailyRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         attendanceService.disconfirmAttendance(100L, "member@example.com");
 
-        assertThat(scheduledDaily.getConfirmedPlayers()).doesNotContain(member);
+        assertThat(attendance.users(scheduledDaily)).doesNotContain(member);
     }
 
     @Test
@@ -207,11 +209,10 @@ class DailyAttendanceServiceTest {
         when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
         when(userRepository.findById(2L)).thenReturn(Optional.of(member));
-        when(dailyRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         DailyListItemDTO result = attendanceService.adminConfirmAttendance(100L, 2L, "admin@example.com");
 
-        assertThat(scheduledDaily.getConfirmedPlayers()).contains(member);
+        assertThat(attendance.users(scheduledDaily)).contains(member);
         assertThat(result).isNotNull();
     }
 
@@ -281,7 +282,7 @@ class DailyAttendanceServiceTest {
 
     @Test
     void adminConfirmAttendance_alreadyConfirmed_throwsConflict() {
-        scheduledDaily.getConfirmedPlayers().add(member);
+        attendance.confirm(scheduledDaily, member);
         when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
         when(userRepository.findById(2L)).thenReturn(Optional.of(member));
@@ -295,15 +296,14 @@ class DailyAttendanceServiceTest {
 
     @Test
     void adminDisconfirmAttendance_success_removesPlayer() {
-        scheduledDaily.getConfirmedPlayers().add(member);
+        attendance.confirm(scheduledDaily, member);
         when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
         when(userRepository.findById(2L)).thenReturn(Optional.of(member));
-        when(dailyRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         DailyListItemDTO result = attendanceService.adminDisconfirmAttendance(100L, 2L, "admin@example.com");
 
-        assertThat(scheduledDaily.getConfirmedPlayers()).doesNotContain(member);
+        assertThat(attendance.users(scheduledDaily)).doesNotContain(member);
         assertThat(result).isNotNull();
     }
 
@@ -351,16 +351,39 @@ class DailyAttendanceServiceTest {
                 .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.BAD_REQUEST));
     }
 
+    // --- adminConfirmAll ---
+
+    @Test
+    void adminConfirmAll_confirmsOnlyTheMembersMissing() {
+        attendance.confirm(scheduledDaily, member);
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
+        when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
+
+        DailyListItemDTO result = attendanceService.adminConfirmAll(100L, "admin@example.com");
+
+        assertThat(attendance.users(scheduledDaily)).containsExactly(member, admin);
+        assertThat(result.getConfirmedPlayerCount()).isEqualTo(2);
+    }
+
+    @Test
+    void adminConfirmAll_callerNotAdmin_throwsForbidden() {
+        when(userAuthHelper.getAuthenticatedUser("member@example.com")).thenReturn(member);
+        when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
+
+        assertThatThrownBy(() -> attendanceService.adminConfirmAll(100L, "member@example.com"))
+                .isInstanceOf(AppException.class)
+                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.FORBIDDEN));
+    }
+
     // --- clearAttendees ---
 
     @Test
-    void clearAttendees_clearsConfirmedPlayersAndSaves() {
-        scheduledDaily.getConfirmedPlayers().add(admin);
-        scheduledDaily.getConfirmedPlayers().add(member);
+    void clearAttendees_deletesTheSessionAttendance() {
+        attendance.confirm(scheduledDaily, admin);
+        attendance.confirm(scheduledDaily, member);
 
         attendanceService.clearAttendees(scheduledDaily);
 
-        assertThat(scheduledDaily.getConfirmedPlayers()).isEmpty();
-        verify(dailyRepository).save(scheduledDaily);
+        assertThat(attendance.users(scheduledDaily)).isEmpty();
     }
 }

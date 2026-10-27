@@ -2,6 +2,8 @@ package com.futspring.backend.domain.daily;
 
 import com.futspring.backend.domain.daily.dto.DailyListItemDTO;
 import com.futspring.backend.domain.daily.entity.Daily;
+import com.futspring.backend.domain.daily.entity.DailyAttendance;
+import com.futspring.backend.domain.daily.repository.DailyAttendanceRepository;
 import com.futspring.backend.domain.daily.repository.DailyRepository;
 import com.futspring.backend.domain.pelada.Pelada;
 import com.futspring.backend.shared.exception.AppException;
@@ -14,6 +16,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
+import java.util.List;
+import java.util.Set;
+
 @Service
 @RequiredArgsConstructor
 public class DailyAttendanceService {
@@ -21,6 +27,7 @@ public class DailyAttendanceService {
     private final UserAuthenticationHelper userAuthHelper;
     private final PeladaAccessHelper accessHelper;
     private final DailyRepository dailyRepository;
+    private final DailyAttendanceRepository attendanceRepository;
     private final UserRepository userRepository;
     private final DailyListItemAssembler dailyListItemAssembler;
 
@@ -31,12 +38,11 @@ public class DailyAttendanceService {
         accessHelper.requireMember(daily.getPelada(), caller);
         requireUnlocked(daily);
 
-        if (daily.getConfirmedPlayers().contains(caller)) {
+        if (attendanceRepository.existsByDailyAndUser(daily, caller)) {
             throw new AppException(HttpStatus.CONFLICT, "Você já confirmou presença nesta sessão");
         }
 
-        daily.getConfirmedPlayers().add(caller);
-        dailyRepository.save(daily);
+        attendanceRepository.save(new DailyAttendance(daily, caller, Instant.now()));
         return dailyListItemAssembler.toListItem(daily, caller);
     }
 
@@ -46,12 +52,10 @@ public class DailyAttendanceService {
         Daily daily = findDaily(id);
         requireUnlocked(daily);
 
-        if (!daily.getConfirmedPlayers().contains(caller)) {
+        if (attendanceRepository.deleteByDailyAndUser(daily, caller) == 0) {
             throw new AppException(HttpStatus.BAD_REQUEST, "Você não confirmou presença nesta sessão");
         }
 
-        daily.getConfirmedPlayers().remove(caller);
-        dailyRepository.save(daily);
         return dailyListItemAssembler.toListItem(daily, caller);
     }
 
@@ -64,12 +68,11 @@ public class DailyAttendanceService {
         User target = findMember(pelada, targetUserId);
         requireUnlocked(daily);
 
-        if (daily.getConfirmedPlayers().contains(target)) {
+        if (attendanceRepository.existsByDailyAndUser(daily, target)) {
             throw new AppException(HttpStatus.CONFLICT, "O jogador já está confirmado nesta sessão");
         }
 
-        daily.getConfirmedPlayers().add(target);
-        dailyRepository.save(daily);
+        attendanceRepository.save(new DailyAttendance(daily, target, Instant.now()));
         return dailyListItemAssembler.toListItem(daily, caller);
     }
 
@@ -82,12 +85,10 @@ public class DailyAttendanceService {
         User target = findMember(pelada, targetUserId);
         requireUnlocked(daily);
 
-        if (!daily.getConfirmedPlayers().contains(target)) {
+        if (attendanceRepository.deleteByDailyAndUser(daily, target) == 0) {
             throw new AppException(HttpStatus.BAD_REQUEST, "O jogador não está confirmado nesta sessão");
         }
 
-        daily.getConfirmedPlayers().remove(target);
-        dailyRepository.save(daily);
         return dailyListItemAssembler.toListItem(daily, caller);
     }
 
@@ -100,14 +101,18 @@ public class DailyAttendanceService {
         accessHelper.requireAdmin(pelada, caller);
         requireUnlocked(daily);
 
-        daily.getConfirmedPlayers().addAll(pelada.getMembers());
-        dailyRepository.save(daily);
+        Set<User> confirmed = Set.copyOf(attendanceRepository.findUsersByDaily(daily));
+        Instant now = Instant.now();
+        List<DailyAttendance> added = pelada.getMembers().stream()
+                .filter(member -> !confirmed.contains(member))
+                .map(member -> new DailyAttendance(daily, member, now))
+                .toList();
+        attendanceRepository.saveAll(added);
         return dailyListItemAssembler.toListItem(daily, caller);
     }
 
     void clearAttendees(Daily daily) {
-        daily.getConfirmedPlayers().clear();
-        dailyRepository.save(daily);
+        attendanceRepository.deleteAllOfDaily(daily);
     }
 
     private Daily findDaily(Long id) {

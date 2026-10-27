@@ -8,6 +8,8 @@ import com.futspring.backend.domain.daily.entity.Daily;
 import com.futspring.backend.domain.daily.entity.DailyStatus;
 import com.futspring.backend.domain.daily.entity.Match;
 import com.futspring.backend.domain.daily.entity.PlayerMatchStat;
+import com.futspring.backend.domain.daily.repository.DailyAttendanceBumpRepository;
+import com.futspring.backend.domain.daily.repository.DailyAttendanceRepository;
 import com.futspring.backend.domain.daily.repository.DailyRepository;
 import com.futspring.backend.domain.daily.repository.LeagueTableEntryRepository;
 import com.futspring.backend.domain.daily.repository.MatchRepository;
@@ -46,6 +48,8 @@ public class DailyService {
     private final FileUploadService fileUploadService;
     private final DailyDTOMapper dailyDTOMapper;
     private final DailyRepository dailyRepository;
+    private final DailyAttendanceRepository attendanceRepository;
+    private final DailyAttendanceBumpRepository bumpRepository;
     private final PeladaRepository peladaRepository;
     private final PeladaPlayerStarsRepository playerStarsRepository;
     private final TeamRepository teamRepository;
@@ -108,13 +112,14 @@ public class DailyService {
     }
 
     /**
-     * Deletes a daily and everything that hangs from it (results, teams, attendance, champion image).
+     * Deletes a daily and everything that hangs from it (results, teams, attendance, bumps, champion image).
      * Returns the players whose Ranking/Stats must be rebuilt; the caller rebuilds them once.
      */
     public Set<User> deleteDailyData(Daily daily) {
         Set<User> affected = dailyResultsService.clearResults(daily);
         dailyTeamManagementService.clearTeams(daily);
         dailyAttendanceService.clearAttendees(daily);
+        bumpRepository.deleteByDaily(daily);
         fileUploadService.deleteImageAfterCommit(daily.getChampionImage());
         dailyRepository.delete(daily);
         return affected;
@@ -129,7 +134,7 @@ public class DailyService {
         boolean isAdmin = accessHelper.isAdmin(pelada, caller);
         Map<Long, Integer> starsByUserId = playerStarsRepository.findStarsByPelada(pelada);
 
-        List<PlayerDTO> confirmedPlayers = daily.getConfirmedPlayers().stream()
+        List<PlayerDTO> confirmedPlayers = attendanceRepository.findUsersByDaily(daily).stream()
                 .sorted(Comparator.comparing(User::getUsername, String.CASE_INSENSITIVE_ORDER))
                 .map(user -> dailyDTOMapper.toPlayerDTO(user, starsByUserId))
                 .toList();

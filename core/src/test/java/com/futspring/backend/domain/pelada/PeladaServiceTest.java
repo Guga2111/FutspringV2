@@ -3,6 +3,7 @@ package com.futspring.backend.domain.pelada;
 import com.futspring.backend.domain.chat.MessageRepository;
 import com.futspring.backend.domain.daily.DailyService;
 import com.futspring.backend.domain.daily.entity.Daily;
+import com.futspring.backend.domain.daily.repository.DailyAttendanceRepository;
 import com.futspring.backend.domain.daily.repository.DailyRepository;
 import com.futspring.backend.domain.file.FileUploadService;
 import com.futspring.backend.domain.pelada.dto.CreatePeladaRequestDTO;
@@ -41,6 +42,8 @@ import static org.mockito.Mockito.*;
 class PeladaServiceTest {
 
     @Mock DailyRepository dailyRepository;
+    @Mock DailyAttendanceRepository attendanceRepository;
+    @Mock PeladaMensalistaRepository mensalistaRepository;
     @Mock RankingRepository rankingRepository;
     @Mock MessageRepository messageRepository;
     @Mock DailyService dailyService;
@@ -69,7 +72,7 @@ class PeladaServiceTest {
 
     @BeforeEach
     void setUp() {
-        peladaService = new PeladaService(peladaRepository, playerStarsRepository, userRepository, dailyRepository, rankingRepository, messageRepository,
+        peladaService = new PeladaService(peladaRepository, playerStarsRepository, mensalistaRepository, userRepository, dailyRepository, attendanceRepository, rankingRepository, messageRepository,
                 fileUploadService, userAuthHelper, new PeladaAccessHelper(peladaRepository), dailyService, aggregateRebuildService);
 
         admin = User.builder().id(1L).email("admin@example.com").username("admin").password("hash").build();
@@ -307,6 +310,7 @@ class PeladaServiceTest {
 
         assertThat(pelada.getMembers()).doesNotContain(member);
         verify(playerStarsRepository).deleteByPeladaAndUser(pelada, member);
+        verify(mensalistaRepository).deleteByPeladaAndUser(pelada, member);
     }
 
     @Test
@@ -649,6 +653,7 @@ class PeladaServiceTest {
         verify(dailyService).deleteDailyData(d2);
         verify(messageRepository).deleteByPelada(pelada);
         verify(rankingRepository).deleteByPelada(pelada);
+        verify(mensalistaRepository).deleteByPelada(pelada);
         verify(peladaRepository).delete(pelada);
         verify(aggregateRebuildService).rebuild(isNull(), eq(new java.util.LinkedHashSet<>(List.of(admin, member))));
     }

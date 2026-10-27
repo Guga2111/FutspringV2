@@ -5,6 +5,7 @@ import com.futspring.backend.domain.daily.dto.DailyDetailDTO;
 import com.futspring.backend.domain.daily.entity.Daily;
 import com.futspring.backend.domain.daily.entity.DailyStatus;
 import com.futspring.backend.domain.daily.entity.Team;
+import com.futspring.backend.domain.daily.repository.DailyAttendanceRepository;
 import com.futspring.backend.domain.daily.repository.DailyRepository;
 import com.futspring.backend.domain.daily.repository.TeamRepository;
 import com.futspring.backend.domain.pelada.Pelada;
@@ -12,6 +13,7 @@ import com.futspring.backend.domain.pelada.PeladaRepository;
 import com.futspring.backend.shared.exception.AppException;
 import com.futspring.backend.shared.helper.PeladaAccessHelper;
 import com.futspring.backend.shared.helper.UserAuthenticationHelper;
+import com.futspring.backend.support.InMemoryAttendance;
 import com.futspring.backend.support.MembershipStubs;
 import com.futspring.backend.domain.user.User;
 import org.junit.jupiter.api.BeforeEach;
@@ -36,6 +38,7 @@ class DailyTeamManagementServiceTest {
     @Mock PeladaRepository peladaRepository;
     @Mock UserAuthenticationHelper userAuthHelper;
     @Mock DailyRepository dailyRepository;
+    @Mock DailyAttendanceRepository attendanceRepository;
     @Mock TeamRepository teamRepository;
     @Mock DailyDTOMapper dailyDTOMapper;
 
@@ -43,6 +46,7 @@ class DailyTeamManagementServiceTest {
     PeladaPlayerStarsRepository playerStarsRepository;
 
     DailyTeamManagementService teamManagementService;
+    InMemoryAttendance attendance;
 
     User admin;
     User member;
@@ -53,7 +57,8 @@ class DailyTeamManagementServiceTest {
     @BeforeEach
     void setUp() {
         teamManagementService = new DailyTeamManagementService(
-                userAuthHelper, new PeladaAccessHelper(peladaRepository), dailyRepository, teamRepository, playerStarsRepository, dailyDTOMapper);
+                userAuthHelper, new PeladaAccessHelper(peladaRepository), dailyRepository, attendanceRepository, teamRepository,
+                playerStarsRepository, dailyDTOMapper);
 
         admin = User.builder().id(1L).email("admin@example.com").username("admin").password("hash").build();
         member = User.builder().id(2L).email("member@example.com").username("member").password("hash").build();
@@ -78,9 +83,9 @@ class DailyTeamManagementServiceTest {
                 .dailyDate(LocalDate.now().plusDays(3))
                 .dailyTime("18:00")
                 .status(DailyStatus.SCHEDULED)
-                .confirmedPlayers(new HashSet<>())
                 .build();
         MembershipStubs.stubMembership(peladaRepository, pelada);
+        attendance = InMemoryAttendance.stub(attendanceRepository);
     }
 
     // --- sortTeams error paths ---
@@ -142,9 +147,9 @@ class DailyTeamManagementServiceTest {
     @Test
     void sortTeams_tooManyPlayers_throwsBadRequest() {
         // need exactly 2 (2 teams x 1), add 3
-        scheduledDaily.getConfirmedPlayers().add(admin);
-        scheduledDaily.getConfirmedPlayers().add(member);
-        scheduledDaily.getConfirmedPlayers().add(outsider);
+        attendance.confirm(scheduledDaily, admin);
+        attendance.confirm(scheduledDaily, member);
+        attendance.confirm(scheduledDaily, outsider);
 
         when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
@@ -181,7 +186,7 @@ class DailyTeamManagementServiceTest {
         User player3 = User.builder().id(4L).email("p3@example.com").username("p3").password("hash").build();
         User player4 = User.builder().id(5L).email("p4@example.com").username("p4").password("hash").build();
         pelada.setPlayersPerTeam(2);
-        scheduledDaily.getConfirmedPlayers().addAll(List.of(admin, member, player3, player4));
+        attendance.confirm(scheduledDaily, admin, member, player3, player4);
 
         when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
@@ -200,8 +205,8 @@ class DailyTeamManagementServiceTest {
 
     @Test
     void sortTeams_success_deletesExistingTeamsAndCreatesNew() {
-        scheduledDaily.getConfirmedPlayers().add(admin);
-        scheduledDaily.getConfirmedPlayers().add(member);
+        attendance.confirm(scheduledDaily, admin);
+        attendance.confirm(scheduledDaily, member);
 
         Team existingTeam = Team.builder().id(1L).daily(scheduledDaily).name("Old Team")
                 .players(new HashSet<>()).build();

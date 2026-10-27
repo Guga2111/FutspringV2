@@ -5,11 +5,13 @@ import com.futspring.backend.domain.daily.dto.DailyListItemDTO;
 import com.futspring.backend.domain.daily.dto.MatchResultDTO;
 import com.futspring.backend.domain.daily.dto.PopulateDailyRequestDTO;
 import com.futspring.backend.domain.daily.entity.Daily;
+import com.futspring.backend.domain.daily.entity.DailyAttendance;
 import com.futspring.backend.domain.daily.entity.DailyStatus;
 import com.futspring.backend.domain.daily.entity.LeagueTableEntry;
 import com.futspring.backend.domain.daily.entity.Match;
 import com.futspring.backend.domain.daily.entity.PlayerMatchStat;
 import com.futspring.backend.domain.daily.entity.Team;
+import com.futspring.backend.domain.daily.repository.DailyAttendanceRepository;
 import com.futspring.backend.domain.daily.repository.DailyRepository;
 import com.futspring.backend.domain.daily.repository.LeagueTableEntryRepository;
 import com.futspring.backend.domain.daily.repository.MatchRepository;
@@ -33,6 +35,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -50,6 +53,7 @@ public class DailyResultsService {
     private final DailyTeamManagementService dailyTeamManagementService;
     private final DailyDTOMapper dailyDTOMapper;
     private final DailyRepository dailyRepository;
+    private final DailyAttendanceRepository attendanceRepository;
     private final UserRepository userRepository;
     private final TeamRepository teamRepository;
     private final MatchRepository matchRepository;
@@ -445,7 +449,7 @@ public class DailyResultsService {
             matchRepository.deleteAll(existingMatches);
         }
         dailyTeamManagementService.clearTeams(daily);
-        daily.getConfirmedPlayers().clear();
+        attendanceRepository.deleteAllOfDaily(daily);
 
         Map<String, Team> colorToTeam = new HashMap<>();
         for (PopulateDailyRequestDTO.ParsedTeamDTO parsedTeam : request.getTeams()) {
@@ -458,8 +462,11 @@ public class DailyResultsService {
             colorToTeam.put(parsedTeam.getColorName().toLowerCase(Locale.ROOT), teamRepository.save(team));
         }
 
-        allUserIds.forEach(uid -> daily.getConfirmedPlayers().add(userMap.get(uid)));
-        dailyRepository.save(daily);
+        // The imported players are the session's attendance, in the message's order
+        Instant now = Instant.now();
+        attendanceRepository.saveAll(allUserIds.stream()
+                .map(uid -> new DailyAttendance(daily, userMap.get(uid), now))
+                .toList());
 
         List<Match> savedMatches = new ArrayList<>();
         if (request.getMatches() != null) {

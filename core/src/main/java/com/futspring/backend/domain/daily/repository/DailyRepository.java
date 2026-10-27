@@ -24,10 +24,6 @@ public interface DailyRepository extends JpaRepository<Daily, Long> {
     long countByPeladaAndStatusInRange(@Param("peladaId") Long peladaId, @Param("status") DailyStatus status,
                                        @Param("from") LocalDate from, @Param("to") LocalDate to);
 
-    // [dailyId, confirmedPlayerCount] in one query
-    @Query("SELECT d.id, SIZE(d.confirmedPlayers) FROM Daily d WHERE d.id IN :ids")
-    List<Object[]> countConfirmedByIds(@Param("ids") Collection<Long> ids);
-
     // The next session (earliest date from `from` on, in one of `statuses`) of every pelada, in one query
     @Query("""
         SELECT d FROM Daily d
@@ -39,8 +35,4 @@ public interface DailyRepository extends JpaRepository<Daily, Long> {
     List<Daily> findNextDailies(@Param("peladaIds") Collection<Long> peladaIds,
                                 @Param("statuses") Collection<DailyStatus> statuses,
                                 @Param("from") LocalDate from);
-
-    // Ids (among `ids`) of the dailies the user confirmed attendance in
-    @Query("SELECT d.id FROM Daily d JOIN d.confirmedPlayers u WHERE d.id IN :ids AND u.id = :userId")
-    List<Long> findConfirmedDailyIds(@Param("ids") Collection<Long> ids, @Param("userId") Long userId);
 }

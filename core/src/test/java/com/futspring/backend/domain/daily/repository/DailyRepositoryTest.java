@@ -137,7 +137,7 @@ class DailyRepositoryTest {
         assertThat(result.get(2).getDailyDate()).isEqualTo(LocalDate.of(2024, 1, 1));
     }
 
-    // --- findNextDailies / findConfirmedDailyIds ---
+    // --- findNextDailies ---
 
     @Test
     void findNextDailies_returnsEarliestUpcomingSessionPerPelada() {
@@ -154,17 +154,5 @@ class DailyRepositoryTest {
                 List.of(pelada1.getId(), pelada2.getId()), Set.of(DailyStatus.SCHEDULED, DailyStatus.CONFIRMED), today);
 
         assertThat(next).extracting(Daily::getId).containsExactlyInAnyOrder(p1Next.getId(), p2Next.getId());
-    }
-
-    @Test
-    void findConfirmedDailyIds_returnsOnlyDailiesTheUserConfirmed() {
-        User player = userRepository.save(User.builder().email("player@example.com").username("player").password("hash").build());
-        Daily confirmed = Daily.builder().pelada(pelada1).dailyDate(LocalDate.of(2026, 10, 6)).dailyTime("18:00").build();
-        confirmed.getConfirmedPlayers().add(player);
-        confirmed = dailyRepository.save(confirmed);
-        Daily other = dailyRepository.save(Daily.builder().pelada(pelada1).dailyDate(LocalDate.of(2026, 10, 13)).dailyTime("18:00").build());
-
-        assertThat(dailyRepository.findConfirmedDailyIds(List.of(confirmed.getId(), other.getId()), player.getId()))
-                .containsExactly(confirmed.getId());
     }
 }

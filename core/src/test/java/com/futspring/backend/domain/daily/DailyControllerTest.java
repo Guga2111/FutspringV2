@@ -7,8 +7,10 @@ import com.futspring.backend.domain.daily.dto.UpdateDailyStatusRequestDTO;
 import com.futspring.backend.domain.daily.dto.UpdateTeamColorRequestDTO;
 import com.futspring.backend.domain.daily.dto.UpdateTeamNameRequestDTO;
 import com.futspring.backend.domain.daily.entity.Daily;
+import com.futspring.backend.domain.daily.entity.DailyAttendance;
 import com.futspring.backend.domain.daily.entity.DailyStatus;
 import com.futspring.backend.domain.daily.entity.Team;
+import com.futspring.backend.domain.daily.repository.DailyAttendanceRepository;
 import com.futspring.backend.domain.daily.repository.DailyRepository;
 import com.futspring.backend.domain.daily.repository.TeamRepository;
 import com.futspring.backend.domain.pelada.Pelada;
@@ -22,6 +24,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Collections;
 import java.util.HashSet;
@@ -36,6 +39,7 @@ class DailyControllerTest extends BaseIntegrationTest {
     @Autowired private UserRepository userRepository;
     @Autowired private PeladaRepository peladaRepository;
     @Autowired private DailyRepository dailyRepository;
+    @Autowired private DailyAttendanceRepository attendanceRepository;
     @Autowired private TeamRepository teamRepository;
 
     private User admin;
@@ -110,8 +114,7 @@ class DailyControllerTest extends BaseIntegrationTest {
 
     @Test
     void getDailies_includesCountsAndCallerAttendance() throws Exception {
-        daily.getConfirmedPlayers().add(member);
-        dailyRepository.save(daily);
+        attendanceRepository.save(new DailyAttendance(daily, member, Instant.now()));
         teamRepository.save(Team.builder().daily(daily).name("Time 1").build());
         teamRepository.save(Team.builder().daily(daily).name("Time 2").build());
 
@@ -161,8 +164,7 @@ class DailyControllerTest extends BaseIntegrationTest {
     @Test
     void disconfirmAttendance_self() throws Exception {
         // Confirm first so we have something to disconfirm
-        daily.getConfirmedPlayers().add(member);
-        dailyRepository.save(daily);
+        attendanceRepository.save(new DailyAttendance(daily, member, Instant.now()));
 
         mockMvc.perform(delete("/api/v1/dailies/" + daily.getId() + "/confirm")
                 .header("Authorization", bearerToken(member.getId(), member.getEmail())))
@@ -189,8 +191,7 @@ class DailyControllerTest extends BaseIntegrationTest {
 
     @Test
     void confirmAll_asAdmin_confirmsEveryMember() throws Exception {
-        daily.getConfirmedPlayers().add(member);
-        dailyRepository.save(daily);
+        attendanceRepository.save(new DailyAttendance(daily, member, Instant.now()));
 
         mockMvc.perform(post("/api/v1/dailies/" + daily.getId() + "/confirm/all")
                 .header("Authorization", bearerToken(admin.getId(), admin.getEmail())))
@@ -246,13 +247,11 @@ class DailyControllerTest extends BaseIntegrationTest {
     @Test
     void sortTeams_asAdmin() throws Exception {
         // Create exactly numberOfTeams × playersPerTeam = 10 confirmed players
-        Set<User> players = new HashSet<>();
         for (int i = 0; i < 10; i++) {
-            players.add(userRepository.save(User.builder()
-                    .email("sp" + i + "@test.com").username("sp" + i).password("hash").build()));
+            User player = userRepository.save(User.builder()
+                    .email("sp" + i + "@test.com").username("sp" + i).password("hash").build());
+            attendanceRepository.save(new DailyAttendance(daily, player, Instant.now()));
         }
-        daily.setConfirmedPlayers(players);
-        dailyRepository.save(daily);
 
         mockMvc.perform(post("/api/v1/dailies/" + daily.getId() + "/sort-teams")
                 .header("Authorization", bearerToken(admin.getId(), admin.getEmail())))

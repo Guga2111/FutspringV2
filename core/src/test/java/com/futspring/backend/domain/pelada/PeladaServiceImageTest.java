@@ -2,6 +2,7 @@ package com.futspring.backend.domain.pelada;
 
 import com.futspring.backend.domain.chat.MessageRepository;
 import com.futspring.backend.domain.daily.DailyService;
+import com.futspring.backend.domain.daily.repository.DailyAttendanceRepository;
 import com.futspring.backend.domain.daily.repository.DailyRepository;
 import com.futspring.backend.domain.file.FileUploadService;
 import com.futspring.backend.domain.pelada.dto.PeladaResponseDTO;
@@ -32,6 +33,8 @@ import static org.mockito.Mockito.*;
 class PeladaServiceImageTest {
 
     @Mock DailyRepository dailyRepository;
+    @Mock DailyAttendanceRepository attendanceRepository;
+    @Mock PeladaMensalistaRepository mensalistaRepository;
     @Mock RankingRepository rankingRepository;
     @Mock MessageRepository messageRepository;
     @Mock DailyService dailyService;
@@ -59,7 +62,7 @@ class PeladaServiceImageTest {
 
     @BeforeEach
     void setUp() {
-        peladaService = new PeladaService(peladaRepository, playerStarsRepository, userRepository, dailyRepository, rankingRepository, messageRepository,
+        peladaService = new PeladaService(peladaRepository, playerStarsRepository, mensalistaRepository, userRepository, dailyRepository, attendanceRepository, rankingRepository, messageRepository,
                 fileUploadService, userAuthHelper, new PeladaAccessHelper(peladaRepository), dailyService, aggregateRebuildService);
 
         admin = User.builder().id(1L).email("admin@example.com").username("admin").password("hash").build();

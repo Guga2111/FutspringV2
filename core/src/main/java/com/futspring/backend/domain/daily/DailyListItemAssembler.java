@@ -2,7 +2,7 @@ package com.futspring.backend.domain.daily;
 
 import com.futspring.backend.domain.daily.dto.DailyListItemDTO;
 import com.futspring.backend.domain.daily.entity.Daily;
-import com.futspring.backend.domain.daily.repository.DailyRepository;
+import com.futspring.backend.domain.daily.repository.DailyAttendanceRepository;
 import com.futspring.backend.domain.daily.repository.MatchRepository;
 import com.futspring.backend.domain.daily.repository.TeamRepository;
 import com.futspring.backend.domain.user.User;
@@ -21,17 +21,17 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class DailyListItemAssembler {
 
-    private final DailyRepository dailyRepository;
+    private final DailyAttendanceRepository attendanceRepository;
     private final TeamRepository teamRepository;
     private final MatchRepository matchRepository;
 
-    /** One daily, after a mutation (the confirmed players are already loaded by the caller). */
+    /** One daily, after a mutation. */
     public DailyListItemDTO toListItem(Daily daily, User caller) {
         return build(daily,
-                daily.getConfirmedPlayers().size(),
+                (int) attendanceRepository.countByDaily(daily),
                 (int) teamRepository.countByDaily(daily),
                 (int) matchRepository.countByDaily(daily),
-                daily.getConfirmedPlayers().contains(caller));
+                attendanceRepository.existsByDailyAndUser(daily, caller));
     }
 
     /** A freshly created daily: nothing hangs from it yet. */
@@ -45,10 +45,10 @@ public class DailyListItemAssembler {
             return List.of();
         }
         List<Long> ids = dailies.stream().map(Daily::getId).toList();
-        Map<Long, Integer> confirmed = toCountMap(dailyRepository.countConfirmedByIds(ids));
+        Map<Long, Integer> confirmed = toCountMap(attendanceRepository.countConfirmedByIds(ids));
         Map<Long, Integer> teams = toCountMap(teamRepository.countByDailyIds(ids));
         Map<Long, Integer> matches = toCountMap(matchRepository.countByDailyIds(ids));
-        Set<Long> confirmedByCaller = new HashSet<>(dailyRepository.findConfirmedDailyIds(ids, caller.getId()));
+        Set<Long> confirmedByCaller = new HashSet<>(attendanceRepository.findConfirmedDailyIds(ids, caller.getId()));
 
         return dailies.stream()
                 .map(d -> build(d,
