@@ -41,6 +41,11 @@ export async function confirmAttendance(id: number): Promise<DailyListItem> {
   return response.data
 }
 
+// Dismisses the caller's "you lost your spot" alert in this session
+export async function markBumpsSeen(id: number): Promise<void> {
+  await apiClient.post(`/api/v1/dailies/${id}/bumps/seen`)
+}
+
 export async function disconfirmAttendance(id: number): Promise<DailyListItem> {
   const response = await apiClient.delete<DailyListItem>(`/api/v1/dailies/${id}/confirm`)
   return response.data

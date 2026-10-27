@@ -13,6 +13,9 @@ const daily = (id: number, dailyDate: string, status: DailyStatus = "FINISHED"):
   matchCount: 0,
   championImage: null,
   isConfirmed: false,
+  capacity: 10,
+  startsAt: `${dailyDate}T11:00:00Z`,
+  confirmOpensAt: null,
 })
 
 const now = new Date(2026, 9, 4, 10, 0)

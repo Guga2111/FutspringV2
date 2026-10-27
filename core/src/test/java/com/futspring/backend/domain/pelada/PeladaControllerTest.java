@@ -6,7 +6,9 @@ import com.futspring.backend.domain.daily.DailyResultsService;
 import com.futspring.backend.domain.daily.dto.PopulateDailyRequestDTO;
 import com.futspring.backend.domain.daily.entity.Daily;
 import com.futspring.backend.domain.daily.entity.DailyAttendance;
+import com.futspring.backend.domain.daily.entity.DailyAttendanceBump;
 import com.futspring.backend.domain.daily.entity.DailyStatus;
+import com.futspring.backend.domain.daily.repository.DailyAttendanceBumpRepository;
 import com.futspring.backend.domain.daily.repository.DailyAttendanceRepository;
 import com.futspring.backend.domain.daily.repository.DailyRepository;
 import com.futspring.backend.domain.pelada.dto.AddPlayerRequestDTO;
@@ -40,6 +42,7 @@ class PeladaControllerTest extends BaseIntegrationTest {
     @Autowired private PeladaRepository peladaRepository;
     @Autowired private DailyRepository dailyRepository;
     @Autowired private DailyAttendanceRepository attendanceRepository;
+    @Autowired private DailyAttendanceBumpRepository bumpRepository;
     @Autowired private MessageRepository messageRepository;
     @Autowired private RankingRepository rankingRepository;
     @Autowired private StatsRepository statsRepository;
@@ -76,7 +79,7 @@ class PeladaControllerTest extends BaseIntegrationTest {
     @Test
     void createPelada_success() throws Exception {
         CreatePeladaRequestDTO req = new CreatePeladaRequestDTO(
-                "New Pelada", "SATURDAY", "10:00", 1.5f, null, null, false, 2, 5);
+                "New Pelada", "SATURDAY", "10:00", 1.5f, null, null, false, 2, 5, null, 0);
 
         mockMvc.perform(post("/api/v1/peladas")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -454,7 +457,7 @@ class PeladaControllerTest extends BaseIntegrationTest {
     @Test
     void createPelada_portugueseDayOfWeek_returnsValidationError() throws Exception {
         CreatePeladaRequestDTO req = new CreatePeladaRequestDTO(
-                "New Pelada", "Sabado", "10:00", 1.5f, null, null, false, 2, 5);
+                "New Pelada", "Sabado", "10:00", 1.5f, null, null, false, 2, 5, null, 0);
 
         mockMvc.perform(post("/api/v1/peladas")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -499,5 +502,131 @@ class PeladaControllerTest extends BaseIntegrationTest {
         request.setTeams(List.of(red, blue));
         request.setMatches(List.of(match));
         return request;
+    }
+
+    // --- PUT /api/v1/peladas/{id}/players/{userId}/mensalista ---
+
+    @Test
+    void setMensalista_asAdmin_isShownInTheDetail() throws Exception {
+        pelada.setMaxMensalistas(1);
+        peladaRepository.save(pelada);
+
+        mockMvc.perform(put(mensalistaUrl(pelada, member))
+                .contentType(MediaType.APPLICATION_JSON)
+                .header("Authorization", bearerToken(admin.getId(), admin.getEmail()))
+                .content("{\"isMensalista\":true}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(member.getId()))
+                .andExpect(jsonPath("$.isMensalista").value(true));
+
+        mockMvc.perform(get("/api/v1/peladas/" + pelada.getId())
+                .header("Authorization", bearerToken(member.getId(), member.getEmail())))
+                .andExpect(jsonPath("$.timeZone").value("America/Sao_Paulo"))
+                .andExpect(jsonPath("$.maxMensalistas").value(1))
+                .andExpect(jsonPath("$.members[?(@.id == " + member.getId() + ")].isMensalista").value(true))
+                .andExpect(jsonPath("$.members[?(@.id == " + admin.getId() + ")].isMensalista").value(false));
+    }
+
+    @Test
+    void setMensalista_limitFull_returnsConflict() throws Exception {
+        mockMvc.perform(put(mensalistaUrl(pelada, member))
+                .contentType(MediaType.APPLICATION_JSON)
+                .header("Authorization", bearerToken(admin.getId(), admin.getEmail()))
+                .content("{\"isMensalista\":true}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("Limite de mensalistas atingido (0/0)"));
+    }
+
+    @Test
+    void setMensalista_missingFlag_returnsValidationError() throws Exception {
+        mockMvc.perform(put(mensalistaUrl(pelada, member))
+                .contentType(MediaType.APPLICATION_JSON)
+                .header("Authorization", bearerToken(admin.getId(), admin.getEmail()))
+                .content("{}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.isMensalista").exists());
+    }
+
+    @Test
+    void setMensalista_asMemberOrOutsider_returnsForbidden() throws Exception {
+        for (User caller : List.of(member, outsider)) {
+            mockMvc.perform(put(mensalistaUrl(pelada, member))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .header("Authorization", bearerToken(caller.getId(), caller.getEmail()))
+                    .content("{\"isMensalista\":true}"))
+                    .andExpect(status().isForbidden());
+        }
+    }
+
+    @Test
+    void setMensalista_userOfAnotherPelada_returnsNotFound() throws Exception {
+        Pelada other = peladaRepository.save(Pelada.builder().name("Other").dayOfWeek("MONDAY").timeOfDay("18:00")
+                .duration(1f).creator(outsider).members(new HashSet<>(Set.of(outsider))).admins(new HashSet<>(Set.of(outsider)))
+                .build());
+        pelada.setMaxMensalistas(5);
+        peladaRepository.save(pelada);
+
+        mockMvc.perform(put(mensalistaUrl(pelada, outsider))
+                .contentType(MediaType.APPLICATION_JSON)
+                .header("Authorization", bearerToken(admin.getId(), admin.getEmail()))
+                .content("{\"isMensalista\":true}"))
+                .andExpect(status().isNotFound());
+        // and an admin of another pelada can't mark this pelada's members
+        mockMvc.perform(put(mensalistaUrl(pelada, member))
+                .contentType(MediaType.APPLICATION_JSON)
+                .header("Authorization", bearerToken(outsider.getId(), outsider.getEmail()))
+                .content("{\"isMensalista\":true}"))
+                .andExpect(status().isForbidden());
+        assertThat(other.getId()).isNotNull();
+    }
+
+    @Test
+    void updatePelada_timeZoneAndLimit_validated() throws Exception {
+        mockMvc.perform(put("/api/v1/peladas/" + pelada.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .header("Authorization", bearerToken(admin.getId(), admin.getEmail()))
+                .content("{\"timeZone\":\"America/Toronto\",\"maxMensalistas\":4}"))
+                .andExpect(status().isOk());
+        mockMvc.perform(put("/api/v1/peladas/" + pelada.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .header("Authorization", bearerToken(admin.getId(), admin.getEmail()))
+                .content("{\"maxMensalistas\":-1}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.maxMensalistas").exists());
+        mockMvc.perform(put("/api/v1/peladas/" + pelada.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .header("Authorization", bearerToken(admin.getId(), admin.getEmail()))
+                .content("{\"timeZone\":\"Nowhere/City\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Fuso horário inválido"));
+
+        Pelada saved = peladaRepository.findById(pelada.getId()).orElseThrow();
+        assertThat(saved.getTimeZone()).isEqualTo("America/Toronto");
+        assertThat(saved.getMaxMensalistas()).isEqualTo(4);
+    }
+
+    @Test
+    void getMyPeladas_nextSessionCarriesTheWindowAndTheCallersUnseenBump() throws Exception {
+        Daily next = dailyRepository.save(Daily.builder().pelada(pelada).dailyDate(LocalDate.of(2099, 10, 30)).dailyTime("20:00").build());
+        bumpRepository.save(DailyAttendanceBump.builder().daily(next).user(member).bumpedBy(admin)
+                .bumpedAt(Instant.parse("2099-10-30T12:00:00Z")).build());
+
+        mockMvc.perform(get("/api/v1/peladas/my")
+                .header("Authorization", bearerToken(member.getId(), member.getEmail())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].nextDaily.startsAt").value("2099-10-30T23:00:00Z"))
+                .andExpect(jsonPath("$[0].nextDaily.confirmOpensAt").value("2099-10-29T23:00:00Z"))
+                .andExpect(jsonPath("$[0].nextDaily.bump.bumpedBy.id").value(admin.getId()))
+                .andExpect(jsonPath("$[0].nextDaily.bump.bumpedBy.email").doesNotExist())
+                .andExpect(jsonPath("$[0].nextDaily.bump.bumpedAt").value("2099-10-30T12:00:00Z"));
+
+        // The admin wasn't bumped
+        mockMvc.perform(get("/api/v1/peladas/my")
+                .header("Authorization", bearerToken(admin.getId(), admin.getEmail())))
+                .andExpect(jsonPath("$[0].nextDaily.bump").doesNotExist());
+    }
+
+    private static String mensalistaUrl(Pelada pelada, User user) {
+        return "/api/v1/peladas/" + pelada.getId() + "/players/" + user.getId() + "/mensalista";
     }
 }

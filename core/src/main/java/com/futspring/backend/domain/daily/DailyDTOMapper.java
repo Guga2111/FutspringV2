@@ -10,6 +10,7 @@ import com.futspring.backend.domain.pelada.PeladaPlayerStars;
 import com.futspring.backend.domain.user.User;
 import org.springframework.stereotype.Component;
 
+import java.time.Instant;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -25,6 +26,19 @@ public class DailyDTOMapper {
                 .image(user.getImage())
                 .stars(starsByUserId.getOrDefault(user.getId(), PeladaPlayerStars.DEFAULT_STARS))
                 .position(user.getPosition())
+                .build();
+    }
+
+    /** A player of the attendance list: also their type, and when they confirmed (null if they haven't). */
+    public PlayerDTO toAttendeeDTO(User user, Map<Long, Integer> starsByUserId, boolean isMensalista, Instant confirmedAt) {
+        return PlayerDTO.builder()
+                .id(user.getId())
+                .username(user.getUsername())
+                .image(user.getImage())
+                .stars(starsByUserId.getOrDefault(user.getId(), PeladaPlayerStars.DEFAULT_STARS))
+                .position(user.getPosition())
+                .isMensalista(isMensalista)
+                .confirmedAt(confirmedAt)
                 .build();
     }
 

@@ -62,6 +62,12 @@ public class DailyController {
         return ResponseEntity.ok(dailyAttendanceService.disconfirmAttendance(id, email));
     }
 
+    @PostMapping("/dailies/{id}/bumps/seen")
+    public ResponseEntity<Void> markBumpsSeen(@PathVariable Long id, @AuthenticationPrincipal String email) {
+        dailyAttendanceService.markBumpsSeen(id, email);
+        return ResponseEntity.noContent().build();
+    }
+
     @PostMapping("/dailies/{id}/confirm/all")
     public ResponseEntity<DailyListItemDTO> adminConfirmAll(@PathVariable Long id, @AuthenticationPrincipal String email) {
         return ResponseEntity.ok(dailyAttendanceService.adminConfirmAll(id, email));

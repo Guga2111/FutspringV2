@@ -13,6 +13,9 @@ export interface CreatePeladaData {
   autoCreateDailyEnabled?: boolean
   numberOfTeams?: number
   playersPerTeam?: number
+  // IANA zone; the backend defaults to America/Sao_Paulo
+  timeZone?: string
+  maxMensalistas?: number
 }
 
 export interface UpdatePeladaData {
@@ -23,6 +26,8 @@ export interface UpdatePeladaData {
   address?: string
   reference?: string
   autoCreateDailyEnabled?: boolean
+  timeZone?: string
+  maxMensalistas?: number
 }
 
 export async function getMyPeladas(): Promise<PeladaResponse[]> {
@@ -64,6 +69,12 @@ export async function setAdmin(peladaId: number, userId: number, isAdmin: boolea
 // admin only; returns the member with the new stars
 export async function setPlayerStars(peladaId: number, userId: number, stars: number): Promise<PeladaMember> {
   const response = await apiClient.put<PeladaMember>(`/api/v1/peladas/${peladaId}/players/${userId}/stars`, { stars })
+  return response.data
+}
+
+// admin only; 409 when the mensalista limit is full. Returns the member with the new type
+export async function setMensalista(peladaId: number, userId: number, isMensalista: boolean): Promise<PeladaMember> {
+  const response = await apiClient.put<PeladaMember>(`/api/v1/peladas/${peladaId}/players/${userId}/mensalista`, { isMensalista })
   return response.data
 }
 

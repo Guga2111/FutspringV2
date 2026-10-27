@@ -3,6 +3,7 @@ package com.futspring.backend.domain.pelada;
 import com.futspring.backend.domain.chat.MessageRepository;
 import com.futspring.backend.domain.daily.DailyService;
 import com.futspring.backend.domain.daily.entity.Daily;
+import com.futspring.backend.domain.daily.repository.DailyAttendanceBumpRepository;
 import com.futspring.backend.domain.daily.repository.DailyAttendanceRepository;
 import com.futspring.backend.domain.daily.repository.DailyRepository;
 import com.futspring.backend.domain.file.FileUploadService;
@@ -43,6 +44,7 @@ class PeladaServiceTest {
 
     @Mock DailyRepository dailyRepository;
     @Mock DailyAttendanceRepository attendanceRepository;
+    @Mock DailyAttendanceBumpRepository bumpRepository;
     @Mock PeladaMensalistaRepository mensalistaRepository;
     @Mock RankingRepository rankingRepository;
     @Mock MessageRepository messageRepository;
@@ -72,7 +74,7 @@ class PeladaServiceTest {
 
     @BeforeEach
     void setUp() {
-        peladaService = new PeladaService(peladaRepository, playerStarsRepository, mensalistaRepository, userRepository, dailyRepository, attendanceRepository, rankingRepository, messageRepository,
+        peladaService = new PeladaService(peladaRepository, playerStarsRepository, mensalistaRepository, userRepository, dailyRepository, attendanceRepository, bumpRepository, rankingRepository, messageRepository,
                 fileUploadService, userAuthHelper, new PeladaAccessHelper(peladaRepository), dailyService, aggregateRebuildService);
 
         admin = User.builder().id(1L).email("admin@example.com").username("admin").password("hash").build();
@@ -685,5 +687,157 @@ class PeladaServiceTest {
         assertThatThrownBy(() -> peladaService.deletePelada(10L, "ghost@example.com"))
                 .isInstanceOf(AppException.class)
                 .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.NOT_FOUND));
+    }
+
+    // --- setMensalista ---
+
+    @Test
+    void setMensalista_marksAMemberWithinTheLimit() {
+        pelada.setMaxMensalistas(2);
+        stubSetMensalista(admin, member);
+        when(mensalistaRepository.countByPelada(pelada)).thenReturn(1L);
+
+        PeladaMemberDTO result = peladaService.setMensalista(10L, 2L, true, "admin@example.com");
+
+        verify(mensalistaRepository).save(argThat(m -> m.getPelada() == pelada && m.getUser() == member));
+        assertThat(result.isMensalista()).isTrue();
+        assertThat(result.getStars()).isEqualTo(PeladaPlayerStars.DEFAULT_STARS);
+    }
+
+    @Test
+    void setMensalista_limitFull_throwsConflict() {
+        pelada.setMaxMensalistas(2);
+        stubSetMensalista(admin, member);
+        when(mensalistaRepository.countByPelada(pelada)).thenReturn(2L);
+
+        assertThatThrownBy(() -> peladaService.setMensalista(10L, 2L, true, "admin@example.com"))
+                .hasMessage("Limite de mensalistas atingido (2/2)")
+                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.CONFLICT));
+        verify(mensalistaRepository, never()).save(any());
+    }
+
+    @Test
+    void setMensalista_alreadyMensalista_isIdempotentEvenWithTheLimitFull() {
+        pelada.setMaxMensalistas(1);
+        stubSetMensalista(admin, member);
+        when(mensalistaRepository.existsByPeladaAndUser(pelada, member)).thenReturn(true);
+
+        PeladaMemberDTO result = peladaService.setMensalista(10L, 2L, true, "admin@example.com");
+
+        assertThat(result.isMensalista()).isTrue();
+        verify(mensalistaRepository, never()).save(any());
+        verify(mensalistaRepository, never()).countByPelada(any());
+    }
+
+    @Test
+    void setMensalista_unmark_deletesTheRow() {
+        stubSetMensalista(admin, member);
+        when(mensalistaRepository.existsByPeladaAndUser(pelada, member)).thenReturn(true);
+
+        PeladaMemberDTO result = peladaService.setMensalista(10L, 2L, false, "admin@example.com");
+
+        verify(mensalistaRepository).deleteByPeladaAndUser(pelada, member);
+        assertThat(result.isMensalista()).isFalse();
+    }
+
+    @Test
+    void setMensalista_callerNotAdmin_throwsForbidden() {
+        when(userAuthHelper.getAuthenticatedUser("member@example.com")).thenReturn(member);
+        when(peladaRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(pelada));
+
+        assertThatThrownBy(() -> peladaService.setMensalista(10L, 2L, true, "member@example.com"))
+                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.FORBIDDEN));
+        verifyNoInteractions(mensalistaRepository);
+    }
+
+    @Test
+    void setMensalista_targetNotAMember_throwsNotFound() {
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
+        when(peladaRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(pelada));
+        when(userRepository.findById(3L)).thenReturn(Optional.of(outsider));
+
+        assertThatThrownBy(() -> peladaService.setMensalista(10L, 3L, true, "admin@example.com"))
+                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.NOT_FOUND));
+        verifyNoInteractions(mensalistaRepository);
+    }
+
+    // --- time zone and mensalista limit ---
+
+    @Test
+    void createPelada_withoutTimeZone_usesSaoPaulo_invalidZone_throwsBadRequest() {
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
+        when(peladaRepository.save(any(Pelada.class))).thenAnswer(inv -> inv.getArgument(0));
+        CreatePeladaRequestDTO req = new CreatePeladaRequestDTO();
+        req.setName("P");
+        req.setDayOfWeek("FRIDAY");
+        req.setTimeOfDay("20:00");
+        req.setDuration(1f);
+
+        peladaService.createPelada(req, "admin@example.com");
+        verify(peladaRepository).save(argThat(p -> p.getTimeZone().equals("America/Sao_Paulo") && p.getMaxMensalistas() == 0));
+
+        req.setTimeZone("-03:00");
+        assertThatThrownBy(() -> peladaService.createPelada(req, "admin@example.com"))
+                .hasMessage("Fuso horário inválido")
+                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.BAD_REQUEST));
+    }
+
+    @Test
+    void updatePelada_timeZoneAndLimit_areSaved() {
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
+        when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
+        when(peladaRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(pelada));
+        when(peladaRepository.save(pelada)).thenReturn(pelada);
+        when(mensalistaRepository.countByPelada(pelada)).thenReturn(3L);
+
+        peladaService.updatePelada(10L, UpdatePeladaRequestDTO.builder()
+                .timeZone("America/Toronto").maxMensalistas(10).build(), "admin@example.com");
+
+        assertThat(pelada.getTimeZone()).isEqualTo("America/Toronto");
+        assertThat(pelada.getMaxMensalistas()).isEqualTo(10);
+    }
+
+    @Test
+    void updatePelada_limitBelowTheCurrentMensalistas_throwsConflict() {
+        pelada.setMaxMensalistas(5);
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
+        when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
+        when(peladaRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(pelada));
+        when(mensalistaRepository.countByPelada(pelada)).thenReturn(5L);
+
+        assertThatThrownBy(() -> peladaService.updatePelada(10L, UpdatePeladaRequestDTO.builder().maxMensalistas(3).build(),
+                "admin@example.com"))
+                .hasMessage("Desmarque 2 mensalistas antes de reduzir o limite")
+                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.CONFLICT));
+        assertThat(pelada.getMaxMensalistas()).isEqualTo(5);
+    }
+
+    @Test
+    void updatePelada_limitAboveTheCapacity_throwsConflict() {
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
+        when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
+        when(peladaRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(pelada));
+
+        assertThatThrownBy(() -> peladaService.updatePelada(10L, UpdatePeladaRequestDTO.builder().maxMensalistas(11).build(),
+                "admin@example.com"))
+                .hasMessage("O limite de mensalistas não pode passar das vagas (10)")
+                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.CONFLICT));
+    }
+
+    @Test
+    void updatePelada_invalidTimeZone_throwsBadRequest() {
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
+        when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
+
+        assertThatThrownBy(() -> peladaService.updatePelada(10L, UpdatePeladaRequestDTO.builder().timeZone("Mars/Olympus").build(),
+                "admin@example.com"))
+                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.BAD_REQUEST));
+        assertThat(pelada.getTimeZone()).isEqualTo("America/Sao_Paulo");
+    }
+
+    private void stubSetMensalista(User caller, User target) {
+        when(userAuthHelper.getAuthenticatedUser(caller.getEmail())).thenReturn(caller);
+        when(peladaRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(pelada));
+        when(userRepository.findById(target.getId())).thenReturn(Optional.of(target));
     }
 }

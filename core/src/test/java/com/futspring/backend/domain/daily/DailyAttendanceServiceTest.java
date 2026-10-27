@@ -548,7 +548,8 @@ class DailyAttendanceServiceTest {
 
         assertThat(result.getConfirmedPlayerCount()).isEqualTo(3);
         verify(attendanceRepository, never()).findBumpVictim(any());
-        verifyNoInteractions(bumpRepository, eventPublisher, mensalistaRepository);
+        verifyNoInteractions(bumpRepository, eventPublisher);
+        verify(mensalistaRepository, never()).existsByPeladaAndUser(pelada, member);
     }
 
     @Test
@@ -591,7 +592,7 @@ class DailyAttendanceServiceTest {
     private DailyAttendanceService serviceAt(Instant now) {
         return new DailyAttendanceService(userAuthHelper, new PeladaAccessHelper(peladaRepository), dailyRepository,
                 attendanceRepository, bumpRepository, mensalistaRepository, userRepository,
-                new DailyListItemAssembler(attendanceRepository, teamRepository, matchRepository), eventPublisher,
+                new DailyListItemAssembler(attendanceRepository, teamRepository, matchRepository, mensalistaRepository), eventPublisher,
                 Clock.fixed(now, ZoneOffset.UTC));
     }
 

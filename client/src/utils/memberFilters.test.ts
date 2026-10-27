@@ -9,6 +9,7 @@ const member = (id: number, username: string, position: string | null): PeladaMe
   image: null,
   stars: 3,
   isAdmin: false,
+  isMensalista: false,
 })
 
 const members = [

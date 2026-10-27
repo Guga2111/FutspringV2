@@ -5,6 +5,7 @@ import com.futspring.backend.domain.daily.entity.Daily;
 import com.futspring.backend.domain.daily.repository.DailyAttendanceRepository;
 import com.futspring.backend.domain.daily.repository.MatchRepository;
 import com.futspring.backend.domain.daily.repository.TeamRepository;
+import com.futspring.backend.domain.pelada.PeladaMensalistaRepository;
 import com.futspring.backend.domain.user.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -24,6 +25,7 @@ public class DailyListItemAssembler {
     private final DailyAttendanceRepository attendanceRepository;
     private final TeamRepository teamRepository;
     private final MatchRepository matchRepository;
+    private final PeladaMensalistaRepository mensalistaRepository;
 
     /** One daily, after a mutation. */
     public DailyListItemDTO toListItem(Daily daily, User caller) {
@@ -31,15 +33,16 @@ public class DailyListItemAssembler {
                 (int) attendanceRepository.countByDaily(daily),
                 (int) teamRepository.countByDaily(daily),
                 (int) matchRepository.countByDaily(daily),
-                attendanceRepository.existsByDailyAndUser(daily, caller));
+                attendanceRepository.existsByDailyAndUser(daily, caller),
+                mensalistaRepository.existsByPeladaAndUser(daily.getPelada(), caller));
     }
 
     /** A freshly created daily: nothing hangs from it yet. */
-    public DailyListItemDTO toNewListItem(Daily daily) {
-        return build(daily, 0, 0, 0, false);
+    public DailyListItemDTO toNewListItem(Daily daily, User caller) {
+        return build(daily, 0, 0, 0, false, mensalistaRepository.existsByPeladaAndUser(daily.getPelada(), caller));
     }
 
-    /** A list of dailies: four grouped queries, whatever the list size. */
+    /** A list of dailies: five grouped queries, whatever the list size. */
     public List<DailyListItemDTO> toListItems(List<Daily> dailies, User caller) {
         if (dailies.isEmpty()) {
             return List.of();
@@ -49,17 +52,21 @@ public class DailyListItemAssembler {
         Map<Long, Integer> teams = toCountMap(teamRepository.countByDailyIds(ids));
         Map<Long, Integer> matches = toCountMap(matchRepository.countByDailyIds(ids));
         Set<Long> confirmedByCaller = new HashSet<>(attendanceRepository.findConfirmedDailyIds(ids, caller.getId()));
+        Set<Long> peladaIds = dailies.stream().map(d -> d.getPelada().getId()).collect(Collectors.toSet());
+        Set<Long> mensalistaIn = new HashSet<>(mensalistaRepository.findPeladaIdsByUserAndPeladaIn(caller.getId(), peladaIds));
 
         return dailies.stream()
                 .map(d -> build(d,
                         confirmed.getOrDefault(d.getId(), 0),
                         teams.getOrDefault(d.getId(), 0),
                         matches.getOrDefault(d.getId(), 0),
-                        confirmedByCaller.contains(d.getId())))
+                        confirmedByCaller.contains(d.getId()),
+                        mensalistaIn.contains(d.getPelada().getId())))
                 .toList();
     }
 
-    private static DailyListItemDTO build(Daily daily, int confirmedCount, int teamCount, int matchCount, boolean isConfirmed) {
+    private static DailyListItemDTO build(Daily daily, int confirmedCount, int teamCount, int matchCount,
+                                          boolean isConfirmed, boolean callerIsMensalista) {
         return DailyListItemDTO.builder()
                 .id(daily.getId())
                 .dailyDate(daily.getDailyDate())
@@ -71,6 +78,9 @@ public class DailyListItemAssembler {
                 .matchCount(matchCount)
                 .championImage(daily.getChampionImage())
                 .isConfirmed(isConfirmed)
+                .capacity(daily.getPelada().capacity())
+                .startsAt(AttendanceWindow.startsAt(daily))
+                .confirmOpensAt(callerIsMensalista ? null : AttendanceWindow.diaristaOpensAt(daily))
                 .build();
     }
 

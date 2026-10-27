@@ -1,4 +1,4 @@
-import type { DailyStatus } from "@/types/daily"
+import type { AttendanceBump, DailyStatus } from "@/types/daily"
 
 export interface PeladaMember {
   id: number
@@ -8,6 +8,8 @@ export interface PeladaMember {
   stars: number
   position: string | null
   isAdmin: boolean
+  // mensalista (priority on attendance) or diarista
+  isMensalista: boolean
 }
 
 export interface PeladaResponse {
@@ -40,11 +42,21 @@ export interface NextDaily {
   capacity: number
   // whether the caller confirmed attendance
   isConfirmed: boolean
+  // ISO instant of the session start
+  startsAt: string
+  // ISO instant from when the caller may confirm themselves; null for mensalistas (the server re-checks it)
+  confirmOpensAt: string | null
+  // the caller's bump in this session not dismissed yet
+  bump: AttendanceBump | null
 }
 
 // mirrors PeladaDetailResponseDTO: no caller flags (isAdmin comes from members[]) and no next session
 export interface PeladaDetail extends Omit<PeladaResponse, "isAdmin" | "nextDaily"> {
   creatorId: number | null
+  // IANA zone the sessions' date and time are in (America/Sao_Paulo)
+  timeZone: string
+  // how many members can be mensalistas (0 ≤ max ≤ numberOfTeams × playersPerTeam)
+  maxMensalistas: number
   members: PeladaMember[]
 }
 

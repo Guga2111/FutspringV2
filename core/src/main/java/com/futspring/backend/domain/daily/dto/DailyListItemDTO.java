@@ -7,6 +7,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.Instant;
 import java.time.LocalDate;
 
 // Built by DailyListItemAssembler (counts come from grouped queries, isConfirmed is the caller's attendance)
@@ -28,4 +29,10 @@ public class DailyListItemDTO {
     private String championImage;
     @JsonProperty("isConfirmed")
     private boolean isConfirmed;
+    // numberOfTeams × playersPerTeam
+    private int capacity;
+    // session start, in the pelada's zone
+    private Instant startsAt;
+    // from when the caller may confirm themselves; null for mensalistas (no window). The server re-checks it
+    private Instant confirmOpensAt;
 }

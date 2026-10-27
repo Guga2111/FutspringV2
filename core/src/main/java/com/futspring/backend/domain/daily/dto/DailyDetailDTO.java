@@ -1,12 +1,14 @@
 package com.futspring.backend.domain.daily.dto;
 
 import com.futspring.backend.domain.daily.entity.DailyStatus;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -36,6 +38,15 @@ public class DailyDetailDTO {
     @JsonProperty("isAdmin")
     private boolean isAdmin;
     private List<PlayerDTO> peladaMembers;
+    // numberOfTeams × playersPerTeam
+    private int capacity;
+    private Instant startsAt;
+    // from when the caller may confirm themselves; null for mensalistas
+    private Instant confirmOpensAt;
+    // the caller's bump in this session not dismissed yet, or null
+    private AttendanceBumpDTO myBump;
+    // every bump of the session, newest first
+    private List<AttendanceBumpDTO> bumps;
 
     @Data
     @NoArgsConstructor
@@ -47,6 +58,13 @@ public class DailyDetailDTO {
         private String image;
         private int stars;
         private String position;
+        // only on confirmedPlayers and peladaMembers
+        @JsonInclude(JsonInclude.Include.NON_NULL)
+        @JsonProperty("isMensalista")
+        private Boolean isMensalista;
+        // only on confirmedPlayers
+        @JsonInclude(JsonInclude.Include.NON_NULL)
+        private Instant confirmedAt;
     }
 
     @Data

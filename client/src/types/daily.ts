@@ -1,3 +1,5 @@
+import type { PublicUser } from "@/types/user"
+
 // mirrors the backend DailyStatus enum
 export type DailyStatus = "SCHEDULED" | "CONFIRMED" | "IN_COURSE" | "FINISHED" | "CANCELED"
 
@@ -29,6 +31,18 @@ export interface PlayerDTO {
   image: string | null
   stars: number
   position: string | null
+  // only on confirmedPlayers and peladaMembers
+  isMensalista?: boolean
+  // ISO instant; only on confirmedPlayers
+  confirmedAt?: string
+}
+
+// mirrors AttendanceBumpDTO: a diarista (user) who lost the spot to a mensalista (bumpedBy)
+export interface AttendanceBump {
+  user: PublicUser
+  bumpedBy: PublicUser
+  // ISO instant
+  bumpedAt: string
 }
 
 export interface TeamDTO {
@@ -107,6 +121,12 @@ export interface DailyListItem {
   championImage: string | null
   // whether the caller confirmed attendance
   isConfirmed: boolean
+  // numberOfTeams × playersPerTeam
+  capacity: number
+  // ISO instant of the session start
+  startsAt: string
+  // ISO instant from when the caller may confirm themselves; null for mensalistas (the server re-checks it)
+  confirmOpensAt: string | null
 }
 
 export interface DailyDetail {
@@ -129,4 +149,11 @@ export interface DailyDetail {
   isAdmin: boolean
   // every member of the pelada, sorted by username
   peladaMembers: PlayerDTO[]
+  capacity: number
+  startsAt: string
+  confirmOpensAt: string | null
+  // the caller's bump in this session not dismissed yet
+  myBump: AttendanceBump | null
+  // every bump of the session, newest first
+  bumps: AttendanceBump[]
 }

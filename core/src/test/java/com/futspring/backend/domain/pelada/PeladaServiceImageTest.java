@@ -2,6 +2,7 @@ package com.futspring.backend.domain.pelada;
 
 import com.futspring.backend.domain.chat.MessageRepository;
 import com.futspring.backend.domain.daily.DailyService;
+import com.futspring.backend.domain.daily.repository.DailyAttendanceBumpRepository;
 import com.futspring.backend.domain.daily.repository.DailyAttendanceRepository;
 import com.futspring.backend.domain.daily.repository.DailyRepository;
 import com.futspring.backend.domain.file.FileUploadService;
@@ -34,6 +35,7 @@ class PeladaServiceImageTest {
 
     @Mock DailyRepository dailyRepository;
     @Mock DailyAttendanceRepository attendanceRepository;
+    @Mock DailyAttendanceBumpRepository bumpRepository;
     @Mock PeladaMensalistaRepository mensalistaRepository;
     @Mock RankingRepository rankingRepository;
     @Mock MessageRepository messageRepository;
@@ -62,7 +64,7 @@ class PeladaServiceImageTest {
 
     @BeforeEach
     void setUp() {
-        peladaService = new PeladaService(peladaRepository, playerStarsRepository, mensalistaRepository, userRepository, dailyRepository, attendanceRepository, rankingRepository, messageRepository,
+        peladaService = new PeladaService(peladaRepository, playerStarsRepository, mensalistaRepository, userRepository, dailyRepository, attendanceRepository, bumpRepository, rankingRepository, messageRepository,
                 fileUploadService, userAuthHelper, new PeladaAccessHelper(peladaRepository), dailyService, aggregateRebuildService);
 
         admin = User.builder().id(1L).email("admin@example.com").username("admin").password("hash").build();

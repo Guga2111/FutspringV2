@@ -1,9 +1,12 @@
 package com.futspring.backend.domain.pelada;
 
 import com.futspring.backend.domain.chat.MessageRepository;
+import com.futspring.backend.domain.daily.AttendanceWindow;
 import com.futspring.backend.domain.daily.DailyService;
+import com.futspring.backend.domain.daily.dto.AttendanceBumpDTO;
 import com.futspring.backend.domain.daily.entity.Daily;
 import com.futspring.backend.domain.daily.entity.DailyStatus;
+import com.futspring.backend.domain.daily.repository.DailyAttendanceBumpRepository;
 import com.futspring.backend.domain.daily.repository.DailyAttendanceRepository;
 import com.futspring.backend.domain.daily.repository.DailyRepository;
 import com.futspring.backend.domain.file.FileUploadService;
@@ -28,6 +31,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -49,6 +53,7 @@ public class PeladaService {
     private final UserRepository userRepository;
     private final DailyRepository dailyRepository;
     private final DailyAttendanceRepository attendanceRepository;
+    private final DailyAttendanceBumpRepository bumpRepository;
     private final RankingRepository rankingRepository;
     private final MessageRepository messageRepository;
     private final FileUploadService fileUploadService;
@@ -71,8 +76,11 @@ public class PeladaService {
                 .autoCreateDailyEnabled(request.isAutoCreateDailyEnabled())
                 .numberOfTeams(request.getNumberOfTeams())
                 .playersPerTeam(request.getPlayersPerTeam())
+                .timeZone(request.getTimeZone() == null ? Pelada.DEFAULT_TIME_ZONE : validTimeZone(request.getTimeZone()))
+                .maxMensalistas(request.getMaxMensalistas())
                 .creator(user)
                 .build();
+        requireMaxWithinCapacity(pelada.getMaxMensalistas(), pelada);
 
         pelada.getMembers().add(user);
         pelada.getAdmins().add(user);
@@ -116,6 +124,11 @@ public class PeladaService {
                         .collect(Collectors.toMap(row -> (Long) row[0], row -> ((Number) row[1]).intValue()));
         Set<Long> confirmedByCaller = nextIds.isEmpty() ? Set.of()
                 : new HashSet<>(attendanceRepository.findConfirmedDailyIds(nextIds, caller.getId()));
+        Set<Long> mensalistaIn = new HashSet<>(mensalistaRepository.findPeladaIdsByUserAndPeladaIn(caller.getId(), ids));
+        // Newest first, so the first bump kept per session is the caller's latest
+        Map<Long, AttendanceBumpDTO> unseenBumps = nextIds.isEmpty() ? Map.of()
+                : bumpRepository.findUnseenByUserAndDailyIn(caller.getId(), nextIds).stream()
+                        .collect(Collectors.toMap(b -> b.getDaily().getId(), AttendanceBumpDTO::from, (newest, older) -> newest));
 
         return peladas.stream()
                 .map(p -> {
@@ -128,6 +141,9 @@ public class PeladaService {
                             .confirmedCount(confirmedCounts.getOrDefault(next.getId(), 0))
                             .capacity(p.capacity())
                             .isConfirmed(confirmedByCaller.contains(next.getId()))
+                            .startsAt(AttendanceWindow.startsAt(next))
+                            .confirmOpensAt(mensalistaIn.contains(p.getId()) ? null : AttendanceWindow.diaristaOpensAt(next))
+                            .bump(unseenBumps.get(next.getId()))
                             .build();
                     return PeladaResponseDTO.from(p, memberCounts.getOrDefault(p.getId(), 0),
                             administered.contains(p.getId()), nextDaily);
@@ -140,7 +156,8 @@ public class PeladaService {
         User user = userAuthHelper.getAuthenticatedUser(currentUserEmail);
         Pelada pelada = findPelada(id);
         accessHelper.requireMember(pelada, user);
-        return PeladaDetailResponseDTO.from(pelada, playerStarsRepository.findStarsByPelada(pelada));
+        return PeladaDetailResponseDTO.from(pelada, playerStarsRepository.findStarsByPelada(pelada),
+                mensalistaRepository.findUserIdsByPelada(pelada));
     }
 
     @Transactional
@@ -190,7 +207,38 @@ public class PeladaService {
         rating.setStars(stars);
         playerStarsRepository.save(rating);
 
-        return PeladaMemberDTO.from(target, accessHelper.isAdmin(pelada, target), stars);
+        return PeladaMemberDTO.from(target, accessHelper.isAdmin(pelada, target), stars,
+                mensalistaRepository.existsByPeladaAndUser(pelada, target));
+    }
+
+    /**
+     * Any admin marks or unmarks any member as mensalista (idempotent). The pelada row is locked before
+     * counting, so two admins at once can't go past maxMensalistas.
+     */
+    @Transactional
+    public PeladaMemberDTO setMensalista(Long peladaId, Long targetUserId, boolean isMensalista, String currentUserEmail) {
+        User caller = userAuthHelper.getAuthenticatedUser(currentUserEmail);
+        Pelada pelada = peladaRepository.findByIdForUpdate(peladaId)
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Pelada não encontrada"));
+        accessHelper.requireAdmin(pelada, caller);
+
+        User target = findMember(pelada, targetUserId);
+        boolean already = mensalistaRepository.existsByPeladaAndUser(pelada, target);
+        if (isMensalista && !already) {
+            long count = mensalistaRepository.countByPelada(pelada);
+            if (count >= pelada.getMaxMensalistas()) {
+                throw new AppException(HttpStatus.CONFLICT,
+                        "Limite de mensalistas atingido (" + count + "/" + pelada.getMaxMensalistas() + ")");
+            }
+            mensalistaRepository.save(PeladaMensalista.builder().pelada(pelada).user(target).build());
+        } else if (!isMensalista && already) {
+            mensalistaRepository.deleteByPeladaAndUser(pelada, target);
+        }
+
+        int stars = playerStarsRepository.findByPeladaAndUser(pelada, target)
+                .map(PeladaPlayerStars::getStars)
+                .orElse(PeladaPlayerStars.DEFAULT_STARS);
+        return PeladaMemberDTO.from(target, accessHelper.isAdmin(pelada, target), stars, isMensalista);
     }
 
     @Transactional
@@ -238,6 +286,20 @@ public class PeladaService {
         if (request.getAddress() != null) pelada.setAddress(request.getAddress());
         if (request.getReference() != null) pelada.setReference(request.getReference());
         if (request.getAutoCreateDailyEnabled() != null) pelada.setAutoCreateDailyEnabled(request.getAutoCreateDailyEnabled());
+        if (request.getTimeZone() != null) pelada.setTimeZone(validTimeZone(request.getTimeZone()));
+        if (request.getMaxMensalistas() != null) {
+            // Same lock as setMensalista: the count can't change while the limit is checked
+            peladaRepository.findByIdForUpdate(peladaId);
+            int max = request.getMaxMensalistas();
+            requireMaxWithinCapacity(max, pelada);
+            long current = mensalistaRepository.countByPelada(pelada);
+            if (current > max) {
+                // The system never picks who loses the status
+                throw new AppException(HttpStatus.CONFLICT,
+                        "Desmarque " + (current - max) + " mensalistas antes de reduzir o limite");
+            }
+            pelada.setMaxMensalistas(max);
+        }
 
         return PeladaResponseDTO.forAdmin(peladaRepository.save(pelada));
     }
@@ -282,6 +344,21 @@ public class PeladaService {
         fileUploadService.deleteImageAfterCommit(pelada.getImage());
         pelada.setImage(filename);
         return PeladaResponseDTO.forAdmin(peladaRepository.save(pelada));
+    }
+
+    // IANA region ids only (America/Sao_Paulo), not offsets like "-03:00"
+    private static String validTimeZone(String timeZone) {
+        if (!ZoneId.getAvailableZoneIds().contains(timeZone)) {
+            throw new AppException(HttpStatus.BAD_REQUEST, "Fuso horário inválido");
+        }
+        return timeZone;
+    }
+
+    private static void requireMaxWithinCapacity(int maxMensalistas, Pelada pelada) {
+        if (maxMensalistas > pelada.capacity()) {
+            throw new AppException(HttpStatus.CONFLICT,
+                    "O limite de mensalistas não pode passar das vagas (" + pelada.capacity() + ")");
+        }
     }
 
     private Pelada findPelada(Long id) {

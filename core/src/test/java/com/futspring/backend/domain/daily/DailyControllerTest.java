@@ -8,18 +8,23 @@ import com.futspring.backend.domain.daily.dto.UpdateTeamColorRequestDTO;
 import com.futspring.backend.domain.daily.dto.UpdateTeamNameRequestDTO;
 import com.futspring.backend.domain.daily.entity.Daily;
 import com.futspring.backend.domain.daily.entity.DailyAttendance;
+import com.futspring.backend.domain.daily.entity.DailyAttendanceBump;
 import com.futspring.backend.domain.daily.entity.DailyStatus;
 import com.futspring.backend.domain.daily.entity.Team;
+import com.futspring.backend.domain.daily.repository.DailyAttendanceBumpRepository;
 import com.futspring.backend.domain.daily.repository.DailyAttendanceRepository;
 import com.futspring.backend.domain.daily.repository.DailyRepository;
 import com.futspring.backend.domain.daily.repository.TeamRepository;
 import com.futspring.backend.domain.pelada.Pelada;
+import com.futspring.backend.domain.pelada.PeladaMensalista;
+import com.futspring.backend.domain.pelada.PeladaMensalistaRepository;
 import com.futspring.backend.domain.pelada.PeladaRepository;
 import com.futspring.backend.support.BaseIntegrationTest;
 import com.futspring.backend.domain.user.User;
 import com.futspring.backend.domain.user.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import jakarta.persistence.EntityManager;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
@@ -32,6 +37,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -41,6 +47,9 @@ class DailyControllerTest extends BaseIntegrationTest {
     @Autowired private PeladaRepository peladaRepository;
     @Autowired private DailyRepository dailyRepository;
     @Autowired private DailyAttendanceRepository attendanceRepository;
+    @Autowired private DailyAttendanceBumpRepository bumpRepository;
+    @Autowired private PeladaMensalistaRepository mensalistaRepository;
+    @Autowired private EntityManager entityManager;
     @Autowired private TeamRepository teamRepository;
 
     private User admin;
@@ -478,5 +487,93 @@ class DailyControllerTest extends BaseIntegrationTest {
                 .with(request -> { request.setMethod("PUT"); return request; })
                 .header("Authorization", bearerToken(member.getId(), member.getEmail())))
                 .andExpect(status().isForbidden());
+    }
+
+    // --- window, bumps and the attendance fields ---
+
+    @Test
+    void confirmAttendance_ignoresAnyTimeOrUserSentInTheBody() throws Exception {
+        String forged = "{\"confirmedAt\":\"2000-01-01T00:00:00Z\",\"now\":\"2099-01-01T00:00:00Z\",\"userId\":" + admin.getId() + "}";
+        // The window is closed (session in a week): a forged "now" doesn't open it
+        mockMvc.perform(post("/api/v1/dailies/" + daily.getId() + "/confirm")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(forged)
+                .header("Authorization", bearerToken(member.getId(), member.getEmail())))
+                .andExpect(status().isForbidden());
+
+        daily.setDailyDate(LocalDate.now(ZoneId.of(pelada.getTimeZone())));
+        dailyRepository.save(daily);
+        Instant before = Instant.now();
+        mockMvc.perform(post("/api/v1/dailies/" + daily.getId() + "/confirm")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(forged)
+                .header("Authorization", bearerToken(member.getId(), member.getEmail())))
+                .andExpect(status().isOk());
+
+        assertThat(attendanceRepository.findByDailyWithUser(daily)).singleElement().satisfies(a -> {
+            assertThat(a.getUser()).isEqualTo(member);
+            assertThat(a.getConfirmedAt()).isAfterOrEqualTo(before.minusSeconds(1));
+        });
+    }
+
+    @Test
+    void getDailyDetail_includesCapacityWindowTypesAndBumps() throws Exception {
+        mensalistaRepository.save(PeladaMensalista.builder().pelada(pelada).user(admin).build());
+        attendanceRepository.save(new DailyAttendance(daily, admin, Instant.parse("2026-10-01T12:00:00Z")));
+        bumpRepository.save(DailyAttendanceBump.builder().daily(daily).user(member).bumpedBy(admin)
+                .bumpedAt(Instant.parse("2026-10-01T12:00:00Z")).build());
+
+        mockMvc.perform(get("/api/v1/dailies/" + daily.getId())
+                .header("Authorization", bearerToken(member.getId(), member.getEmail())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.capacity").value(10))
+                .andExpect(jsonPath("$.startsAt").exists())
+                .andExpect(jsonPath("$.confirmOpensAt").exists())
+                .andExpect(jsonPath("$.confirmedPlayers[0].isMensalista").value(true))
+                .andExpect(jsonPath("$.confirmedPlayers[0].confirmedAt").value("2026-10-01T12:00:00Z"))
+                .andExpect(jsonPath("$.peladaMembers[?(@.id == " + member.getId() + ")].isMensalista").value(false))
+                .andExpect(jsonPath("$.myBump.bumpedBy.id").value(admin.getId()))
+                .andExpect(jsonPath("$.bumps[0].user.id").value(member.getId()))
+                .andExpect(jsonPath("$.bumps[0].user.email").doesNotExist());
+
+        // The mensalista has no window and no bump of their own; everyone sees the history
+        mockMvc.perform(get("/api/v1/dailies/" + daily.getId())
+                .header("Authorization", bearerToken(admin.getId(), admin.getEmail())))
+                .andExpect(jsonPath("$.confirmOpensAt").doesNotExist())
+                .andExpect(jsonPath("$.myBump").doesNotExist())
+                .andExpect(jsonPath("$.bumps.length()").value(1));
+    }
+
+    @Test
+    void markBumpsSeen_onlyTouchesTheCallersBumps() throws Exception {
+        User other = userRepository.save(User.builder().email("dother@test.com").username("dother").password("hash").build());
+        pelada.getMembers().add(other);
+        peladaRepository.save(pelada);
+        DailyAttendanceBump mine = bumpRepository.save(DailyAttendanceBump.builder().daily(daily).user(member).bumpedBy(admin)
+                .bumpedAt(Instant.parse("2026-10-01T12:00:00Z")).build());
+        DailyAttendanceBump theirs = bumpRepository.save(DailyAttendanceBump.builder().daily(daily).user(other).bumpedBy(admin)
+                .bumpedAt(Instant.parse("2026-10-01T12:00:00Z")).build());
+
+        mockMvc.perform(post("/api/v1/dailies/" + daily.getId() + "/bumps/seen")
+                .header("Authorization", bearerToken(member.getId(), member.getEmail())))
+                .andExpect(status().isNoContent());
+
+        entityManager.flush();
+        entityManager.clear();
+        assertThat(bumpRepository.findById(mine.getId()).orElseThrow().getSeenAt()).isNotNull();
+        assertThat(bumpRepository.findById(theirs.getId()).orElseThrow().getSeenAt()).isNull();
+        mockMvc.perform(get("/api/v1/dailies/" + daily.getId())
+                .header("Authorization", bearerToken(member.getId(), member.getEmail())))
+                .andExpect(jsonPath("$.myBump").doesNotExist());
+    }
+
+    @Test
+    void markBumpsSeen_outsider_returnsForbidden_unknownDaily_returnsNotFound() throws Exception {
+        mockMvc.perform(post("/api/v1/dailies/" + daily.getId() + "/bumps/seen")
+                .header("Authorization", bearerToken(outsider.getId(), outsider.getEmail())))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post("/api/v1/dailies/999999/bumps/seen")
+                .header("Authorization", bearerToken(member.getId(), member.getEmail())))
+                .andExpect(status().isNotFound());
     }
 }

@@ -142,6 +142,15 @@ public class DailyAttendanceService {
         return dailyListItemAssembler.toListItem(daily, caller);
     }
 
+    /** The caller dismisses the "you lost your spot" alert of this session; other users' bumps are untouched. */
+    @Transactional
+    public void markBumpsSeen(Long dailyId, String currentUserEmail) {
+        User caller = userAuthHelper.getAuthenticatedUser(currentUserEmail);
+        Daily daily = findDaily(dailyId);
+        accessHelper.requireMember(daily.getPelada(), caller);
+        bumpRepository.markSeen(daily, caller, Instant.now(clock));
+    }
+
     void clearAttendees(Daily daily) {
         attendanceRepository.deleteAllOfDaily(daily);
     }

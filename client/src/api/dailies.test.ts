@@ -5,7 +5,7 @@ vi.mock("./client", () => ({
 }))
 
 import apiClient from "./client"
-import { adminConfirmAllAttendance } from "./dailies"
+import { adminConfirmAllAttendance, markBumpsSeen } from "./dailies"
 
 const mockPost = vi.mocked(apiClient.post)
 
@@ -20,5 +20,14 @@ describe("adminConfirmAllAttendance", () => {
 
     await expect(adminConfirmAllAttendance(7)).resolves.toEqual(item)
     expect(mockPost).toHaveBeenCalledWith("/api/v1/dailies/7/confirm/all")
+  })
+})
+
+describe("markBumpsSeen", () => {
+  it("posts to the bumps/seen route without a body", async () => {
+    mockPost.mockResolvedValue({ data: undefined })
+
+    await markBumpsSeen(7)
+    expect(mockPost).toHaveBeenCalledWith("/api/v1/dailies/7/bumps/seen")
   })
 })

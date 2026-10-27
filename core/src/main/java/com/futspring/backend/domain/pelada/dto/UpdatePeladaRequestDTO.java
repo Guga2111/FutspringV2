@@ -1,5 +1,6 @@
 package com.futspring.backend.domain.pelada.dto;
 
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
@@ -34,4 +35,12 @@ public class UpdatePeladaRequestDTO {
     private String reference;
 
     private Boolean autoCreateDailyEnabled;
+
+    // IANA zone (America/Sao_Paulo); unknown → 400
+    @Size(min = 1, max = 64, message = "O fuso horário deve ter entre 1 e 64 caracteres")
+    private String timeZone;
+
+    // between the current number of mensalistas and the session capacity, else 409
+    @Min(value = 0, message = "O limite de mensalistas não pode ser negativo")
+    private Integer maxMensalistas;
 }

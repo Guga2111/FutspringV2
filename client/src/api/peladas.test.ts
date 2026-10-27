@@ -5,7 +5,7 @@ vi.mock('./client', () => ({
 }))
 
 import apiClient from './client'
-import { uploadPeladaImage, searchUsers, getPeladaAttendance } from './peladas'
+import { uploadPeladaImage, searchUsers, getPeladaAttendance, setMensalista } from './peladas'
 
 const mockPost = vi.mocked(apiClient.post)
 
@@ -54,5 +54,16 @@ describe('getPeladaAttendance', () => {
     await getPeladaAttendance(7)
 
     expect(mockGet).toHaveBeenCalledWith('/api/v1/peladas/7/attendance')
+  })
+})
+
+describe('setMensalista', () => {
+  it('puts the flag on the member route and returns the member', async () => {
+    const mockPut = vi.mocked(apiClient.put)
+    const member = { id: 2, isMensalista: true }
+    mockPut.mockResolvedValue({ data: member })
+
+    await expect(setMensalista(1, 2, true)).resolves.toEqual(member)
+    expect(mockPut).toHaveBeenCalledWith('/api/v1/peladas/1/players/2/mensalista', { isMensalista: true })
   })
 })

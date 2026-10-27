@@ -8,6 +8,7 @@ import com.futspring.backend.domain.pelada.dto.PeladaDetailResponseDTO;
 import com.futspring.backend.domain.pelada.dto.PeladaMemberDTO;
 import com.futspring.backend.domain.pelada.dto.PeladaResponseDTO;
 import com.futspring.backend.domain.pelada.dto.SetAdminRequestDTO;
+import com.futspring.backend.domain.pelada.dto.SetMensalistaRequestDTO;
 import com.futspring.backend.domain.pelada.dto.UpdatePeladaRequestDTO;
 import com.futspring.backend.domain.pelada.dto.UpdatePlayerStarsRequestDTO;
 import com.futspring.backend.domain.stats.AttendanceService;
@@ -89,6 +90,16 @@ public class PeladaController {
     ) {
         peladaService.setAdmin(id, userId, request.getIsAdmin(), email);
         return ResponseEntity.ok().build();
+    }
+
+    @PutMapping("/{id}/players/{userId}/mensalista")
+    public ResponseEntity<PeladaMemberDTO> setMensalista(
+            @PathVariable Long id,
+            @PathVariable Long userId,
+            @Valid @RequestBody SetMensalistaRequestDTO request,
+            @AuthenticationPrincipal String email
+    ) {
+        return ResponseEntity.ok(peladaService.setMensalista(id, userId, request.getIsMensalista(), email));
     }
 
     @PutMapping("/{id}/players/{userId}/stars")

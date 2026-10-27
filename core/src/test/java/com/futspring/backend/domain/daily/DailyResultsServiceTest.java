@@ -17,6 +17,7 @@ import com.futspring.backend.domain.daily.repository.PlayerMatchStatRepository;
 import com.futspring.backend.domain.daily.repository.TeamRepository;
 import com.futspring.backend.domain.file.FileUploadService;
 import com.futspring.backend.domain.pelada.Pelada;
+import com.futspring.backend.domain.pelada.PeladaMensalistaRepository;
 import com.futspring.backend.domain.pelada.PeladaRepository;
 import com.futspring.backend.shared.exception.AppException;
 import com.futspring.backend.shared.helper.PeladaAccessHelper;
@@ -56,6 +57,7 @@ class DailyResultsServiceTest {
     @Mock UserAuthenticationHelper userAuthHelper;
     @Mock DailyRepository dailyRepository;
     @Mock DailyAttendanceRepository attendanceRepository;
+    @Mock PeladaMensalistaRepository mensalistaRepository;
     @Mock UserRepository userRepository;
     @Mock TeamRepository teamRepository;
     @Mock MatchRepository matchRepository;
@@ -84,7 +86,7 @@ class DailyResultsServiceTest {
                 dailyTeamManagementService, new DailyDTOMapper(), dailyRepository, attendanceRepository, userRepository,
                 teamRepository, matchRepository, playerMatchStatRepository,
                 userDailyStatsRepository, leagueTableEntryRepository, dailyAwardRepository,
-                new DailyListItemAssembler(attendanceRepository, teamRepository, matchRepository));
+                new DailyListItemAssembler(attendanceRepository, teamRepository, matchRepository, mensalistaRepository));
 
         admin = User.builder().id(1L).email("admin@example.com").username("admin").password("hash").build();
         member = User.builder().id(2L).email("member@example.com").username("member").password("hash").build();

@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Data
@@ -30,13 +31,17 @@ public class PeladaDetailResponseDTO {
     private int memberCount;
     private int numberOfTeams;
     private int playersPerTeam;
+    private String timeZone;
+    private int maxMensalistas;
     private List<PeladaMemberDTO> members;
 
-    // starsByUserId: PeladaPlayerStarsRepository.findStarsByPelada; members missing from it have the default
-    public static PeladaDetailResponseDTO from(Pelada pelada, Map<Long, Integer> starsByUserId) {
+    // starsByUserId: PeladaPlayerStarsRepository.findStarsByPelada; members missing from it have the default.
+    // mensalistaIds: PeladaMensalistaRepository.findUserIdsByPelada
+    public static PeladaDetailResponseDTO from(Pelada pelada, Map<Long, Integer> starsByUserId, Set<Long> mensalistaIds) {
         List<PeladaMemberDTO> memberDTOs = pelada.getMembers().stream()
                 .map(user -> PeladaMemberDTO.from(user, pelada.getAdmins().contains(user),
-                        starsByUserId.getOrDefault(user.getId(), PeladaPlayerStars.DEFAULT_STARS)))
+                        starsByUserId.getOrDefault(user.getId(), PeladaPlayerStars.DEFAULT_STARS),
+                        mensalistaIds.contains(user.getId())))
                 .collect(Collectors.toList());
 
         return PeladaDetailResponseDTO.builder()
@@ -53,6 +58,8 @@ public class PeladaDetailResponseDTO {
                 .memberCount(pelada.getMembers().size())
                 .numberOfTeams(pelada.getNumberOfTeams())
                 .playersPerTeam(pelada.getPlayersPerTeam())
+                .timeZone(pelada.getTimeZone())
+                .maxMensalistas(pelada.getMaxMensalistas())
                 .members(memberDTOs)
                 .build();
     }

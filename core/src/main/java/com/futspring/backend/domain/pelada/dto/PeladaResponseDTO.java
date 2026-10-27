@@ -1,5 +1,6 @@
 package com.futspring.backend.domain.pelada.dto;
 
+import com.futspring.backend.domain.daily.dto.AttendanceBumpDTO;
 import com.futspring.backend.domain.daily.entity.DailyStatus;
 import com.futspring.backend.domain.pelada.Pelada;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -8,6 +9,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.Instant;
 import java.time.LocalDate;
 
 @Data
@@ -49,6 +51,12 @@ public class PeladaResponseDTO {
         // whether the caller confirmed attendance
         @JsonProperty("isConfirmed")
         private boolean isConfirmed;
+        // session start, in the pelada's zone
+        private Instant startsAt;
+        // from when the caller may confirm themselves; null for mensalistas. The server re-checks it
+        private Instant confirmOpensAt;
+        // the caller's bump in this session not dismissed yet, or null
+        private AttendanceBumpDTO bump;
     }
 
     /** Create/update responses: the caller is an admin (both routes require it). */

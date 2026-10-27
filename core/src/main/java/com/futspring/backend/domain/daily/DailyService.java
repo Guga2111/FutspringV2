@@ -1,10 +1,12 @@
 package com.futspring.backend.domain.daily;
 
+import com.futspring.backend.domain.daily.dto.AttendanceBumpDTO;
 import com.futspring.backend.domain.daily.dto.CreateDailyRequestDTO;
 import com.futspring.backend.domain.daily.dto.DailyDetailDTO.*;
 import com.futspring.backend.domain.daily.dto.DailyDetailDTO;
 import com.futspring.backend.domain.daily.dto.DailyListItemDTO;
 import com.futspring.backend.domain.daily.entity.Daily;
+import com.futspring.backend.domain.daily.entity.DailyAttendanceBump;
 import com.futspring.backend.domain.daily.entity.DailyStatus;
 import com.futspring.backend.domain.daily.entity.Match;
 import com.futspring.backend.domain.daily.entity.PlayerMatchStat;
@@ -17,6 +19,7 @@ import com.futspring.backend.domain.daily.repository.PlayerMatchStatRepository;
 import com.futspring.backend.domain.daily.repository.TeamRepository;
 import com.futspring.backend.domain.file.FileUploadService;
 import com.futspring.backend.domain.pelada.Pelada;
+import com.futspring.backend.domain.pelada.PeladaMensalistaRepository;
 import com.futspring.backend.domain.pelada.PeladaPlayerStarsRepository;
 import com.futspring.backend.domain.pelada.PeladaRepository;
 import com.futspring.backend.shared.exception.AppException;
@@ -50,6 +53,7 @@ public class DailyService {
     private final DailyRepository dailyRepository;
     private final DailyAttendanceRepository attendanceRepository;
     private final DailyAttendanceBumpRepository bumpRepository;
+    private final PeladaMensalistaRepository mensalistaRepository;
     private final PeladaRepository peladaRepository;
     private final PeladaPlayerStarsRepository playerStarsRepository;
     private final TeamRepository teamRepository;
@@ -72,7 +76,7 @@ public class DailyService {
                 .dailyTime(request.getDailyTime())
                 .build();
 
-        return dailyListItemAssembler.toNewListItem(dailyRepository.save(daily));
+        return dailyListItemAssembler.toNewListItem(dailyRepository.save(daily), caller);
     }
 
     @Transactional(readOnly = true)
@@ -134,10 +138,23 @@ public class DailyService {
         boolean isAdmin = accessHelper.isAdmin(pelada, caller);
         Map<Long, Integer> starsByUserId = playerStarsRepository.findStarsByPelada(pelada);
 
-        List<PlayerDTO> confirmedPlayers = attendanceRepository.findUsersByDaily(daily).stream()
-                .sorted(Comparator.comparing(User::getUsername, String.CASE_INSENSITIVE_ORDER))
-                .map(user -> dailyDTOMapper.toPlayerDTO(user, starsByUserId))
+        Set<Long> mensalistaIds = mensalistaRepository.findUserIdsByPelada(pelada);
+
+        List<PlayerDTO> confirmedPlayers = attendanceRepository.findByDailyWithUser(daily).stream()
+                .sorted(Comparator.comparing(a -> a.getUser().getUsername(), String.CASE_INSENSITIVE_ORDER))
+                .map(a -> dailyDTOMapper.toAttendeeDTO(a.getUser(), starsByUserId,
+                        mensalistaIds.contains(a.getUser().getId()), a.getConfirmedAt()))
                 .toList();
+
+        List<AttendanceBumpDTO> bumps = new ArrayList<>();
+        AttendanceBumpDTO myBump = null;
+        for (DailyAttendanceBump bump : bumpRepository.findByDailyWithUsers(daily)) {
+            bumps.add(AttendanceBumpDTO.from(bump));
+            // newest first: the first unseen one is the caller's latest
+            if (myBump == null && bump.getSeenAt() == null && bump.getUser().equals(caller)) {
+                myBump = AttendanceBumpDTO.from(bump);
+            }
+        }
 
         List<TeamDTO> teamDTOs = teamRepository.findByDailyWithPlayers(daily).stream()
                 .map(team -> dailyDTOMapper.buildTeamDTO(team, starsByUserId))
@@ -202,7 +219,7 @@ public class DailyService {
         // Every member sees the attendance list (confirmed and pending); PlayerDTO has public fields only
         List<PlayerDTO> peladaMembers = pelada.getMembers().stream()
                 .sorted(Comparator.comparing(User::getUsername, String.CASE_INSENSITIVE_ORDER))
-                .map(user -> dailyDTOMapper.toPlayerDTO(user, starsByUserId))
+                .map(user -> dailyDTOMapper.toAttendeeDTO(user, starsByUserId, mensalistaIds.contains(user.getId()), null))
                 .toList();
 
         return DailyDetailDTO.builder()
@@ -224,6 +241,11 @@ public class DailyService {
                 .playersPerTeam(pelada.getPlayersPerTeam())
                 .isAdmin(isAdmin)
                 .peladaMembers(peladaMembers)
+                .capacity(pelada.capacity())
+                .startsAt(AttendanceWindow.startsAt(daily))
+                .confirmOpensAt(mensalistaIds.contains(caller.getId()) ? null : AttendanceWindow.diaristaOpensAt(daily))
+                .myBump(myBump)
+                .bumps(bumps)
                 .build();
     }
 

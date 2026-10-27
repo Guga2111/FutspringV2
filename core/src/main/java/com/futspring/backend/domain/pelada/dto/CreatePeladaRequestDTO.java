@@ -47,4 +47,11 @@ public class CreatePeladaRequestDTO {
     @Min(value = 2, message = "Mínimo de 2 jogadores por time")
     @Max(value = 20, message = "Máximo de 20 jogadores por time")
     private int playersPerTeam = 5;
+
+    // IANA zone (America/Sao_Paulo); missing → America/Sao_Paulo, unknown → 400
+    @Size(max = 64, message = "Máximo de 64 caracteres")
+    private String timeZone;
+
+    @Min(value = 0, message = "O limite de mensalistas não pode ser negativo")
+    private int maxMensalistas = 0;
 }

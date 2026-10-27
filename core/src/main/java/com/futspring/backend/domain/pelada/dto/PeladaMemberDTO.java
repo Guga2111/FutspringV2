@@ -20,9 +20,11 @@ public class PeladaMemberDTO {
     private String position;
     @JsonProperty("isAdmin")
     private boolean isAdmin;
+    @JsonProperty("isMensalista")
+    private boolean isMensalista;
 
     // stars: the member's stars in this pelada
-    public static PeladaMemberDTO from(User user, boolean isAdmin, int stars) {
+    public static PeladaMemberDTO from(User user, boolean isAdmin, int stars, boolean isMensalista) {
         return PeladaMemberDTO.builder()
                 .id(user.getId())
                 .username(user.getUsername())
@@ -30,6 +32,7 @@ public class PeladaMemberDTO {
                 .stars(stars)
                 .position(user.getPosition())
                 .isAdmin(isAdmin)
+                .isMensalista(isMensalista)
                 .build();
     }
 }
