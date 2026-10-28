@@ -5,7 +5,16 @@ vi.mock('./client', () => ({
 }))
 
 import apiClient from './client'
-import { uploadPeladaImage, searchUsers, getPeladaAttendance, setMensalista } from './peladas'
+import {
+  uploadPeladaImage,
+  searchUsers,
+  getPeladaAttendance,
+  setMensalista,
+  setAdmins,
+  setMensalistas,
+  setPlayersStars,
+  removePlayers,
+} from './peladas'
 
 const mockPost = vi.mocked(apiClient.post)
 
@@ -65,5 +74,28 @@ describe('setMensalista', () => {
 
     await expect(setMensalista(1, 2, true)).resolves.toEqual(member)
     expect(mockPut).toHaveBeenCalledWith('/api/v1/peladas/1/players/2/mensalista', { isMensalista: true })
+  })
+})
+
+describe('bulk member actions', () => {
+  it('put the ids and the value on the pelada routes and return the members', async () => {
+    const mockPut = vi.mocked(apiClient.put)
+    const members = [{ id: 2 }, { id: 3 }]
+    mockPut.mockResolvedValue({ data: members })
+
+    await expect(setAdmins(1, [2, 3], true)).resolves.toEqual(members)
+    expect(mockPut).toHaveBeenLastCalledWith('/api/v1/peladas/1/players/admin', { userIds: [2, 3], isAdmin: true })
+
+    await expect(setMensalistas(1, [2, 3], false)).resolves.toEqual(members)
+    expect(mockPut).toHaveBeenLastCalledWith('/api/v1/peladas/1/players/mensalista', { userIds: [2, 3], isMensalista: false })
+
+    await expect(setPlayersStars(1, [2, 3], 4)).resolves.toEqual(members)
+    expect(mockPut).toHaveBeenLastCalledWith('/api/v1/peladas/1/players/stars', { userIds: [2, 3], stars: 4 })
+  })
+
+  it('removes with a POST carrying the ids', async () => {
+    await removePlayers(1, [2, 3])
+
+    expect(mockPost).toHaveBeenCalledWith('/api/v1/peladas/1/players/remove', { userIds: [2, 3] })
   })
 })

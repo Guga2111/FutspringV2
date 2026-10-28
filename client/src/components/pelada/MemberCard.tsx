@@ -2,6 +2,7 @@ import { Link, useNavigate } from "react-router-dom"
 import { CalendarCheck, CalendarX, Crown, MoreHorizontal, ShieldCheck, ShieldOff, Star, Trash2, User } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,7 +31,7 @@ interface MemberCardProps {
   // any admin sets any member's stars, the creator's and their own included
   canSetStars: boolean
   isToggling: boolean
-  // dimmed and inert while the removal request runs
+  // dimmed and inert while a removal or a bulk request on this member runs
   isRemoving: boolean
   // "Limite atingido (8/8)" when no more mensalistas fit; null when this member can be made one
   mensalistaLimitHint: string | null
@@ -38,6 +39,10 @@ interface MemberCardProps {
   onRemove: () => void
   onSetStars: () => void
   onToggleMensalista: () => void
+  // selection mode (bulk actions): checkbox, the whole card toggles it and the ⋯ menu is hidden
+  selectable?: boolean
+  selected?: boolean
+  onToggleSelected?: () => void
 }
 
 export function MemberCard({
@@ -52,6 +57,9 @@ export function MemberCard({
   onRemove,
   onSetStars,
   onToggleMensalista,
+  selectable = false,
+  selected = false,
+  onToggleSelected,
 }: MemberCardProps) {
   const navigate = useNavigate()
   const position = positionShortLabel(member.position)
@@ -59,18 +67,35 @@ export function MemberCard({
   return (
     <article
       aria-busy={isRemoving}
+      onClick={selectable ? onToggleSelected : undefined}
       className={cn(
         "flex flex-col gap-3 rounded-xl border bg-card p-3.5 transition-[background-color,border-color,opacity] hover:border-input hover:bg-card-elevated",
+        selectable && "cursor-pointer select-none",
+        selected && "border-primary ring-1 ring-primary hover:border-primary",
         isRemoving && "pointer-events-none opacity-50",
       )}
     >
       <div className="flex items-center gap-3">
+        {selectable && (
+          <Checkbox
+            checked={selected}
+            onCheckedChange={onToggleSelected}
+            // the card's own click would toggle it a second time
+            onClick={(e) => e.stopPropagation()}
+            aria-label={`Selecionar ${member.username}`}
+            className="shrink-0"
+          />
+        )}
         <PlayerAvatar username={member.username} image={member.image} colorId={member.id} className="size-[42px] text-[13px]" />
         <div className="flex min-w-0 flex-1 flex-col gap-1">
           <div className="flex min-w-0 items-center gap-1.5">
-            <Link to={`/profile/${member.id}`} className="truncate text-[15px] font-semibold hover:underline">
-              {member.username}
-            </Link>
+            {selectable ? (
+              <span className="truncate text-[15px] font-semibold">{member.username}</span>
+            ) : (
+              <Link to={`/profile/${member.id}`} className="truncate text-[15px] font-semibold hover:underline">
+                {member.username}
+              </Link>
+            )}
             {member.isAdmin && <Crown aria-label="Admin" className="size-3.5 shrink-0 text-gold" />}
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -83,66 +108,68 @@ export function MemberCard({
             <StarRow stars={member.stars} />
           </div>
         </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label={`Ações de ${member.username}`}
-              disabled={isToggling || isRemoving}
-              className="size-7 shrink-0 self-start text-subtle-foreground hover:bg-secondary hover:text-foreground"
-            >
-              <MoreHorizontal className="size-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-52 rounded-[10px] shadow-menu">
-            <DropdownMenuItem onSelect={() => navigate(`/profile/${member.id}`)}>
-              <User className="mr-2 size-4 text-muted-foreground" />
-              Ver perfil
-            </DropdownMenuItem>
-            {canSetStars && (
-              <DropdownMenuItem onSelect={onSetStars}>
-                <Star className="mr-2 size-4 text-muted-foreground" />
-                Definir estrelas
-              </DropdownMenuItem>
-            )}
-            {canSetStars && (
-              <DropdownMenuItem
-                onSelect={onToggleMensalista}
-                disabled={isToggling || (!member.isMensalista && mensalistaLimitHint !== null)}
+        {!selectable && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label={`Ações de ${member.username}`}
+                disabled={isToggling || isRemoving}
+                className="size-7 shrink-0 self-start text-subtle-foreground hover:bg-secondary hover:text-foreground"
               >
-                {member.isMensalista ? (
-                  <CalendarX className="mr-2 size-4 text-muted-foreground" />
-                ) : (
-                  <CalendarCheck className="mr-2 size-4 text-muted-foreground" />
-                )}
-                <span className="flex flex-col">
-                  {member.isMensalista ? "Tornar diarista" : "Tornar mensalista"}
-                  {!member.isMensalista && mensalistaLimitHint && (
-                    <span className="text-xs text-muted-foreground">{mensalistaLimitHint}</span>
-                  )}
-                </span>
+                <MoreHorizontal className="size-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-52 rounded-[10px] shadow-menu">
+              <DropdownMenuItem onSelect={() => navigate(`/profile/${member.id}`)}>
+                <User className="mr-2 size-4 text-muted-foreground" />
+                Ver perfil
               </DropdownMenuItem>
-            )}
-            {canManage && (
-              <>
-                <DropdownMenuItem onSelect={onToggleAdmin} disabled={isToggling}>
-                  {member.isAdmin ? (
-                    <ShieldOff className="mr-2 size-4 text-muted-foreground" />
+              {canSetStars && (
+                <DropdownMenuItem onSelect={onSetStars}>
+                  <Star className="mr-2 size-4 text-muted-foreground" />
+                  Definir estrelas
+                </DropdownMenuItem>
+              )}
+              {canSetStars && (
+                <DropdownMenuItem
+                  onSelect={onToggleMensalista}
+                  disabled={isToggling || (!member.isMensalista && mensalistaLimitHint !== null)}
+                >
+                  {member.isMensalista ? (
+                    <CalendarX className="mr-2 size-4 text-muted-foreground" />
                   ) : (
-                    <ShieldCheck className="mr-2 size-4 text-muted-foreground" />
+                    <CalendarCheck className="mr-2 size-4 text-muted-foreground" />
                   )}
-                  {member.isAdmin ? "Remover admin" : "Tornar admin"}
+                  <span className="flex flex-col">
+                    {member.isMensalista ? "Tornar diarista" : "Tornar mensalista"}
+                    {!member.isMensalista && mensalistaLimitHint && (
+                      <span className="text-xs text-muted-foreground">{mensalistaLimitHint}</span>
+                    )}
+                  </span>
                 </DropdownMenuItem>
-                <DropdownMenuSeparator className="bg-border" />
-                <DropdownMenuItem onSelect={onRemove} className="text-destructive focus:bg-destructive-muted focus:text-destructive">
-                  <Trash2 className="mr-2 size-4" />
-                  Remover
-                </DropdownMenuItem>
-              </>
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
+              )}
+              {canManage && (
+                <>
+                  <DropdownMenuItem onSelect={onToggleAdmin} disabled={isToggling}>
+                    {member.isAdmin ? (
+                      <ShieldOff className="mr-2 size-4 text-muted-foreground" />
+                    ) : (
+                      <ShieldCheck className="mr-2 size-4 text-muted-foreground" />
+                    )}
+                    {member.isAdmin ? "Remover admin" : "Tornar admin"}
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator className="bg-border" />
+                  <DropdownMenuItem onSelect={onRemove} className="text-destructive focus:bg-destructive-muted focus:text-destructive">
+                    <Trash2 className="mr-2 size-4" />
+                    Remover
+                  </DropdownMenuItem>
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </div>
       <dl className="grid grid-cols-3 border-t pt-2.5">
         {(

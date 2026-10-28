@@ -24,7 +24,7 @@ export function makeUpdatePeladaSchema(capacity: number) {
 }
 export type UpdatePeladaValues = z.infer<ReturnType<typeof makeUpdatePeladaSchema>>
 
-// mirrors UpdatePlayerStarsRequestDTO
+// mirrors UpdatePlayerStarsRequestDTO and the stars of BulkSetStarsRequestDTO
 export const playerStarsSchema = z.object({
   stars: z.number().int().min(1, "Mínimo de 1 estrela").max(5, "Máximo de 5 estrelas"),
 })

@@ -13,26 +13,32 @@ import {
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { cn } from "@/lib/utils"
 import { playerStarsSchema, type PlayerStarsValues } from "@/schemas/pelada"
-import type { PeladaMember } from "@/types/pelada"
 
-// Admin only: the member's stars in this pelada (team sorting weight). Saving closes the dialog at once; the
-// request runs in usePeladaActions.setMemberStars, which reports the result with a toast
+// Admin only: stars in this pelada (team sorting weight) for one member or a selection. Saving closes the dialog at
+// once; the request runs in usePeladaActions, which reports the result with a toast
 export function SetPlayerStarsDialog({
-  member,
+  title = "Definir estrelas",
+  description,
+  defaultStars,
+  requireChange = false,
   onClose,
   onSave,
 }: {
-  member: PeladaMember
+  title?: string
+  description: string
+  defaultStars: number
+  // single member: Salvar stays disabled until the value changes
+  requireChange?: boolean
   onClose: () => void
-  onSave: (member: PeladaMember, stars: number) => void
+  onSave: (stars: number) => void
 }) {
   const form = useForm<PlayerStarsValues>({
     resolver: zodResolver(playerStarsSchema),
-    defaultValues: { stars: member.stars },
+    defaultValues: { stars: defaultStars },
   })
 
   function onSubmit(values: PlayerStarsValues) {
-    onSave(member, values.stars)
+    onSave(values.stars)
     onClose()
   }
 
@@ -40,10 +46,8 @@ export function SetPlayerStarsDialog({
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
-          <DialogTitle>Definir estrelas</DialogTitle>
-          <DialogDescription>
-            Nível de {member.username} nesta pelada, usado para equilibrar os times no sorteio.
-          </DialogDescription>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
         <form onSubmit={form.handleSubmit(onSubmit)} noValidate className="flex flex-col gap-6">
           <FieldGroup>
@@ -78,7 +82,7 @@ export function SetPlayerStarsDialog({
             <Button type="button" variant="ghost" onClick={onClose}>
               Cancelar
             </Button>
-            <Button type="submit" variant="gradient" disabled={!form.formState.isDirty}>
+            <Button type="submit" variant="gradient" disabled={requireChange && !form.formState.isDirty}>
               Salvar
             </Button>
           </DialogFooter>

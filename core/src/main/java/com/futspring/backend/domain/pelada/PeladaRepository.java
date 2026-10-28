@@ -44,6 +44,14 @@ public interface PeladaRepository extends JpaRepository<Pelada, Long> {
         """)
     List<Pelada> findSharedPeladas(@Param("userA") Long userA, @Param("userB") Long userB);
 
+    // Ids (among `userIds`) of the users who are members of the pelada, in one query
+    @Query("SELECT m.id FROM Pelada p JOIN p.members m WHERE p.id = :peladaId AND m.id IN :userIds")
+    List<Long> findMemberIds(@Param("peladaId") Long peladaId, @Param("userIds") Collection<Long> userIds);
+
+    // Ids of the pelada's admins, in one query
+    @Query("SELECT a.id FROM Pelada p JOIN p.admins a WHERE p.id = :peladaId")
+    List<Long> findAdminIds(@Param("peladaId") Long peladaId);
+
     @Query("SELECT p.id FROM Pelada p JOIN p.members m WHERE m.id = :userId")
     List<Long> findIdsByMemberId(@Param("userId") Long userId);
 

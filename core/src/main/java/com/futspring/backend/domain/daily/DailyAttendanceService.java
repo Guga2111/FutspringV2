@@ -4,7 +4,6 @@ import com.futspring.backend.domain.daily.dto.DailyListItemDTO;
 import com.futspring.backend.domain.daily.entity.Daily;
 import com.futspring.backend.domain.daily.entity.DailyAttendance;
 import com.futspring.backend.domain.daily.entity.DailyAttendanceBump;
-import com.futspring.backend.domain.daily.entity.DailyAttendanceId;
 import com.futspring.backend.domain.daily.repository.DailyAttendanceBumpRepository;
 import com.futspring.backend.domain.daily.repository.DailyAttendanceRepository;
 import com.futspring.backend.domain.daily.repository.DailyRepository;
@@ -23,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 
@@ -157,9 +157,8 @@ public class DailyAttendanceService {
     }
 
     // Through the persistence context, like clearAttendees
-    void removeAttendee(Daily daily, User user) {
-        attendanceRepository.findById(new DailyAttendanceId(daily.getId(), user.getId()))
-                .ifPresent(attendanceRepository::delete);
+    void removeAttendees(Collection<Daily> dailies, Collection<User> users) {
+        attendanceRepository.deleteAll(attendanceRepository.findByDailyInAndUserIn(dailies, users));
     }
 
     // The diarista loses the spot; the bump is recorded for the in-app alert and the e-mail goes after the commit
