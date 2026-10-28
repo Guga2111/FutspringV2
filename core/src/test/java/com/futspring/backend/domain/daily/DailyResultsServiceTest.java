@@ -1,5 +1,6 @@
 package com.futspring.backend.domain.daily;
 
+import org.springframework.context.ApplicationEventPublisher;
 import com.futspring.backend.domain.daily.dto.DailyDetailDTO.MatchDTO;
 import com.futspring.backend.domain.daily.dto.MatchResultDTO;
 import com.futspring.backend.domain.daily.dto.PopulateDailyRequestDTO;
@@ -51,6 +52,9 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class DailyResultsServiceTest {
 
+    @Mock
+    ApplicationEventPublisher eventPublisher;
+
     @Mock PeladaRepository peladaRepository;
     @Mock DailyTeamManagementService dailyTeamManagementService;
     @Mock FileUploadService fileUploadService;
@@ -86,7 +90,8 @@ class DailyResultsServiceTest {
                 dailyTeamManagementService, new DailyDTOMapper(), dailyRepository, attendanceRepository, userRepository,
                 teamRepository, matchRepository, playerMatchStatRepository,
                 userDailyStatsRepository, leagueTableEntryRepository, dailyAwardRepository,
-                new DailyListItemAssembler(attendanceRepository, teamRepository, matchRepository, mensalistaRepository));
+                new DailyListItemAssembler(attendanceRepository, teamRepository, matchRepository, mensalistaRepository),
+                eventPublisher);
 
         admin = User.builder().id(1L).email("admin@example.com").username("admin").password("hash").build();
         member = User.builder().id(2L).email("member@example.com").username("member").password("hash").build();
@@ -435,6 +440,35 @@ class DailyResultsServiceTest {
         verify(dailyAwardRepository).save(awardCaptor.capture());
         assertThat(awardCaptor.getValue().getArtilheiroWinners()).containsExactly(member);
         assertThat(awardCaptor.getValue().getPuskasWinners()).containsExactly(member);
+
+        ArgumentCaptor<DailyFinalizedEvent> eventCaptor = ArgumentCaptor.forClass(DailyFinalizedEvent.class);
+        verify(eventPublisher).publishEvent(eventCaptor.capture());
+        DailyFinalizedEvent event = eventCaptor.getValue();
+        assertThat(event.firstFinalize()).isTrue();
+        assertThat(event.actor()).isEqualTo(admin);
+        // the session's players are the players on the teams, not the confirmed list
+        assertThat(event.players()).containsExactlyInAnyOrder(admin, member);
+        assertThat(event.puskasWinners()).containsExactly(member);
+        assertThat(event.artilheiroWinners()).containsExactly(member);
+    }
+
+    @Test
+    void finalizeDaily_alreadyFinished_isNotTheFirstFinalize() {
+        inCourseDaily.setStatus(DailyStatus.FINISHED);
+        inCourseDaily.setFinished(true);
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
+        when(dailyRepository.findById(100L)).thenReturn(Optional.of(inCourseDaily));
+        Match match = Match.builder().id(50L).daily(inCourseDaily).team1(team1).team2(team2)
+                .team1Score(1).team2Score(0).winner(team1).build();
+        when(matchRepository.findByDaily(inCourseDaily)).thenReturn(List.of(match));
+        when(teamRepository.findByDailyWithPlayers(inCourseDaily)).thenReturn(List.of(team1, team2));
+        when(playerMatchStatRepository.findByMatchInWithUser(any())).thenReturn(Collections.emptyList());
+        when(dailyAwardRepository.findByDaily(inCourseDaily)).thenReturn(Optional.empty());
+        stubCloseSession(Collections.emptyList());
+
+        resultsService.finalizeDaily(100L, List.of(2L), null, "admin@example.com");
+
+        verify(eventPublisher).publishEvent(argThat((Object e) -> e instanceof DailyFinalizedEvent f && !f.firstFinalize()));
     }
 
     @Test
@@ -584,6 +618,8 @@ class DailyResultsServiceTest {
         verify(statsRepository).saveAll(any());
         assertThat(award.getPuskasWinners()).containsExactly(member);
         assertThat(inCourseDaily.getStatus()).isEqualTo(DailyStatus.FINISHED);
+        // editing the results doesn't announce the session or its awards again
+        verifyNoInteractions(eventPublisher);
     }
 
     // --- populateFromMessage ---

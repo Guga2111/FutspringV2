@@ -1,5 +1,6 @@
 package com.futspring.backend.domain.daily;
 
+import org.springframework.context.ApplicationEventPublisher;
 import com.futspring.backend.domain.pelada.PeladaPlayerStarsRepository;
 import com.futspring.backend.domain.daily.dto.DailyDetailDTO;
 import com.futspring.backend.domain.daily.entity.Daily;
@@ -35,6 +36,9 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class DailyTeamManagementServiceTest {
 
+    @Mock
+    ApplicationEventPublisher eventPublisher;
+
     @Mock PeladaRepository peladaRepository;
     @Mock UserAuthenticationHelper userAuthHelper;
     @Mock DailyRepository dailyRepository;
@@ -58,7 +62,7 @@ class DailyTeamManagementServiceTest {
     void setUp() {
         teamManagementService = new DailyTeamManagementService(
                 userAuthHelper, new PeladaAccessHelper(peladaRepository), dailyRepository, attendanceRepository, teamRepository,
-                playerStarsRepository, dailyDTOMapper);
+                playerStarsRepository, dailyDTOMapper, eventPublisher);
 
         admin = User.builder().id(1L).email("admin@example.com").username("admin").password("hash").build();
         member = User.builder().id(2L).email("member@example.com").username("member").password("hash").build();
@@ -227,6 +231,9 @@ class DailyTeamManagementServiceTest {
 
         verify(teamRepository).deleteAll(List.of(existingTeam));
         assertThat(result).hasSize(2);
+        verify(eventPublisher).publishEvent(argThat((Object e) -> e instanceof TeamsSortedEvent t
+                && t.daily() == scheduledDaily && admin.equals(t.actor())
+                && t.players().containsAll(List.of(admin, member)) && t.players().size() == 2));
     }
 
     // --- swapPlayers swap logic ---

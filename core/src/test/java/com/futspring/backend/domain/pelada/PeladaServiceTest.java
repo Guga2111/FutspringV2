@@ -1,5 +1,7 @@
 package com.futspring.backend.domain.pelada;
 
+import com.futspring.backend.domain.notification.NotificationRepository;
+import org.springframework.context.ApplicationEventPublisher;
 import com.futspring.backend.domain.chat.MessageRepository;
 import com.futspring.backend.domain.daily.DailyService;
 import com.futspring.backend.domain.daily.entity.Daily;
@@ -43,6 +45,12 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class PeladaServiceTest {
 
+    @Mock
+    NotificationRepository notificationRepository;
+
+    @Mock
+    ApplicationEventPublisher eventPublisher;
+
     @Mock DailyRepository dailyRepository;
     @Mock DailyAttendanceRepository attendanceRepository;
     @Mock DailyAttendanceBumpRepository bumpRepository;
@@ -76,7 +84,8 @@ class PeladaServiceTest {
     @BeforeEach
     void setUp() {
         peladaService = new PeladaService(peladaRepository, playerStarsRepository, mensalistaRepository, userRepository, dailyRepository, attendanceRepository, bumpRepository, rankingRepository, messageRepository,
-                fileUploadService, userAuthHelper, new PeladaAccessHelper(peladaRepository), dailyService, aggregateRebuildService);
+                fileUploadService, userAuthHelper, new PeladaAccessHelper(peladaRepository), dailyService, aggregateRebuildService,
+                notificationRepository, eventPublisher);
 
         admin = User.builder().id(1L).email("admin@example.com").username("admin").password("hash").build();
         member = User.builder().id(2L).email("member@example.com").username("member").password("hash").build();
@@ -252,6 +261,7 @@ class PeladaServiceTest {
         peladaService.addPlayer(10L, 3L, "admin@example.com");
 
         assertThat(pelada.getMembers()).contains(outsider);
+        verify(eventPublisher).publishEvent(new MembersAddedEvent(pelada, admin, List.of(outsider)));
     }
 
     @Test
@@ -319,6 +329,7 @@ class PeladaServiceTest {
         verify(playerStarsRepository).deleteByPeladaAndUserIn(pelada, List.of(member));
         verify(mensalistaRepository).deleteByPeladaAndUserIn(pelada, List.of(member));
         verify(dailyService).removeFromUpcomingSessions(pelada, List.of(member));
+        verify(eventPublisher).publishEvent(new MembersRemovedEvent(pelada, admin, List.of(member)));
     }
 
     @Test
@@ -381,6 +392,20 @@ class PeladaServiceTest {
         peladaService.setAdmin(10L, 2L, true, "admin@example.com");
 
         assertThat(pelada.getAdmins()).contains(member);
+        verify(eventPublisher).publishEvent(new AdminsChangedEvent(pelada, admin, List.of(member), true));
+    }
+
+    @Test
+    void setAdmins_onlyMembersWhoseStatusChangesAreNotified() {
+        pelada.getMembers().add(outsider);
+        pelada.getAdmins().add(member);
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
+        when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
+        when(peladaRepository.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        peladaService.setAdmins(10L, List.of(2L, 3L), true, "admin@example.com");
+
+        verify(eventPublisher).publishEvent(new AdminsChangedEvent(pelada, admin, List.of(outsider), true));
     }
 
     @Test
@@ -393,6 +418,7 @@ class PeladaServiceTest {
         peladaService.setAdmin(10L, 2L, false, "admin@example.com");
 
         assertThat(pelada.getAdmins()).doesNotContain(member);
+        verify(eventPublisher).publishEvent(new AdminsChangedEvent(pelada, admin, List.of(member), false));
     }
 
     @Test
@@ -653,6 +679,7 @@ class PeladaServiceTest {
         verify(messageRepository).deleteByPelada(pelada);
         verify(rankingRepository).deleteByPelada(pelada);
         verify(mensalistaRepository).deleteByPelada(pelada);
+        verify(notificationRepository).deleteByPelada(pelada);
         verify(peladaRepository).delete(pelada);
         verify(aggregateRebuildService).rebuild(isNull(), eq(new java.util.LinkedHashSet<>(List.of(admin, member))));
     }
@@ -821,6 +848,8 @@ class PeladaServiceTest {
 
         assertThat(mensalistas).containsExactlyInAnyOrder(2L, 3L);
         assertThat(result).allMatch(PeladaMemberDTO::isMensalista);
+        // member 2 already was one: only the outsider is notified
+        verify(eventPublisher).publishEvent(new MensalistasChangedEvent(pelada, admin, List.of(outsider), true));
     }
 
     @Test
@@ -833,6 +862,7 @@ class PeladaServiceTest {
 
         verify(mensalistaRepository).deleteByPeladaAndUserIn(pelada, List.of(member));
         assertThat(result).noneMatch(PeladaMemberDTO::isMensalista);
+        verify(eventPublisher).publishEvent(new MensalistasChangedEvent(pelada, admin, List.of(member), false));
     }
 
     @Test
@@ -1034,6 +1064,7 @@ class PeladaServiceTest {
         assertThat(pelada.getCreator()).isEqualTo(member);
         assertThat(pelada.getAdmins()).contains(admin, member);
         assertThat(pelada.getMembers()).contains(admin);
+        verify(eventPublisher).publishEvent(new PeladaTransferredEvent(pelada, admin, member));
     }
 
     @Test

@@ -18,6 +18,7 @@ import com.futspring.backend.domain.daily.repository.MatchRepository;
 import com.futspring.backend.domain.daily.repository.PlayerMatchStatRepository;
 import com.futspring.backend.domain.daily.repository.TeamRepository;
 import com.futspring.backend.domain.file.FileUploadService;
+import com.futspring.backend.domain.notification.NotificationRepository;
 import com.futspring.backend.domain.pelada.Pelada;
 import com.futspring.backend.domain.pelada.PeladaMensalistaRepository;
 import com.futspring.backend.domain.pelada.PeladaPlayerStarsRepository;
@@ -30,6 +31,7 @@ import com.futspring.backend.domain.stats.repository.DailyAwardRepository;
 import com.futspring.backend.domain.stats.repository.UserDailyStatsRepository;
 import com.futspring.backend.domain.user.User;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -63,6 +65,8 @@ public class DailyService {
     private final LeagueTableEntryRepository leagueTableEntryRepository;
     private final DailyAwardRepository dailyAwardRepository;
     private final DailyListItemAssembler dailyListItemAssembler;
+    private final NotificationRepository notificationRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public DailyListItemDTO createDaily(Long peladaId, CreateDailyRequestDTO request, String currentUserEmail) {
@@ -76,7 +80,9 @@ public class DailyService {
                 .dailyTime(request.getDailyTime())
                 .build();
 
-        return dailyListItemAssembler.toNewListItem(dailyRepository.save(daily), caller);
+        Daily saved = dailyRepository.save(daily);
+        eventPublisher.publishEvent(new DailyCreatedEvent(saved, caller));
+        return dailyListItemAssembler.toNewListItem(saved, caller);
     }
 
     @Transactional(readOnly = true)
@@ -101,6 +107,9 @@ public class DailyService {
 
         daily.setStatus(newStatus);
         dailyRepository.save(daily);
+        if (newStatus == DailyStatus.CANCELED) {
+            eventPublisher.publishEvent(new DailyCanceledEvent(daily, caller));
+        }
         return dailyListItemAssembler.toListItem(daily, caller);
     }
 
@@ -131,7 +140,8 @@ public class DailyService {
     }
 
     /**
-     * Deletes a daily and everything that hangs from it (results, teams, attendance, bumps, champion image).
+     * Deletes a daily and everything that hangs from it (results, teams, attendance, bumps, notifications,
+     * champion image).
      * Returns the players whose Ranking/Stats must be rebuilt; the caller rebuilds them once.
      */
     public Set<User> deleteDailyData(Daily daily) {
@@ -139,6 +149,7 @@ public class DailyService {
         dailyTeamManagementService.clearTeams(daily);
         dailyAttendanceService.clearAttendees(daily);
         bumpRepository.deleteByDaily(daily);
+        notificationRepository.deleteByDaily(daily);
         fileUploadService.deleteImageAfterCommit(daily.getChampionImage());
         dailyRepository.delete(daily);
         return affected;

@@ -23,6 +23,10 @@ public interface TeamRepository extends JpaRepository<Team, Long> {
     @Query("SELECT DISTINCT t FROM Team t LEFT JOIN FETCH t.players WHERE t.daily = :daily ORDER BY t.id")
     List<Team> findByDailyWithPlayers(@Param("daily") Daily daily);
 
+    // [dailyId, name, color] of the user's team in each of these sessions (notification list), one query
+    @Query("SELECT t.daily.id, t.name, t.color FROM Team t JOIN t.players p WHERE p.id = :userId AND t.daily.id IN :dailyIds")
+    List<Object[]> findTeamsOfUserInDailies(@Param("userId") Long userId, @Param("dailyIds") Collection<Long> dailyIds);
+
     @Query("SELECT DISTINCT t FROM Team t LEFT JOIN FETCH t.players WHERE t.daily IN :dailies")
     List<Team> findByDailyInWithPlayers(@Param("dailies") Collection<Daily> dailies);
 }

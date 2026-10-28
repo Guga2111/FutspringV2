@@ -6,6 +6,7 @@ import com.futspring.backend.domain.daily.repository.DailyRepository;
 import com.futspring.backend.domain.pelada.Pelada;
 import com.futspring.backend.domain.pelada.PeladaRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -26,6 +27,7 @@ public class DailySchedulerService {
 
     private final PeladaRepository peladaRepository;
     private final DailyRepository dailyRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     // Hourly, server-local time: creates the next daily of each pelada once it is at most 24 h away
     @Scheduled(cron = "0 0 * * * *")
@@ -55,11 +57,13 @@ public class DailySchedulerService {
         if (dailyRepository.existsByPeladaAndDailyDate(pelada, nextOccurrence)) {
             return;
         }
-        dailyRepository.save(Daily.builder()
+        Daily daily = dailyRepository.save(Daily.builder()
                 .pelada(pelada)
                 .dailyDate(nextOccurrence)
                 .dailyTime(pelada.getTimeOfDay())
                 .status(DailyStatus.SCHEDULED)
                 .build());
+        // No actor: every member hears about it
+        eventPublisher.publishEvent(new DailyCreatedEvent(daily, null));
     }
 }
