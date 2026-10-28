@@ -26,7 +26,23 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
     List<Notification> findPage(@Param("recipientId") Long recipientId, @Param("unreadOnly") boolean unreadOnly,
                                 Pageable pageable);
 
+    // New notifications with everything the push needs (the recipient's e-mail and the DTO's references)
+    @Query("""
+        SELECT n FROM Notification n
+        JOIN FETCH n.recipient LEFT JOIN FETCH n.pelada LEFT JOIN FETCH n.daily LEFT JOIN FETCH n.actor
+        WHERE n.id IN :ids
+        """)
+    List<Notification> findAllByIdInWithRefs(@Param("ids") Collection<Long> ids);
+
     long countByRecipientIdAndReadAtIsNull(Long recipientId);
+
+    // [recipientId, unread count] for these recipients, one query (pushed with each notification)
+    @Query("""
+        SELECT n.recipient.id, COUNT(n) FROM Notification n
+        WHERE n.recipient.id IN :recipientIds AND n.readAt IS NULL
+        GROUP BY n.recipient.id
+        """)
+    List<Object[]> countUnreadByRecipients(@Param("recipientIds") Collection<Long> recipientIds);
 
     Optional<Notification> findByIdAndRecipientId(Long id, Long recipientId);
 
