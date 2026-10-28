@@ -28,6 +28,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -46,6 +47,8 @@ class NotificationControllerTest extends BaseIntegrationTest {
     @Autowired private PeladaMensalistaRepository mensalistaRepository;
     @Autowired private TeamRepository teamRepository;
     @Autowired private NotificationRepository notificationRepository;
+    @Autowired private NotificationPreferenceRepository preferenceRepository;
+    @Autowired private NotificationPreferenceService preferenceService;
     @Autowired private EntityManager entityManager;
 
     private User admin;
@@ -352,5 +355,90 @@ class NotificationControllerTest extends BaseIntegrationTest {
                 .andExpect(status().isNoContent());
 
         assertThat(notificationsOf(member)).isEmpty();
+    }
+
+    // --- preferences ---
+
+    private String preferencesBody(Object... categoryAndEnabled) throws Exception {
+        List<Map<String, Object>> items = new java.util.ArrayList<>();
+        for (int i = 0; i < categoryAndEnabled.length; i += 2) {
+            items.add(Map.of("category", categoryAndEnabled[i], "emailEnabled", categoryAndEnabled[i + 1]));
+        }
+        return objectMapper.writeValueAsString(items);
+    }
+
+    @Test
+    void preferences_withoutRows_returnTheDefaults() throws Exception {
+        mockMvc.perform(get("/api/v1/notifications/preferences").header("Authorization", auth(member)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(4)))
+                .andExpect(jsonPath("$[?(@.category == 'ATTENDANCE')].emailEnabled").value(true))
+                .andExpect(jsonPath("$[?(@.category == 'MEMBERSHIP')].emailEnabled").value(true))
+                .andExpect(jsonPath("$[?(@.category == 'SESSION')].emailEnabled").value(false))
+                .andExpect(jsonPath("$[?(@.category == 'AWARDS')].emailEnabled").value(false));
+    }
+
+    @Test
+    void updatePreferences_storesOnlyWhatDiffersFromTheDefault() throws Exception {
+        mockMvc.perform(put("/api/v1/notifications/preferences").header("Authorization", auth(member))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(preferencesBody("ATTENDANCE", false, "SESSION", true, "MEMBERSHIP", true)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(4)))
+                .andExpect(jsonPath("$[?(@.category == 'ATTENDANCE')].emailEnabled").value(false))
+                .andExpect(jsonPath("$[?(@.category == 'SESSION')].emailEnabled").value(true));
+
+        assertThat(preferenceRepository.findByIdUserId(member.getId()))
+                .extracting(NotificationPreference::getCategory)
+                .containsExactlyInAnyOrder(NotificationCategory.ATTENDANCE, NotificationCategory.SESSION);
+        assertThat(preferenceRepository.findByIdUserId(admin.getId())).isEmpty();
+
+        // back to the default → the row goes away
+        mockMvc.perform(put("/api/v1/notifications/preferences").header("Authorization", auth(member))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(preferencesBody("ATTENDANCE", true)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.category == 'ATTENDANCE')].emailEnabled").value(true))
+                .andExpect(jsonPath("$[?(@.category == 'SESSION')].emailEnabled").value(true));
+        assertThat(preferenceRepository.findByIdUserId(member.getId()))
+                .extracting(NotificationPreference::getCategory)
+                .containsExactly(NotificationCategory.SESSION);
+    }
+
+    @Test
+    void updatePreferences_invalidBodies_returnBadRequest() throws Exception {
+        for (String body : List.of(
+                "[]",
+                preferencesBody("ATTENDANCE", false, "ATTENDANCE", true),
+                "[{\"category\": null, \"emailEnabled\": true}]",
+                "[{\"category\": \"ATTENDANCE\"}]",
+                "[{\"category\": \"CHAT\", \"emailEnabled\": true}]")) {
+            mockMvc.perform(put("/api/v1/notifications/preferences").header("Authorization", auth(member))
+                            .contentType(MediaType.APPLICATION_JSON).content(body))
+                    .andExpect(status().isBadRequest());
+        }
+        assertThat(preferenceRepository.findByIdUserId(member.getId())).isEmpty();
+    }
+
+    @Test
+    void preferences_withoutToken_returnUnauthorized() throws Exception {
+        mockMvc.perform(get("/api/v1/notifications/preferences")).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void emailEnabled_appliesTheDefaultsAndTheRowsOfEachUser() {
+        preferenceRepository.save(new NotificationPreference(member, NotificationCategory.ATTENDANCE, false));
+        preferenceRepository.save(new NotificationPreference(member, NotificationCategory.AWARDS, true));
+        flushAndClear();
+
+        Map<Long, Map<NotificationCategory, Boolean>> enabled =
+                preferenceService.emailEnabled(List.of(member.getId(), admin.getId()));
+
+        assertThat(enabled.get(member.getId())).containsEntry(NotificationCategory.ATTENDANCE, false)
+                .containsEntry(NotificationCategory.AWARDS, true)
+                .containsEntry(NotificationCategory.MEMBERSHIP, true)
+                .containsEntry(NotificationCategory.SESSION, false);
+        assertThat(enabled.get(admin.getId())).containsEntry(NotificationCategory.ATTENDANCE, true)
+                .containsEntry(NotificationCategory.AWARDS, false);
     }
 }
