@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest"
 import { Trophy, UserX } from "lucide-react"
 import type { NotificationResponse, NotificationType } from "@/types/notification"
 import { notificationTypeCategory } from "@/types/notification"
-import { mergeNotifications, notificationPlainText, notificationView } from "./notifications"
+import { mergeNotifications, notificationPlainText, notificationToast, notificationView, upsertNotification } from "./notifications"
 
 function make(type: NotificationType, overrides: Partial<NotificationResponse> = {}): NotificationResponse {
   return {
@@ -85,5 +85,31 @@ describe("mergeNotifications", () => {
     const b = make("SESSION_CREATED", { id: 2 })
     const c = make("SESSION_CREATED", { id: 3 })
     expect(mergeNotifications([a, b], [b, c]).map((n) => n.id)).toEqual([1, 2, 3])
+  })
+})
+
+describe("upsertNotification", () => {
+  it("puts a new notification on top", () => {
+    const a = make("SESSION_CREATED", { id: 1 })
+    const b = make("SESSION_CREATED", { id: 2 })
+    expect(upsertNotification([a], b).map((n) => n.id)).toEqual([2, 1])
+  })
+
+  it("replaces a collapsed notification and moves it to the top, without duplicating it", () => {
+    const a = make("SESSION_CREATED", { id: 1 })
+    const old = make("TEAMS_SORTED", { id: 2, readAt: null, createdAt: "2026-10-27T12:00:00Z" })
+    const collapsed = make("TEAMS_SORTED", { id: 2, readAt: null, createdAt: "2026-10-28T12:00:00Z" })
+    const result = upsertNotification([a, old], collapsed)
+    expect(result.map((n) => n.id)).toEqual([2, 1])
+    expect(result[0].createdAt).toBe("2026-10-28T12:00:00Z")
+  })
+})
+
+describe("notificationToast", () => {
+  it("toasts only losing or not having a spot", () => {
+    const toasted = (Object.keys(notificationToast) as NotificationType[]).filter((type) => notificationToast[type])
+    expect(toasted.sort()).toEqual(
+      ["ATTENDANCE_REMOVED_BY_ADMIN", "DIARISTA_BUMPED", "SESSION_CANCELED", "SESSION_REMINDER"],
+    )
   })
 })

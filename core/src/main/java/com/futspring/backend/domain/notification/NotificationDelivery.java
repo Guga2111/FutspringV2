@@ -1,19 +1,21 @@
 package com.futspring.backend.domain.notification;
 
-import lombok.extern.slf4j.Slf4j;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
 
 /**
- * What happens to new notifications once their transaction commits. Nothing yet: the realtime push and the
- * e-mail dispatch plug in here.
+ * What happens to new notifications once their transaction commits: the realtime push (async, so the request
+ * that caused them never waits). The e-mail dispatch plugs in here too.
  */
-@Slf4j
 @Component
+@RequiredArgsConstructor
 public class NotificationDelivery {
 
+    private final NotificationPushService pushService;
+
     public void deliver(List<Long> notificationIds) {
-        log.debug("Notifications stored: {}", notificationIds);
+        pushService.push(notificationIds);
     }
 }

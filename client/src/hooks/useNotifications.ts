@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useNavigate } from "react-router-dom"
 import { toast } from "sonner"
 import {
   NOTIFICATIONS_PAGE_SIZE,
@@ -8,9 +9,16 @@ import {
   markNotificationRead,
 } from "@/api/notifications"
 import type { NotificationFilter, NotificationsContextValue } from "@/context/notifications-context-value"
-import type { NotificationResponse } from "@/types/notification"
+import { useRealtime } from "@/hooks/useRealtime"
+import type { NotificationPush, NotificationResponse } from "@/types/notification"
 import { getErrorMessage } from "@/lib/errors"
-import { mergeNotifications } from "@/utils/notifications"
+import {
+  mergeNotifications,
+  notificationPlainText,
+  notificationToast,
+  notificationView,
+  upsertNotification,
+} from "@/utils/notifications"
 
 interface ListState {
   filter: NotificationFilter
@@ -23,8 +31,10 @@ interface ListState {
 
 const initialList: ListState = { filter: "all", items: [], page: 0, hasMore: false, status: "idle", loadingMore: false }
 
-// The bell's state: the unread counter (on start and whenever the tab becomes visible again; no polling) and the
-// list, loaded when the panel opens. Called once by AppLayout and shared through NotificationsContext.
+// The bell's state: the unread counter and the list, loaded when the panel opens. New notifications arrive on
+// /user/queue/notifications with the server's unread count; the counter is also fetched on start, on every
+// (re)connect (catches up on what was missed while offline) and whenever the tab becomes visible again; no polling.
+// Called once by AppLayout, inside RealtimeProvider, and shared through NotificationsContext.
 // `onBumpsRead` mirrors the server, where reading a "perdeu a vaga" notification also dismisses the bump alert
 // (null = every session, after "Marcar todas como lidas").
 export function useNotifications(onBumpsRead: (dailyId: number | null) => void): NotificationsContextValue {
@@ -32,6 +42,8 @@ export function useNotifications(onBumpsRead: (dailyId: number | null) => void):
   const [list, setList] = useState<ListState>(initialList)
   // only the latest list request may write; a filter change or a refresh drops the older answers
   const requestRef = useRef(0)
+  const { subscribe, connectionId } = useRealtime()
+  const navigate = useNavigate()
 
   const fetchCount = useCallback(() => {
     getUnreadNotificationCount()
@@ -49,6 +61,10 @@ export function useNotifications(onBumpsRead: (dailyId: number | null) => void):
     document.addEventListener("visibilitychange", onVisibilityChange)
     return () => document.removeEventListener("visibilitychange", onVisibilityChange)
   }, [fetchCount])
+
+  useEffect(() => {
+    if (connectionId > 0) fetchCount()
+  }, [connectionId, fetchCount])
 
   const load = useCallback(async (filter: NotificationFilter, page: number) => {
     const request = ++requestRef.current
@@ -136,6 +152,44 @@ export function useNotifications(onBumpsRead: (dailyId: number | null) => void):
       fetchCount()
     },
     [setReadAt, fetchCount],
+  )
+
+  // Read through a ref so the subscription isn't remade whenever markRead changes
+  const onPushRef = useRef<(push: NotificationPush) => void>(() => {})
+  useEffect(() => {
+    onPushRef.current = ({ notification, unreadCount: count }) => {
+      setUnreadCount(count)
+      // a list not loaded yet gets it when the panel opens
+      setList((prev) => (prev.status === "ready" ? { ...prev, items: upsertNotification(prev.items, notification) } : prev))
+      if (!notificationToast[notification.type]) return
+      const href = notificationView(notification).href
+      toast(
+        notificationPlainText(notification),
+        href
+          ? {
+              action: {
+                label: "Ver",
+                onClick: () => {
+                  markRead(notification)
+                  navigate(href)
+                },
+              },
+            }
+          : undefined,
+      )
+    }
+  }, [markRead, navigate])
+
+  useEffect(
+    () =>
+      subscribe("/user/queue/notifications", (body) => {
+        try {
+          onPushRef.current(JSON.parse(body) as NotificationPush)
+        } catch {
+          // ignore malformed frames
+        }
+      }),
+    [subscribe],
   )
 
   return useMemo(

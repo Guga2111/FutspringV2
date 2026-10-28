@@ -160,3 +160,29 @@ export function mergeNotifications(current: NotificationResponse[], page: Notifi
   const known = new Set(current.map((n) => n.id))
   return [...current, ...page.filter((n) => !known.has(n.id))]
 }
+
+// A pushed notification goes to the top; a collapsed one (same id, re-sorted teams) replaces the old entry
+export function upsertNotification(current: NotificationResponse[], n: NotificationResponse): NotificationResponse[] {
+  return [n, ...current.filter((c) => c.id !== n.id)]
+}
+
+// Pushed types that also show a toast with "Ver": losing or not having a spot. The rest only update the bell
+export const notificationToast: Record<NotificationType, boolean> = {
+  DIARISTA_BUMPED: true,
+  SESSION_CANCELED: true,
+  ATTENDANCE_REMOVED_BY_ADMIN: true,
+  SESSION_REMINDER: true,
+  ATTENDANCE_CONFIRMED_BY_ADMIN: false,
+  SESSION_CREATED: false,
+  DIARISTA_WINDOW_OPEN: false,
+  TEAMS_SORTED: false,
+  SESSION_FINISHED: false,
+  ADDED_TO_PELADA: false,
+  REMOVED_FROM_PELADA: false,
+  ADMIN_GRANTED: false,
+  ADMIN_REVOKED: false,
+  MENSALISTA_GRANTED: false,
+  MENSALISTA_REVOKED: false,
+  PELADA_TRANSFERRED: false,
+  AWARD_WON: false,
+}

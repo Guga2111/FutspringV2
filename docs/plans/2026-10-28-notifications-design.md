@@ -298,6 +298,17 @@ Decisions taken while building PR 1:
 - `SESSION_REMINDER` text in the client uses the date ("Sessão de sáb, 31/10 às 20:00 na …"), not "amanhã", because the bell may be read days later.
 
 **PR 2:** first extract the connection with backoff from `usePeladaChat` into `RealtimeProvider` with the chat behaving exactly as before (checked by hand), then add the `/user/queue/notifications` subscription, the server push and the toasts.
+- [x] 1. `RealtimeProvider` in `AppLayout` (one connection, `subscribe` / `publish` / `connectionState` / `connectionId`), `usePeladaChat` on top of it. Checked by hand: send, receive, reconnect after restarting the API, the error queue, a single `/ws` connection.
+- [x] 2. `JwtChannelInterceptor` accepts `SUBSCRIBE /user/queue/notifications`; `NotificationDelivery.deliver` calls `NotificationPushService.push` (`@Async`, default pool, failures only logged).
+- [x] 3. Client: `useNotifications` subscribes, upserts by id, takes the pushed counter, refetches `unread-count` on every (re)connect, toasts with "Ver".
+
+Decisions taken while building PR 2:
+- The push payload is `NotificationPushDTO {notification, unreadCount}`, not the bare `NotificationDTO`: the client can't tell a collapsed notification (already counted) from a new one when it isn't in the loaded list, so the server sends the recipient's unread total (one grouped query per batch) and the client just applies it.
+- The DTO assembly moved from `NotificationInboxService` to `NotificationDTOAssembler`, shared by the list and the push; the team query now takes several users (`TeamRepository.findTeamsOfUsersInDailies`).
+- The old chat reconnect never worked: a dropped connection only fires stompjs's `onWebSocketClose` (not handled), and `client.activate()` is ignored while the client is still `ACTIVE`. The provider uses stompjs's own reconnect (`reconnectDelay` 1 s, `EXPONENTIAL`, max 4 s) and counts attempts in `onWebSocketClose`; after 3 failed retries it deactivates (`failed`, same chat banner as before) and starts over when the tab becomes visible again or the token changes. An API restart can take longer than the 7 s window, so the visibility resume matters.
+- Toasts only for `DIARISTA_BUMPED`, `SESSION_CANCELED`, `ATTENDANCE_REMOVED_BY_ADMIN` and `SESSION_REMINDER` (`notificationToast` record); `ATTENDANCE_CONFIRMED_BY_ADMIN` is Attendance too but good news, so it only updates the bell.
+- A pushed notification is only inserted into a list already loaded; otherwise the panel loads it on open.
+- Not done here: a pushed `DIARISTA_BUMPED` doesn't refresh the Home card / "Você perdeu a vaga" alert (they still update on reload), and the server sends no STOMP heart-beats, so a silently dead connection (no close event) isn't detected.
 
 **PR 3:** check the Resend plan first (the only external blocker). Write the exhaustive `NotificationEmailContent` `switch` and its "every emailable type renders" test before the dispatcher. Remove `DiaristaBumpedEmailListener` in the same commit that turns the new dispatch on.
 

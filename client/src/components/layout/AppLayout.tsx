@@ -8,6 +8,7 @@ import { useNotifications } from "@/hooks/useNotifications"
 import CreatePeladaModal from "@/components/CreatePeladaModal"
 import { AppSidebar } from "@/components/layout/AppSidebar"
 import { MobileTopBar } from "@/components/layout/MobileTopBar"
+import { RealtimeProvider } from "@/components/layout/RealtimeProvider"
 
 const SIDEBAR_OPEN_KEY = "sidebar_open"
 
@@ -30,8 +31,17 @@ function saveSidebarOpen(open: boolean) {
 const pageFallback = <div className="flex flex-1 items-center justify-center p-8 text-sm text-muted-foreground">Carregando…</div>
 
 // Shell of every private page: sidebar with the user's peladas (Sheet on mobile) and the page in <Outlet/>.
-// Also loads the user's peladas and the notifications once, shared through their contexts.
+// Opens the user's realtime connection and loads the peladas and the notifications once, shared through contexts.
 export function AppLayout() {
+  return (
+    <RealtimeProvider>
+      <AppShell />
+    </RealtimeProvider>
+  )
+}
+
+// Inside RealtimeProvider, so the notifications can subscribe to the user's queue
+function AppShell() {
   const [sidebarOpen, setSidebarOpen] = useState(readSidebarOpen)
   const [createOpen, setCreateOpen] = useState(false)
   const { peladas, loading, error, reload, updateNextDaily } = useMyPeladas()
