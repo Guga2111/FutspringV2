@@ -12,10 +12,13 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
 import java.time.DayOfWeek;
 import java.time.Duration;
 import java.time.LocalDate;
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.temporal.TemporalAdjusters;
 import java.util.List;
 import java.util.Locale;
@@ -28,13 +31,14 @@ public class DailySchedulerService {
     private final PeladaRepository peladaRepository;
     private final DailyRepository dailyRepository;
     private final ApplicationEventPublisher eventPublisher;
+    private final Clock clock;
 
-    // Hourly, server-local time: creates the next daily of each pelada once it is at most 24 h away
+    // Hourly: creates the next daily of each pelada once its day starts at most 24 h from now, in the pelada's zone
     @Scheduled(cron = "0 0 * * * *")
     @Transactional
     public void autoCreateDailies() {
         List<Pelada> peladas = peladaRepository.findByAutoCreateDailyEnabledTrue();
-        LocalDateTime now = LocalDateTime.now();
+        Instant now = Instant.now(clock);
 
         for (Pelada pelada : peladas) {
             // One bad pelada must not abort the run for the others
@@ -46,7 +50,8 @@ public class DailySchedulerService {
         }
     }
 
-    private void createNextDailyIfDue(Pelada pelada, LocalDateTime now) {
+    private void createNextDailyIfDue(Pelada pelada, Instant instant) {
+        LocalDateTime now = LocalDateTime.ofInstant(instant, ZoneId.of(pelada.getTimeZone()));
         DayOfWeek target = DayOfWeek.valueOf(pelada.getDayOfWeek().toUpperCase(Locale.ROOT));
         LocalDate nextOccurrence = now.toLocalDate().with(TemporalAdjusters.nextOrSame(target));
         long hoursUntilNext = Duration.between(now, nextOccurrence.atStartOfDay()).toHours();
