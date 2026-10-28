@@ -132,7 +132,7 @@ Every route acts on the caller only (from the token); none takes a `userId`.
 | POST | `/notifications/read-all` | — | 204 |
 | GET | `/notifications/preferences` | — | `[{category, emailEnabled}]`, always the 4 categories with defaults applied |
 | PUT | `/notifications/preferences` | `[{category, emailEnabled}]` (`@Valid`, unique categories, else 400) | same shape; stores only what differs from the default |
-| POST | `/notifications/unsubscribe` | `{token}` | **public**; `{category, emailEnabled: false}`; invalid token → 400 "Link inválido". Rate-limited in `AuthRateLimitFilter` |
+| POST | `/notifications/unsubscribe` | `{token}`, or `?token=` with the one-click form body (see Decisions PR 3) | **public**; `{category, emailEnabled: false}`; invalid token → 400 "Link inválido". Rate-limited in `AuthRateLimitFilter` |
 | POST | `/notifications/resubscribe` | `{token}` | **public**; same token turns the category back on |
 
 `NotificationDTO`:
@@ -311,6 +311,24 @@ Decisions taken while building PR 2:
 - Not done here: a pushed `DIARISTA_BUMPED` doesn't refresh the Home card / "Você perdeu a vaga" alert (they still update on reload), and the server sends no STOMP heart-beats, so a silently dead connection (no close event) isn't detected.
 
 **PR 3:** check the Resend plan first (the only external blocker). Write the exhaustive `NotificationEmailContent` `switch` and its "every emailable type renders" test before the dispatcher. Remove `DiaristaBumpedEmailListener` in the same commit that turns the new dispatch on.
+- [x] 0. Resend plan checked: free (100/day, 3,000/month, shared with the password reset).
+- [x] 1. `NotificationPreference` entity on the V10 table, `GET/PUT /notifications/preferences` (only differences from `defaultEmail` stored).
+- [x] 2. `NotificationEmailContent` (exhaustive `switch`) and its "every type renders subject, title and CTA" test.
+- [x] 3. `email/notification.html` + `NotificationEmail`, `EmailSender` headers, `UnsubscribeTokens`, public `unsubscribe` / `resubscribe` (permitAll, rate-limited, `JwtAuthFilter` skipped), `API_URL`.
+- [x] 4. `NotificationEmailDispatcher` + `EmailPacer` wired into `NotificationDelivery`; `DiaristaBumpedEmailListener`, `DiaristaBumpedEmail` and `email/diarista-bumped.html` removed in the same commit.
+- [x] 5. Client: `/settings/notifications`, `/notifications/unsubscribe?token=`, UserMenu item without "Em breve", the panel's gear.
+
+Decisions taken while building PR 3:
+- Resend stays on the free plan with the spec's defaults (no daily budget, no types cut): it only matters at roughly 30 peladas of 40 players. If traffic grows, the paid plan or the digest (phase 2) come next. Noted in BACKEND.md.
+- The one-click URL points at the API, which only knew `APP_URL`: new `API_URL` setting (`app.api-url`), written to the deploy `.env` from the same value the frontend is built with (`vars.API_URL || APP_URL`).
+- RFC 8058 one-click POSTs `List-Unsubscribe=One-Click` as a form to the header's URL, so the token can't be in a JSON body there: `POST /notifications/unsubscribe` takes `{token}` as JSON (the client's page) **or** `?token=` with any body (the mail provider). `/resubscribe` is JSON only.
+- `JwtAuthFilter` returned 401 for any invalid Bearer token, even on public routes, and the client attaches the stored token and logs out on 401. It now skips the two e-mail link routes (`SecurityConfig.EMAIL_LINK_PATHS`), which never read the caller, so a visitor with an expired session isn't thrown to `/auth`. The one rate limit (10/min per IP) covers them; at scale, many one-click POSTs from the same provider IPs could hit it.
+- The e-mail executor is owned by `NotificationEmailDispatcher`, not a bean: any `Executor` bean disables Spring Boot's default `applicationTaskExecutor`, which would have moved the push and the password reset e-mail onto the single e-mail thread.
+- The pacer is one token every 500 ms with no burst (a 2-token bucket lets three sends into one second). 30 e-mails take ~15 s.
+- The e-mails are built in a short read-only transaction and sent outside it, so pacing never holds a database connection. `EmailSender.enabled()` (false for the no-op) skips the whole build when there is no API key.
+- `PUT /preferences` is partial (1–4 items): the client sends only the switch that changed; a value equal to the default deletes the row.
+- `NotificationEmailContent` covers every type, emailable or not (the switch has no `default`); the CTA of `REMOVED_FROM_PELADA` opens `/home`. Category and award labels live in `NotificationCategory.label()` / `NotificationAward.label()`.
+- Placeholders are replaced in one pass with every value HTML-escaped, so a pelada called `{{unsubscribeUrl}}` stays text.
 
 **PR 4:** follow `DailySchedulerService` (try/catch per pelada) with an injected `Clock`; extend the 04:00 job with the retention deletes.
 
@@ -330,6 +348,6 @@ Docs to update in each PR:
 
 ## Risks
 
-- Resend quota: check the plan before PR 3.
+- Resend quota: free plan (checked in PR 3); enough at today's scale, next steps are the paid plan or the digest.
 - STOMP broker and scheduled jobs assume a single API instance (already documented).
 - Two text sources (client and e-mail), kept honest by the exhaustive `Record` / `switch` and their tests.
