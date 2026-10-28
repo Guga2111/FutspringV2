@@ -8,19 +8,22 @@ import { getErrorMessage } from "@/lib/errors"
 import type { PeladaDetail, PeladaMember } from "@/types/pelada"
 import type { DailyListItem } from "@/types/daily"
 
-// Mutations of the pelada page: admin/creator actions (the pelada is reloaded after member changes) and the
-// caller's attendance in the next session (merged into the sessions list and the sidebar's peladas)
+// Mutations of the pelada page: admin/creator actions (member changes are merged into the pelada on screen; the
+// dialogs close before the request, which runs in the background with a toast) and the caller's attendance in
+// the next session (merged into the sessions list and the sidebar's peladas)
 export function usePeladaActions(
   pelada: PeladaDetail | null,
-  refetchPelada: () => Promise<void>,
+  refetchDailies: () => Promise<void>,
   mergeDaily: (item: DailyListItem) => void,
   mergeMember: (member: PeladaMember) => void,
+  dropMember: (userId: number) => void,
 ) {
   const navigate = useNavigate()
   const { updateNextDaily, reload: reloadMyPeladas } = useMyPeladasContext()
   const [attendancePending, setAttendancePending] = useState(false)
   const [deleting, setDeleting] = useState(false)
-  const [removing, setRemoving] = useState(false)
+  const [removingMember, setRemovingMember] = useState<number | null>(null)
+  const [settingStars, setSettingStars] = useState<number | null>(null)
   const [togglingAdmin, setTogglingAdmin] = useState<number | null>(null)
   const [togglingMensalista, setTogglingMensalista] = useState<number | null>(null)
 
@@ -39,19 +42,19 @@ export function usePeladaActions(
     }
   }
 
-  async function removeMember(member: PeladaMember): Promise<boolean> {
-    if (!pelada) return false
-    setRemoving(true)
+  // The card stays dimmed until the response; the backend also takes the member out of upcoming sessions
+  async function removeMember(member: PeladaMember) {
+    if (!pelada) return
+    setRemovingMember(member.id)
     try {
       await removePlayer(pelada.id, member.id)
-      await refetchPelada()
+      dropMember(member.id)
       toast.success(`${member.username} foi removido da pelada`)
-      return true
+      void refetchDailies()
     } catch (error) {
       toast.error(getErrorMessage(error, "Não foi possível remover o jogador"))
-      return false
     } finally {
-      setRemoving(false)
+      setRemovingMember(null)
     }
   }
 
@@ -60,7 +63,7 @@ export function usePeladaActions(
     setTogglingAdmin(member.id)
     try {
       await setAdmin(pelada.id, member.id, !member.isAdmin)
-      await refetchPelada()
+      mergeMember({ ...member, isAdmin: !member.isAdmin })
       toast.success(member.isAdmin ? `${member.username} não é mais administrador` : `${member.username} agora é administrador`)
     } catch (error) {
       toast.error(getErrorMessage(error, "Não foi possível alterar o administrador"))
@@ -69,11 +72,20 @@ export function usePeladaActions(
     }
   }
 
-  // Errors are thrown to the stars dialog, which shows them in its form
+  // Optimistic: the card shows the new stars at once and goes back to the previous value if the request fails
   async function setMemberStars(member: PeladaMember, stars: number) {
     if (!pelada) return
-    await setPlayerStars(pelada.id, member.id, stars)
-    await refetchPelada()
+    setSettingStars(member.id)
+    mergeMember({ ...member, stars })
+    try {
+      mergeMember(await setPlayerStars(pelada.id, member.id, stars))
+      toast.success(`Estrelas de ${member.username} atualizadas`)
+    } catch (error) {
+      mergeMember(member)
+      toast.error(getErrorMessage(error, "Não foi possível salvar as estrelas"))
+    } finally {
+      setSettingStars(null)
+    }
   }
 
   async function setMemberMensalista(member: PeladaMember, isMensalista: boolean) {
@@ -112,7 +124,8 @@ export function usePeladaActions(
 
   return {
     deleting,
-    removing,
+    removingMember,
+    settingStars,
     togglingAdmin,
     togglingMensalista,
     attendancePending,
