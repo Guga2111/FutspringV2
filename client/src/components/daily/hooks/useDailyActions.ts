@@ -14,6 +14,7 @@ import {
   updateTeamName,
   uploadChampionImage,
 } from '@/api/dailies'
+import { useNotificationsContext } from '@/hooks/useNotificationsContext'
 import { getErrorMessage } from '@/lib/errors'
 import { validateImageFile } from '@/schemas/upload'
 import type { DailyDetail, DailyStatus, TeamDTO } from '@/types/daily'
@@ -35,6 +36,7 @@ export function useDailyActions({ daily, setDaily, refetch }: Options) {
   const [adminToggleLoading, setAdminToggleLoading] = useState<number | null>(null)
   const [confirmAllLoading, setConfirmAllLoading] = useState(false)
   const [dismissBumpLoading, setDismissBumpLoading] = useState(false)
+  const { markBumpRead } = useNotificationsContext()
   const [selectedPlayer, setSelectedPlayer] = useState<{ id: number; teamId: number } | null>(null)
 
   async function run(action: () => Promise<unknown>, success: string, failure: string, reload = true) {
@@ -157,6 +159,7 @@ export function useDailyActions({ daily, setDaily, refetch }: Options) {
     try {
       await markBumpsSeen(daily.id)
       setDaily((prev) => (prev ? { ...prev, myBump: null } : prev))
+      markBumpRead(daily.id)
     } catch (error) {
       toast.error(getErrorMessage(error, 'Não foi possível fechar o aviso'))
     } finally {

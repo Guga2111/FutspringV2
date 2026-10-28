@@ -2,6 +2,7 @@ import { Link } from "react-router-dom"
 import { Menu } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useSidebar } from "@/components/ui/sidebar-context"
+import { NotificationBell } from "@/components/notifications/NotificationBell"
 
 // Below md the sidebar lives in a Sheet; this bar opens it
 export function MobileTopBar() {
@@ -12,6 +13,7 @@ export function MobileTopBar() {
         <img src="/logo-64.png" alt="" width={28} height={28} className="size-7 rounded-full object-cover" />
         <span className="text-gradient-primary text-[17px] font-bold">FutSpring</span>
       </Link>
+      <NotificationBell className="size-10 rounded-[10px] hover:bg-accent [&_svg]:size-5" />
       <Button
         variant="ghost"
         size="icon"
