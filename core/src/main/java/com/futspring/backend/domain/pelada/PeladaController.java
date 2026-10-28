@@ -13,6 +13,7 @@ import com.futspring.backend.domain.pelada.dto.PeladaMemberDTO;
 import com.futspring.backend.domain.pelada.dto.PeladaResponseDTO;
 import com.futspring.backend.domain.pelada.dto.SetAdminRequestDTO;
 import com.futspring.backend.domain.pelada.dto.SetMensalistaRequestDTO;
+import com.futspring.backend.domain.pelada.dto.TransferCreatorRequestDTO;
 import com.futspring.backend.domain.pelada.dto.UpdatePeladaRequestDTO;
 import com.futspring.backend.domain.pelada.dto.UpdatePlayerStarsRequestDTO;
 import com.futspring.backend.domain.stats.AttendanceService;
@@ -173,6 +174,15 @@ public class PeladaController {
         return ResponseEntity.noContent().build();
     }
 
+    @PutMapping("/{id}/creator")
+    public ResponseEntity<PeladaResponseDTO> transferCreator(
+            @PathVariable Long id,
+            @Valid @RequestBody TransferCreatorRequestDTO request,
+            @AuthenticationPrincipal String email
+    ) {
+        return ResponseEntity.ok(peladaService.transferCreator(id, request.getUserId(), email));
+    }
+
     @GetMapping("/{id}/ranking")
     public ResponseEntity<List<RankingDTO>> getRanking(
             @PathVariable Long id,
@@ -233,5 +243,13 @@ public class PeladaController {
             @AuthenticationPrincipal String email
     ) {
         return ResponseEntity.ok(peladaService.uploadPeladaImage(id, file, email));
+    }
+
+    @DeleteMapping("/{id}/image")
+    public ResponseEntity<PeladaResponseDTO> removeImage(
+            @PathVariable Long id,
+            @AuthenticationPrincipal String email
+    ) {
+        return ResponseEntity.ok(peladaService.removePeladaImage(id, email));
     }
 }

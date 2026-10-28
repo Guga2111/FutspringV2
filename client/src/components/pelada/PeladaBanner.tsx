@@ -1,4 +1,5 @@
-import { Bookmark, Calendar, Clock, MapPin, Pencil, Trash2 } from "lucide-react"
+import { Bookmark, Calendar, Clock, MapPin, Settings } from "lucide-react"
+import { Link } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { dayOfWeekLabel } from "@/lib/constants"
 import { cn, getFileUrl, getInitials, getPeladaGradient } from "@/lib/utils"
@@ -7,15 +8,12 @@ import type { PeladaDetail } from "@/types/pelada"
 interface PeladaBannerProps {
   pelada: PeladaDetail
   isCurrentUserAdmin: boolean
-  isCurrentUserCreator: boolean
-  onEdit: () => void
-  onDelete: () => void
 }
 
 // Text and buttons sit on the photo/gradient, so they stay white in both themes
 const overlayButton = "size-[34px] rounded-full bg-black/35 text-white hover:bg-black/55 hover:text-white [&_svg]:size-[15px]"
 
-export function PeladaBanner({ pelada, isCurrentUserAdmin, isCurrentUserCreator, onEdit, onDelete }: PeladaBannerProps) {
+export function PeladaBanner({ pelada, isCurrentUserAdmin }: PeladaBannerProps) {
   const imageUrl = getFileUrl(pelada.image)
   return (
     <section
@@ -36,24 +34,13 @@ export function PeladaBanner({ pelada, isCurrentUserAdmin, isCurrentUserCreator,
       )}
       <div className="bg-banner-overlay absolute inset-0" />
 
-      {(isCurrentUserAdmin || isCurrentUserCreator) && (
-        <div className="absolute right-3 top-3 z-10 flex gap-2">
-          {isCurrentUserAdmin && (
-            <Button variant="ghost" size="icon" aria-label="Editar pelada" className={overlayButton} onClick={onEdit}>
-              <Pencil />
-            </Button>
-          )}
-          {isCurrentUserCreator && (
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label="Excluir pelada"
-              className={cn(overlayButton, "hover:bg-destructive/80")}
-              onClick={onDelete}
-            >
-              <Trash2 />
-            </Button>
-          )}
+      {isCurrentUserAdmin && (
+        <div className="absolute right-3 top-3 z-10">
+          <Button variant="ghost" size="icon" asChild className={overlayButton}>
+            <Link to={`/pelada/${pelada.id}/settings`} aria-label="Configurações da pelada">
+              <Settings />
+            </Link>
+          </Button>
         </div>
       )}
 

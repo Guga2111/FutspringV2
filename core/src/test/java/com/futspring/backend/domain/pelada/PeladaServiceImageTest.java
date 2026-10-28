@@ -165,4 +165,30 @@ class PeladaServiceImageTest {
 
         verify(fileUploadService).deleteImageAfterCommit("old-cover.jpg");
     }
+
+    @Test
+    void removePeladaImage_clearsTheImageAndDeletesTheFileAfterCommit() {
+        pelada.setImage("old.png");
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
+        when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
+        when(peladaRepository.save(pelada)).thenReturn(pelada);
+
+        PeladaResponseDTO result = peladaService.removePeladaImage(10L, "admin@example.com");
+
+        assertThat(result.getImage()).isNull();
+        assertThat(pelada.getImage()).isNull();
+        verify(fileUploadService).deleteImageAfterCommit("old.png");
+    }
+
+    @Test
+    void removePeladaImage_notAdmin_throwsForbidden() {
+        pelada.setImage("old.png");
+        when(userAuthHelper.getAuthenticatedUser("member@example.com")).thenReturn(member);
+        when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
+
+        assertThatThrownBy(() -> peladaService.removePeladaImage(10L, "member@example.com"))
+                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.FORBIDDEN));
+        assertThat(pelada.getImage()).isEqualTo("old.png");
+        verifyNoInteractions(fileUploadService);
+    }
 }

@@ -1,8 +1,6 @@
 import { useState } from "react"
-import { useNavigate } from "react-router-dom"
 import { toast } from "sonner"
 import {
-  deletePelada,
   removePlayer,
   removePlayers,
   setAdmin,
@@ -19,7 +17,7 @@ import { pluralMembers } from "@/utils/bulkMemberActions"
 import type { PeladaDetail, PeladaMember } from "@/types/pelada"
 import type { DailyListItem } from "@/types/daily"
 
-// Mutations of the pelada page: admin/creator actions on one member or a selection (member changes are merged into
+// Mutations of the pelada page: admin actions on one member or a selection (member changes are merged into
 // the pelada on screen; the dialogs close before the request, which runs in the background with a toast) and the
 // caller's attendance in the next session (merged into the sessions list and the sidebar's peladas)
 export function usePeladaActions(
@@ -29,10 +27,8 @@ export function usePeladaActions(
   mergeMembers: (members: PeladaMember[]) => void,
   dropMembers: (userIds: number[]) => void,
 ) {
-  const navigate = useNavigate()
-  const { updateNextDaily, reload: reloadMyPeladas } = useMyPeladasContext()
+  const { updateNextDaily } = useMyPeladasContext()
   const [attendancePending, setAttendancePending] = useState(false)
-  const [deleting, setDeleting] = useState(false)
   const [removingMember, setRemovingMember] = useState<number | null>(null)
   const [settingStars, setSettingStars] = useState<number | null>(null)
   const [togglingAdmin, setTogglingAdmin] = useState<number | null>(null)
@@ -40,21 +36,6 @@ export function usePeladaActions(
   // the members a bulk request is changing: their cards are dimmed and the selection bar is disabled
   const [bulkPending, setBulkPending] = useState<ReadonlySet<number> | null>(null)
   const mergeMember = (member: PeladaMember) => mergeMembers([member])
-
-  async function removePeladaAndLeave(): Promise<boolean> {
-    if (!pelada) return false
-    setDeleting(true)
-    try {
-      await deletePelada(pelada.id)
-      toast.success("Pelada excluída")
-      navigate("/home")
-      return true
-    } catch (error) {
-      toast.error(getErrorMessage(error, "Não foi possível excluir a pelada"))
-      setDeleting(false)
-      return false
-    }
-  }
 
   // The card stays dimmed until the response; the backend also takes the member out of upcoming sessions
   async function removeMember(member: PeladaMember) {
@@ -205,21 +186,13 @@ export function usePeladaActions(
     }
   }
 
-  async function removePeladaAndLeaveAndReload(): Promise<boolean> {
-    const removed = await removePeladaAndLeave()
-    if (removed) reloadMyPeladas()
-    return removed
-  }
-
   return {
-    deleting,
     removingMember,
     settingStars,
     togglingAdmin,
     togglingMensalista,
     bulkPending,
     attendancePending,
-    removePeladaAndLeave: removePeladaAndLeaveAndReload,
     removeMember,
     toggleAdmin,
     setMemberStars,
