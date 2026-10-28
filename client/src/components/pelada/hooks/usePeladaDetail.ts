@@ -141,6 +141,24 @@ export function usePeladaDetail(id: string | undefined) {
     [peladaId],
   )
 
+  // Take a removed member out of the pelada on screen
+  const dropMember = useCallback(
+    (userId: number) => {
+      setMain((prev) =>
+        prev && prev.peladaId === peladaId && prev.data.pelada
+          ? {
+              peladaId,
+              data: {
+                ...prev.data,
+                pelada: { ...prev.data.pelada, members: prev.data.pelada.members.filter((m) => m.id !== userId) },
+              },
+            }
+          : prev,
+      )
+    },
+    [peladaId],
+  )
+
   const refetch = useCallback(async () => {
     await Promise.all([fetchPelada(), fetchDailies(), fetchRanking(), fetchAwards()])
   }, [fetchPelada, fetchDailies, fetchRanking, fetchAwards])
@@ -167,5 +185,6 @@ export function usePeladaDetail(id: string | undefined) {
     refetchDailies: fetchDailies,
     mergeDaily,
     mergeMember,
+    dropMember,
   }
 }

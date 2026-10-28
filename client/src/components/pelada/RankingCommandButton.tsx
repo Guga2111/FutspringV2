@@ -23,6 +23,7 @@ import type { PeladaMember } from "@/types/pelada";
 interface RankingCommandButtonProps {
   peladaId: number;
   members: PeladaMember[];
+  creatorId: number | null;
   isAdmin?: boolean;
   onCreateSession?: () => void;
   onAddPlayer?: () => void;
@@ -33,6 +34,7 @@ interface RankingCommandButtonProps {
 export function RankingCommandButton({
   peladaId,
   members,
+  creatorId,
   isAdmin = false,
   onCreateSession,
   onAddPlayer,
@@ -189,7 +191,7 @@ export function RankingCommandButton({
         <RemovePlayerDialog
           open={removeOpen}
           onOpenChange={setRemoveOpen}
-          members={members}
+          members={members.filter((m) => m.id !== creatorId)}
           onConfirm={(member) => {
             setRemoveOpen(false);
             onRemovePlayer(member);

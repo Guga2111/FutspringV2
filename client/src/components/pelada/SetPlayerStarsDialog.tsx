@@ -1,8 +1,6 @@
 import { Controller, useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Star } from "lucide-react"
-import { toast } from "sonner"
-import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -13,12 +11,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
-import { applyServerErrors } from "@/lib/form-errors"
 import { cn } from "@/lib/utils"
 import { playerStarsSchema, type PlayerStarsValues } from "@/schemas/pelada"
 import type { PeladaMember } from "@/types/pelada"
 
-// Admin only: the member's stars in this pelada (team sorting weight)
+// Admin only: the member's stars in this pelada (team sorting weight). Saving closes the dialog at once; the
+// request runs in usePeladaActions.setMemberStars, which reports the result with a toast
 export function SetPlayerStarsDialog({
   member,
   onClose,
@@ -26,27 +24,20 @@ export function SetPlayerStarsDialog({
 }: {
   member: PeladaMember
   onClose: () => void
-  onSave: (member: PeladaMember, stars: number) => Promise<void>
+  onSave: (member: PeladaMember, stars: number) => void
 }) {
   const form = useForm<PlayerStarsValues>({
     resolver: zodResolver(playerStarsSchema),
     defaultValues: { stars: member.stars },
   })
 
-  async function onSubmit(values: PlayerStarsValues) {
-    try {
-      await onSave(member, values.stars)
-      toast.success(`Estrelas de ${member.username} atualizadas`)
-      onClose()
-    } catch (error) {
-      applyServerErrors(form, error, "Não foi possível salvar as estrelas")
-    }
+  function onSubmit(values: PlayerStarsValues) {
+    onSave(member, values.stars)
+    onClose()
   }
 
-  const submitting = form.formState.isSubmitting
-
   return (
-    <Dialog open onOpenChange={(open) => !open && !submitting && onClose()}>
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
           <DialogTitle>Definir estrelas</DialogTitle>
@@ -83,17 +74,12 @@ export function SetPlayerStarsDialog({
               )}
             />
           </FieldGroup>
-          {form.formState.errors.root && (
-            <Alert variant="destructive">
-              <AlertDescription>{form.formState.errors.root.message}</AlertDescription>
-            </Alert>
-          )}
           <DialogFooter className="gap-2">
-            <Button type="button" variant="ghost" onClick={onClose} disabled={submitting}>
+            <Button type="button" variant="ghost" onClick={onClose}>
               Cancelar
             </Button>
-            <Button type="submit" variant="gradient" disabled={submitting || !form.formState.isDirty}>
-              {submitting ? "Salvando..." : "Salvar"}
+            <Button type="submit" variant="gradient" disabled={!form.formState.isDirty}>
+              Salvar
             </Button>
           </DialogFooter>
         </form>

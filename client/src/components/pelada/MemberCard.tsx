@@ -12,6 +12,7 @@ import {
 import { MembershipBadge } from "@/components/MembershipBadge"
 import { PlayerAvatar } from "@/components/PlayerAvatar"
 import { StarRow } from "@/components/StarRow"
+import { cn } from "@/lib/utils"
 import { positionShortLabel } from "@/utils/memberFilters"
 import type { PeladaMember } from "@/types/pelada"
 
@@ -29,6 +30,8 @@ interface MemberCardProps {
   // any admin sets any member's stars, the creator's and their own included
   canSetStars: boolean
   isToggling: boolean
+  // dimmed and inert while the removal request runs
+  isRemoving: boolean
   // "Limite atingido (8/8)" when no more mensalistas fit; null when this member can be made one
   mensalistaLimitHint: string | null
   onToggleAdmin: () => void
@@ -43,6 +46,7 @@ export function MemberCard({
   canManage,
   canSetStars,
   isToggling,
+  isRemoving,
   mensalistaLimitHint,
   onToggleAdmin,
   onRemove,
@@ -53,7 +57,13 @@ export function MemberCard({
   const position = positionShortLabel(member.position)
 
   return (
-    <article className="flex flex-col gap-3 rounded-xl border bg-card p-3.5 transition-colors hover:border-input hover:bg-card-elevated">
+    <article
+      aria-busy={isRemoving}
+      className={cn(
+        "flex flex-col gap-3 rounded-xl border bg-card p-3.5 transition-[background-color,border-color,opacity] hover:border-input hover:bg-card-elevated",
+        isRemoving && "pointer-events-none opacity-50",
+      )}
+    >
       <div className="flex items-center gap-3">
         <PlayerAvatar username={member.username} image={member.image} colorId={member.id} className="size-[42px] text-[13px]" />
         <div className="flex min-w-0 flex-1 flex-col gap-1">
@@ -79,7 +89,7 @@ export function MemberCard({
               variant="ghost"
               size="icon"
               aria-label={`Ações de ${member.username}`}
-              disabled={isToggling}
+              disabled={isToggling || isRemoving}
               className="size-7 shrink-0 self-start text-subtle-foreground hover:bg-secondary hover:text-foreground"
             >
               <MoreHorizontal className="size-4" />
