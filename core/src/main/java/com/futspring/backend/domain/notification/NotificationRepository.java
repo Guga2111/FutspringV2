@@ -73,6 +73,40 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
     int markRead(@Param("recipient") User recipient, @Param("type") NotificationType type,
                  @Param("daily") Daily daily, @Param("now") Instant now);
 
+    // Mensalistas of the session's pelada who haven't confirmed and haven't been reminded of it yet (the scheduled
+    // job's guard against duplicates, together with uq_notifications_scheduled in production)
+    @Query("""
+        SELECT u FROM Daily d JOIN d.pelada p JOIN p.members u
+        WHERE d = :daily
+          AND EXISTS (SELECT 1 FROM PeladaMensalista m WHERE m.pelada = p AND m.user = u)
+          AND NOT EXISTS (SELECT 1 FROM DailyAttendance a WHERE a.daily = d AND a.user = u)
+          AND NOT EXISTS (SELECT 1 FROM Notification n WHERE n.recipient = u AND n.daily = d
+              AND n.type = com.futspring.backend.domain.notification.NotificationType.SESSION_REMINDER)
+        """)
+    List<User> findReminderRecipients(@Param("daily") Daily daily);
+
+    // Diaristas (every member without a mensalista row: creator and admins included) who haven't confirmed and
+    // haven't been told the window opened for this session yet
+    @Query("""
+        SELECT u FROM Daily d JOIN d.pelada p JOIN p.members u
+        WHERE d = :daily
+          AND NOT EXISTS (SELECT 1 FROM PeladaMensalista m WHERE m.pelada = p AND m.user = u)
+          AND NOT EXISTS (SELECT 1 FROM DailyAttendance a WHERE a.daily = d AND a.user = u)
+          AND NOT EXISTS (SELECT 1 FROM Notification n WHERE n.recipient = u AND n.daily = d
+              AND n.type = com.futspring.backend.domain.notification.NotificationType.DIARISTA_WINDOW_OPEN)
+        """)
+    List<User> findWindowOpenRecipients(@Param("daily") Daily daily);
+
+    // Retention: read notifications created before the cutoff
+    @Modifying
+    @Query("DELETE FROM Notification n WHERE n.readAt IS NOT NULL AND n.createdAt < :cutoff")
+    int deleteReadCreatedBefore(@Param("cutoff") Instant cutoff);
+
+    // Retention: every notification created before the cutoff, read or not
+    @Modifying
+    @Query("DELETE FROM Notification n WHERE n.createdAt < :cutoff")
+    int deleteCreatedBefore(@Param("cutoff") Instant cutoff);
+
     @Modifying
     @Query("DELETE FROM Notification n WHERE n.daily = :daily")
     void deleteByDaily(@Param("daily") Daily daily);
