@@ -34,6 +34,11 @@ export function NotificationBell({ compact = false, className }: NotificationBel
     if (next) refresh()
   }
 
+  function openPreferences() {
+    setOpen(false)
+    navigate("/settings/notifications")
+  }
+
   function handleSelect(notification: NotificationResponse, href: string | null) {
     markRead(notification)
     if (!href) return
@@ -77,6 +82,7 @@ export function NotificationBell({ compact = false, className }: NotificationBel
             <NotificationPanel
               title={<DrawerTitle className="text-[15px] font-semibold">Notificações</DrawerTitle>}
               onSelect={handleSelect}
+              onOpenPreferences={openPreferences}
               className="flex min-h-0 flex-1 flex-col"
             />
           </DrawerContent>
@@ -94,7 +100,12 @@ export function NotificationBell({ compact = false, className }: NotificationBel
         aria-label="Notificações"
         className="flex max-h-[min(560px,calc(100vh-96px))] w-[380px] max-w-[calc(100vw-32px)] flex-col overflow-hidden rounded-tile border-input bg-card p-0 shadow-panel"
       >
-        <NotificationPanel title={title} onSelect={handleSelect} className="flex min-h-0 flex-1 flex-col" />
+        <NotificationPanel
+          title={title}
+          onSelect={handleSelect}
+          onOpenPreferences={openPreferences}
+          className="flex min-h-0 flex-1 flex-col"
+        />
       </PopoverContent>
     </Popover>
   )

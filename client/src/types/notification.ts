@@ -33,6 +33,22 @@ export const notificationCategoryLabel: Record<NotificationCategory, string> = {
   AWARDS: "Prêmios",
 }
 
+// rows of the e-mail preferences page, in this order
+export const notificationPreferenceText: Record<NotificationCategory, { label: string; description: string }> = {
+  ATTENDANCE: { label: "Presença e vaga", description: "Perdeu a vaga, sessão cancelada, lembrete de confirmação" },
+  SESSION: { label: "Sessões", description: "Nova sessão, confirmações abertas, sessão finalizada" },
+  MEMBERSHIP: { label: "Membros", description: "Adicionado, removido, virou admin ou mensalista" },
+  AWARDS: { label: "Prêmios", description: "Artilheiro, Garçom, Puskás, Bola Murcha" },
+}
+
+export const NOTIFICATION_CATEGORIES = Object.keys(notificationPreferenceText) as NotificationCategory[]
+
+// mirrors NotificationPreferenceDTO: GET always returns the four categories with the defaults applied
+export interface NotificationPreference {
+  category: NotificationCategory
+  emailEnabled: boolean
+}
+
 // same mapping as NotificationType.category() in the backend
 export const notificationTypeCategory: Record<NotificationType, NotificationCategory> = {
   DIARISTA_BUMPED: "ATTENDANCE",

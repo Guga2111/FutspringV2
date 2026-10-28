@@ -42,7 +42,7 @@ CI (`.github/workflows/ci-backend.yml`) runs `./mvnw -B verify` (every test, inc
 | secret | `RESEND_API_KEY` | optional for now; without it the API sends no e-mails (the deploy warns) |
 | secret | `PG_DUMP_URL` | optional; libpq URL on the Supabase session pooler (5432) for the pre-migration backup |
 | variable | `VPS_IP`, `APP_URL` | required |
-| variable | `VPS_USER` (`root`), `API_URL` (baked in as `VITE_API_URL`, defaults to `APP_URL`; production is `https://futspring.luisgosampaio.com/api` because nginx's `location /api/` strips the prefix before proxying to `:8081`), `ALLOWED_ORIGINS` (defaults to `APP_URL`), `API_PORT` (`8081`), `JWT_EXPIRATION_MS`, `MAIL_FROM` (defaults to `Futspring <no-reply@futspring.luisgosampaio.com>`) | optional |
+| variable | `VPS_USER` (`root`), `API_URL` (baked in as `VITE_API_URL` and written to `.env` as the API's `API_URL`, defaults to `APP_URL`; production is `https://futspring.luisgosampaio.com/api` because nginx's `location /api/` strips the prefix before proxying to `:8081`), `ALLOWED_ORIGINS` (defaults to `APP_URL`), `API_PORT` (`8081`), `JWT_EXPIRATION_MS`, `MAIL_FROM` (defaults to `Futspring <no-reply@futspring.luisgosampaio.com>`) | optional |
 
 ## Configuration & environment
 
@@ -57,11 +57,12 @@ There is a single `src/main/resources/application.properties`; there are no `app
 | `DDL_AUTO` | `spring.jpa.hibernate.ddl-auto`; leave unset (the schema is owned by Flyway) | `validate` |
 | `ALLOWED_ORIGINS` | allowed browser origins, comma-separated; used by HTTP CORS (Spring Security `http.cors`) and the STOMP endpoint (`app.cors.allowed-origins`, `CorsConfig`) | `http://localhost:5173` |
 | `APP_URL` | frontend base URL (`app.frontend-url`), used to build links sent by e-mail | `http://localhost:5173` |
+| `API_URL` | public base URL of this API (`app.api-url`), for the one-click `List-Unsubscribe` header the mail provider calls; production `https://futspring.luisgosampaio.com/api` | `http://localhost:8080` |
 | `RESEND_API_KEY` | Resend API key (`app.mail.resend-api-key`); empty means no e-mail is sent | — |
 | `MAIL_FROM` | sender (`app.mail.from`), must belong to the domain verified in Resend (`futspring.luisgosampaio.com`) | `Futspring <no-reply@futspring.luisgosampaio.com>` |
 | `SPRING_PROFILES_ACTIVE` | `dev` runs the seed (`docker-compose.dev.yml`), `prod` in production | — |
 
-Locally, `docker-compose.dev.yml` passes `RESEND_API_KEY`, `MAIL_FROM` and `APP_URL` from `core/.env` (gitignored, next to the compose file). Compose only uses `.env` to fill `${…}` in the file, so a new variable reaches the container only when it is listed under `environment`.
+Locally, `docker-compose.dev.yml` passes `RESEND_API_KEY`, `MAIL_FROM`, `APP_URL` and `API_URL` from `core/.env` (gitignored, next to the compose file). Compose only uses `.env` to fill `${…}` in the file, so a new variable reaches the container only when it is listed under `environment`.
 
 - Uploads go to `app.uploads.dir=/app/uploads` (container path; override it when running outside Docker). Multipart limit is 10 MB, but `FileUploadService` enforces 5 MB.
 - `server.forward-headers-strategy=framework`: behind nginx, `getRemoteAddr()` is the client IP (rate limiting). The API only listens on `127.0.0.1`.
@@ -107,7 +108,7 @@ com.futspring.backend
 │   │   │                           DailyService (create, list, status transitions, delete, detail aggregation)
 │   │   │                           DailyAttendanceService (confirm / unconfirm, self and by admin; diarista window, capacity, mensalista bump,
 │   │   │                           row lock; bumps seen), AttendanceWindow (session start / diarista window in the pelada's zone),
-│   │   │                           DiaristaBumpedEvent + DiaristaBumpedEmailListener + DiaristaBumpedEmail (bump e-mail after commit, @Async)
+│   │   │                           DiaristaBumpedEvent (the bump's notification and e-mail go through domain/notification)
 │   │   │                           DailyTeamManagementService (sort teams with LPT balanced by the stars in the pelada, swap, rename, color)
 │   │   │                           DailyResultsService (results, live league table, finalize, champion image, populate, clearResults)
 │   │   │                           DailySchedulerService (hourly cron that auto-creates the next daily), DailyDTOMapper (Player/Team/MatchDTO),
@@ -126,13 +127,19 @@ com.futspring.backend
 │   │   │                           collapse of repeatable types, saves the rows and registers the after-commit delivery),
 │   │   │                           NotificationInboxService (list / count / read / read-all of the caller), NotificationController,
 │   │   │                           Notification + NotificationRepository, NotificationType (category + emailable), NotificationCategory,
-│   │   │                           NotificationAward, NotificationDelivery (after-commit hook: the push; the e-mail joins it later),
+│   │   │                           NotificationAward, NotificationDelivery (after-commit hook: the push, then the e-mail),
 │   │   │                           NotificationPushService (@Async STOMP push to /user/queue/notifications),
-│   │   │                           NotificationDTOAssembler (NotificationDTOs of one or many recipients, one team query)
-│   │   └── dto/                    NotificationDTO, NotificationPushDTO, UnreadCountDTO
-│   ├── mail/                       EmailSender (interface, takes InlineImage CID attachments), ResendEmailSender (Resend HTTP API through RestClient, 5 s / 10 s
-│   │                               timeouts), NoopEmailSender (no API key: logs recipient + subject only), MailConfig
-│   │                               (picks the sender, exposes app.frontend-url for links)
+│   │   │                           NotificationDTOAssembler (NotificationDTOs of one or many recipients, one team query),
+│   │   │                           NotificationPreference (+ Id) + repository + NotificationPreferenceService (e-mail per category, only
+│   │   │                           what differs from the default is stored; unsubscribe / resubscribe by token), UnsubscribeTokens (HMAC),
+│   │   │                           NotificationEmailDispatcher (own single-thread executor, bounded queue), EmailPacer (Bucket4j, 2/s),
+│   │   │                           NotificationEmailContent (exhaustive switch: subject, title, body, CTA per type),
+│   │   │                           NotificationEmail (fills resources/email/notification.html)
+│   │   └── dto/                    NotificationDTO, NotificationPushDTO, UnreadCountDTO, NotificationPreferenceDTO, UnsubscribeRequestDTO
+│   ├── mail/                       EmailSender (interface, takes InlineImage CID attachments and extra headers; enabled() is false
+│   │                               for the no-op), ResendEmailSender (Resend HTTP API through RestClient, 5 s / 10 s timeouts),
+│   │                               NoopEmailSender (no API key: logs recipient + subject only), MailConfig (picks the sender,
+│   │                               exposes app.frontend-url and app.api-url for links)
 │   ├── file/                       FileController (public GET /files/{filename}), FileUploadService (stores/deletes images on local disk,
 │   │                               UUID + extension from the content type, delete after commit)
 └── dev/DataInitializer         dev seed (CommandLineRunner, dev profile only)
@@ -148,7 +155,7 @@ New code goes in the domain it belongs to (a new feature is a new package under 
 - **Caller resolution.** The principal is the email (`@AuthenticationPrincipal String email` in controllers); services load the user with `UserAuthenticationHelper.getAuthenticatedUser(email)`. Don't repeat `userRepository.findByEmail(...).orElseThrow(...)`.
 - **Relationship checks** go through `PeladaAccessHelper` (exists queries), never `pelada.getMembers().contains(...)`.
 - **Uploads** always go through `FileUploadService` (size and content-type checks, UUID names, extension from the content type). Replaced files are removed with `deleteImageAfterCommit`, so a rollback never loses the old image. Files are served publicly by `FileController` (`GET /api/v1/files/{filename}`, with a path-traversal guard).
-- **Notifications.** Services publish domain events (`DiaristaBumpedEvent`, `DailyCreatedEvent`, `DailyCanceledEvent`, `AttendanceChangedByAdminEvent`, `TeamsSortedEvent`, `DailyFinalizedEvent` in `domain/daily`; `MembersAddedEvent`, `MembersRemovedEvent`, `AdminsChangedEvent`, `MensalistasChangedEvent`, `PeladaTransferredEvent` in `domain/pelada`) carrying the entities they already loaded. `NotificationService` handles them with plain `@EventListener`s, so the rows are written in the publisher's transaction (a rollback leaves none), and registers `NotificationDelivery.deliver(ids)` for after the commit, which pushes them over STOMP (`NotificationPushService`, on the default `@Async` pool: it reloads the rows with fetch joins, builds the DTOs through `NotificationDTOAssembler` and sends each recipient `NotificationPushDTO {notification, unreadCount}` on `/user/queue/notifications`; a failure is only logged, the row is stored and the client recounts on reconnect). A collapsed notification keeps its id, so the client replaces it. Rules: the actor is never notified; `TEAMS_SORTED` / `SESSION_FINISHED` reuse the recipient's unread row for that session (its `createdAt` moves to now); `AWARD_WON` only on the first finalize, with no actor (the admin who finalized hears about their own award); admin/mensalista changes only notify members whose status changed; stars never notify. A feature that should notify publishes an event and gets a type in `NotificationType` (and the V-migration CHECK).
+- **Notifications.** Services publish domain events (`DiaristaBumpedEvent`, `DailyCreatedEvent`, `DailyCanceledEvent`, `AttendanceChangedByAdminEvent`, `TeamsSortedEvent`, `DailyFinalizedEvent` in `domain/daily`; `MembersAddedEvent`, `MembersRemovedEvent`, `AdminsChangedEvent`, `MensalistasChangedEvent`, `PeladaTransferredEvent` in `domain/pelada`) carrying the entities they already loaded. `NotificationService` handles them with plain `@EventListener`s, so the rows are written in the publisher's transaction (a rollback leaves none), and registers `NotificationDelivery.deliver(ids)` for after the commit, which pushes them over STOMP (`NotificationPushService`, on the default `@Async` pool: it reloads the rows with fetch joins, builds the DTOs through `NotificationDTOAssembler` and sends each recipient `NotificationPushDTO {notification, unreadCount}` on `/user/queue/notifications`; a failure is only logged, the row is stored and the client recounts on reconnect) and then queues the e-mails (`NotificationEmailDispatcher`, see [Notification e-mails](#notification-e-mails)). A collapsed notification keeps its id, so the client replaces it. Rules: the actor is never notified; `TEAMS_SORTED` / `SESSION_FINISHED` reuse the recipient's unread row for that session (its `createdAt` moves to now); `AWARD_WON` only on the first finalize, with no actor (the admin who finalized hears about their own award); admin/mensalista changes only notify members whose status changed; stars never notify. A feature that should notify publishes an event and gets a type in `NotificationType` (and the V-migration CHECK).
 - **Denormalized aggregates.** `Ranking`, `Stats` and `UserDailyStats` are rebuilt from match data on finalize, results edits on a finalized daily, daily delete and pelada delete, through `AggregateRebuildService.rebuild(pelada, players)`. Any feature that changes match data must call it.
 
 ## Domain model
@@ -175,8 +182,7 @@ All entities use IDENTITY ids and **LAZY** fetching, Lombok `@Getter @Setter` (n
 | `PeladaPlayerStars` | `pelada_player_stars` (unique `pelada_id`+`user_id`) | `stars` (1–5), `updatedAt`; `pelada`, `user`. A member's stars in one pelada, set by its admins; a member without a row has `DEFAULT_STARS` (3). Read in one query per pelada (`findStarsByPelada`); deleted when the member is removed or the pelada is deleted. Used by team sorting, the member/team/player DTOs and the profile average |
 | `Message` | `messages` | `content` (≤ 500), `sentAt`; `pelada`, `sender` |
 | `Notification` | `notifications` | `type` (`NotificationType`, its category and emailable flag live in the enum), `award` (`NotificationAward`, only on `AWARD_WON`), `createdAt`, `readAt` (null = unread); `recipient`, `pelada`, `daily`, `actor` (null for system events). Only references are stored; the text is rendered by the client. Deleted with its daily (`DailyService.deleteDailyData`) or pelada (`PeladaService.deletePelada`) |
-
-`notification_preferences` (`user_id`, `category`, `email_enabled`, PK `(user_id, category)`) exists since V10 but has no entity yet (e-mail preferences).
+| `NotificationPreference` | `notification_preferences` (PK `user_id`+`category`) | `@EmbeddedId NotificationPreferenceId (userId, category)` with `@MapsId` `user`, `emailEnabled`. A row exists only when the user's choice differs from `NotificationCategory.defaultEmail` (`ATTENDANCE`, `MEMBERSHIP` on; `SESSION`, `AWARDS` off), so changing a default reaches everyone who never touched it. Created in V10; deleted with the user (`ON DELETE CASCADE`) |
 
 There are no JPA cascades: deletes are explicit in the services (`DailyService.deleteDailyData`, `PeladaService.deletePelada`), notifications included.
 
@@ -194,7 +200,7 @@ There are no JPA cascades: deletes are explicit in the services (`DailyService.d
 - **Admins** skip the window and the capacity (they can push a session over the limit) and never bump anyone.
 - **Lock:** every confirmation loads the daily with `DailyRepository.findByIdForUpdate` (`PESSIMISTIC_WRITE`, a database row lock held until commit), so the count and the victim choice never race and it works across API instances; other sessions don't wait. `setMensalista` and a `maxMensalistas` change lock the pelada row the same way.
 - No waiting list: nobody is promoted when someone withdraws; a bumped diarista may confirm again under the normal rules.
-- **Bump e-mail:** `DiaristaBumpedEmailListener` (`@Async @TransactionalEventListener`, after commit) reloads the bump with its users and pelada and sends `resources/email/diarista-bumped.html` (same structure as the reset e-mail; `{{username}}`, `{{bumpedBy}}`, `{{peladaName}}` HTML-escaped; link `${app.frontend-url}/daily/{id}`). A Resend failure is only logged; the in-app alert (`myBump` / `nextDaily.bump` until `bumps/seen`) still shows.
+- **Bump e-mail:** the bump is a `DIARISTA_BUMPED` notification (Attendance, e-mail on by default), e-mailed like every other one (see [Notification e-mails](#notification-e-mails)), with a link to `/daily/{id}`. A Resend failure is only logged; the in-app alert (`myBump` / `nextDaily.bump` until `bumps/seen`) still shows.
 - **Mensalista limit:** marking past `maxMensalistas` → 409 "Limite de mensalistas atingido (8/8)"; lowering the limit below the current count → 409 "Desmarque 2 mensalistas antes de reduzir o limite" (the system never picks who loses the status); a limit above the capacity → 409 "O limite de mensalistas não pode passar das vagas (10)".
 - Read paths stay at a constant number of queries: mensalista ids per pelada in one query, the caller's mensalista peladas in one query, unseen bumps for `/peladas/my` in one query.
 
@@ -245,8 +251,8 @@ New status-like fields must be Java enums stored with `@Enumerated(EnumType.STRI
 ### Filter chain (`S/shared/config/SecurityConfig.java`)
 
 - CSRF disabled, stateless sessions, JSON 401 entry point.
-- Public: `/api/v1/auth/**`, `/api/v1/files/**`, `/ws/**` (the STOMP layer authenticates itself, see WebSocket). Everything else requires a valid token.
-- `JwtAuthFilter` runs before `UsernamePasswordAuthenticationFilter`. It accepts a Bearer token only through `AccessTokenVerifier`: valid signature, not expired, the user still exists and the `ver` claim equals `users.token_version` (one indexed query per authenticated request). Otherwise it returns 401 on **any** path, including the public ones.
+- Public: `/api/v1/auth/**`, `/api/v1/files/**`, `/ws/**` (the STOMP layer authenticates itself, see WebSocket) and `POST /api/v1/notifications/unsubscribe` / `/resubscribe` (`SecurityConfig.EMAIL_LINK_PATHS`, authorized by the HMAC token in the request). Everything else requires a valid token.
+- `JwtAuthFilter` runs before `UsernamePasswordAuthenticationFilter`. It accepts a Bearer token only through `AccessTokenVerifier`: valid signature, not expired, the user still exists and the `ver` claim equals `users.token_version` (one indexed query per authenticated request). Otherwise it returns 401 on **any** path, including the public ones, except `EMAIL_LINK_PATHS`, where it ignores the header (`shouldNotFilter`): a visitor whose stored session expired must still be able to use the e-mail's link, and those routes never read the caller.
 - No roles: authorities are always empty, there is no `@PreAuthorize`/`@EnableMethodSecurity`. **All authorization is done in services** (see [Ownership](#ownership--authorization)).
 - Passwords: BCrypt (strength 10).
 
@@ -263,7 +269,7 @@ New status-like fields must be Java enums stored with `@Enumerated(EnumType.STRI
 
 ### Rate limiting
 
-`AuthRateLimitFilter` (in the security chain): 10 requests per minute per client IP on each of `POST /api/v1/auth/login`, `/register`, `/forgot-password` and `/reset-password`, answering 429 with the usual error body. Buckets live in a Caffeine cache (max 100k entries, evicted 10 min after the last access). The IP is `getRemoteAddr()`, which reflects `X-Forwarded-For` because of `server.forward-headers-strategy=framework`. In memory: one API instance only. New rate limits go into a filter like this one.
+`AuthRateLimitFilter` (in the security chain): 10 requests per minute per client IP on each of `POST /api/v1/auth/login`, `/register`, `/forgot-password`, `/reset-password` and the e-mail link routes `/api/v1/notifications/unsubscribe` and `/resubscribe`, answering 429 with the usual error body. Buckets live in a Caffeine cache (max 100k entries, evicted 10 min after the last access). The IP is `getRemoteAddr()`, which reflects `X-Forwarded-For` because of `server.forward-headers-strategy=framework`. In memory: one API instance only. New rate limits go into a filter like this one.
 
 ### WebSocket (`S/domain/auth/JwtChannelInterceptor.java`)
 
@@ -281,6 +287,15 @@ New status-like fields must be Java enums stored with `@Enumerated(EnumType.STRI
 - `POST /auth/reset-password` finds the token by hash with a row lock (unused, not expired), sets the new BCrypt password and marks every pending token of the user as used. Any invalid token answers 400 "Link inválido ou expirado. Peça um novo.".
 - The reset increments `User.tokenVersion`, so every session opened before (other browsers, a stolen token) gets 401 on its next request and the frontend sends it to `/auth`.
 - `PasswordResetTokenCleanup` deletes tokens expired or used more than a day ago, daily at 04:00.
+
+### Notification e-mails
+
+- **When:** the type is emailable (`NotificationType.emailable`), the recipient's category is on (their `notification_preferences` row, else `NotificationCategory.defaultEmail`) and the sender is real (`EmailSender.enabled()`; the no-op only logs). The preferences of every recipient of a batch are read in one query.
+- **Dispatch:** `NotificationDelivery` calls `NotificationEmailDispatcher.dispatch(ids)` after the commit; it only queues a task on its **own** single-thread `ThreadPoolTaskExecutor` (queue of 500). The executor is created by the dispatcher, not exposed as a bean: an `Executor` bean would replace Spring Boot's default `@Async` executor. The task builds the e-mails in a short read-only transaction (`findAllByIdInWithRefs` + preferences) and sends them **outside** it, one by one, through `EmailPacer` (Bucket4j: one send every 500 ms, no burst, so never more than Resend's ~2 requests/s; 30 e-mails ≈ 15 s). A full queue, a failed build or a failed send is only logged; no retry. The Resend batch endpoint isn't used because it doesn't take attachments (the logo is `cid:`).
+- **Text and template:** `NotificationEmailContent.of(notification)` is an exhaustive `switch` over `NotificationType` (a new type doesn't compile without its subject, title, body and CTA); the dates come from `AttendanceWindow` in the pelada's zone. `NotificationEmail` fills `resources/email/notification.html` (same structure and inline logo as the reset e-mail) in one pass, HTML-escaping every value, so a pelada or user name can never fill another placeholder.
+- **Unsubscribe:** the footer says which category is on and links to "Desativar" (`${app.frontend-url}/notifications/unsubscribe?token=…`, a page that POSTs the token) and "Preferências" (`/settings/notifications`). The token (`UnsubscribeTokens`) is `base64url("userId:CATEGORY")` + `.` + HMAC-SHA256, keyed by an HMAC of `JWT_SECRET` with the context `"notification-unsubscribe"`; not stored, no expiry, it only turns that category of that user off or on. Every e-mail also carries `List-Unsubscribe: <${app.api-url}/api/v1/notifications/unsubscribe?token=…>` and `List-Unsubscribe-Post: List-Unsubscribe=One-Click` (RFC 8058), so Gmail / Yahoo can unsubscribe with a POST straight to the API.
+- **Quota:** production is on Resend's free plan (100 e-mails/day, 3,000/month, shared with the password reset). That is enough at today's scale (it takes roughly 30 peladas of 40 players to matter); if it gets tight, the plan upgrade or the daily digest (phase 2) are the next steps.
+- The password reset e-mail stays separate: transactional, not a notification, no unsubscribe.
 
 ### Uploads
 
@@ -328,7 +343,8 @@ Relationships: **creator** (`pelada.creator`), **admin** (`pelada.admins`), **me
 | User stats, timeline, match history (`/users/{id}/stats…`) | self, or a user who shares a pelada (403 otherwise); non-self viewers only get sessions of the peladas they share |
 | Peladas in common (`/users/{id}/peladas`) | any; returns only peladas both users belong to |
 | Search users | any; public fields only (`PublicUserDTO`), query ≥ 3 characters |
-| List / count / read notifications (`/notifications/**`) | self only: every route reads the caller from the token and takes no `userId`; someone else's notification id → 404 |
+| List / count / read notifications, e-mail preferences (`/notifications/**`) | self only: every route reads the caller from the token and takes no `userId`; someone else's notification id → 404 |
+| Unsubscribe / resubscribe from an e-mail (`POST /notifications/unsubscribe`, `/resubscribe`) | public: the HMAC token names the user and category; an invalid token → 400 |
 
 ### Rules for new code
 
@@ -433,7 +449,7 @@ All routes are under `/api/v1`. "Auth" is the relationship checked (see the matr
 | DELETE | `/dailies/{id}` | — | admin | 204; rebuilds Ranking/Stats when the daily was finalized |
 
 ### Notifications (`NotificationController`, `/notifications`)
-Every route acts on the caller's notifications only.
+Every route acts on the caller's notifications only, except unsubscribe / resubscribe, which are public and act on the user and category signed in the e-mail's token.
 
 | Method | Path | Body | Response |
 |--------|------|------|----------|
@@ -442,7 +458,14 @@ Every route acts on the caller's notifications only.
 | POST | `/notifications/{id}/read` | — | 204; idempotent; missing or someone else's → 404. A `DIARISTA_BUMPED` notification also sets the bump's `seenAt` |
 | POST | `/notifications/read-all` | — | 204; also sets `seenAt` on the bumps of the `DIARISTA_BUMPED` notifications it reads |
 
+| GET | `/notifications/preferences` | — | `List<NotificationPreferenceDTO {category, emailEnabled}>`: always the four categories, defaults applied |
+| PUT | `/notifications/preferences` | `List<NotificationPreferenceDTO>` (1–4 items, `category` and `emailEnabled` `@NotNull`; a repeated category → 400) | the four categories after the change. Partial: only the categories sent change; a value equal to the default deletes the row instead of storing it |
+| POST | `/notifications/unsubscribe` | `UnsubscribeRequestDTO {token}` (JSON, from the client's page) **or** `?token=` with any body (RFC 8058 one-click from the mail provider, form body `List-Unsubscribe=One-Click`) | **public**, rate-limited; `NotificationPreferenceDTO` with `emailEnabled: false`; idempotent; a tampered token, a swapped category or an unknown user → 400 "Link inválido" |
+| POST | `/notifications/resubscribe` | `UnsubscribeRequestDTO {token}` | **public**, rate-limited; the same token turns the category back on |
+
 Types and recipients (the actor is always left out): `DIARISTA_BUMPED` (bumped diarista), `SESSION_CANCELED` (confirmed players), `ATTENDANCE_CONFIRMED_BY_ADMIN` / `ATTENDANCE_REMOVED_BY_ADMIN` (the player; "Confirmar todos" included), `SESSION_CREATED` (every member; from the scheduler with no actor), `TEAMS_SORTED` / `SESSION_FINISHED` (players on the teams; collapsed while unread), `AWARD_WON` (each winner per award, first finalize only), `ADDED_TO_PELADA`, `REMOVED_FROM_PELADA`, `ADMIN_GRANTED` / `ADMIN_REVOKED`, `MENSALISTA_GRANTED` / `MENSALISTA_REVOKED` (members whose status changed), `PELADA_TRANSFERRED` (new creator). `SESSION_REMINDER` and `DIARISTA_WINDOW_OPEN` are reserved for the scheduled job (not created yet). Importing teams from a message (`populate`) doesn't notify.
+
+E-mail: the emailable types go by e-mail when the recipient's category is on (see [Notification e-mails](#notification-e-mails)). Not emailable: `ATTENDANCE_CONFIRMED_BY_ADMIN`, `TEAMS_SORTED`, `ADMIN_REVOKED`.
 
 Realtime: after the commit every new or collapsed notification is sent to its recipient on the STOMP user queue `/user/queue/notifications` as `NotificationPushDTO {notification: NotificationDTO, unreadCount}` (`unreadCount` is the recipient's unread total after it, so a collapsed notification isn't counted twice). Three queries per batch (rows with fetch joins, the recipients' teams of `TEAMS_SORTED`, a grouped unread count). Nothing is replayed: a client that was offline refetches `unread-count` when it reconnects.
 
@@ -469,7 +492,7 @@ When an endpoint or DTO changes, update this table, the frontend `src/api/*` + `
 - **Aggregates:** compute in the DB with grouped queries (as finalize does: `aggregateStatsByUsers`), not by looping and querying per user.
 - **Transactions:** `@Transactional` on writes, `@Transactional(readOnly = true)` on reads. `open-in-view` is on, so lazy loads in controllers silently work; don't rely on it — build DTOs inside the service transaction.
 - **Pagination:** any list that grows with time (messages, dailies, match history) takes a `Pageable` with a capped `size` (chat: 1–100).
-- **Single instance assumptions:** the in-memory STOMP broker, the rate-limit cache and `@Scheduled` (no ShedLock) only work with one API instance.
+- **Single instance assumptions:** the in-memory STOMP broker, the rate-limit cache, the notification e-mail queue and pacer (e-mails still queued are lost on a restart) and `@Scheduled` (no ShedLock) only work with one API instance.
 - **Scheduler:** `DailySchedulerService` runs hourly in server-local time; a failing pelada is logged and skipped. `dayOfWeek` is validated on create/update.
 
 ## Testing
@@ -480,7 +503,7 @@ Tests live in `src/test/java/com/futspring/backend`, in the same domain packages
 - **Controller integration tests** — extend `BaseIntegrationTest` (`@SpringBootTest(RANDOM_PORT)`, `@AutoConfigureMockMvc`, `@Transactional`, real JWTs from `JwtService`).
 - **Repository tests** — `@DataJpaTest` on H2 (`UserRepositoryTest`, `DailyRepositoryTest`, `UserDailyStatsRepositoryTest`, `DailyAwardRepositoryTest` for the native award queries).
 - **Attendance** — `DailyAttendanceServiceTest` uses `Clock.fixed` and `support/InMemoryAttendance` (lenient stubs that back `DailyAttendanceRepository` with an in-memory list); `AttendanceWindowTest` covers zones and the Canadian DST change; `DailyAttendanceRepositoryTest` the victim query; `AttendanceConcurrencyTest` (Testcontainers Postgres, no test transaction, skipped without Docker) races diaristas for the last spot and expects exactly one to get it.
-- **Notifications** — `NotificationServiceTest` (recipients per type, actor excluded, collapse, awards only on the first finalize, delivery only after commit, through `TransactionSynchronizationManager`); `NotificationPushServiceTest` (each recipient's e-mail and unread count, the team on `TEAMS_SORTED`, one failed send doesn't stop the others, failures only logged); `NotificationControllerTest` (REST, the bump `seenAt` ↔ `readAt` sync both ways, one event per path end to end, deleting a daily / pelada with notifications on H2). The publishing services' tests verify the events they publish.
+- **Notifications** — `NotificationServiceTest` (recipients per type, actor excluded, collapse, awards only on the first finalize, delivery only after commit, through `TransactionSynchronizationManager`); `NotificationPushServiceTest` (each recipient's e-mail and unread count, the team on `TEAMS_SORTED`, one failed send doesn't stop the others, failures only logged); `NotificationControllerTest` (REST, the bump `seenAt` ↔ `readAt` sync both ways, one event per path end to end, deleting a daily / pelada with notifications on H2, preferences GET/PUT and validation, public unsubscribe / resubscribe with no session, a stale session header, the one-click form POST, invalid tokens and the rate limit); `NotificationEmailContentTest` (every type renders subject, title, body and CTA; escaping and one-pass placeholders); `NotificationEmailDispatcherTest` (send matrix type × preference × default, headers, pacing per send, failures only logged, nothing queued without a real sender); `EmailPacerTest` (fake clock: never more than 2 sends in a second); `UnsubscribeTokensTest` (tampered, swapped category or user, another secret). The publishing services' tests verify the events they publish.
 - **WebSocket** — `JwtChannelInterceptorTest` covers CONNECT/SUBSCRIBE/SEND rules (the notification queue included).
 - **Migration tests** — `FlywayMigrationTest` applies every migration to a Postgres container and starts the app with `validate`; `MigrationDataTest` migrates to a version, inserts production-shaped rows and checks what the next migration does. A new migration or entity change must keep them green (needs Docker).
 - When adding an endpoint: a controller test (happy path, validation 400, 403 for non-member/non-admin, 404) and service tests for the rules, including the ownership cases listed in [Rules for new code](#rules-for-new-code).

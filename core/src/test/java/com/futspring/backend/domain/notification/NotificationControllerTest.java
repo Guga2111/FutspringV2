@@ -23,12 +23,15 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.hasSize;
@@ -46,6 +49,9 @@ class NotificationControllerTest extends BaseIntegrationTest {
     @Autowired private PeladaMensalistaRepository mensalistaRepository;
     @Autowired private TeamRepository teamRepository;
     @Autowired private NotificationRepository notificationRepository;
+    @Autowired private NotificationPreferenceRepository preferenceRepository;
+    @Autowired private NotificationPreferenceService preferenceService;
+    @Autowired private UnsubscribeTokens unsubscribeTokens;
     @Autowired private EntityManager entityManager;
 
     private User admin;
@@ -352,5 +358,202 @@ class NotificationControllerTest extends BaseIntegrationTest {
                 .andExpect(status().isNoContent());
 
         assertThat(notificationsOf(member)).isEmpty();
+    }
+
+    // --- preferences ---
+
+    private String preferencesBody(Object... categoryAndEnabled) throws Exception {
+        List<Map<String, Object>> items = new java.util.ArrayList<>();
+        for (int i = 0; i < categoryAndEnabled.length; i += 2) {
+            items.add(Map.of("category", categoryAndEnabled[i], "emailEnabled", categoryAndEnabled[i + 1]));
+        }
+        return objectMapper.writeValueAsString(items);
+    }
+
+    @Test
+    void preferences_withoutRows_returnTheDefaults() throws Exception {
+        mockMvc.perform(get("/api/v1/notifications/preferences").header("Authorization", auth(member)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(4)))
+                .andExpect(jsonPath("$[?(@.category == 'ATTENDANCE')].emailEnabled").value(true))
+                .andExpect(jsonPath("$[?(@.category == 'MEMBERSHIP')].emailEnabled").value(true))
+                .andExpect(jsonPath("$[?(@.category == 'SESSION')].emailEnabled").value(false))
+                .andExpect(jsonPath("$[?(@.category == 'AWARDS')].emailEnabled").value(false));
+    }
+
+    @Test
+    void updatePreferences_storesOnlyWhatDiffersFromTheDefault() throws Exception {
+        mockMvc.perform(put("/api/v1/notifications/preferences").header("Authorization", auth(member))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(preferencesBody("ATTENDANCE", false, "SESSION", true, "MEMBERSHIP", true)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(4)))
+                .andExpect(jsonPath("$[?(@.category == 'ATTENDANCE')].emailEnabled").value(false))
+                .andExpect(jsonPath("$[?(@.category == 'SESSION')].emailEnabled").value(true));
+
+        assertThat(preferenceRepository.findByIdUserId(member.getId()))
+                .extracting(NotificationPreference::getCategory)
+                .containsExactlyInAnyOrder(NotificationCategory.ATTENDANCE, NotificationCategory.SESSION);
+        assertThat(preferenceRepository.findByIdUserId(admin.getId())).isEmpty();
+
+        // back to the default → the row goes away
+        mockMvc.perform(put("/api/v1/notifications/preferences").header("Authorization", auth(member))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(preferencesBody("ATTENDANCE", true)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.category == 'ATTENDANCE')].emailEnabled").value(true))
+                .andExpect(jsonPath("$[?(@.category == 'SESSION')].emailEnabled").value(true));
+        assertThat(preferenceRepository.findByIdUserId(member.getId()))
+                .extracting(NotificationPreference::getCategory)
+                .containsExactly(NotificationCategory.SESSION);
+    }
+
+    @Test
+    void updatePreferences_invalidBodies_returnBadRequest() throws Exception {
+        for (String body : List.of(
+                "[]",
+                preferencesBody("ATTENDANCE", false, "ATTENDANCE", true),
+                "[{\"category\": null, \"emailEnabled\": true}]",
+                "[{\"category\": \"ATTENDANCE\"}]",
+                "[{\"category\": \"CHAT\", \"emailEnabled\": true}]")) {
+            mockMvc.perform(put("/api/v1/notifications/preferences").header("Authorization", auth(member))
+                            .contentType(MediaType.APPLICATION_JSON).content(body))
+                    .andExpect(status().isBadRequest());
+        }
+        assertThat(preferenceRepository.findByIdUserId(member.getId())).isEmpty();
+    }
+
+    @Test
+    void preferences_withoutToken_returnUnauthorized() throws Exception {
+        mockMvc.perform(get("/api/v1/notifications/preferences")).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void emailEnabled_appliesTheDefaultsAndTheRowsOfEachUser() {
+        preferenceRepository.save(new NotificationPreference(member, NotificationCategory.ATTENDANCE, false));
+        preferenceRepository.save(new NotificationPreference(member, NotificationCategory.AWARDS, true));
+        flushAndClear();
+
+        Map<Long, Map<NotificationCategory, Boolean>> enabled =
+                preferenceService.emailEnabled(List.of(member.getId(), admin.getId()));
+
+        assertThat(enabled.get(member.getId())).containsEntry(NotificationCategory.ATTENDANCE, false)
+                .containsEntry(NotificationCategory.AWARDS, true)
+                .containsEntry(NotificationCategory.MEMBERSHIP, true)
+                .containsEntry(NotificationCategory.SESSION, false);
+        assertThat(enabled.get(admin.getId())).containsEntry(NotificationCategory.ATTENDANCE, true)
+                .containsEntry(NotificationCategory.AWARDS, false);
+    }
+
+    // --- public unsubscribe / resubscribe ---
+
+    private static final AtomicInteger IP = new AtomicInteger();
+
+    // A new client IP per request, so these tests never share a rate-limit bucket
+    private static RequestPostProcessor freshIp() {
+        int n = IP.incrementAndGet();
+        return request -> {
+            request.setRemoteAddr("10.1." + (n / 250) + "." + (n % 250 + 1));
+            return request;
+        };
+    }
+
+    private String tokenBody(String token) throws Exception {
+        return objectMapper.writeValueAsString(Map.of("token", token));
+    }
+
+    private Map<NotificationCategory, Boolean> emailOf(User user) {
+        flushAndClear();
+        return preferenceService.emailEnabled(List.of(user.getId())).get(user.getId());
+    }
+
+    @Test
+    void unsubscribe_withoutSession_turnsOnlyThatUsersCategoryOff() throws Exception {
+        String token = unsubscribeTokens.create(member.getId(), NotificationCategory.ATTENDANCE);
+
+        mockMvc.perform(post("/api/v1/notifications/unsubscribe").with(freshIp())
+                        .contentType(MediaType.APPLICATION_JSON).content(tokenBody(token)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.category").value("ATTENDANCE"))
+                .andExpect(jsonPath("$.emailEnabled").value(false));
+
+        assertThat(emailOf(member)).containsEntry(NotificationCategory.ATTENDANCE, false)
+                .containsEntry(NotificationCategory.MEMBERSHIP, true);
+        assertThat(emailOf(admin)).containsEntry(NotificationCategory.ATTENDANCE, true);
+    }
+
+    // The browser may still hold an expired or revoked session: the route ignores it instead of answering 401
+    @Test
+    void unsubscribe_withAStaleSessionHeader_stillWorks() throws Exception {
+        String token = unsubscribeTokens.create(member.getId(), NotificationCategory.MEMBERSHIP);
+
+        mockMvc.perform(post("/api/v1/notifications/unsubscribe").with(freshIp())
+                        .header("Authorization", "Bearer not-a-valid-jwt")
+                        .contentType(MediaType.APPLICATION_JSON).content(tokenBody(token)))
+                .andExpect(status().isOk());
+
+        assertThat(emailOf(member)).containsEntry(NotificationCategory.MEMBERSHIP, false);
+    }
+
+    // RFC 8058: the mail provider POSTs "List-Unsubscribe=One-Click" to the header's URL, token in the query
+    @Test
+    void unsubscribe_oneClickFromTheMailProvider() throws Exception {
+        String token = unsubscribeTokens.create(member.getId(), NotificationCategory.ATTENDANCE);
+
+        mockMvc.perform(post("/api/v1/notifications/unsubscribe").with(freshIp()).queryParam("token", token)
+                        .contentType(MediaType.APPLICATION_FORM_URLENCODED).content("List-Unsubscribe=One-Click"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.emailEnabled").value(false));
+
+        assertThat(emailOf(member)).containsEntry(NotificationCategory.ATTENDANCE, false);
+    }
+
+    @Test
+    void resubscribe_turnsTheCategoryBackOn() throws Exception {
+        String token = unsubscribeTokens.create(member.getId(), NotificationCategory.SESSION);
+
+        mockMvc.perform(post("/api/v1/notifications/resubscribe").with(freshIp())
+                        .contentType(MediaType.APPLICATION_JSON).content(tokenBody(token)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.category").value("SESSION"))
+                .andExpect(jsonPath("$.emailEnabled").value(true));
+
+        assertThat(emailOf(member)).containsEntry(NotificationCategory.SESSION, true);
+    }
+
+    @Test
+    void unsubscribe_invalidTokens_returnBadRequest() throws Exception {
+        String valid = unsubscribeTokens.create(member.getId(), NotificationCategory.ATTENDANCE);
+        String swapped = java.util.Base64.getUrlEncoder().withoutPadding()
+                .encodeToString((member.getId() + ":SESSION").getBytes()) + "." + valid.split("\\.")[1];
+        String unknownUser = unsubscribeTokens.create(999_999L, NotificationCategory.ATTENDANCE);
+
+        for (String token : List.of(valid + "x", swapped, unknownUser, "garbage")) {
+            mockMvc.perform(post("/api/v1/notifications/unsubscribe").with(freshIp())
+                            .contentType(MediaType.APPLICATION_JSON).content(tokenBody(token)))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.message").value("Link inválido"));
+        }
+        mockMvc.perform(post("/api/v1/notifications/unsubscribe").with(freshIp())
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"token\": \"\"}"))
+                .andExpect(status().isBadRequest());
+
+        assertThat(emailOf(member)).containsEntry(NotificationCategory.ATTENDANCE, true)
+                .containsEntry(NotificationCategory.SESSION, false);
+    }
+
+    @Test
+    void unsubscribe_isRateLimitedPerIp() throws Exception {
+        String token = unsubscribeTokens.create(member.getId(), NotificationCategory.ATTENDANCE);
+        RequestPostProcessor sameIp = freshIp();
+
+        for (int i = 0; i < 10; i++) {
+            mockMvc.perform(post("/api/v1/notifications/unsubscribe").with(sameIp)
+                            .contentType(MediaType.APPLICATION_JSON).content(tokenBody(token)))
+                    .andExpect(status().isOk());
+        }
+        mockMvc.perform(post("/api/v1/notifications/unsubscribe").with(sameIp)
+                        .contentType(MediaType.APPLICATION_JSON).content(tokenBody(token)))
+                .andExpect(status().isTooManyRequests());
     }
 }

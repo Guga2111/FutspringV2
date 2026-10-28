@@ -11,17 +11,8 @@ import org.springframework.data.repository.query.Param;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
-import java.util.Optional;
 
 public interface DailyAttendanceBumpRepository extends JpaRepository<DailyAttendanceBump, Long> {
-
-    // Everything the bump e-mail needs, in one query (it runs after the commit, outside the transaction)
-    @Query("""
-        SELECT b FROM DailyAttendanceBump b
-        JOIN FETCH b.user JOIN FETCH b.bumpedBy JOIN FETCH b.daily d JOIN FETCH d.pelada
-        WHERE b.id = :id
-        """)
-    Optional<DailyAttendanceBump> findByIdWithDetails(@Param("id") Long id);
 
     // The session's bump history, newest first
     @Query("""
