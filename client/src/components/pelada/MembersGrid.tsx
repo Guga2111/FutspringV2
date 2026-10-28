@@ -25,6 +25,8 @@ interface MembersGridProps {
   isCurrentUserAdmin: boolean
   togglingAdmin: number | null
   togglingMensalista: number | null
+  settingStars: number | null
+  removingMember: number | null
   onAddPlayer: () => void
   onToggleAdmin: (member: PeladaMember) => void
   onRemoveMember: (member: PeladaMember) => void
@@ -42,6 +44,8 @@ export function MembersGrid({
   isCurrentUserAdmin,
   togglingAdmin,
   togglingMensalista,
+  settingStars,
+  removingMember,
   onAddPlayer,
   onToggleAdmin,
   onRemoveMember,
@@ -146,7 +150,10 @@ export function MembersGrid({
               stats={statsById.get(member.id) ?? NO_STATS}
               canManage={isCurrentUserAdmin && member.id !== creatorId}
               canSetStars={isCurrentUserAdmin}
-              isToggling={togglingAdmin === member.id || togglingMensalista === member.id}
+              isToggling={
+                togglingAdmin === member.id || togglingMensalista === member.id || settingStars === member.id
+              }
+              isRemoving={removingMember === member.id}
               mensalistaLimitHint={limitHint}
               onToggleAdmin={() => onToggleAdmin(member)}
               onRemove={() => onRemoveMember(member)}

@@ -5,12 +5,11 @@ export function ConfirmRemoveDialog({
   member,
   onConfirm,
   onClose,
-  loading,
 }: {
   member: PeladaMember
+  // the page closes the dialog and the removal runs in the background (the card is dimmed meanwhile)
   onConfirm: () => void
   onClose: () => void
-  loading: boolean
 }) {
   return (
     <ConfirmActionDialog
@@ -22,7 +21,7 @@ export function ConfirmRemoveDialog({
       }
       confirmLabel="Remover"
       pendingLabel="Removendo..."
-      loading={loading}
+      loading={false}
       onConfirm={onConfirm}
       onClose={onClose}
     />

@@ -52,6 +52,7 @@ export default function PeladaDetailPage() {
     refetchDailies,
     mergeDaily,
     mergeMember,
+    dropMember,
   } = usePeladaDetail(id);
 
   const [showAddPlayer, setShowAddPlayer] = useState(false);
@@ -100,7 +101,8 @@ export default function PeladaDetailPage() {
 
   const {
     deleting,
-    removing,
+    removingMember,
+    settingStars,
     togglingAdmin,
     togglingMensalista,
     attendancePending,
@@ -110,7 +112,7 @@ export default function PeladaDetailPage() {
     setMemberStars,
     setMemberMensalista,
     toggleAttendance,
-  } = usePeladaActions(pelada, refetchPelada, mergeDaily, mergeMember);
+  } = usePeladaActions(pelada, refetchDailies, mergeDaily, mergeMember, dropMember);
 
   const nextSession = useMemo(() => pickNextSession(dailies), [dailies]);
   const pastSessions = useMemo(
@@ -122,10 +124,11 @@ export default function PeladaDetailPage() {
     if (!(await removePeladaAndLeave())) setShowDeleteConfirm(false);
   };
 
-  const handleRemoveConfirm = async () => {
-    if (confirmRemoveMember && (await removeMember(confirmRemoveMember))) {
-      setConfirmRemoveMember(null);
-    }
+  // Close the dialog before the request, so the member leaves the list with no overlay open
+  const handleRemoveConfirm = () => {
+    if (!confirmRemoveMember) return;
+    setConfirmRemoveMember(null);
+    void removeMember(confirmRemoveMember);
   };
 
   return (
@@ -168,6 +171,8 @@ export default function PeladaDetailPage() {
                     isCurrentUserAdmin={isCurrentUserAdmin}
                     togglingAdmin={togglingAdmin}
                     togglingMensalista={togglingMensalista}
+                    settingStars={settingStars}
+                    removingMember={removingMember}
                     onAddPlayer={() => setShowAddPlayer(true)}
                     onToggleAdmin={toggleAdmin}
                     onRemoveMember={setConfirmRemoveMember}
@@ -202,6 +207,7 @@ export default function PeladaDetailPage() {
                     <RankingCommandButton
                       peladaId={pelada.id}
                       members={pelada.members}
+                      creatorId={pelada.creatorId}
                       isAdmin={isCurrentUserAdmin}
                       onCreateSession={() => setShowCreateSession(true)}
                       onAddPlayer={() => setShowAddPlayer(true)}
@@ -263,7 +269,6 @@ export default function PeladaDetailPage() {
           member={confirmRemoveMember}
           onConfirm={handleRemoveConfirm}
           onClose={() => setConfirmRemoveMember(null)}
-          loading={removing}
         />
       )}
 
