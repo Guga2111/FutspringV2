@@ -126,7 +126,7 @@ Every route acts on the caller only (from the token); none takes a `userId`.
 
 | Method | Path | Body | Response |
 |--------|------|------|----------|
-| GET | `/notifications?page=0&size=20` | — | `List<NotificationDTO>`, newest first; `size` clamped to 1–50 |
+| GET | `/notifications?page=0&size=20&unread=false` | — | `List<NotificationDTO>`, newest first; `size` clamped to 1–50; `unread=true` only returns unread ones (the panel's "Não lidas" chip) |
 | GET | `/notifications/unread-count` | — | `{count}` |
 | POST | `/notifications/{id}/read` | — | 204; someone else's notification → 404; idempotent |
 | POST | `/notifications/read-all` | — | 204 |
@@ -279,11 +279,23 @@ Between PR 1 and PR 3 the bump keeps sending its e-mail through the old listener
 ### Order inside each PR
 
 **PR 1** touches about 8 services, so it is built in steps, each with its tests:
-1. V10, `Notification`, `NotificationType` (category + emailable), `NotificationCategory`, repository, `NotificationService` with the synchronous listener and the after-commit registration (no-op until PR 2), explicit deletes.
-2. Three types end to end, one per path: `DIARISTA_BUMPED` (attendance), `SESSION_CANCELED` (status), `ADDED_TO_PELADA` (membership).
-3. `NotificationController` (list, count, read, read-all) and the `bumps/seen` ↔ `read_at` sync.
-4. Client: types, api module, `utils/notifications.ts`, bell, panel. The bell works from here on.
-5. The remaining non-scheduled types, one service at a time (actor excluded, collapse of `TEAMS_SORTED` / `SESSION_FINISHED`, awards only on the first finalize).
+- [x] 1. V10, `Notification`, `NotificationType` (category + emailable), `NotificationCategory`, repository, `NotificationService` with the synchronous listener and the after-commit registration (no-op until PR 2), explicit deletes.
+- [x] 2. Three types end to end, one per path: `DIARISTA_BUMPED` (attendance), `SESSION_CANCELED` (status), `ADDED_TO_PELADA` (membership).
+- [x] 3. `NotificationController` (list, count, read, read-all) and the `bumps/seen` ↔ `read_at` sync.
+- [x] 4. Client: types, api module, `utils/notifications.ts`, bell, panel. The bell works from here on.
+- [x] 5. The remaining non-scheduled types, one service at a time (actor excluded, collapse of `TEAMS_SORTED` / `SESSION_FINISHED`, awards only on the first finalize).
+
+Decisions taken while building PR 1:
+- `AWARD_WON` is a system event (`actor` null): the admin who finalizes still gets their own award; `SESSION_FINISHED` skips them (rule 1).
+- `GET /notifications` takes `?unread=true` so the "Não lidas" chip pages on the server (added to the REST table above).
+- V10 creates both tables; `notification_preferences` has no entity until PR 3 (`validate` ignores unmapped tables).
+- Events carry the entities the publishing service already loaded (`domain/daily`: `DailyCreatedEvent`, `DailyCanceledEvent`, `AttendanceChangedByAdminEvent`, `TeamsSortedEvent`, `DailyFinalizedEvent`; `domain/pelada`: `MembersAddedEvent`, `MembersRemovedEvent`, `AdminsChangedEvent`, `MensalistasChangedEvent`, `PeladaTransferredEvent`); the bump reuses `DiaristaBumpedEvent`. Only cancel (confirmed players) and create (members) read their recipients.
+- The after-commit hook is `NotificationDelivery.deliver(ids)`, a no-op that PR 2 (push) and PR 3 (e-mail) fill in. The list itself is `NotificationInboxService`, so `NotificationService` stays the pipeline.
+- Admin and mensalista changes only notify members whose status actually changed (both routes are idempotent). "Confirmar todos" notifies each newly confirmed member.
+- `read-all` also sets `seenAt` on the bumps it reads, like reading one bump notification. In the client, reading a bump notification clears the Home alert (`AppLayout.clearBumps`), and dismissing the alert reads the notification (`markBumpRead`).
+- Importing teams from a WhatsApp message (`populate`) doesn't send `TEAMS_SORTED`; only the sort does.
+- The panel's gear to the preferences waits for PR 3 (the route doesn't exist yet); the UserMenu item stays "Em breve".
+- `SESSION_REMINDER` text in the client uses the date ("Sessão de sáb, 31/10 às 20:00 na …"), not "amanhã", because the bell may be read days later.
 
 **PR 2:** first extract the connection with backoff from `usePeladaChat` into `RealtimeProvider` with the chat behaving exactly as before (checked by hand), then add the `/user/queue/notifications` subscription, the server push and the toasts.
 

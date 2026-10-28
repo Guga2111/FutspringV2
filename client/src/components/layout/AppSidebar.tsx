@@ -17,16 +17,17 @@ import { useSidebar } from "@/components/ui/sidebar-context"
 import { useMyPeladasContext } from "@/hooks/useMyPeladasContext"
 import { SidebarPeladaItem } from "@/components/layout/SidebarPeladaItem"
 import { UserMenu } from "@/components/layout/UserMenu"
+import { NotificationBell } from "@/components/notifications/NotificationBell"
 
 export function AppSidebar() {
   const { pathname } = useLocation()
   const { peladas, loading, openCreatePelada } = useMyPeladasContext()
-  const { isMobile, toggleSidebar, setOpenMobile } = useSidebar()
+  const { isMobile, state, toggleSidebar, setOpenMobile } = useSidebar()
   const closeOnMobile = () => setOpenMobile(false)
 
   return (
     <Sidebar collapsible="icon" className="border-sidebar-border">
-      <SidebarHeader className="h-[60px] flex-row items-center gap-2.5 px-3.5 py-4 group-data-[collapsible=icon]:justify-center">
+      <SidebarHeader className="h-[60px] flex-row items-center gap-1.5 px-3.5 py-4 group-data-[collapsible=icon]:h-auto group-data-[collapsible=icon]:flex-col-reverse group-data-[collapsible=icon]:justify-center">
         <Link
           to="/home"
           onClick={closeOnMobile}
@@ -35,6 +36,13 @@ export function AppSidebar() {
           <img src="/logo-64.png" alt="" width={30} height={30} className="size-[30px] shrink-0 rounded-full object-cover" />
           <span className="text-gradient-primary text-[17px] font-bold">FutSpring</span>
         </Link>
+        {/* on mobile the bell lives in the top bar */}
+        {!isMobile && (
+          <NotificationBell
+            compact={state === "collapsed"}
+            className="size-7 rounded-lg hover:bg-sidebar-accent [&_svg]:size-4"
+          />
+        )}
         <Button
           variant="ghost"
           size="icon"

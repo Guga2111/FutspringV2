@@ -1,5 +1,6 @@
 package com.futspring.backend.domain.daily;
 
+import org.springframework.context.ApplicationEventPublisher;
 import com.futspring.backend.domain.daily.entity.Daily;
 import com.futspring.backend.domain.daily.entity.DailyStatus;
 import com.futspring.backend.domain.daily.repository.DailyRepository;
@@ -26,6 +27,9 @@ import static org.mockito.Mockito.*;
 class DailySchedulerServiceTest {
 
     @Mock
+    ApplicationEventPublisher eventPublisher;
+
+    @Mock
     PeladaRepository peladaRepository;
     @Mock
     DailyRepository dailyRepository;
@@ -34,7 +38,7 @@ class DailySchedulerServiceTest {
 
     @BeforeEach
     void setUp() {
-        schedulerService = new DailySchedulerService(peladaRepository, dailyRepository);
+        schedulerService = new DailySchedulerService(peladaRepository, dailyRepository, eventPublisher);
     }
 
     // The scheduler creates a daily the day before (next occurrence's midnight 0-24 h ahead), so tests
@@ -61,6 +65,7 @@ class DailySchedulerServiceTest {
         schedulerService.autoCreateDailies();
 
         verify(dailyRepository, never()).save(any());
+        verifyNoInteractions(eventPublisher);
     }
 
     @Test
@@ -77,6 +82,8 @@ class DailySchedulerServiceTest {
         ArgumentCaptor<Daily> captor = ArgumentCaptor.forClass(Daily.class);
         verify(dailyRepository).save(captor.capture());
         assertThat(captor.getValue().getStatus()).isEqualTo(DailyStatus.SCHEDULED);
+        // created by the system: no actor, so every member is notified
+        verify(eventPublisher).publishEvent(new DailyCreatedEvent(captor.getValue(), null));
     }
 
     @Test

@@ -43,6 +43,15 @@ public interface DailyAttendanceBumpRepository extends JpaRepository<DailyAttend
     @Query("UPDATE DailyAttendanceBump b SET b.seenAt = :now WHERE b.daily = :daily AND b.user = :user AND b.seenAt IS NULL")
     int markSeen(@Param("daily") Daily daily, @Param("user") User user, @Param("now") Instant now);
 
+    // The user's bumps of several sessions at once (reading every notification)
+    @Modifying
+    @Query("""
+        UPDATE DailyAttendanceBump b SET b.seenAt = :now
+        WHERE b.user = :user AND b.daily.id IN :dailyIds AND b.seenAt IS NULL
+        """)
+    int markSeenInDailies(@Param("user") User user, @Param("dailyIds") Collection<Long> dailyIds,
+                          @Param("now") Instant now);
+
     @Modifying
     @Query("DELETE FROM DailyAttendanceBump b WHERE b.daily = :daily")
     void deleteByDaily(@Param("daily") Daily daily);

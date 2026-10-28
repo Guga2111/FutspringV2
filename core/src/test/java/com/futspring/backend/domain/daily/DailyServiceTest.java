@@ -1,5 +1,7 @@
 package com.futspring.backend.domain.daily;
 
+import com.futspring.backend.domain.notification.NotificationRepository;
+import org.springframework.context.ApplicationEventPublisher;
 import com.futspring.backend.domain.pelada.PeladaPlayerStarsRepository;
 import com.futspring.backend.domain.daily.dto.CreateDailyRequestDTO;
 import com.futspring.backend.domain.daily.dto.DailyDetailDTO;
@@ -44,6 +46,12 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class DailyServiceTest {
 
+    @Mock
+    NotificationRepository notificationRepository;
+
+    @Mock
+    ApplicationEventPublisher eventPublisher;
+
     @Mock AggregateRebuildService aggregateRebuildService;
     @Mock FileUploadService fileUploadService;
     @Mock UserAuthenticationHelper userAuthHelper;
@@ -83,7 +91,8 @@ class DailyServiceTest {
                 dailyRepository, attendanceRepository, bumpRepository, mensalistaRepository, peladaRepository, playerStarsRepository, teamRepository,
                 matchRepository, playerMatchStatRepository, userDailyStatsRepository,
                 leagueTableEntryRepository, dailyAwardRepository,
-                new DailyListItemAssembler(attendanceRepository, teamRepository, matchRepository, mensalistaRepository));
+                new DailyListItemAssembler(attendanceRepository, teamRepository, matchRepository, mensalistaRepository),
+                notificationRepository, eventPublisher);
 
         admin = User.builder().id(1L).email("admin@example.com").username("admin").password("hash").build();
         member = User.builder().id(2L).email("member@example.com").username("member").password("hash").build();
@@ -132,6 +141,8 @@ class DailyServiceTest {
         DailyListItemDTO result = dailyService.createDaily(10L, req, "admin@example.com");
 
         assertThat(result).isNotNull();
+        verify(eventPublisher).publishEvent(argThat((Object e) -> e instanceof DailyCreatedEvent c
+                && c.daily().getId().equals(100L) && admin.equals(c.actor())));
     }
 
     @Test
@@ -292,6 +303,7 @@ class DailyServiceTest {
         dailyService.updateStatus(100L, DailyStatus.CONFIRMED, "admin@example.com");
 
         assertThat(scheduledDaily.getStatus()).isEqualTo(DailyStatus.CONFIRMED);
+        verifyNoInteractions(eventPublisher);
     }
 
     @Test
@@ -303,6 +315,7 @@ class DailyServiceTest {
         dailyService.updateStatus(100L, DailyStatus.CANCELED, "admin@example.com");
 
         assertThat(scheduledDaily.getStatus()).isEqualTo(DailyStatus.CANCELED);
+        verify(eventPublisher).publishEvent(new DailyCanceledEvent(scheduledDaily, admin));
     }
 
     @Test
@@ -383,6 +396,7 @@ class DailyServiceTest {
         verify(dailyTeamManagementService).clearTeams(scheduledDaily);
         verify(dailyAttendanceService).clearAttendees(scheduledDaily);
         verify(bumpRepository).deleteByDaily(scheduledDaily);
+        verify(notificationRepository).deleteByDaily(scheduledDaily);
         verify(dailyRepository).delete(scheduledDaily);
     }
 
