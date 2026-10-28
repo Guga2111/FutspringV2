@@ -1,5 +1,4 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { useAuth } from "@/hooks/useAuth";
 import { cn, getFileUrl, getInitials } from "@/lib/utils";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -29,8 +28,7 @@ interface ChatPanelProps {
 
 // Messages and composer of the pelada chat; the floating panel / drawer around it lives in PeladaChat
 export function ChatPanel({ peladaId, currentUserId, size = "panel" }: ChatPanelProps) {
-  const { token } = useAuth();
-  const { messages, loading, connectionState, send } = usePeladaChat(peladaId, token);
+  const { messages, loading, connectionState, send } = usePeladaChat(peladaId);
   const [inputValue, setInputValue] = useState("");
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const wasNearBottomRef = useRef(true);

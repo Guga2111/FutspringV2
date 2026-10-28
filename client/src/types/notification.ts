@@ -71,6 +71,12 @@ export interface NotificationResponse {
   team: { name: string; color: string | null } | null
 }
 
+// mirrors NotificationPushDTO: a frame on /user/queue/notifications, with the recipient's unread count after it
+export interface NotificationPush {
+  notification: NotificationResponse
+  unreadCount: number
+}
+
 export interface UnreadCountResponse {
   count: number
 }
