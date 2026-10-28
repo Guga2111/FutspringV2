@@ -325,18 +325,24 @@ public class PeladaService {
         if (request.getReference() != null) pelada.setReference(request.getReference());
         if (request.getAutoCreateDailyEnabled() != null) pelada.setAutoCreateDailyEnabled(request.getAutoCreateDailyEnabled());
         if (request.getTimeZone() != null) pelada.setTimeZone(validTimeZone(request.getTimeZone()));
-        if (request.getMaxMensalistas() != null) {
+        boolean capacityChanged = request.getNumberOfTeams() != null || request.getPlayersPerTeam() != null;
+        if (capacityChanged || request.getMaxMensalistas() != null) {
             // Same lock as setMensalista: the count can't change while the limit is checked
             peladaRepository.findByIdForUpdate(peladaId);
-            int max = request.getMaxMensalistas();
+            if (request.getNumberOfTeams() != null) pelada.setNumberOfTeams(request.getNumberOfTeams());
+            if (request.getPlayersPerTeam() != null) pelada.setPlayersPerTeam(request.getPlayersPerTeam());
+            // The limit (new or current) must fit the resulting capacity
+            int max = request.getMaxMensalistas() != null ? request.getMaxMensalistas() : pelada.getMaxMensalistas();
             requireMaxWithinCapacity(max, pelada);
-            long current = mensalistaRepository.countByPelada(pelada);
-            if (current > max) {
-                // The system never picks who loses the status
-                throw new AppException(HttpStatus.CONFLICT,
-                        "Desmarque " + (current - max) + " mensalistas antes de reduzir o limite");
+            if (request.getMaxMensalistas() != null) {
+                long current = mensalistaRepository.countByPelada(pelada);
+                if (current > max) {
+                    // The system never picks who loses the status
+                    throw new AppException(HttpStatus.CONFLICT,
+                            "Desmarque " + (current - max) + " mensalistas antes de reduzir o limite");
+                }
+                pelada.setMaxMensalistas(max);
             }
-            pelada.setMaxMensalistas(max);
         }
 
         return PeladaResponseDTO.forAdmin(peladaRepository.save(pelada));
@@ -381,6 +387,41 @@ public class PeladaService {
         String filename = fileUploadService.uploadImage(file);
         fileUploadService.deleteImageAfterCommit(pelada.getImage());
         pelada.setImage(filename);
+        return PeladaResponseDTO.forAdmin(peladaRepository.save(pelada));
+    }
+
+    /** Back to the gradient with initials; the file is deleted after the commit. Idempotent. */
+    @Transactional
+    public PeladaResponseDTO removePeladaImage(Long peladaId, String currentUserEmail) {
+        User caller = userAuthHelper.getAuthenticatedUser(currentUserEmail);
+        Pelada pelada = findPelada(peladaId);
+        accessHelper.requireAdmin(pelada, caller);
+
+        fileUploadService.deleteImageAfterCommit(pelada.getImage());
+        pelada.setImage(null);
+        return PeladaResponseDTO.forAdmin(peladaRepository.save(pelada));
+    }
+
+    /**
+     * The creator hands the pelada to another admin. The old creator stays member and admin; they only lose what
+     * is reserved to the creator (delete, transfer, not being removable or demotable).
+     */
+    @Transactional
+    public PeladaResponseDTO transferCreator(Long peladaId, Long userId, String currentUserEmail) {
+        User caller = userAuthHelper.getAuthenticatedUser(currentUserEmail);
+        Pelada pelada = findPelada(peladaId);
+        if (!accessHelper.isCreator(pelada, caller)) {
+            throw new AppException(HttpStatus.FORBIDDEN, "Apenas o criador pode transferir a pelada");
+        }
+        if (caller.getId().equals(userId)) {
+            throw new AppException(HttpStatus.BAD_REQUEST, "Você já é o criador da pelada");
+        }
+        User target = findMembers(pelada, List.of(userId)).get(0);
+        if (!accessHelper.isAdmin(pelada, target)) {
+            throw new AppException(HttpStatus.CONFLICT, "Só é possível transferir a pelada para um admin");
+        }
+
+        pelada.setCreator(target);
         return PeladaResponseDTO.forAdmin(peladaRepository.save(pelada));
     }
 

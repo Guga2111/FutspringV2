@@ -98,11 +98,11 @@ com.futspring.backend
 │   │                               ForgotPasswordRequestDTO, ResetPasswordRequestDTO
 │   ├── user/                       UserController, UserService (profile get/update, avatar, background image), User, UserRepository
 │   │   └── dto/                    ProfileDTO, PublicUserDTO, UpdateProfileRequest
-│   ├── pelada/                     PeladaController, PeladaService (pelada CRUD, members, admins, member stars, mensalistas, user search, image; each member action works on a list of members and the single routes call it with one id), Pelada, PeladaRepository,
+│   ├── pelada/                     PeladaController, PeladaService (pelada CRUD, members, admins, member stars, mensalistas, user search, image, creator transfer; each member action works on a list of members and the single routes call it with one id), Pelada, PeladaRepository,
 │   │                               PeladaPlayerStars + PeladaPlayerStarsRepository (stars per member, profile average),
 │   │                               PeladaMensalista + PeladaMensalistaRepository (members marked as mensalistas)
 │   │   └── dto/                    Create/UpdatePeladaRequestDTO, DayOfWeekPattern, PeladaResponseDTO, PeladaDetailResponseDTO, PeladaMemberDTO, UpdatePlayerStarsRequestDTO,
-│   │                               SetMensalistaRequestDTO, Bulk{SetAdmin,SetMensalista,SetStars,RemovePlayers}RequestDTO…
+│   │                               SetMensalistaRequestDTO, Bulk{SetAdmin,SetMensalista,SetStars,RemovePlayers}RequestDTO, TransferCreatorRequestDTO…
 │   ├── daily/                      DailyController and the daily services:
 │   │   │                           DailyService (create, list, status transitions, delete, detail aggregation)
 │   │   │                           DailyAttendanceService (confirm / unconfirm, self and by admin; diarista window, capacity, mensalista bump,
@@ -297,10 +297,11 @@ Relationships: **creator** (`pelada.creator`), **admin** (`pelada.admins`), **me
 |--------|----------|
 | Create pelada | any authenticated user (becomes creator, member and admin) |
 | Read pelada detail, dailies, daily detail, ranking, attendance ranking, awards, member stats/history, chat history, send chat, subscribe to the chat topic | member (member stats/history: the target user must also be a member, else 404) |
-| Update pelada, upload pelada image, add/remove player, set/unset admin | admin (the creator can't be removed or demoted; remove/set admin need the target to be a member, else 404). Remove and set admin also work on a list of members: one request, one transaction, any invalid target fails the whole batch |
+| Update pelada (teams and players per team included), upload/remove pelada image, add/remove player, set/unset admin | admin (the creator can't be removed or demoted; remove/set admin need the target to be a member, else 404). Remove and set admin also work on a list of members: one request, one transaction, any invalid target fails the whole batch |
 | Set a member's stars in the pelada | admin; any member, the creator and the caller included (target must be a member, else 404); one member or a list (atomic) |
 | Mark/unmark a member as mensalista | admin; any member, the creator and the caller included (target must be a member, else 404; 409 past `maxMensalistas`); one member or a list (atomic: a batch that doesn't fit changes nobody) |
 | Delete pelada (cascades dailies, results, teams, attendance, messages, rankings; rebuilds global Stats) | creator |
+| Transfer the pelada (`PUT /peladas/{id}/creator`) | creator; the target must be an admin of the pelada; the old creator stays admin |
 | Create daily, change status, delete daily, sort/swap teams, submit results, finalize, populate, champion image | admin of the daily's pelada |
 | Confirm attendance (self) | member; diaristas only inside their window and while there are spots (see [Attendance](#attendance-mensalistas-and-diaristas)) |
 | Dismiss the bump alert (`bumps/seen`) | member; only the caller's own bumps |
@@ -330,7 +331,6 @@ Relationships: **creator** (`pelada.creator`), **admin** (`pelada.admins`), **me
 |-----|-------|
 | No unique constraint on `user_daily_stats(daily_id, user_id)` / `player_match_stats(match_id, user_id)` (the code never writes duplicates, but the database doesn't enforce it). Check production for duplicates before adding them | `V1__baseline.sql` |
 | `DailySchedulerService` and `nextDaily`'s "from today" still use the server's zone, not the pelada's `timeZone` | `DailySchedulerService`, `PeladaService.toSummaries` |
-| `UpdatePeladaRequestDTO` can't change `numberOfTeams`/`playersPerTeam`, so the "capacity below `maxMensalistas`" check only runs on create and on a limit change | `PeladaService` |
 | The JWT is valid for 7 days and can only be revoked for all of a user's sessions at once (`tokenVersion`); an open chat connection survives the revocation until it reconnects | `JwtAuthFilter`, `JwtService` |
 
 ## Error handling (`S/shared/exception/GlobalExceptionHandler.java`)
@@ -375,7 +375,8 @@ All routes are under `/api/v1`. "Auth" is the relationship checked (see the matr
 | POST | `/peladas` | `CreatePeladaRequestDTO` (`dayOfWeek` `MONDAY`..`SUNDAY`, `timeOfDay` `HH:mm`, 2–10 teams, 2–20 players per team, optional `timeZone` (IANA, default `America/Sao_Paulo`, unknown → 400), `maxMensalistas` ≥ 0 (default 0, above the capacity → 409)) | any | 201 `PeladaResponseDTO` |
 | GET | `/peladas/my` | — | self | `List<PeladaResponseDTO>` with `memberCount`, `isAdmin` (the caller administers it) `timeZone` and `nextDaily` (`{id, date, time, status, confirmedCount, capacity, isConfirmed, startsAt, confirmOpensAt, bump}`: the next `SCHEDULED`/`CONFIRMED` session from today, or null; `capacity` = `numberOfTeams × playersPerTeam`, `isConfirmed` is the caller's attendance, `startsAt` the session start (ISO instant), `confirmOpensAt` from when the caller may confirm themselves (null for mensalistas), `bump` the caller's unseen `AttendanceBumpDTO` or null). Grouped queries, constant count |
 | GET | `/peladas/{id}` | — | member | `PeladaDetailResponseDTO` (includes `numberOfTeams`, `playersPerTeam`, `timeZone`, `maxMensalistas` and `members` with `isAdmin`, `isMensalista` and their `stars` in this pelada) |
-| PUT | `/peladas/{id}` | `UpdatePeladaRequestDTO` (partial; `dayOfWeek` `MONDAY`..`SUNDAY`, `timeOfDay` `HH:mm`, `timeZone` (unknown → 400), `maxMensalistas` ≥ 0 (409 below the current mensalistas or above the capacity)) | admin | `PeladaResponseDTO` |
+| PUT | `/peladas/{id}` | `UpdatePeladaRequestDTO` (partial; `dayOfWeek` `MONDAY`..`SUNDAY`, `timeOfDay` `HH:mm`, `timeZone` (unknown → 400), `numberOfTeams` 2–10, `playersPerTeam` 2–20, `maxMensalistas` ≥ 0 (409 below the current mensalistas or above the resulting capacity: the limit, new or current, is checked against the new numbers under the pelada row lock)) | admin | `PeladaResponseDTO`. A new capacity also applies to the sessions already scheduled: nobody is removed (a session with more confirmed players is just over the limit) and sorted teams stay |
+| PUT | `/peladas/{id}/creator` | `TransferCreatorRequestDTO {userId}` (`@NotNull`) | creator | `PeladaResponseDTO`; `userId` must be a member (404) and an admin (409 "Só é possível transferir a pelada para um admin"); yourself → 400. The old creator stays member and admin |
 | DELETE | `/peladas/{id}` | — | creator | 204; deletes dailies (results, teams, attendance, photos), messages and rankings, then rebuilds the players' global Stats |
 | POST | `/peladas/{id}/players` | `AddPlayerRequestDTO {userId}` | admin | 200; 409 if already a member |
 | DELETE | `/peladas/{id}/players/{userId}` | — | admin | 200; 404 if `userId` isn't a member. Also deletes their stars and mensalista row, and takes them out of the attendance and teams of the pelada's sessions that haven't started (`SCHEDULED`/`CONFIRMED`); live, finished and canceled sessions keep them, and their results, rankings and stats stay |
@@ -393,6 +394,7 @@ All routes are under `/api/v1`. "Auth" is the relationship checked (see the matr
 | GET | `/peladas/{id}/awards` | — | member | `PeladaAwardsDTO` |
 | GET | `/peladas/{id}/messages?page=0&size=50` | — | member | `List<MessageDTO>` (oldest first); `size` is clamped to 1–100, `page` to ≥ 0 |
 | POST | `/peladas/{id}/image` | multipart `file` | admin | `PeladaResponseDTO` |
+| DELETE | `/peladas/{id}/image` | — | admin | `PeladaResponseDTO` with `image` null; the file is deleted after the commit; idempotent |
 
 ### Dailies (`DailyController`)
 | Method | Path | Body | Auth | Response |

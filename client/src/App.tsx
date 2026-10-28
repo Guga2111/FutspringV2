@@ -11,6 +11,7 @@ const ForgotPasswordPage = lazy(() => import("@/pages/ForgotPasswordPage"))
 const ResetPasswordPage = lazy(() => import("@/pages/ResetPasswordPage"))
 const HomePage = lazy(() => import("@/pages/HomePage"))
 const PeladaDetailPage = lazy(() => import("@/pages/PeladaDetailPage"))
+const PeladaSettingsPage = lazy(() => import("@/pages/PeladaSettingsPage"))
 const DailyDetailPage = lazy(() => import("@/pages/DailyDetailPage"))
 const ProfilePage = lazy(() => import("@/pages/ProfilePage"))
 const NotFoundPage = lazy(() => import("@/pages/NotFoundPage"))
@@ -31,6 +32,7 @@ function App() {
           <Route element={<ErrorBoundary><PrivateRoute><AppLayout /></PrivateRoute></ErrorBoundary>}>
             <Route path="/home" element={<ErrorBoundary><HomePage /></ErrorBoundary>} />
             <Route path="/pelada/:id" element={<ErrorBoundary><PeladaDetailPage /></ErrorBoundary>} />
+            <Route path="/pelada/:id/settings" element={<ErrorBoundary><PeladaSettingsPage /></ErrorBoundary>} />
             <Route path="/daily/:id" element={<ErrorBoundary><DailyDetailPage /></ErrorBoundary>} />
             <Route path="/profile/:id" element={<ErrorBoundary><ProfilePage /></ErrorBoundary>} />
           </Route>

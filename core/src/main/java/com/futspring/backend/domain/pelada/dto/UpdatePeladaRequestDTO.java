@@ -1,5 +1,6 @@
 package com.futspring.backend.domain.pelada.dto;
 
+import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Positive;
@@ -39,6 +40,16 @@ public class UpdatePeladaRequestDTO {
     // IANA zone (America/Sao_Paulo); unknown → 400
     @Size(min = 1, max = 64, message = "O fuso horário deve ter entre 1 e 64 caracteres")
     private String timeZone;
+
+    // The new capacity applies to the sessions already scheduled too: nobody is removed, a session with more
+    // confirmed players than spots is just over the limit
+    @Min(value = 2, message = "Mínimo de 2 times")
+    @Max(value = 10, message = "Máximo de 10 times")
+    private Integer numberOfTeams;
+
+    @Min(value = 2, message = "Mínimo de 2 jogadores por time")
+    @Max(value = 20, message = "Máximo de 20 jogadores por time")
+    private Integer playersPerTeam;
 
     // between the current number of mensalistas and the session capacity, else 409
     @Min(value = 0, message = "O limite de mensalistas não pode ser negativo")

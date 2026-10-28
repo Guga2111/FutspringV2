@@ -14,6 +14,8 @@ import {
   setMensalistas,
   setPlayersStars,
   removePlayers,
+  removePeladaImage,
+  transferPelada,
 } from './peladas'
 
 const mockPost = vi.mocked(apiClient.post)
@@ -97,5 +99,28 @@ describe('bulk member actions', () => {
     await removePlayers(1, [2, 3])
 
     expect(mockPost).toHaveBeenCalledWith('/api/v1/peladas/1/players/remove', { userIds: [2, 3] })
+  })
+})
+
+describe('removePeladaImage', () => {
+  it('deletes the pelada image', async () => {
+    const mockDelete = vi.mocked(apiClient.delete)
+    mockDelete.mockResolvedValue({ data: { id: 1, image: null } })
+
+    const result = await removePeladaImage(1)
+
+    expect(mockDelete).toHaveBeenCalledWith('/api/v1/peladas/1/image')
+    expect(result).toEqual({ id: 1, image: null })
+  })
+})
+
+describe('transferPelada', () => {
+  it('sends the new creator id', async () => {
+    const mockPut = vi.mocked(apiClient.put)
+    mockPut.mockResolvedValue({ data: { id: 1 } })
+
+    await transferPelada(1, 7)
+
+    expect(mockPut).toHaveBeenCalledWith('/api/v1/peladas/1/creator', { userId: 7 })
   })
 })

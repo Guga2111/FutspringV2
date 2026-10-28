@@ -272,6 +272,94 @@ class PeladaControllerTest extends BaseIntegrationTest {
                 .andExpect(status().isForbidden());
     }
 
+    @Test
+    void updatePelada_capacity_isSaved() throws Exception {
+        mockMvc.perform(put("/api/v1/peladas/" + pelada.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .header("Authorization", bearerToken(admin.getId(), admin.getEmail()))
+                .content("{\"numberOfTeams\":3,\"playersPerTeam\":6}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.numberOfTeams").value(3))
+                .andExpect(jsonPath("$.playersPerTeam").value(6));
+    }
+
+    @Test
+    void updatePelada_capacityOutOfRange_returnsFieldErrors() throws Exception {
+        mockMvc.perform(put("/api/v1/peladas/" + pelada.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .header("Authorization", bearerToken(admin.getId(), admin.getEmail()))
+                .content("{\"numberOfTeams\":1,\"playersPerTeam\":21}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.numberOfTeams").value("Mínimo de 2 times"))
+                .andExpect(jsonPath("$.errors.playersPerTeam").value("Máximo de 20 jogadores por time"));
+    }
+
+    // --- PUT /api/v1/peladas/{id}/creator ---
+
+    @Test
+    void transferCreator_toAnAdmin() throws Exception {
+        pelada.getAdmins().add(member);
+        peladaRepository.save(pelada);
+
+        mockMvc.perform(put("/api/v1/peladas/" + pelada.getId() + "/creator")
+                .contentType(MediaType.APPLICATION_JSON)
+                .header("Authorization", bearerToken(admin.getId(), admin.getEmail()))
+                .content("{\"userId\":" + member.getId() + "}"))
+                .andExpect(status().isOk());
+
+        Pelada saved = peladaRepository.findById(pelada.getId()).orElseThrow();
+        assertThat(saved.getCreator().getId()).isEqualTo(member.getId());
+    }
+
+    @Test
+    void transferCreator_asAdminNotCreator_returnsForbidden() throws Exception {
+        pelada.getAdmins().add(member);
+        peladaRepository.save(pelada);
+
+        mockMvc.perform(put("/api/v1/peladas/" + pelada.getId() + "/creator")
+                .contentType(MediaType.APPLICATION_JSON)
+                .header("Authorization", bearerToken(member.getId(), member.getEmail()))
+                .content("{\"userId\":" + member.getId() + "}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void transferCreator_asNonMember_returnsForbidden() throws Exception {
+        mockMvc.perform(put("/api/v1/peladas/" + pelada.getId() + "/creator")
+                .contentType(MediaType.APPLICATION_JSON)
+                .header("Authorization", bearerToken(outsider.getId(), outsider.getEmail()))
+                .content("{\"userId\":" + member.getId() + "}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void transferCreator_toANonMember_returnsNotFound() throws Exception {
+        mockMvc.perform(put("/api/v1/peladas/" + pelada.getId() + "/creator")
+                .contentType(MediaType.APPLICATION_JSON)
+                .header("Authorization", bearerToken(admin.getId(), admin.getEmail()))
+                .content("{\"userId\":" + outsider.getId() + "}"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void transferCreator_toAMemberNotAdmin_returnsConflict() throws Exception {
+        mockMvc.perform(put("/api/v1/peladas/" + pelada.getId() + "/creator")
+                .contentType(MediaType.APPLICATION_JSON)
+                .header("Authorization", bearerToken(admin.getId(), admin.getEmail()))
+                .content("{\"userId\":" + member.getId() + "}"))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    void transferCreator_withoutUserId_returnsBadRequest() throws Exception {
+        mockMvc.perform(put("/api/v1/peladas/" + pelada.getId() + "/creator")
+                .contentType(MediaType.APPLICATION_JSON)
+                .header("Authorization", bearerToken(admin.getId(), admin.getEmail()))
+                .content("{}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.userId").value("Informe o novo criador"));
+    }
+
     // --- DELETE /api/v1/peladas/{id} ---
 
     @Test
@@ -412,6 +500,33 @@ class PeladaControllerTest extends BaseIntegrationTest {
         mockMvc.perform(multipart("/api/v1/peladas/" + pelada.getId() + "/image")
                 .file(file)
                 .header("Authorization", bearerToken(member.getId(), member.getEmail())))
+                .andExpect(status().isForbidden());
+    }
+
+    // --- DELETE /api/v1/peladas/{id}/image ---
+
+    @Test
+    void removeImage_asAdmin() throws Exception {
+        pelada.setImage("old.png");
+        peladaRepository.save(pelada);
+
+        mockMvc.perform(delete("/api/v1/peladas/" + pelada.getId() + "/image")
+                .header("Authorization", bearerToken(admin.getId(), admin.getEmail())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.image").doesNotExist());
+    }
+
+    @Test
+    void removeImage_asNonAdmin() throws Exception {
+        mockMvc.perform(delete("/api/v1/peladas/" + pelada.getId() + "/image")
+                .header("Authorization", bearerToken(member.getId(), member.getEmail())))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void removeImage_asNonMember() throws Exception {
+        mockMvc.perform(delete("/api/v1/peladas/" + pelada.getId() + "/image")
+                .header("Authorization", bearerToken(outsider.getId(), outsider.getEmail())))
                 .andExpect(status().isForbidden());
     }
 
