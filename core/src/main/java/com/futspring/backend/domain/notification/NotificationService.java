@@ -127,6 +127,11 @@ public class NotificationService {
         create(PELADA_TRANSFERRED, List.of(event.newCreator()), event.actor(), event.pelada());
     }
 
+    /** Scheduled events (no actor): the job has already picked the recipients who weren't notified yet. */
+    public void notifyScheduled(NotificationType type, Daily daily, Collection<User> recipients) {
+        create(type, recipients, null, daily);
+    }
+
     private void create(NotificationType type, Collection<User> recipients, User actor, Daily daily) {
         create(type, recipients, actor, daily.getPelada(), daily);
     }

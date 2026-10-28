@@ -35,6 +35,14 @@ public interface DailyRepository extends JpaRepository<Daily, Long> {
     long countByPeladaAndStatusInRange(@Param("peladaId") Long peladaId, @Param("status") DailyStatus status,
                                        @Param("from") LocalDate from, @Param("to") LocalDate to);
 
+    // Sessions in one of `statuses` dated in [from, to], with their pelada (the scheduled notifications' candidates)
+    @Query("""
+        SELECT d FROM Daily d JOIN FETCH d.pelada
+        WHERE d.status IN :statuses AND d.dailyDate BETWEEN :from AND :to
+        """)
+    List<Daily> findWithPeladaByStatusInAndDateBetween(@Param("statuses") Collection<DailyStatus> statuses,
+                                                       @Param("from") LocalDate from, @Param("to") LocalDate to);
+
     // The next session (earliest date from `from` on, in one of `statuses`) of every pelada, in one query
     @Query("""
         SELECT d FROM Daily d

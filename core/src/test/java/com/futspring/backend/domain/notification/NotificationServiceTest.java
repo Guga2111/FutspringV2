@@ -253,6 +253,30 @@ class NotificationServiceTest {
     }
 
     @Test
+    void notifyScheduled_isASystemEvent_deliveredOnlyAfterTheCommit() {
+        TransactionSynchronizationManager.initSynchronization();
+
+        service.notifyScheduled(NotificationType.SESSION_REMINDER, daily, List.of(member, other));
+
+        assertThat(recipients()).containsExactly(member, other);
+        assertThat(saved).allSatisfy(n -> {
+            assertThat(n.getType()).isEqualTo(NotificationType.SESSION_REMINDER);
+            assertThat(n.getActor()).isNull();
+            assertThat(n.getDaily()).isEqualTo(daily);
+        });
+        verifyNoInteractions(delivery);
+        TransactionSynchronizationManager.getSynchronizations().forEach(TransactionSynchronization::afterCommit);
+        verify(delivery).deliver(saved.stream().map(Notification::getId).toList());
+    }
+
+    @Test
+    void notifyScheduled_nobodyDue_savesNothing() {
+        service.notifyScheduled(NotificationType.DIARISTA_WINDOW_OPEN, daily, List.of());
+
+        verify(notificationRepository, never()).saveAll(anyList());
+    }
+
+    @Test
     void delivery_noTransaction_registersNothing() {
         service.onMembersAdded(new MembersAddedEvent(pelada, admin, List.of(other)));
 
