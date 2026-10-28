@@ -24,6 +24,7 @@ public final class AttendanceWindow {
             DayOfWeek.MONDAY, "seg", DayOfWeek.TUESDAY, "ter", DayOfWeek.WEDNESDAY, "qua", DayOfWeek.THURSDAY, "qui",
             DayOfWeek.FRIDAY, "sex", DayOfWeek.SATURDAY, "sáb", DayOfWeek.SUNDAY, "dom");
     private static final DateTimeFormatter DATE_TIME = DateTimeFormatter.ofPattern("dd/MM 'às' HH:mm");
+    private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("dd/MM");
 
     private AttendanceWindow() {
     }
@@ -44,6 +45,11 @@ public final class AttendanceWindow {
     /** "sex, 30/10 às 20:00": the session start, in the pelada's zone. */
     public static String formatStart(Daily daily) {
         return format(start(daily));
+    }
+
+    /** "sáb, 31/10": the session's day, as the session list shows it. */
+    public static String formatDate(Daily daily) {
+        return WEEKDAYS.get(daily.getDailyDate().getDayOfWeek()) + ", " + DATE.format(daily.getDailyDate());
     }
 
     private static ZonedDateTime start(Daily daily) {

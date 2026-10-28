@@ -5,6 +5,7 @@ import org.flywaydb.core.api.MigrationInfo;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -42,6 +43,9 @@ class FlywayMigrationTest {
     @Autowired
     private Flyway flyway;
 
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
     @Test
     void migrationsApplyOnEmptyDatabaseAndMatchEntities() {
         MigrationInfo[] applied = flyway.info().applied();
@@ -50,5 +54,18 @@ class FlywayMigrationTest {
         assertThat(Arrays.stream(applied).map(m -> m.getVersion().getVersion()))
                 .startsWith("1");
         assertThat(flyway.info().pending()).isEmpty();
+    }
+
+    // The H2 test schema never gets this partial index, so its existence is checked here
+    @Test
+    void scheduledNotificationsHaveTheirUniqueBackstop() {
+        String definition = jdbcTemplate.queryForObject(
+                "SELECT indexdef FROM pg_indexes WHERE indexname = 'uq_notifications_scheduled'", String.class);
+
+        assertThat(definition)
+                .startsWith("CREATE UNIQUE INDEX")
+                .contains("(recipient_id, type, daily_id)")
+                .contains("SESSION_REMINDER")
+                .contains("DIARISTA_WINDOW_OPEN");
     }
 }

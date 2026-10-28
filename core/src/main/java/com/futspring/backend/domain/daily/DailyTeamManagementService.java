@@ -14,6 +14,7 @@ import com.futspring.backend.shared.helper.PeladaAccessHelper;
 import com.futspring.backend.shared.helper.UserAuthenticationHelper;
 import com.futspring.backend.domain.user.User;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,6 +38,7 @@ public class DailyTeamManagementService {
     private final TeamRepository teamRepository;
     private final PeladaPlayerStarsRepository playerStarsRepository;
     private final DailyDTOMapper dailyDTOMapper;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public List<DailyDetailDTO.TeamDTO> sortTeams(Long id, String currentUserEmail) {
@@ -97,6 +99,7 @@ public class DailyTeamManagementService {
         }
 
         teamRepository.saveAll(teams);
+        eventPublisher.publishEvent(new TeamsSortedEvent(daily, caller, players));
         return teams.stream().map(team -> dailyDTOMapper.buildTeamDTO(team, starsByUserId)).toList();
     }
 

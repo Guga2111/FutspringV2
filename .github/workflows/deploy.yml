@@ -122,6 +122,8 @@ jobs:
             printf 'API_PORT=%s\n' "$API_PORT"
             printf 'PG_DUMP_URL=%s\n' "$PG_DUMP_URL"
             printf 'APP_URL=%s\n' "$APP_URL"
+            # Public API URL (same value the frontend is built with), for the List-Unsubscribe header
+            printf 'API_URL=%s\n' "$VITE_API_URL"
             printf 'RESEND_API_KEY=%s\n' "$RESEND_API_KEY"
             printf 'MAIL_FROM=%s\n' "$MAIL_FROM"
           } > .env

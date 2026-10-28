@@ -1,11 +1,14 @@
-import { Suspense, useMemo, useState } from "react"
+import { Suspense, useCallback, useMemo, useState } from "react"
 import { Outlet } from "react-router-dom"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import { MyPeladasContext, type MyPeladasContextValue } from "@/context/my-peladas-context-value"
+import { NotificationsContext } from "@/context/notifications-context-value"
 import { useMyPeladas } from "@/hooks/useMyPeladas"
+import { useNotifications } from "@/hooks/useNotifications"
 import CreatePeladaModal from "@/components/CreatePeladaModal"
 import { AppSidebar } from "@/components/layout/AppSidebar"
 import { MobileTopBar } from "@/components/layout/MobileTopBar"
+import { RealtimeProvider } from "@/components/layout/RealtimeProvider"
 
 const SIDEBAR_OPEN_KEY = "sidebar_open"
 
@@ -27,11 +30,31 @@ function saveSidebarOpen(open: boolean) {
 
 const pageFallback = <div className="flex flex-1 items-center justify-center p-8 text-sm text-muted-foreground">Carregando…</div>
 
-// Shell of every private page: sidebar with the user's peladas (Sheet on mobile) and the page in <Outlet/>
+// Shell of every private page: sidebar with the user's peladas (Sheet on mobile) and the page in <Outlet/>.
+// Opens the user's realtime connection and loads the peladas and the notifications once, shared through contexts.
 export function AppLayout() {
+  return (
+    <RealtimeProvider>
+      <AppShell />
+    </RealtimeProvider>
+  )
+}
+
+// Inside RealtimeProvider, so the notifications can subscribe to the user's queue
+function AppShell() {
   const [sidebarOpen, setSidebarOpen] = useState(readSidebarOpen)
   const [createOpen, setCreateOpen] = useState(false)
   const { peladas, loading, error, reload, updateNextDaily } = useMyPeladas()
+  // A bump notification read in the panel also clears the "Você perdeu a vaga" alert on Home
+  const clearBumps = useCallback(
+    (dailyId: number | null) => {
+      for (const p of peladas) {
+        if (p.nextDaily?.bump && (dailyId === null || p.nextDaily.id === dailyId)) updateNextDaily(p.id, { bump: null })
+      }
+    },
+    [peladas, updateNextDaily],
+  )
+  const notifications = useNotifications(clearBumps)
 
   const contextValue = useMemo<MyPeladasContextValue>(
     () => ({ peladas, loading, error, reload, updateNextDaily, openCreatePelada: () => setCreateOpen(true) }),
@@ -45,6 +68,7 @@ export function AppLayout() {
 
   return (
     <MyPeladasContext.Provider value={contextValue}>
+      <NotificationsContext.Provider value={notifications}>
       <SidebarProvider open={sidebarOpen} onOpenChange={handleSidebarOpenChange}>
         <AppSidebar />
         <SidebarInset className="min-w-0">
@@ -63,6 +87,7 @@ export function AppLayout() {
           }}
         />
       )}
+      </NotificationsContext.Provider>
     </MyPeladasContext.Provider>
   )
 }

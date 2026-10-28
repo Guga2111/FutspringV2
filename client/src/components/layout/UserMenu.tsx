@@ -1,7 +1,6 @@
 import { useNavigate } from "react-router-dom"
 import { Bell, ChevronsUpDown, LogOut, Moon, Sun, User } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -44,6 +43,11 @@ export function UserMenu() {
     navigate(`/profile/${user.id}`)
   }
 
+  function goToNotificationSettings() {
+    setOpenMobile(false)
+    navigate("/settings/notifications")
+  }
+
   function handleLogout() {
     logout()
     navigate("/auth", { replace: true })
@@ -84,12 +88,9 @@ export function UserMenu() {
               <User />
               Perfil
             </DropdownMenuItem>
-            <DropdownMenuItem className={itemClass} disabled>
+            <DropdownMenuItem className={itemClass} onSelect={goToNotificationSettings}>
               <Bell />
               Notificações
-              <Badge variant="status" className="ml-auto bg-secondary px-2 py-0 text-[11px] text-secondary-foreground">
-                Em breve
-              </Badge>
             </DropdownMenuItem>
             <DropdownMenuItem className={itemClass} onSelect={toggleTheme}>
               {isDark ? <Sun /> : <Moon />}
