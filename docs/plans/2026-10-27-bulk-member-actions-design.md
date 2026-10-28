@@ -1,6 +1,6 @@
 # Bulk member actions
 
-Date: 2026-10-27 · Status: approved
+Date: 2026-10-27 · Status: implemented
 
 ## Goal
 

@@ -98,11 +98,11 @@ com.futspring.backend
 │   │                               ForgotPasswordRequestDTO, ResetPasswordRequestDTO
 │   ├── user/                       UserController, UserService (profile get/update, avatar, background image), User, UserRepository
 │   │   └── dto/                    ProfileDTO, PublicUserDTO, UpdateProfileRequest
-│   ├── pelada/                     PeladaController, PeladaService (pelada CRUD, members, admins, member stars, mensalistas, user search, image), Pelada, PeladaRepository,
+│   ├── pelada/                     PeladaController, PeladaService (pelada CRUD, members, admins, member stars, mensalistas, user search, image; each member action works on a list of members and the single routes call it with one id), Pelada, PeladaRepository,
 │   │                               PeladaPlayerStars + PeladaPlayerStarsRepository (stars per member, profile average),
 │   │                               PeladaMensalista + PeladaMensalistaRepository (members marked as mensalistas)
 │   │   └── dto/                    Create/UpdatePeladaRequestDTO, DayOfWeekPattern, PeladaResponseDTO, PeladaDetailResponseDTO, PeladaMemberDTO, UpdatePlayerStarsRequestDTO,
-│   │                               SetMensalistaRequestDTO…
+│   │                               SetMensalistaRequestDTO, Bulk{SetAdmin,SetMensalista,SetStars,RemovePlayers}RequestDTO…
 │   ├── daily/                      DailyController and the daily services:
 │   │   │                           DailyService (create, list, status transitions, delete, detail aggregation)
 │   │   │                           DailyAttendanceService (confirm / unconfirm, self and by admin; diarista window, capacity, mensalista bump,
@@ -297,9 +297,9 @@ Relationships: **creator** (`pelada.creator`), **admin** (`pelada.admins`), **me
 |--------|----------|
 | Create pelada | any authenticated user (becomes creator, member and admin) |
 | Read pelada detail, dailies, daily detail, ranking, attendance ranking, awards, member stats/history, chat history, send chat, subscribe to the chat topic | member (member stats/history: the target user must also be a member, else 404) |
-| Update pelada, upload pelada image, add/remove player, set/unset admin | admin (the creator can't be removed or demoted; remove/set admin need the target to be a member, else 404) |
-| Set a member's stars in the pelada | admin; any member, the creator and the caller included (target must be a member, else 404) |
-| Mark/unmark a member as mensalista | admin; any member, the creator and the caller included (target must be a member, else 404; 409 past `maxMensalistas`) |
+| Update pelada, upload pelada image, add/remove player, set/unset admin | admin (the creator can't be removed or demoted; remove/set admin need the target to be a member, else 404). Remove and set admin also work on a list of members: one request, one transaction, any invalid target fails the whole batch |
+| Set a member's stars in the pelada | admin; any member, the creator and the caller included (target must be a member, else 404); one member or a list (atomic) |
+| Mark/unmark a member as mensalista | admin; any member, the creator and the caller included (target must be a member, else 404; 409 past `maxMensalistas`); one member or a list (atomic: a batch that doesn't fit changes nobody) |
 | Delete pelada (cascades dailies, results, teams, attendance, messages, rankings; rebuilds global Stats) | creator |
 | Create daily, change status, delete daily, sort/swap teams, submit results, finalize, populate, champion image | admin of the daily's pelada |
 | Confirm attendance (self) | member; diaristas only inside their window and while there are spots (see [Attendance](#attendance-mensalistas-and-diaristas)) |
@@ -382,6 +382,10 @@ All routes are under `/api/v1`. "Auth" is the relationship checked (see the matr
 | PUT | `/peladas/{id}/players/{userId}/admin` | `SetAdminRequestDTO {isAdmin}` | admin | 200; 404 if `userId` isn't a member |
 | PUT | `/peladas/{id}/players/{userId}/mensalista` | `SetMensalistaRequestDTO {isMensalista}` (`@NotNull`) | admin | `PeladaMemberDTO` with the new type; idempotent; 404 if `userId` isn't a member; 409 when the limit is full |
 | PUT | `/peladas/{id}/players/{userId}/stars` | `UpdatePlayerStarsRequestDTO {stars 1–5}` | admin | `PeladaMemberDTO` with the new stars; 404 if `userId` isn't a member |
+| PUT | `/peladas/{id}/players/admin` | `BulkSetAdminRequestDTO {userIds, isAdmin}` | admin | `List<PeladaMemberDTO>` (the targets, request order). Bulk version of `.../{userId}/admin`; idempotent per member. `userIds`: 1–100, no duplicates (400). Atomic: a target that isn't a member → 404 naming the player, the creator → 403, and nothing changes |
+| PUT | `/peladas/{id}/players/mensalista` | `BulkSetMensalistaRequestDTO {userIds, isMensalista}` | admin | `List<PeladaMemberDTO>`; pelada row locked like the single route; only members who change count towards the limit, and a batch past it → 409 "Limite de mensalistas atingido: cabem 2, foram selecionados 5" (a single new mensalista keeps "(8/8)"); atomic |
+| PUT | `/peladas/{id}/players/stars` | `BulkSetStarsRequestDTO {userIds, stars 1–5}` | admin | `List<PeladaMemberDTO>`; the same stars for every target, creator and caller included; atomic |
+| POST | `/peladas/{id}/players/remove` | `BulkRemovePlayersRequestDTO {userIds}` | admin | 204; same effects as the single removal for every target (batch queries: stars and mensalista rows, attendance and teams of the upcoming sessions through `DailyService.removeFromUpcomingSessions(pelada, users)`); the creator in the list → 403; atomic. POST because a DELETE with a body is poorly supported by proxies and axios |
 | GET | `/peladas/{id}/ranking` | — | member | `List<RankingDTO>` |
 | GET | `/peladas/{id}/members/{userId}/stats` | — | member (404 if `userId` isn't a member) | `PlayerPeladaStatsDTO` (includes the player's `stars` in this pelada) |
 | GET | `/peladas/{id}/members/{userId}/history?limit=` | — | member (404 if `userId` isn't a member) | `PlayerPeladaHistoryDTO {userId, totalSessions, rows: [{dailyId, date, goals, assists, matchesPlayed, wins, wonSession}]}`, newest first, one row per finalized session the player took part in. `limit` (optional, 1–100, else 400) returns only the last N sessions; without it every session is returned. `totalSessions` is always the full count (the count query only runs when the page is full) |
