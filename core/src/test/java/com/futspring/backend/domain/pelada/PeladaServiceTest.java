@@ -975,6 +975,110 @@ class PeladaServiceTest {
     }
 
     @Test
+    void updatePelada_capacityAndLimitTogether_checksTheLimitAgainstTheNewCapacity() {
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
+        when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
+        when(peladaRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(pelada));
+        when(peladaRepository.save(pelada)).thenReturn(pelada);
+        when(mensalistaRepository.countByPelada(pelada)).thenReturn(0L);
+
+        // 3 × 6 = 18 spots: a limit of 15 only fits the new capacity
+        peladaService.updatePelada(10L, UpdatePeladaRequestDTO.builder()
+                .numberOfTeams(3).playersPerTeam(6).maxMensalistas(15).build(), "admin@example.com");
+
+        assertThat(pelada.getNumberOfTeams()).isEqualTo(3);
+        assertThat(pelada.getPlayersPerTeam()).isEqualTo(6);
+        assertThat(pelada.getMaxMensalistas()).isEqualTo(15);
+    }
+
+    @Test
+    void updatePelada_capacityBelowTheCurrentLimit_throwsConflictAndChangesNothing() {
+        pelada.setMaxMensalistas(8);
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
+        when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
+        when(peladaRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(pelada));
+
+        assertThatThrownBy(() -> peladaService.updatePelada(10L, UpdatePeladaRequestDTO.builder().playersPerTeam(3).build(),
+                "admin@example.com"))
+                .hasMessage("O limite de mensalistas não pode passar das vagas (6)")
+                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.CONFLICT));
+        verify(peladaRepository, never()).save(any());
+    }
+
+    @Test
+    void updatePelada_capacityBelowTheConfirmedPlayers_isAllowed() {
+        // Upcoming sessions are not read: a session with more confirmed players just sits over the limit
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
+        when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
+        when(peladaRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(pelada));
+        when(peladaRepository.save(pelada)).thenReturn(pelada);
+
+        peladaService.updatePelada(10L, UpdatePeladaRequestDTO.builder().numberOfTeams(2).playersPerTeam(2).build(),
+                "admin@example.com");
+
+        assertThat(pelada.capacity()).isEqualTo(4);
+        verifyNoInteractions(attendanceRepository, dailyService);
+    }
+
+    // --- transferCreator ---
+
+    @Test
+    void transferCreator_toAnAdmin_changesTheCreatorAndKeepsTheOldOneAdmin() {
+        pelada.getAdmins().add(member);
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
+        when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
+        when(peladaRepository.save(pelada)).thenReturn(pelada);
+
+        peladaService.transferCreator(10L, member.getId(), "admin@example.com");
+
+        assertThat(pelada.getCreator()).isEqualTo(member);
+        assertThat(pelada.getAdmins()).contains(admin, member);
+        assertThat(pelada.getMembers()).contains(admin);
+    }
+
+    @Test
+    void transferCreator_callerIsAdminButNotCreator_throwsForbidden() {
+        pelada.getAdmins().add(member);
+        when(userAuthHelper.getAuthenticatedUser("member@example.com")).thenReturn(member);
+        when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
+
+        assertThatThrownBy(() -> peladaService.transferCreator(10L, admin.getId(), "member@example.com"))
+                .hasMessage("Apenas o criador pode transferir a pelada")
+                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.FORBIDDEN));
+        assertThat(pelada.getCreator()).isEqualTo(admin);
+    }
+
+    @Test
+    void transferCreator_targetIsNotAdmin_throwsConflict() {
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
+        when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
+
+        assertThatThrownBy(() -> peladaService.transferCreator(10L, member.getId(), "admin@example.com"))
+                .hasMessage("Só é possível transferir a pelada para um admin")
+                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.CONFLICT));
+        assertThat(pelada.getCreator()).isEqualTo(admin);
+    }
+
+    @Test
+    void transferCreator_targetIsNotAMember_throwsNotFound() {
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
+        when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
+
+        assertThatThrownBy(() -> peladaService.transferCreator(10L, outsider.getId(), "admin@example.com"))
+                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.NOT_FOUND));
+        assertThat(pelada.getCreator()).isEqualTo(admin);
+    }
+
+    @Test
+    void transferCreator_toYourself_throwsBadRequest() {
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
+        when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
+
+        assertThatThrownBy(() -> peladaService.transferCreator(10L, admin.getId(), "admin@example.com"))
+                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.BAD_REQUEST));
+    }
+
+    @Test
     void updatePelada_invalidTimeZone_throwsBadRequest() {
         when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
