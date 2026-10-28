@@ -14,6 +14,8 @@ const PeladaDetailPage = lazy(() => import("@/pages/PeladaDetailPage"))
 const PeladaSettingsPage = lazy(() => import("@/pages/PeladaSettingsPage"))
 const DailyDetailPage = lazy(() => import("@/pages/DailyDetailPage"))
 const ProfilePage = lazy(() => import("@/pages/ProfilePage"))
+const NotificationSettingsPage = lazy(() => import("@/pages/NotificationSettingsPage"))
+const NotificationUnsubscribePage = lazy(() => import("@/pages/NotificationUnsubscribePage"))
 const NotFoundPage = lazy(() => import("@/pages/NotFoundPage"))
 
 const fallback = <div className="flex items-center justify-center min-h-screen">Carregando…</div>
@@ -28,6 +30,7 @@ function App() {
           <Route path="/auth" element={<ErrorBoundary><AuthPage /></ErrorBoundary>} />
           <Route path="/forgot-password" element={<ErrorBoundary><ForgotPasswordPage /></ErrorBoundary>} />
           <Route path="/reset-password" element={<ErrorBoundary><ResetPasswordPage /></ErrorBoundary>} />
+          <Route path="/notifications/unsubscribe" element={<ErrorBoundary><NotificationUnsubscribePage /></ErrorBoundary>} />
           {/* Private pages share the sidebar shell */}
           <Route element={<ErrorBoundary><PrivateRoute><AppLayout /></PrivateRoute></ErrorBoundary>}>
             <Route path="/home" element={<ErrorBoundary><HomePage /></ErrorBoundary>} />
@@ -35,6 +38,7 @@ function App() {
             <Route path="/pelada/:id/settings" element={<ErrorBoundary><PeladaSettingsPage /></ErrorBoundary>} />
             <Route path="/daily/:id" element={<ErrorBoundary><DailyDetailPage /></ErrorBoundary>} />
             <Route path="/profile/:id" element={<ErrorBoundary><ProfilePage /></ErrorBoundary>} />
+            <Route path="/settings/notifications" element={<ErrorBoundary><NotificationSettingsPage /></ErrorBoundary>} />
           </Route>
           <Route path="*" element={<ErrorBoundary><NotFoundPage /></ErrorBoundary>} />
         </Routes>
