@@ -122,6 +122,12 @@ com.futspring.backend
 │   │   └── dto/                    RankingDTO, StatsDTO, PeladaAwardsDTO, PeladaAttendanceDTO, PlayerPelada{Stats,History}DTO, UserMatchHistoryDTO, UserStatsTimelineDTO
 │   ├── chat/                       ChatController (STOMP + @MessageExceptionHandler), ChatService (save message, paged history), Message, MessageRepository
 │   │   └── dto/                    MessageDTO, SendMessageRequest
+│   ├── notification/               NotificationService (synchronous @EventListener for every domain event: recipients, actor dropped,
+│   │   │                           collapse of repeatable types, saves the rows and registers the after-commit delivery),
+│   │   │                           NotificationInboxService (list / count / read / read-all of the caller), NotificationController,
+│   │   │                           Notification + NotificationRepository, NotificationType (category + emailable), NotificationCategory,
+│   │   │                           NotificationAward, NotificationDelivery (after-commit hook: no-op until the push and the e-mail)
+│   │   └── dto/                    NotificationDTO, UnreadCountDTO
 │   ├── mail/                       EmailSender (interface, takes InlineImage CID attachments), ResendEmailSender (Resend HTTP API through RestClient, 5 s / 10 s
 │   │                               timeouts), NoopEmailSender (no API key: logs recipient + subject only), MailConfig
 │   │                               (picks the sender, exposes app.frontend-url for links)
@@ -140,6 +146,7 @@ New code goes in the domain it belongs to (a new feature is a new package under 
 - **Caller resolution.** The principal is the email (`@AuthenticationPrincipal String email` in controllers); services load the user with `UserAuthenticationHelper.getAuthenticatedUser(email)`. Don't repeat `userRepository.findByEmail(...).orElseThrow(...)`.
 - **Relationship checks** go through `PeladaAccessHelper` (exists queries), never `pelada.getMembers().contains(...)`.
 - **Uploads** always go through `FileUploadService` (size and content-type checks, UUID names, extension from the content type). Replaced files are removed with `deleteImageAfterCommit`, so a rollback never loses the old image. Files are served publicly by `FileController` (`GET /api/v1/files/{filename}`, with a path-traversal guard).
+- **Notifications.** Services publish domain events (`DiaristaBumpedEvent`, `DailyCreatedEvent`, `DailyCanceledEvent`, `AttendanceChangedByAdminEvent`, `TeamsSortedEvent`, `DailyFinalizedEvent` in `domain/daily`; `MembersAddedEvent`, `MembersRemovedEvent`, `AdminsChangedEvent`, `MensalistasChangedEvent`, `PeladaTransferredEvent` in `domain/pelada`) carrying the entities they already loaded. `NotificationService` handles them with plain `@EventListener`s, so the rows are written in the publisher's transaction (a rollback leaves none), and registers `NotificationDelivery.deliver(ids)` for after the commit. Rules: the actor is never notified; `TEAMS_SORTED` / `SESSION_FINISHED` reuse the recipient's unread row for that session (its `createdAt` moves to now); `AWARD_WON` only on the first finalize, with no actor (the admin who finalized hears about their own award); admin/mensalista changes only notify members whose status changed; stars never notify. A feature that should notify publishes an event and gets a type in `NotificationType` (and the V-migration CHECK).
 - **Denormalized aggregates.** `Ranking`, `Stats` and `UserDailyStats` are rebuilt from match data on finalize, results edits on a finalized daily, daily delete and pelada delete, through `AggregateRebuildService.rebuild(pelada, players)`. Any feature that changes match data must call it.
 
 ## Domain model
@@ -165,8 +172,11 @@ All entities use IDENTITY ids and **LAZY** fetching, Lombok `@Getter @Setter` (n
 | `PasswordResetToken` | `password_reset_tokens` | `tokenHash` (SHA-256 hex of the token sent by e-mail, unique), `expiresAt` (30 min), `usedAt`, `createdAt`; `user`. Usable while `usedAt` is null and `expiresAt` is in the future |
 | `PeladaPlayerStars` | `pelada_player_stars` (unique `pelada_id`+`user_id`) | `stars` (1–5), `updatedAt`; `pelada`, `user`. A member's stars in one pelada, set by its admins; a member without a row has `DEFAULT_STARS` (3). Read in one query per pelada (`findStarsByPelada`); deleted when the member is removed or the pelada is deleted. Used by team sorting, the member/team/player DTOs and the profile average |
 | `Message` | `messages` | `content` (≤ 500), `sentAt`; `pelada`, `sender` |
+| `Notification` | `notifications` | `type` (`NotificationType`, its category and emailable flag live in the enum), `award` (`NotificationAward`, only on `AWARD_WON`), `createdAt`, `readAt` (null = unread); `recipient`, `pelada`, `daily`, `actor` (null for system events). Only references are stored; the text is rendered by the client. Deleted with its daily (`DailyService.deleteDailyData`) or pelada (`PeladaService.deletePelada`) |
 
-There are no JPA cascades: deletes are explicit in the services (`DailyService.deleteDailyData`, `PeladaService.deletePelada`).
+`notification_preferences` (`user_id`, `category`, `email_enabled`, PK `(user_id, category)`) exists since V10 but has no entity yet (e-mail preferences).
+
+There are no JPA cascades: deletes are explicit in the services (`DailyService.deleteDailyData`, `PeladaService.deletePelada`), notifications included.
 
 **Daily status machine** (`DailyStatus.canTransitionTo`): `SCHEDULED → CONFIRMED | CANCELED`, `CONFIRMED → IN_COURSE | CANCELED`. `FINISHED` is reached only through finalize; populate can also move a daily to `IN_COURSE`. Attendance and team changes are blocked while the status is in `DailyStatus.LOCKED` (`IN_COURSE`, `FINISHED`, `CANCELED`).
 
@@ -214,6 +224,7 @@ New status-like fields must be Java enums stored with `@Enumerated(EnumType.STRI
 | V7 | Adds `users.token_version` (`INTEGER NOT NULL DEFAULT 0`); existing sessions stay valid; non-destructive |
 | V8 | Creates `pelada_player_stars` (FKs `ON DELETE CASCADE`, unique `(pelada_id, user_id)`, index on `user_id`), copies each member's `users.stars` into every pelada they belong to, and sets `DEFAULT 3` on `users.stars` (no longer mapped); non-destructive. Pending: a later migration drops `users.stars` (destructive: back up first) |
 | V9 | Adds `peladas.time_zone` (`DEFAULT 'America/Sao_Paulo'`) and `max_mensalistas` (`DEFAULT 0`, `CHECK ≥ 0`); creates `pelada_mensalistas` (unique `(pelada_id, user_id)`) and `daily_attendance_bumps` (indexes on `daily_id`, `bumped_by_id` and unseen `user_id`); adds `daily_confirmed_players.confirmed_at` (`TIMESTAMPTZ`, backfilled with `dailies.created_at`, then `NOT NULL DEFAULT now()`). FKs `ON DELETE CASCADE` as a safety net only; non-destructive |
+| V10 | Creates `notifications` (CHECK on `type` and `award`; FKs `ON DELETE CASCADE`, `actor_id` `ON DELETE SET NULL`, as a safety net only; indexes `(recipient_id, created_at DESC)`, partial `(recipient_id) WHERE read_at IS NULL`, one per FK, and the unique partial `(recipient_id, type, daily_id)` for the scheduled types, checked by `FlywayMigrationTest`) and `notification_preferences`; non-destructive |
 
 ### Migration rules
 
@@ -314,6 +325,7 @@ Relationships: **creator** (`pelada.creator`), **admin** (`pelada.admins`), **me
 | User stats, timeline, match history (`/users/{id}/stats…`) | self, or a user who shares a pelada (403 otherwise); non-self viewers only get sessions of the peladas they share |
 | Peladas in common (`/users/{id}/peladas`) | any; returns only peladas both users belong to |
 | Search users | any; public fields only (`PublicUserDTO`), query ≥ 3 characters |
+| List / count / read notifications (`/notifications/**`) | self only: every route reads the caller from the token and takes no `userId`; someone else's notification id → 404 |
 
 ### Rules for new code
 
@@ -403,7 +415,7 @@ All routes are under `/api/v1`. "Auth" is the relationship checked (see the matr
 | GET | `/peladas/{peladaId}/dailies` | — | member | `List<DailyListItemDTO>` (`confirmedPlayerCount`, `teamCount`, `matchCount`, `championImage`, `isConfirmed` = the caller's attendance, `capacity`, `startsAt`, `confirmOpensAt` (null for mensalistas); grouped queries, constant count) |
 | GET | `/dailies/{id}` | — | member | `DailyDetailDTO` (includes `isAdmin` for the caller; `peladaMembers`, every member's public fields with `isMensalista`, for the attendance list; `confirmedPlayers` with `isMensalista` and `confirmedAt`; `capacity`, `timeZone`, `startsAt`, `confirmOpensAt` (null for mensalistas); `myBump` (the caller's unseen bump or null) and `bumps` (`[{user, bumpedBy, bumpedAt}]`, public fields, newest first)) |
 | POST / DELETE | `/dailies/{id}/confirm` | — (a body is ignored) | member / confirmed | `DailyListItemDTO`; POST: 403 when a diarista's window isn't open, 409 "Sessão lotada" for a diarista in a full session; a mensalista in a full session bumps the diarista confirmed last |
-| POST | `/dailies/{id}/bumps/seen` | — | member | 204; marks the caller's bumps in that session as seen (other users' untouched) |
+| POST | `/dailies/{id}/bumps/seen` | — | member | 204; marks the caller's bumps in that session as seen (other users' untouched) and reads the caller's `DIARISTA_BUMPED` notification of that session |
 | POST | `/dailies/{id}/confirm/all` | — | admin | `DailyListItemDTO`; confirms every member who hasn't confirmed (400 when the status is locked) |
 | POST / DELETE | `/dailies/{id}/confirm/{userId}` | — | admin | `DailyListItemDTO`; no window or capacity check, never bumps |
 | POST | `/dailies/{id}/sort-teams` | — | admin | `List<TeamDTO>` |
@@ -416,6 +428,18 @@ All routes are under `/api/v1`. "Auth" is the relationship checked (see the matr
 | POST | `/dailies/{id}/populate` | `PopulateDailyRequestDTO` (unique team colors, each player once, all members, each match between two different teams) | admin | `DailyDetailDTO` |
 | PUT | `/dailies/{id}/champion-image` | multipart `file` | admin | `DailyListItemDTO` |
 | DELETE | `/dailies/{id}` | — | admin | 204; rebuilds Ranking/Stats when the daily was finalized |
+
+### Notifications (`NotificationController`, `/notifications`)
+Every route acts on the caller's notifications only.
+
+| Method | Path | Body | Response |
+|--------|------|------|----------|
+| GET | `/notifications?page=0&size=20&unread=false` | — | `List<NotificationDTO {id, type, category, award, createdAt, readAt, pelada {id, name, image}, daily {id, date, time}, actor (PublicUserDTO), team {name, color}}>`, newest first; `size` clamped to 1–50, `page` ≥ 0; `unread=true` returns only unread ones. `team` is the caller's team, only on `TEAMS_SORTED`. Two queries (page with fetch joins + the caller's teams of those sessions) |
+| GET | `/notifications/unread-count` | — | `{count}` |
+| POST | `/notifications/{id}/read` | — | 204; idempotent; missing or someone else's → 404. A `DIARISTA_BUMPED` notification also sets the bump's `seenAt` |
+| POST | `/notifications/read-all` | — | 204; also sets `seenAt` on the bumps of the `DIARISTA_BUMPED` notifications it reads |
+
+Types and recipients (the actor is always left out): `DIARISTA_BUMPED` (bumped diarista), `SESSION_CANCELED` (confirmed players), `ATTENDANCE_CONFIRMED_BY_ADMIN` / `ATTENDANCE_REMOVED_BY_ADMIN` (the player; "Confirmar todos" included), `SESSION_CREATED` (every member; from the scheduler with no actor), `TEAMS_SORTED` / `SESSION_FINISHED` (players on the teams; collapsed while unread), `AWARD_WON` (each winner per award, first finalize only), `ADDED_TO_PELADA`, `REMOVED_FROM_PELADA`, `ADMIN_GRANTED` / `ADMIN_REVOKED`, `MENSALISTA_GRANTED` / `MENSALISTA_REVOKED` (members whose status changed), `PELADA_TRANSFERRED` (new creator). `SESSION_REMINDER` and `DIARISTA_WINDOW_OPEN` are reserved for the scheduled job (not created yet). Importing teams from a message (`populate`) doesn't notify.
 
 ### Users (`UserController`, `/users`)
 | Method | Path | Body | Auth | Response |
@@ -451,6 +475,7 @@ Tests live in `src/test/java/com/futspring/backend`, in the same domain packages
 - **Controller integration tests** — extend `BaseIntegrationTest` (`@SpringBootTest(RANDOM_PORT)`, `@AutoConfigureMockMvc`, `@Transactional`, real JWTs from `JwtService`).
 - **Repository tests** — `@DataJpaTest` on H2 (`UserRepositoryTest`, `DailyRepositoryTest`, `UserDailyStatsRepositoryTest`, `DailyAwardRepositoryTest` for the native award queries).
 - **Attendance** — `DailyAttendanceServiceTest` uses `Clock.fixed` and `support/InMemoryAttendance` (lenient stubs that back `DailyAttendanceRepository` with an in-memory list); `AttendanceWindowTest` covers zones and the Canadian DST change; `DailyAttendanceRepositoryTest` the victim query; `AttendanceConcurrencyTest` (Testcontainers Postgres, no test transaction, skipped without Docker) races diaristas for the last spot and expects exactly one to get it.
+- **Notifications** — `NotificationServiceTest` (recipients per type, actor excluded, collapse, awards only on the first finalize, delivery only after commit, through `TransactionSynchronizationManager`); `NotificationControllerTest` (REST, the bump `seenAt` ↔ `readAt` sync both ways, one event per path end to end, deleting a daily / pelada with notifications on H2). The publishing services' tests verify the events they publish.
 - **WebSocket** — `JwtChannelInterceptorTest` covers CONNECT/SUBSCRIBE/SEND rules.
 - **Migration tests** — `FlywayMigrationTest` applies every migration to a Postgres container and starts the app with `validate`; `MigrationDataTest` migrates to a version, inserts production-shaped rows and checks what the next migration does. A new migration or entity change must keep them green (needs Docker).
 - When adding an endpoint: a controller test (happy path, validation 400, 403 for non-member/non-admin, 404) and service tests for the rules, including the ownership cases listed in [Rules for new code](#rules-for-new-code).

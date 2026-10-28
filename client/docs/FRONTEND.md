@@ -51,7 +51,7 @@ client/
     ├── index.css         Tailwind layers, design tokens (:root / .dark), brand gradient classes, landing animations
     ├── api/              one module per backend domain; typed async functions returning response.data
     │   ├── client.ts     the axios instance (interceptors are added by AuthContext)
-    │   ├── auth.ts, peladas.ts, dailies.ts, users.ts, chat.ts
+    │   ├── auth.ts, peladas.ts, dailies.ts, users.ts, chat.ts, notifications.ts
     │   └── *.test.ts     vitest tests for api modules
     ├── components/
     │   ├── ui/           shadcn primitives (owned code, see shadcn rules)
@@ -67,15 +67,16 @@ client/
     │   ├── home/         Home (HomeBanner, UpcomingSessionCard, MyPeladaCard + CreatePeladaCard; hooks useUserStats, useUpcomingAttendance)
     │   ├── profile/      profile feature (KpiCard, charts, MatchHistoryTable, EditProfileModal…) + index.ts barrel
     │   │   └── hooks/    useProfile
-    │   ├── layout/       AppLayout (shell + MyPeladasContext provider), AppSidebar, SidebarPeladaItem, UserMenu, MobileTopBar
+    │   ├── layout/       AppLayout (shell + MyPeladasContext and NotificationsContext providers), AppSidebar, SidebarPeladaItem, UserMenu, MobileTopBar
+    │   ├── notifications/  NotificationBell (bell + count; Popover on desktop, Drawer on mobile), NotificationPanel (chips, list, states, "Carregar mais"), NotificationItem
     │   ├── PeladaAvatar.tsx   pelada photo or gradient with initials (sidebar, cards, banner)
     │   ├── PlayerAvatar.tsx, StarRow.tsx   round player avatar (photo / initials, `colorId` for per-player colors) and ★ rating
     │   ├── PrivateRoute.tsx, ErrorBoundary.tsx, ScrollToTop.tsx
     │   ├── pelada-settings/  settings page of a pelada (SettingsCard + SettingsCardFooter, SettingsNav, InfoCard, ScheduleCard, LocationCard, SlotsCard, AutomationCard, DangerZone + TransferPeladaDialog / DeletePeladaDialog, ConfirmNameField)
     │   │   └── hooks/    usePeladaSettings, useSettingsSubmit
     │   └── CreatePeladaModal.tsx   Sheet-based form
-    ├── context/          AuthContext.tsx (provider, token storage, axios interceptors), auth-context-value.ts, my-peladas-context-value.ts
-    ├── hooks/            useAuth, useMyPeladas (+ useMyPeladasContext), useNowUntil, useSelfConfirm, useTheme (dark class + localStorage.theme), useIsMobile (< 768 px)
+    ├── context/          AuthContext.tsx (provider, token storage, axios interceptors), auth-context-value.ts, my-peladas-context-value.ts, notifications-context-value.ts
+    ├── hooks/            useAuth, useMyPeladas (+ useMyPeladasContext), useNotifications (+ useNotificationsContext), useNowUntil, useSelfConfirm, useTheme (dark class + localStorage.theme), useIsMobile (< 768 px)
     ├── lib/
     │   ├── config.ts     API_BASE (the only reader of VITE_API_URL)
     │   ├── utils.ts      cn(), getFileUrl(), getInitials(), getPeladaGradient()
@@ -84,8 +85,8 @@ client/
     │   └── constants.ts  DAYS_OF_WEEK (API value + pt-BR label), dayOfWeekLabel()
     ├── pages/            LandingPage, AuthPage, ForgotPasswordPage, ResetPasswordPage, HomePage, PeladaDetailPage, PeladaSettingsPage, DailyDetailPage, ProfilePage, NotFoundPage
     ├── schemas/          zod schemas mirroring request DTOs: auth.ts, daily.ts, pelada.ts, user.ts, upload.ts
-    ├── types/            API DTO types: auth, pelada, daily (DailyStatus), stats, user (PublicUser, Position), chat
-    └── utils/            pure functions: matchStats, matchPlayers, parseSessionMessage (WhatsApp text → teams/matches), dates (local date parsing, short pt-BR labels, formatInZone), liveSession (player totals, scorers line, matchup rotation, goal check), attendance (confirmed/pending split, sort rule and hints, getSelfConfirmState, sortByConfirmation), finishedSession (champion summary, match stat names, player sort, award detail), home (greeting, card dates, upcoming sessions, KPIs), sessions (next session, month groups, pt-BR session labels), memberFilters (position normalization, mensalista/diarista filter, counts, search), bulkMemberActions (`planBulkActions`: targets and disabled hint per bulk action, creator/caller exclusion, mensalista room; remove skip note, name preview, shared stars), attendanceRanking (positions with ties, `viewAttendance`: mensalista/diarista filter ranked inside the group, ascending order, accent-insensitive name search; rate and period labels)
+    ├── types/            API DTO types: auth, pelada, daily (DailyStatus), stats, user (PublicUser, Position), chat, notification (NotificationType/Category/Award unions, category map and labels)
+    └── utils/            pure functions: matchStats, matchPlayers, parseSessionMessage (WhatsApp text → teams/matches), dates (local date parsing, short pt-BR labels, formatInZone), liveSession (player totals, scorers line, matchup rotation, goal check), attendance (confirmed/pending split, sort rule and hints, getSelfConfirmState, sortByConfirmation), finishedSession (champion summary, match stat names, player sort, award detail), home (greeting, card dates, upcoming sessions, KPIs), sessions (next session, month groups, pt-BR session labels), memberFilters (position normalization, mensalista/diarista filter, counts, search), bulkMemberActions (`planBulkActions`: targets and disabled hint per bulk action, creator/caller exclusion, mensalista room; remove skip note, name preview, shared stars), notifications (`notificationView`: text parts with bold names, link and icon per `NotificationType`; `notificationPlainText`, `mergeNotifications`), attendanceRanking (positions with ties, `viewAttendance`: mensalista/diarista filter ranked inside the group, ascending order, accent-insensitive name search; rate and period labels)
 ```
 
 Where new code goes:
@@ -109,7 +110,7 @@ Where new code goes:
 | `*` | `NotFoundPage` | public |
 
 - Every page is `React.lazy` with a default export. Public routes: `<ErrorBoundary>` → page. Private routes are children of one **layout route** whose element is `<ErrorBoundary>` → `<PrivateRoute>` → `<AppLayout>`; each child is `<ErrorBoundary>` → page.
-- `AppLayout` (`components/layout/`) is the shell: `SidebarProvider` + `AppSidebar` (logo, "Início", "Minhas peladas" with the "+" that opens `CreatePeladaModal`, `UserMenu` with Perfil / Notificações "Em breve" / Tema / Sair) + `SidebarInset` with `MobileTopBar` and the page in `<Suspense><Outlet/></Suspense>`, so the shell stays on screen while a page loads. Sidebar: 264 px, collapsible to 64 px (state in `localStorage.sidebar_open`); below 768 px it is a Sheet opened from the top bar that closes when you pick a pelada.
+- `AppLayout` (`components/layout/`) is the shell: `SidebarProvider` + `AppSidebar` (logo and the notification bell (stacked under the collapse toggle when collapsed, with a dot instead of the count), "Início", "Minhas peladas" with the "+" that opens `CreatePeladaModal`, `UserMenu` with Perfil / Notificações "Em breve" / Tema / Sair) + `SidebarInset` with `MobileTopBar` (logo, notification bell, menu) and the page in `<Suspense><Outlet/></Suspense>`, so the shell stays on screen while a page loads. Sidebar: 264 px, collapsible to 64 px (state in `localStorage.sidebar_open`); below 768 px it is a Sheet opened from the top bar that closes when you pick a pelada.
 - `AppLayout` loads the user's peladas once (`useMyPeladas`) and shares them through `MyPeladasContext` (`useMyPeladasContext()`: `peladas`, `loading`, `error`, `reload`, `updateNextDaily`, `openCreatePelada`), used by the sidebar and the Home page.
 - `PrivateRoute` only checks that a token exists (no expiry check); an expired token is caught by the 401 interceptor.
 - Pages don't render a nav bar; they own their padding and use the `.page-enter` fade on their root.
@@ -135,6 +136,7 @@ Each module exports typed async functions that return `response.data`, plus the 
 | `dailies.ts` | `/api/v1/peladas/{id}/dailies`, `/api/v1/dailies/{id}` (detail, confirm, bumps seen (`markBumpsSeen`), admin confirm, confirm all, sort/swap teams, team name/color, status, results, finalize, populate, champion image, delete) |
 | `users.ts` | `/api/v1/users/{id}` (profile, update, image, background, stats, timeline, matches, peladas in common) |
 | `chat.ts` | `/api/v1/peladas/{id}/messages` (paged history) |
+| `notifications.ts` | `/api/v1/notifications` (`getNotifications({page, size, unread})`, pages of `NOTIFICATIONS_PAGE_SIZE` = 20), `unread-count` (`getUnreadNotificationCount`), `{id}/read` (`markNotificationRead`), `read-all` (`markAllNotificationsRead`) |
 
 When an endpoint or DTO changes, update the module, `src/types/*` and this table in the same change as the backend.
 
@@ -157,7 +159,8 @@ Data flows **api → hook → page/component**. A hook owns the request state; t
 - `useNowUntil(iso)` (`src/hooks/`) — the current time, re-read by one `setTimeout` when `iso` is reached (no polling), so the confirm button enables itself when the diarista window opens. `useSelfConfirm(input, timeZone)` turns `getSelfConfirmState` (`utils/attendance.ts`: `confirmed | open | notYet | full | priority`, the single source for the confirm button) into the disabled label ("Abre sáb, 31/10 às 20:00", "Sessão lotada") or the mensalista hint; `SelfConfirmButton` renders it on `NextSessionCard`, `UpcomingSessionCard` and `AttendanceSummaryCard`. The server re-checks everything.
 - `usePeladaSettings(id)` (`components/pelada-settings/hooks/`) — the settings page's pelada (`getPelada`, keyed by request; `accessDenied` on 403), `nextDaily` from `MyPeladasContext` (for the capacity warning), `merge(patch)` (applies a saved card and reloads the sidebar's peladas) and `retry`. `detailFields(response)` copies a `PeladaResponse` (PUT, image, transfer) onto the detail.
 - `useSettingsSubmit(form, save, messages)` — the submit of a settings card: save, `form.reset(values)` (the footer goes back to "Tudo salvo."), toast; errors through `applyServerErrors`. Each card owns its `useForm` + schema and sends only its own fields to the partial `PUT /peladas/{id}`.
-- Bump alerts: `useDailyActions.dismissBump` and `useUpcomingAttendance.dismissBump` call `markBumpsSeen` and clear `myBump` / `nextDaily.bump`.
+- Bump alerts: `useDailyActions.dismissBump` and `useUpcomingAttendance.dismissBump` call `markBumpsSeen`, clear `myBump` / `nextDaily.bump` and call `markBumpRead(dailyId)` (the server read the bump's notification too). The other way round, reading a `DIARISTA_BUMPED` notification (or "Marcar todas como lidas") clears the Home alert through `AppLayout`'s `clearBumps`.
+- `useNotifications(onBumpsRead)` (`src/hooks/`, called once by `AppLayout`; read it with `useNotificationsContext()`) — `unreadCount` (fetched on start and on `visibilitychange` → visible; no polling, realtime comes later), the list (`items`, `filter` `all | unread` sent as `?unread=true`, `loading`, `error`, `hasMore`, `loadingMore`), `refresh` (called when the panel opens: the counter and the first page, keeping the items on screen), `setFilter`, `loadMore` (pages merged by id), `markRead` (optimistic, reverts with a toast), `markAllRead`, `markBumpRead`. Only the latest list request writes. The text, link and icon of each type come from `utils/notifications.ts` (a `Record<NotificationType, …>`, so a new backend type fails the build); clicking an item marks it read, closes the panel and goes to `/daily/:id` (else `/pelada/:id`; `REMOVED_FROM_PELADA` doesn't navigate).
 - `usePlayerSelection` — shared multi-select of players (finalize and results modals).
 - `useForgotPasswordForm()` / `useResetPasswordForm(token)` (`components/auth/hooks/`) — react-hook-form + zod (`schemas/auth.ts`) and the submit; the pages only render. The forgot form's success state is `formState.isSubmitSuccessful` (`form.reset()` goes back); the reset calls `logout()` after success because the backend ends every session.
 - `usePeladaAttendance(peladaId, enabled)` — loads `getPeladaAttendance` while `enabled` (the dialog is open), refetching on every open; the previous ranking stays on screen during the refetch. Results are keyed by request; returns `{ data, loading, error, retry }`.
