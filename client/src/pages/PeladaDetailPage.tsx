@@ -1,6 +1,7 @@
 import { lazy, Suspense, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import type { PeladaMember } from "@/types/pelada";
+import type { BulkMemberAction } from "@/utils/bulkMemberActions";
 import { useAuth } from "@/hooks/useAuth";
 import { usePeladaDetail } from "@/components/pelada/hooks/usePeladaDetail";
 import { usePeladaActions } from "@/components/pelada/hooks/usePeladaActions";
@@ -51,8 +52,8 @@ export default function PeladaDetailPage() {
     refetchPelada,
     refetchDailies,
     mergeDaily,
-    mergeMember,
-    dropMember,
+    mergeMembers,
+    dropMembers,
   } = usePeladaDetail(id);
 
   const [showAddPlayer, setShowAddPlayer] = useState(false);
@@ -105,14 +106,31 @@ export default function PeladaDetailPage() {
     settingStars,
     togglingAdmin,
     togglingMensalista,
+    bulkPending,
     attendancePending,
     removePeladaAndLeave,
     removeMember,
     toggleAdmin,
     setMemberStars,
     setMemberMensalista,
+    bulkSetAdmin,
+    bulkSetMensalista,
+    bulkSetStars,
+    bulkRemove,
     toggleAttendance,
-  } = usePeladaActions(pelada, refetchDailies, mergeDaily, mergeMember, dropMember);
+  } = usePeladaActions(pelada, refetchDailies, mergeDaily, mergeMembers, dropMembers);
+
+  const handleBulkAction = (action: BulkMemberAction, targets: PeladaMember[], stars?: number) => {
+    const run: Record<BulkMemberAction, () => Promise<boolean>> = {
+      makeAdmin: () => bulkSetAdmin(targets, true),
+      removeAdmin: () => bulkSetAdmin(targets, false),
+      makeMensalista: () => bulkSetMensalista(targets, true),
+      makeDiarista: () => bulkSetMensalista(targets, false),
+      setStars: () => (stars === undefined ? Promise.resolve(false) : bulkSetStars(targets, stars)),
+      remove: () => bulkRemove(targets),
+    };
+    return run[action]();
+  };
 
   const nextSession = useMemo(() => pickNextSession(dailies), [dailies]);
   const pastSessions = useMemo(
@@ -167,17 +185,20 @@ export default function PeladaDetailPage() {
                     members={pelada.members}
                     ranking={ranking}
                     creatorId={pelada.creatorId}
+                    currentUserId={currentUser?.id ?? null}
                     maxMensalistas={pelada.maxMensalistas}
                     isCurrentUserAdmin={isCurrentUserAdmin}
                     togglingAdmin={togglingAdmin}
                     togglingMensalista={togglingMensalista}
                     settingStars={settingStars}
                     removingMember={removingMember}
+                    bulkPending={bulkPending}
                     onAddPlayer={() => setShowAddPlayer(true)}
                     onToggleAdmin={toggleAdmin}
                     onRemoveMember={setConfirmRemoveMember}
                     onSetStars={setStarsMember}
                     onSetMensalista={setMemberMensalista}
+                    onBulkAction={handleBulkAction}
                   />
                 </TabsContent>
 
@@ -274,9 +295,11 @@ export default function PeladaDetailPage() {
 
       {starsMember && (
         <SetPlayerStarsDialog
-          member={starsMember}
+          description={`Nível de ${starsMember.username} nesta pelada, usado para equilibrar os times no sorteio.`}
+          defaultStars={starsMember.stars}
+          requireChange
           onClose={() => setStarsMember(null)}
-          onSave={setMemberStars}
+          onSave={(stars) => setMemberStars(starsMember, stars)}
         />
       )}
 
