@@ -1,6 +1,6 @@
 # Pelada settings page
 
-Date: 2026-10-27 · Status: proposed
+Date: 2026-10-27 · Status: implemented
 
 ## Goal
 
@@ -19,7 +19,7 @@ Shadcn first, responsive (375 px), light and dark.
 
 - Back link "← {nome da pelada}", title "Configurações", subtitle "Gerencie as informações, o horário e as vagas da pelada. Preferências são salvas automaticamente; os demais blocos têm botão próprio."
 - Main column of `Card`s grouped under small uppercase labels (`text-faint-foreground`).
-- From `lg`: a sticky "Nesta página" index on the right with one anchor per card, highlighting the card in view (IntersectionObserver). Below `lg` the index is hidden and the cards stack full width.
+- From `lg`: a sticky "Nesta página" index on the right with one link per card (`scrollIntoView`, no `#hash`), highlighting the last card whose top passed 30% of the viewport (the last card at the bottom of the page; a clicked link stays active during its smooth scroll). Below `lg` the index is hidden and the cards stack full width.
 - A card with a form has a footer (`bg-card-elevated`, top border): status text on the left ("Tudo salvo." / "Alterações não salvas"), "Cancelar" (`form.reset()`) and "Salvar alterações" on the right, both disabled while the card isn't dirty or is submitting. Below md the buttons take the full width.
 - Leaving the page with a dirty card: no blocker (YAGNI); the status text is enough.
 
@@ -43,7 +43,7 @@ Every card with a button is its own react-hook-form + zod form and sends only it
 
 - Capacity is `numberOfTeams × playersPerTeam`, computed on read (`Pelada.capacity()`), so a change applies at once to every session, including the ones already scheduled.
 - **Nobody is removed.** A scheduled/confirmed session with more confirmed players than the new capacity simply sits over the limit (the attendance list already shows "acima do limite"; new diaristas get "Sessão lotada"). Teams already sorted stay as they are; the admin can sort again (`sort-teams` reads the new numbers).
-- Before saving, the card shows a warning `Alert` when the next session (`nextDaily` with `confirmedCount`) would be over the new capacity: "A próxima sessão tem 18 confirmados; com 16 vagas, 2 ficam acima do limite. Ninguém é removido." and, when its teams are already sorted, "Os times já sorteados não mudam; sorteie de novo se quiser."
+- Before saving, the card shows a warning `Alert` when the capacity changed and the next session (`nextDaily.confirmedCount` from `MyPeladasContext`) would be over it: "Ela tem 20 confirmados; com 15 vagas, 5 ficam acima do limite. Ninguém é removido." The card description says that sorted teams don't change (the list item has no team count, so no extra request).
 - `maxMensalistas` must stay ≤ the new capacity, checked together with the new numbers in the same request (the schema is built from the values being edited, not the saved capacity). Lowering the capacity below the current `maxMensalistas` without lowering the limit → 409 "O limite de mensalistas não pode passar das vagas (16)", shown on the limit field.
 
 ### Remove image
@@ -78,7 +78,7 @@ Tests: service tests for the capacity/limit combinations (raise capacity + limit
 
 - `api/peladas.ts`: `UpdatePeladaData` gains `numberOfTeams`, `playersPerTeam`; new `removePeladaImage(id)`, `transferPelada(id, userId)`.
 - `schemas/pelada.ts`: one schema per card (`peladaInfoSchema`, `peladaScheduleSchema`, `peladaLocationSchema`, `peladaSlotsSchema` with a `.refine` for `maxMensalistas ≤ teams × players`), each with a comment naming `UpdatePeladaRequestDTO`; `confirmNameSchema(name)` for the danger-zone dialogs. Tests next to the file.
-- `components/pelada-settings/` (new feature folder): `SettingsCard` (card + footer with the status text and buttons, reused by every form card), one component per card, `SettingsNav` (the "Nesta página" index), `TransferPeladaDialog`, `DeletePeladaDialog`; hooks in `hooks/`: `usePeladaSettings(id)` (loads the pelada, `accessDenied`, `merge`), one form hook per card.
+- `components/pelada-settings/` (new feature folder): `SettingsCard` + `SettingsCardFooter` (status text and buttons, reused by every form card), one component per card (each owns its `useForm` + schema), `SettingsNav` (the "Nesta página" index), `DangerZone` with `TransferPeladaDialog` and `DeletePeladaDialog`, `ConfirmNameField`; hooks in `hooks/`: `usePeladaSettings(id)` (loads the pelada, `accessDenied`, `merge`, `nextDaily`) and `useSettingsSubmit(form, save, messages)` (the shared submit: save, reset, toast, server errors).
 - Updates `MyPeladasContext` after name/image/transfer/delete so the sidebar stays in sync.
 - Docs: FRONTEND.md (route table, folder structure, hooks, the removed Sheet, `EditPeladaModal` as the Sheet-form reference replaced by `CreatePeladaModal`), BACKEND.md (API table, permission matrix with transfer and remove image, Known gaps row removed).
 

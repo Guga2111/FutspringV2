@@ -27,6 +27,9 @@ export interface UpdatePeladaData {
   reference?: string
   autoCreateDailyEnabled?: boolean
   timeZone?: string
+  // the new capacity also applies to the sessions already scheduled; nobody is removed
+  numberOfTeams?: number
+  playersPerTeam?: number
   maxMensalistas?: number
 }
 
@@ -107,6 +110,18 @@ export async function uploadPeladaImage(peladaId: number, file: File): Promise<P
   const formData = new FormData()
   formData.append("file", file)
   const response = await apiClient.post<PeladaResponse>(`/api/v1/peladas/${peladaId}/image`, formData)
+  return response.data
+}
+
+// Back to the gradient with initials
+export async function removePeladaImage(peladaId: number): Promise<PeladaResponse> {
+  const response = await apiClient.delete<PeladaResponse>(`/api/v1/peladas/${peladaId}/image`)
+  return response.data
+}
+
+// Creator only; userId must be an admin of the pelada. The old creator stays admin
+export async function transferPelada(peladaId: number, userId: number): Promise<PeladaResponse> {
+  const response = await apiClient.put<PeladaResponse>(`/api/v1/peladas/${peladaId}/creator`, { userId })
   return response.data
 }
 

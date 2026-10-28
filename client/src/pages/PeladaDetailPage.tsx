@@ -5,7 +5,6 @@ import type { BulkMemberAction } from "@/utils/bulkMemberActions";
 import { useAuth } from "@/hooks/useAuth";
 import { usePeladaDetail } from "@/components/pelada/hooks/usePeladaDetail";
 import { usePeladaActions } from "@/components/pelada/hooks/usePeladaActions";
-import EditPeladaModal from "@/components/EditPeladaModal";
 import {
   Tabs,
   TabsList,
@@ -25,7 +24,6 @@ import { AddPlayerDialog } from "@/components/pelada/AddPlayerDialog";
 import { ConfirmRemoveDialog } from "@/components/pelada/ConfirmRemoveDialog";
 import { CreateSessionDialog } from "@/components/pelada/CreateSessionDialog";
 import { SetPlayerStarsDialog } from "@/components/pelada/SetPlayerStarsDialog";
-import { DeletePeladaDialog } from "@/components/pelada/DeletePeladaDialog";
 import { RankingCommandButton } from "@/components/pelada/RankingCommandButton";
 
 // Lazy so recharts only downloads when the dialog is first opened
@@ -57,8 +55,6 @@ export default function PeladaDetailPage() {
   } = usePeladaDetail(id);
 
   const [showAddPlayer, setShowAddPlayer] = useState(false);
-  const [showEdit, setShowEdit] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [confirmRemoveMember, setConfirmRemoveMember] =
     useState<PeladaMember | null>(null);
   const [starsMember, setStarsMember] = useState<PeladaMember | null>(null);
@@ -96,19 +92,14 @@ export default function PeladaDetailPage() {
 
   const isCurrentUserAdmin =
     pelada?.members.find((m) => m.id === currentUser?.id)?.isAdmin ?? false;
-  const creatorId = pelada?.creatorId ?? null;
-  const isCurrentUserCreator =
-    currentUser != null && creatorId === currentUser.id;
 
   const {
-    deleting,
     removingMember,
     settingStars,
     togglingAdmin,
     togglingMensalista,
     bulkPending,
     attendancePending,
-    removePeladaAndLeave,
     removeMember,
     toggleAdmin,
     setMemberStars,
@@ -138,10 +129,6 @@ export default function PeladaDetailPage() {
     [dailies, nextSession],
   );
 
-  const handleDelete = async () => {
-    if (!(await removePeladaAndLeave())) setShowDeleteConfirm(false);
-  };
-
   // Close the dialog before the request, so the member leaves the list with no overlay open
   const handleRemoveConfirm = () => {
     if (!confirmRemoveMember) return;
@@ -163,13 +150,7 @@ export default function PeladaDetailPage() {
         </div>
       ) : pelada ? (
         <main className="flex flex-col gap-5 p-4 md:gap-6 md:p-6">
-          <PeladaBanner
-            pelada={pelada}
-            isCurrentUserAdmin={isCurrentUserAdmin}
-            isCurrentUserCreator={isCurrentUserCreator}
-            onEdit={() => setShowEdit(true)}
-            onDelete={() => setShowDeleteConfirm(true)}
-          />
+          <PeladaBanner pelada={pelada} isCurrentUserAdmin={isCurrentUserAdmin} />
 
           <div className="min-w-0">
               <Tabs defaultValue="members" className="flex flex-col gap-5">
@@ -303,14 +284,6 @@ export default function PeladaDetailPage() {
         />
       )}
 
-      {showEdit && pelada && (
-        <EditPeladaModal
-          pelada={pelada}
-          onClose={() => setShowEdit(false)}
-          onUpdated={refetchPelada}
-        />
-      )}
-
       {showCreateSession && pelada && (
         <CreateSessionDialog
           peladaId={pelada.id}
@@ -320,14 +293,6 @@ export default function PeladaDetailPage() {
         />
       )}
 
-      {showDeleteConfirm && pelada && (
-        <DeletePeladaDialog
-          peladaName={pelada.name}
-          deleting={deleting}
-          onConfirm={handleDelete}
-          onClose={() => setShowDeleteConfirm(false)}
-        />
-      )}
     </div>
   );
 }
