@@ -34,6 +34,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -97,6 +98,11 @@ class PeladaServiceTest {
                 .admins(admins)
                 .build();
         MembershipStubs.stubMembership(peladaRepository, pelada);
+        lenient().when(userRepository.findAllById(anyIterable())).thenAnswer(inv -> {
+            Set<Long> ids = new HashSet<>();
+            inv.<Iterable<Long>>getArgument(0).forEach(ids::add);
+            return Stream.of(admin, member, outsider).filter(u -> ids.contains(u.getId())).toList();
+        });
     }
 
     // --- createPelada ---
@@ -305,15 +311,14 @@ class PeladaServiceTest {
     void removePlayer_success_removesMemberFromPelada() {
         when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
-        when(userRepository.findById(2L)).thenReturn(Optional.of(member));
         when(peladaRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         peladaService.removePlayer(10L, 2L, "admin@example.com");
 
         assertThat(pelada.getMembers()).doesNotContain(member);
-        verify(playerStarsRepository).deleteByPeladaAndUser(pelada, member);
-        verify(mensalistaRepository).deleteByPeladaAndUser(pelada, member);
-        verify(dailyService).removeFromUpcomingSessions(pelada, member);
+        verify(playerStarsRepository).deleteByPeladaAndUserIn(pelada, List.of(member));
+        verify(mensalistaRepository).deleteByPeladaAndUserIn(pelada, List.of(member));
+        verify(dailyService).removeFromUpcomingSessions(pelada, List.of(member));
     }
 
     @Test
@@ -330,7 +335,6 @@ class PeladaServiceTest {
     void removePlayer_targetNotFound_throwsNotFound() {
         when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
-        when(userRepository.findById(999L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> peladaService.removePlayer(10L, 999L, "admin@example.com"))
                 .isInstanceOf(AppException.class)
@@ -341,7 +345,6 @@ class PeladaServiceTest {
     void removePlayer_creatorCannotBeRemoved_throwsForbidden() {
         when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
-        when(userRepository.findById(1L)).thenReturn(Optional.of(admin));
 
         assertThatThrownBy(() -> peladaService.removePlayer(10L, 1L, "admin@example.com"))
                 .isInstanceOf(AppException.class)
@@ -373,8 +376,7 @@ class PeladaServiceTest {
     void setAdmin_promote_success() {
         when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
-        when(userRepository.findById(2L)).thenReturn(Optional.of(member));
-        when(peladaRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(peladaRepository.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
 
         peladaService.setAdmin(10L, 2L, true, "admin@example.com");
 
@@ -386,8 +388,7 @@ class PeladaServiceTest {
         pelada.getAdmins().add(member);
         when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
-        when(userRepository.findById(2L)).thenReturn(Optional.of(member));
-        when(peladaRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(peladaRepository.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
 
         peladaService.setAdmin(10L, 2L, false, "admin@example.com");
 
@@ -408,7 +409,6 @@ class PeladaServiceTest {
     void setAdmin_targetIsCreator_throwsForbidden() {
         when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
-        when(userRepository.findById(1L)).thenReturn(Optional.of(admin));
 
         assertThatThrownBy(() -> peladaService.setAdmin(10L, 1L, false, "admin@example.com"))
                 .isInstanceOf(AppException.class)
@@ -438,20 +438,18 @@ class PeladaServiceTest {
     void setAdmin_targetNotMember_throwsNotFoundAndKeepsAdmins() {
         when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
-        when(userRepository.findById(3L)).thenReturn(Optional.of(outsider));
 
         assertThatThrownBy(() -> peladaService.setAdmin(10L, 3L, true, "admin@example.com"))
                 .isInstanceOf(AppException.class)
                 .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.NOT_FOUND));
         assertThat(pelada.getAdmins()).doesNotContain(outsider);
-        verify(peladaRepository, never()).save(any());
+        verify(peladaRepository, never()).saveAndFlush(any());
     }
 
     @Test
     void setAdmin_targetNotFound_throwsNotFound() {
         when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
-        when(userRepository.findById(999L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> peladaService.setAdmin(10L, 999L, true, "admin@example.com"))
                 .isInstanceOf(AppException.class)
@@ -464,13 +462,13 @@ class PeladaServiceTest {
     void setPlayerStars_newRating_createsRow() {
         when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
-        when(userRepository.findById(2L)).thenReturn(Optional.of(member));
-        when(playerStarsRepository.findByPeladaAndUser(pelada, member)).thenReturn(Optional.empty());
+        when(playerStarsRepository.findByPeladaAndUserIn(pelada, List.of(member))).thenReturn(List.of());
+        when(playerStarsRepository.findStarsByPelada(pelada)).thenReturn(java.util.Map.of(2L, 5));
 
         PeladaMemberDTO result = peladaService.setPlayerStars(10L, 2L, 5, "admin@example.com");
 
-        verify(playerStarsRepository).save(argThat(s ->
-                s.getPelada() == pelada && s.getUser() == member && s.getStars() == 5));
+        verify(playerStarsRepository).saveAll(argThat((List<PeladaPlayerStars> rows) -> rows.size() == 1
+                && rows.get(0).getPelada() == pelada && rows.get(0).getUser() == member && rows.get(0).getStars() == 5));
         assertThat(result.getId()).isEqualTo(2L);
         assertThat(result.getStars()).isEqualTo(5);
         assertThat(result.isAdmin()).isFalse();
@@ -481,12 +479,11 @@ class PeladaServiceTest {
         PeladaPlayerStars existing = PeladaPlayerStars.builder().id(7L).pelada(pelada).user(member).stars(4).build();
         when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
-        when(userRepository.findById(2L)).thenReturn(Optional.of(member));
-        when(playerStarsRepository.findByPeladaAndUser(pelada, member)).thenReturn(Optional.of(existing));
+        when(playerStarsRepository.findByPeladaAndUserIn(pelada, List.of(member))).thenReturn(List.of(existing));
 
         peladaService.setPlayerStars(10L, 2L, 1, "admin@example.com");
 
-        verify(playerStarsRepository).save(existing);
+        verify(playerStarsRepository).saveAll(List.of(existing));
         assertThat(existing.getStars()).isEqualTo(1);
     }
 
@@ -494,8 +491,8 @@ class PeladaServiceTest {
     void setPlayerStars_adminRatesThemselves() {
         when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
-        when(userRepository.findById(1L)).thenReturn(Optional.of(admin));
-        when(playerStarsRepository.findByPeladaAndUser(pelada, admin)).thenReturn(Optional.empty());
+        when(playerStarsRepository.findByPeladaAndUserIn(pelada, List.of(admin))).thenReturn(List.of());
+        when(playerStarsRepository.findStarsByPelada(pelada)).thenReturn(java.util.Map.of(1L, 5));
 
         PeladaMemberDTO result = peladaService.setPlayerStars(10L, 1L, 5, "admin@example.com");
 
@@ -511,7 +508,7 @@ class PeladaServiceTest {
         assertThatThrownBy(() -> peladaService.setPlayerStars(10L, 1L, 5, "member@example.com"))
                 .isInstanceOf(AppException.class)
                 .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.FORBIDDEN));
-        verify(playerStarsRepository, never()).save(any());
+        verify(playerStarsRepository, never()).saveAll(any());
     }
 
     @Test
@@ -528,12 +525,11 @@ class PeladaServiceTest {
     void setPlayerStars_targetNotMember_throwsNotFound() {
         when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
-        when(userRepository.findById(3L)).thenReturn(Optional.of(outsider));
 
         assertThatThrownBy(() -> peladaService.setPlayerStars(10L, 3L, 5, "admin@example.com"))
                 .isInstanceOf(AppException.class)
                 .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.NOT_FOUND));
-        verify(playerStarsRepository, never()).save(any());
+        verify(playerStarsRepository, never()).saveAll(any());
     }
 
     // --- searchUsers ---
@@ -696,11 +692,12 @@ class PeladaServiceTest {
     void setMensalista_marksAMemberWithinTheLimit() {
         pelada.setMaxMensalistas(2);
         stubSetMensalista(admin, member);
-        when(mensalistaRepository.countByPelada(pelada)).thenReturn(1L);
+        stubMensalistas(4L);
 
         PeladaMemberDTO result = peladaService.setMensalista(10L, 2L, true, "admin@example.com");
 
-        verify(mensalistaRepository).save(argThat(m -> m.getPelada() == pelada && m.getUser() == member));
+        verify(mensalistaRepository).saveAll(argThat((List<PeladaMensalista> rows) -> rows.size() == 1
+                && rows.get(0).getPelada() == pelada && rows.get(0).getUser() == member));
         assertThat(result.isMensalista()).isTrue();
         assertThat(result.getStars()).isEqualTo(PeladaPlayerStars.DEFAULT_STARS);
     }
@@ -709,35 +706,34 @@ class PeladaServiceTest {
     void setMensalista_limitFull_throwsConflict() {
         pelada.setMaxMensalistas(2);
         stubSetMensalista(admin, member);
-        when(mensalistaRepository.countByPelada(pelada)).thenReturn(2L);
+        stubMensalistas(4L, 5L);
 
         assertThatThrownBy(() -> peladaService.setMensalista(10L, 2L, true, "admin@example.com"))
                 .hasMessage("Limite de mensalistas atingido (2/2)")
                 .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.CONFLICT));
-        verify(mensalistaRepository, never()).save(any());
+        verify(mensalistaRepository, never()).saveAll(any());
     }
 
     @Test
     void setMensalista_alreadyMensalista_isIdempotentEvenWithTheLimitFull() {
         pelada.setMaxMensalistas(1);
         stubSetMensalista(admin, member);
-        when(mensalistaRepository.existsByPeladaAndUser(pelada, member)).thenReturn(true);
+        stubMensalistas(2L);
 
         PeladaMemberDTO result = peladaService.setMensalista(10L, 2L, true, "admin@example.com");
 
         assertThat(result.isMensalista()).isTrue();
-        verify(mensalistaRepository, never()).save(any());
-        verify(mensalistaRepository, never()).countByPelada(any());
+        verify(mensalistaRepository).saveAll(List.of());
     }
 
     @Test
     void setMensalista_unmark_deletesTheRow() {
         stubSetMensalista(admin, member);
-        when(mensalistaRepository.existsByPeladaAndUser(pelada, member)).thenReturn(true);
+        stubMensalistas(2L);
 
         PeladaMemberDTO result = peladaService.setMensalista(10L, 2L, false, "admin@example.com");
 
-        verify(mensalistaRepository).deleteByPeladaAndUser(pelada, member);
+        verify(mensalistaRepository).deleteByPeladaAndUserIn(pelada, List.of(member));
         assertThat(result.isMensalista()).isFalse();
     }
 
@@ -755,11 +751,164 @@ class PeladaServiceTest {
     void setMensalista_targetNotAMember_throwsNotFound() {
         when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(peladaRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(pelada));
-        when(userRepository.findById(3L)).thenReturn(Optional.of(outsider));
 
         assertThatThrownBy(() -> peladaService.setMensalista(10L, 3L, true, "admin@example.com"))
                 .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.NOT_FOUND));
         verifyNoInteractions(mensalistaRepository);
+    }
+
+    // --- bulk member actions ---
+
+    @Test
+    void setAdmins_promotesEveryTarget_andReturnsThem() {
+        pelada.getMembers().add(outsider);
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
+        when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
+
+        List<PeladaMemberDTO> result = peladaService.setAdmins(10L, List.of(2L, 3L), true, "admin@example.com");
+
+        assertThat(pelada.getAdmins()).contains(member, outsider);
+        assertThat(result).extracting(PeladaMemberDTO::getId).containsExactly(2L, 3L);
+        assertThat(result).allMatch(PeladaMemberDTO::isAdmin);
+    }
+
+    @Test
+    void setAdmins_oneTargetNotAMember_changesNobody() {
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
+        when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
+
+        assertThatThrownBy(() -> peladaService.setAdmins(10L, List.of(2L, 3L), true, "admin@example.com"))
+                .hasMessage("outsider não é membro desta pelada")
+                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.NOT_FOUND));
+        assertThat(pelada.getAdmins()).containsExactly(admin);
+        verify(peladaRepository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    void setAdmins_creatorInTheBatch_forbiddenAndNobodyChanges() {
+        pelada.getAdmins().add(member);
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
+        when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
+
+        assertThatThrownBy(() -> peladaService.setAdmins(10L, List.of(2L, 1L), false, "admin@example.com"))
+                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.FORBIDDEN));
+        assertThat(pelada.getAdmins()).containsExactlyInAnyOrder(admin, member);
+        verify(peladaRepository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    void setMensalistas_batchOverTheLimit_conflictAndNobodyChanges() {
+        pelada.getMembers().add(outsider);
+        pelada.setMaxMensalistas(2);
+        stubSetMensalista(admin, member);
+        Set<Long> mensalistas = stubMensalistas(4L);
+
+        assertThatThrownBy(() -> peladaService.setMensalistas(10L, List.of(2L, 3L), true, "admin@example.com"))
+                .hasMessage("Limite de mensalistas atingido: cabem 1, foram selecionados 2")
+                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.CONFLICT));
+        verify(mensalistaRepository, never()).saveAll(any());
+        assertThat(mensalistas).containsExactly(4L);
+    }
+
+    @Test
+    void setMensalistas_onlyMembersWhoChangeCountTowardsTheLimit() {
+        pelada.getMembers().add(outsider);
+        pelada.setMaxMensalistas(2);
+        stubSetMensalista(admin, member);
+        Set<Long> mensalistas = stubMensalistas(2L);
+
+        List<PeladaMemberDTO> result = peladaService.setMensalistas(10L, List.of(2L, 3L), true, "admin@example.com");
+
+        assertThat(mensalistas).containsExactlyInAnyOrder(2L, 3L);
+        assertThat(result).allMatch(PeladaMemberDTO::isMensalista);
+    }
+
+    @Test
+    void setMensalistas_unmark_deletesOnlyTheMensalistas() {
+        pelada.getMembers().add(outsider);
+        stubSetMensalista(admin, member);
+        stubMensalistas(2L);
+
+        List<PeladaMemberDTO> result = peladaService.setMensalistas(10L, List.of(2L, 3L), false, "admin@example.com");
+
+        verify(mensalistaRepository).deleteByPeladaAndUserIn(pelada, List.of(member));
+        assertThat(result).noneMatch(PeladaMemberDTO::isMensalista);
+    }
+
+    @Test
+    void setPlayersStars_updatesExistingRowsAndCreatesTheMissingOnes() {
+        PeladaPlayerStars existing = PeladaPlayerStars.builder().id(7L).pelada(pelada).user(member).stars(2).build();
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
+        when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
+        when(playerStarsRepository.findByPeladaAndUserIn(pelada, List.of(admin, member))).thenReturn(List.of(existing));
+        when(playerStarsRepository.findStarsByPelada(pelada)).thenReturn(java.util.Map.of(1L, 4, 2L, 4));
+
+        List<PeladaMemberDTO> result = peladaService.setPlayersStars(10L, List.of(1L, 2L), 4, "admin@example.com");
+
+        verify(playerStarsRepository).saveAll(argThat((List<PeladaPlayerStars> rows) -> rows.size() == 2
+                && rows.get(0).getUser() == admin && rows.get(0).getId() == null
+                && rows.get(1) == existing && rows.stream().allMatch(r -> r.getStars() == 4)));
+        assertThat(result).extracting(PeladaMemberDTO::getStars).containsExactly(4, 4);
+    }
+
+    @Test
+    void setPlayersStars_oneTargetNotAMember_savesNothing() {
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
+        when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
+
+        assertThatThrownBy(() -> peladaService.setPlayersStars(10L, List.of(2L, 999L), 4, "admin@example.com"))
+                .hasMessage("O jogador não é membro desta pelada")
+                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.NOT_FOUND));
+        verifyNoInteractions(playerStarsRepository);
+    }
+
+    @Test
+    void removePlayers_removesEveryTargetWithBatchSideEffects() {
+        pelada.getMembers().add(outsider);
+        pelada.getAdmins().add(outsider);
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
+        when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
+
+        peladaService.removePlayers(10L, List.of(2L, 3L), "admin@example.com");
+
+        assertThat(pelada.getMembers()).containsExactly(admin);
+        assertThat(pelada.getAdmins()).containsExactly(admin);
+        verify(playerStarsRepository).deleteByPeladaAndUserIn(pelada, List.of(member, outsider));
+        verify(mensalistaRepository).deleteByPeladaAndUserIn(pelada, List.of(member, outsider));
+        verify(dailyService).removeFromUpcomingSessions(pelada, List.of(member, outsider));
+        verify(peladaRepository).save(pelada);
+    }
+
+    @Test
+    void removePlayers_creatorInTheBatch_forbiddenAndNothingChanges() {
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
+        when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
+
+        assertThatThrownBy(() -> peladaService.removePlayers(10L, List.of(2L, 1L), "admin@example.com"))
+                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.FORBIDDEN));
+        assertThat(pelada.getMembers()).containsExactlyInAnyOrder(admin, member);
+        verifyNoInteractions(playerStarsRepository, mensalistaRepository, dailyService);
+    }
+
+    @Test
+    void removePlayers_oneTargetNotAMember_nothingChanges() {
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
+        when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
+
+        assertThatThrownBy(() -> peladaService.removePlayers(10L, List.of(2L, 3L), "admin@example.com"))
+                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.NOT_FOUND));
+        assertThat(pelada.getMembers()).containsExactlyInAnyOrder(admin, member);
+        verifyNoInteractions(playerStarsRepository, mensalistaRepository, dailyService);
+    }
+
+    @Test
+    void removePlayers_callerNotAdmin_forbidden() {
+        when(userAuthHelper.getAuthenticatedUser("member@example.com")).thenReturn(member);
+        when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
+
+        assertThatThrownBy(() -> peladaService.removePlayers(10L, List.of(2L), "member@example.com"))
+                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.FORBIDDEN));
+        verifyNoInteractions(dailyService);
     }
 
     // --- time zone and mensalista limit ---
@@ -839,6 +988,21 @@ class PeladaServiceTest {
     private void stubSetMensalista(User caller, User target) {
         when(userAuthHelper.getAuthenticatedUser(caller.getEmail())).thenReturn(caller);
         when(peladaRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(pelada));
-        when(userRepository.findById(target.getId())).thenReturn(Optional.of(target));
+    }
+
+    // Backs the mensalista repository with an in-memory set of user ids, like a database would
+    private Set<Long> stubMensalistas(Long... userIds) {
+        Set<Long> ids = new HashSet<>(List.of(userIds));
+        lenient().when(mensalistaRepository.findUserIdsByPelada(pelada)).thenAnswer(inv -> new HashSet<>(ids));
+        lenient().when(mensalistaRepository.saveAll(anyList())).thenAnswer(inv -> {
+            List<PeladaMensalista> rows = inv.getArgument(0);
+            rows.forEach(r -> ids.add(r.getUser().getId()));
+            return rows;
+        });
+        lenient().doAnswer(inv -> {
+            inv.<java.util.Collection<User>>getArgument(1).forEach(u -> ids.remove(u.getId()));
+            return null;
+        }).when(mensalistaRepository).deleteByPeladaAndUserIn(eq(pelada), anyCollection());
+        return ids;
     }
 }

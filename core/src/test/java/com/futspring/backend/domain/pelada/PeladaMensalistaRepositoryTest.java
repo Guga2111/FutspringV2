@@ -50,11 +50,23 @@ class PeladaMensalistaRepositoryTest {
         mark(first, bia);
         mark(second, ana);
 
-        mensalistaRepository.deleteByPeladaAndUser(first, ana);
+        mensalistaRepository.deleteByPeladaAndUserIn(first, List.of(ana));
         mensalistaRepository.deleteByPelada(second);
 
         assertThat(mensalistaRepository.findUserIdsByPelada(first)).containsExactly(bia.getId());
         assertThat(mensalistaRepository.countByPelada(second)).isZero();
+    }
+
+    @Test
+    void deleteByPeladaAndUserIn_onlyTouchesThatPelada() {
+        mark(first, ana);
+        mark(first, bia);
+        mark(second, ana);
+
+        mensalistaRepository.deleteByPeladaAndUserIn(first, List.of(ana, bia));
+
+        assertThat(mensalistaRepository.findUserIdsByPelada(first)).isEmpty();
+        assertThat(mensalistaRepository.findUserIdsByPelada(second)).containsExactly(ana.getId());
     }
 
     private Pelada pelada(String name) {

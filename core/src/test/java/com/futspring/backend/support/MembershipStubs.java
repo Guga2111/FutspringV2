@@ -6,10 +6,12 @@ import com.futspring.backend.shared.helper.PeladaAccessHelper;
 import com.futspring.backend.domain.user.User;
 
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
@@ -42,6 +44,11 @@ public final class MembershipStubs {
                 known.stream()
                         .filter(p -> p.getId().equals(inv.getArgument(0)))
                         .anyMatch(p -> p.getMembers().stream().anyMatch(u -> u.getEmail().equals(inv.getArgument(1)))));
+        lenient().when(repository.findMemberIds(anyLong(), anyCollection())).thenAnswer(inv ->
+                ids(known, inv.getArgument(0), false).stream()
+                        .filter(id -> inv.<Collection<Long>>getArgument(1).contains(id))
+                        .toList());
+        lenient().when(repository.findAdminIds(anyLong())).thenAnswer(inv -> ids(known, inv.getArgument(0), true));
         lenient().when(repository.existsSharedPelada(anyLong(), anyLong())).thenAnswer(inv ->
                 known.stream().anyMatch(p -> hasId(p.getMembers(), inv.getArgument(0)) && hasId(p.getMembers(), inv.getArgument(1))));
     }
@@ -50,6 +57,14 @@ public final class MembershipStubs {
         return known.stream()
                 .filter(p -> p.getId().equals(peladaId))
                 .anyMatch(p -> hasId(admins ? p.getAdmins() : p.getMembers(), userId));
+    }
+
+    private static List<Long> ids(List<Pelada> known, Long peladaId, boolean admins) {
+        return known.stream()
+                .filter(p -> p.getId().equals(peladaId))
+                .flatMap(p -> (admins ? p.getAdmins() : p.getMembers()).stream())
+                .map(User::getId)
+                .toList();
     }
 
     private static boolean hasId(Set<User> users, Long userId) {

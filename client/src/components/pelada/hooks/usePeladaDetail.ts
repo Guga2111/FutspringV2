@@ -120,9 +120,10 @@ export function usePeladaDetail(id: string | undefined) {
     [peladaId],
   )
 
-  // Merge a member returned by a mutation (mensalista toggle) into the pelada on screen
-  const mergeMember = useCallback(
-    (member: PeladaMember) => {
+  // Merge members returned by a mutation (stars, mensalista, admin; one or a batch) into the pelada on screen
+  const mergeMembers = useCallback(
+    (updated: PeladaMember[]) => {
+      const byId = new Map(updated.map((m) => [m.id, m]))
       setMain((prev) =>
         prev && prev.peladaId === peladaId && prev.data.pelada
           ? {
@@ -131,7 +132,10 @@ export function usePeladaDetail(id: string | undefined) {
                 ...prev.data,
                 pelada: {
                   ...prev.data.pelada,
-                  members: prev.data.pelada.members.map((m) => (m.id === member.id ? { ...m, ...member } : m)),
+                  members: prev.data.pelada.members.map((m) => {
+                    const next = byId.get(m.id)
+                    return next ? { ...m, ...next } : m
+                  }),
                 },
               },
             }
@@ -141,16 +145,17 @@ export function usePeladaDetail(id: string | undefined) {
     [peladaId],
   )
 
-  // Take a removed member out of the pelada on screen
-  const dropMember = useCallback(
-    (userId: number) => {
+  // Take removed members out of the pelada on screen
+  const dropMembers = useCallback(
+    (userIds: number[]) => {
+      const removed = new Set(userIds)
       setMain((prev) =>
         prev && prev.peladaId === peladaId && prev.data.pelada
           ? {
               peladaId,
               data: {
                 ...prev.data,
-                pelada: { ...prev.data.pelada, members: prev.data.pelada.members.filter((m) => m.id !== userId) },
+                pelada: { ...prev.data.pelada, members: prev.data.pelada.members.filter((m) => !removed.has(m.id)) },
               },
             }
           : prev,
@@ -184,7 +189,7 @@ export function usePeladaDetail(id: string | undefined) {
     refetchPelada: fetchPelada,
     refetchDailies: fetchDailies,
     mergeDaily,
-    mergeMember,
-    dropMember,
+    mergeMembers,
+    dropMembers,
   }
 }

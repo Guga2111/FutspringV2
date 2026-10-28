@@ -61,6 +61,21 @@ class PeladaPlayerStarsRepositoryTest {
         assertThat(playerStarsRepository.findStarsByPelada(first)).containsExactlyEntriesOf(java.util.Map.of(ana.getId(), 5));
     }
 
+    @Test
+    void batchLookupAndDelete_onlyTouchThatPelada() {
+        rate(first, ana, 5);
+        rate(first, bia, 4);
+        rate(second, ana, 2);
+
+        assertThat(playerStarsRepository.findByPeladaAndUserIn(first, java.util.List.of(ana)))
+                .extracting(PeladaPlayerStars::getStars).containsExactly(5);
+
+        playerStarsRepository.deleteByPeladaAndUserIn(first, java.util.List.of(ana, bia));
+
+        assertThat(playerStarsRepository.findStarsByPelada(first)).isEmpty();
+        assertThat(playerStarsRepository.findStarsByPelada(second)).containsExactlyEntriesOf(java.util.Map.of(ana.getId(), 2));
+    }
+
     private Pelada pelada(String name) {
         return peladaRepository.save(Pelada.builder().name(name).dayOfWeek("FRIDAY").timeOfDay("18:00").duration(1f).creator(ana).build());
     }

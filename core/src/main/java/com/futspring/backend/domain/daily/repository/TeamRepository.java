@@ -22,4 +22,7 @@ public interface TeamRepository extends JpaRepository<Team, Long> {
     // LEFT JOIN so a team without players is still returned
     @Query("SELECT DISTINCT t FROM Team t LEFT JOIN FETCH t.players WHERE t.daily = :daily ORDER BY t.id")
     List<Team> findByDailyWithPlayers(@Param("daily") Daily daily);
+
+    @Query("SELECT DISTINCT t FROM Team t LEFT JOIN FETCH t.players WHERE t.daily IN :dailies")
+    List<Team> findByDailyInWithPlayers(@Param("dailies") Collection<Daily> dailies);
 }

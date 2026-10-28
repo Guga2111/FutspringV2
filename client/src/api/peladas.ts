@@ -78,6 +78,31 @@ export async function setMensalista(peladaId: number, userId: number, isMensalis
   return response.data
 }
 
+// Bulk member actions (admin only): atomic, one invalid target (not a member 404, the creator 403, the mensalista
+// limit 409) changes nobody. They return the targets as they are now
+export async function setAdmins(peladaId: number, userIds: number[], isAdmin: boolean): Promise<PeladaMember[]> {
+  const response = await apiClient.put<PeladaMember[]>(`/api/v1/peladas/${peladaId}/players/admin`, { userIds, isAdmin })
+  return response.data
+}
+
+export async function setMensalistas(peladaId: number, userIds: number[], isMensalista: boolean): Promise<PeladaMember[]> {
+  const response = await apiClient.put<PeladaMember[]>(`/api/v1/peladas/${peladaId}/players/mensalista`, {
+    userIds,
+    isMensalista,
+  })
+  return response.data
+}
+
+export async function setPlayersStars(peladaId: number, userIds: number[], stars: number): Promise<PeladaMember[]> {
+  const response = await apiClient.put<PeladaMember[]>(`/api/v1/peladas/${peladaId}/players/stars`, { userIds, stars })
+  return response.data
+}
+
+// POST, not DELETE with a body
+export async function removePlayers(peladaId: number, userIds: number[]): Promise<void> {
+  await apiClient.post(`/api/v1/peladas/${peladaId}/players/remove`, { userIds })
+}
+
 export async function uploadPeladaImage(peladaId: number, file: File): Promise<PeladaResponse> {
   const formData = new FormData()
   formData.append("file", file)

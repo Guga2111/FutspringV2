@@ -20,6 +20,8 @@ public interface DailyAttendanceRepository extends JpaRepository<DailyAttendance
 
     long countByDaily(Daily daily);
 
+    List<DailyAttendance> findByDailyInAndUserIn(Collection<Daily> dailies, Collection<User> users);
+
     // The session's confirmed players with their users, in confirmation order
     @Query("SELECT a FROM DailyAttendance a JOIN FETCH a.user u WHERE a.daily = :daily ORDER BY a.confirmedAt, u.id")
     List<DailyAttendance> findByDailyWithUser(@Param("daily") Daily daily);
