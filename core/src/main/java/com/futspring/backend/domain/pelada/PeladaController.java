@@ -3,6 +3,10 @@ package com.futspring.backend.domain.pelada;
 import com.futspring.backend.domain.chat.ChatService;
 import com.futspring.backend.domain.chat.dto.MessageDTO;
 import com.futspring.backend.domain.pelada.dto.AddPlayerRequestDTO;
+import com.futspring.backend.domain.pelada.dto.BulkRemovePlayersRequestDTO;
+import com.futspring.backend.domain.pelada.dto.BulkSetAdminRequestDTO;
+import com.futspring.backend.domain.pelada.dto.BulkSetMensalistaRequestDTO;
+import com.futspring.backend.domain.pelada.dto.BulkSetStarsRequestDTO;
 import com.futspring.backend.domain.pelada.dto.CreatePeladaRequestDTO;
 import com.futspring.backend.domain.pelada.dto.PeladaDetailResponseDTO;
 import com.futspring.backend.domain.pelada.dto.PeladaMemberDTO;
@@ -79,6 +83,45 @@ public class PeladaController {
     ) {
         peladaService.removePlayer(id, userId, email);
         return ResponseEntity.ok().build();
+    }
+
+    // Bulk member actions: atomic, every target must be a member of this pelada
+    @PutMapping("/{id}/players/admin")
+    public ResponseEntity<List<PeladaMemberDTO>> setAdmins(
+            @PathVariable Long id,
+            @Valid @RequestBody BulkSetAdminRequestDTO request,
+            @AuthenticationPrincipal String email
+    ) {
+        return ResponseEntity.ok(peladaService.setAdmins(id, request.getUserIds(), request.getIsAdmin(), email));
+    }
+
+    @PutMapping("/{id}/players/mensalista")
+    public ResponseEntity<List<PeladaMemberDTO>> setMensalistas(
+            @PathVariable Long id,
+            @Valid @RequestBody BulkSetMensalistaRequestDTO request,
+            @AuthenticationPrincipal String email
+    ) {
+        return ResponseEntity.ok(peladaService.setMensalistas(id, request.getUserIds(), request.getIsMensalista(), email));
+    }
+
+    @PutMapping("/{id}/players/stars")
+    public ResponseEntity<List<PeladaMemberDTO>> setPlayersStars(
+            @PathVariable Long id,
+            @Valid @RequestBody BulkSetStarsRequestDTO request,
+            @AuthenticationPrincipal String email
+    ) {
+        return ResponseEntity.ok(peladaService.setPlayersStars(id, request.getUserIds(), request.getStars(), email));
+    }
+
+    // POST instead of DELETE with a body, which proxies and axios handle poorly
+    @PostMapping("/{id}/players/remove")
+    public ResponseEntity<Void> removePlayers(
+            @PathVariable Long id,
+            @Valid @RequestBody BulkRemovePlayersRequestDTO request,
+            @AuthenticationPrincipal String email
+    ) {
+        peladaService.removePlayers(id, request.getUserIds(), email);
+        return ResponseEntity.noContent().build();
     }
 
     @PutMapping("/{id}/players/{userId}/admin")

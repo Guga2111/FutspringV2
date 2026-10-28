@@ -659,6 +659,175 @@ class PeladaControllerTest extends BaseIntegrationTest {
                 .andExpect(jsonPath("$[0].nextDaily.bump").doesNotExist());
     }
 
+    // --- bulk member actions: /api/v1/peladas/{id}/players/{admin|mensalista|stars|remove} ---
+
+    @Test
+    void bulkSetAdmins_asAdmin_promotesEveryoneAndReturnsTheMembers() throws Exception {
+        User third = joinedMember("pthird");
+
+        mockMvc.perform(bulk(put(bulkUrl("admin")), admin, "{\"userIds\":[" + member.getId() + "," + third.getId() + "],\"isAdmin\":true}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].id").value(member.getId()))
+                .andExpect(jsonPath("$[0].isAdmin").value(true))
+                .andExpect(jsonPath("$[1].isAdmin").value(true))
+                .andExpect(jsonPath("$[0].stars").value(3));
+
+        assertThat(peladaRepository.findAdminIds(pelada.getId()))
+                .containsExactlyInAnyOrder(admin.getId(), member.getId(), third.getId());
+
+        // Idempotent: demoting includes one who already isn't an admin
+        mockMvc.perform(bulk(put(bulkUrl("admin")), admin, "{\"userIds\":[" + member.getId() + "],\"isAdmin\":false}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].isAdmin").value(false));
+    }
+
+    @Test
+    void bulkSetAdmins_creatorInTheBatch_forbiddenAndNobodyChanges() throws Exception {
+        mockMvc.perform(bulk(put(bulkUrl("admin")), admin, "{\"userIds\":[" + member.getId() + "," + admin.getId() + "],\"isAdmin\":false}"))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(bulk(put(bulkUrl("admin")), admin, "{\"userIds\":[" + member.getId() + "," + outsider.getId() + "],\"isAdmin\":true}"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("pout não é membro desta pelada"));
+
+        assertThat(peladaRepository.findAdminIds(pelada.getId())).containsExactly(admin.getId());
+    }
+
+    @Test
+    void bulkActions_withoutAdmin_forbidden() throws Exception {
+        String body = "{\"userIds\":[" + member.getId() + "],\"isAdmin\":true,\"isMensalista\":true,\"stars\":4}";
+        for (User caller : List.of(member, outsider)) {
+            mockMvc.perform(bulk(put(bulkUrl("admin")), caller, body)).andExpect(status().isForbidden());
+            mockMvc.perform(bulk(put(bulkUrl("mensalista")), caller, body)).andExpect(status().isForbidden());
+            mockMvc.perform(bulk(put(bulkUrl("stars")), caller, body)).andExpect(status().isForbidden());
+            mockMvc.perform(bulk(post(bulkUrl("remove")), caller, body)).andExpect(status().isForbidden());
+        }
+    }
+
+    @Test
+    void bulkActions_invalidUserIds_validationError() throws Exception {
+        String hundredAndOne = java.util.stream.LongStream.rangeClosed(1, 101)
+                .mapToObj(Long::toString).collect(java.util.stream.Collectors.joining(","));
+        for (String ids : List.of("[]", "[" + member.getId() + "," + member.getId() + "]", "[" + hundredAndOne + "]")) {
+            mockMvc.perform(bulk(post(bulkUrl("remove")), admin, "{\"userIds\":" + ids + "}"))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.errors.userIds").exists());
+        }
+        mockMvc.perform(bulk(put(bulkUrl("admin")), admin, "{\"userIds\":[" + member.getId() + "]}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.isAdmin").exists());
+        for (String stars : List.of("0", "6")) {
+            mockMvc.perform(bulk(put(bulkUrl("stars")), admin, "{\"userIds\":[" + member.getId() + "],\"stars\":" + stars + "}"))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.errors.stars").exists());
+        }
+    }
+
+    @Test
+    void bulkSetMensalistas_overTheLimit_conflictAndNobodyChanges() throws Exception {
+        User third = joinedMember("pthird");
+        pelada.setMaxMensalistas(1);
+        peladaRepository.save(pelada);
+        String body = "{\"userIds\":[" + member.getId() + "," + third.getId() + "],\"isMensalista\":true}";
+
+        mockMvc.perform(bulk(put(bulkUrl("mensalista")), admin, body))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("Limite de mensalistas atingido: cabem 1, foram selecionados 2"));
+        assertThat(mensalistaRepository.findUserIdsByPelada(pelada)).isEmpty();
+
+        pelada.setMaxMensalistas(2);
+        peladaRepository.save(pelada);
+        mockMvc.perform(bulk(put(bulkUrl("mensalista")), admin, body))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].isMensalista").value(true))
+                .andExpect(jsonPath("$[1].isMensalista").value(true));
+        assertThat(mensalistaRepository.findUserIdsByPelada(pelada)).containsExactlyInAnyOrder(member.getId(), third.getId());
+    }
+
+    @Test
+    void bulkSetStars_includingTheCreatorAndTheCaller() throws Exception {
+        mockMvc.perform(bulk(put(bulkUrl("stars")), admin, "{\"userIds\":[" + admin.getId() + "," + member.getId() + "],\"stars\":5}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].stars").value(5))
+                .andExpect(jsonPath("$[1].stars").value(5));
+
+        mockMvc.perform(get("/api/v1/peladas/" + pelada.getId())
+                .header("Authorization", bearerToken(member.getId(), member.getEmail())))
+                .andExpect(jsonPath("$.members[?(@.id == " + admin.getId() + ")].stars").value(5))
+                .andExpect(jsonPath("$.members[?(@.id == " + member.getId() + ")].stars").value(5));
+    }
+
+    @Test
+    void bulkRemove_freesTheirSpotsInUpcomingSessionsOnly() throws Exception {
+        User third = joinedMember("pthird");
+        Daily upcoming = dailyRepository.save(Daily.builder()
+                .pelada(pelada).dailyDate(LocalDate.now().plusDays(7)).dailyTime("18:00").build());
+        Daily live = dailyRepository.save(Daily.builder()
+                .pelada(pelada).dailyDate(LocalDate.now()).dailyTime("18:00").status(DailyStatus.IN_COURSE).build());
+        for (Daily daily : List.of(upcoming, live)) {
+            for (User user : List.of(admin, member, third)) {
+                attendanceRepository.save(new DailyAttendance(daily, user, Instant.now()));
+            }
+            teamRepository.save(Team.builder().daily(daily).name("Time 1")
+                    .players(new HashSet<>(Set.of(admin, member, third))).build());
+        }
+        mensalistaRepository.save(PeladaMensalista.builder().pelada(pelada).user(member).build());
+
+        mockMvc.perform(bulk(post(bulkUrl("remove")), admin, "{\"userIds\":[" + member.getId() + "," + third.getId() + "]}"))
+                .andExpect(status().isNoContent());
+
+        assertThat(peladaRepository.findMemberIds(pelada.getId(), List.of(admin.getId(), member.getId(), third.getId())))
+                .containsExactly(admin.getId());
+        assertThat(mensalistaRepository.findUserIdsByPelada(pelada)).isEmpty();
+        assertThat(attendanceRepository.findUsersByDaily(upcoming)).containsExactly(admin);
+        assertThat(teamRepository.findByDailyWithPlayers(upcoming).get(0).getPlayers()).containsExactly(admin);
+        assertThat(attendanceRepository.findUsersByDaily(live)).containsExactlyInAnyOrder(admin, member, third);
+        assertThat(teamRepository.findByDailyWithPlayers(live).get(0).getPlayers()).containsExactlyInAnyOrder(admin, member, third);
+    }
+
+    @Test
+    void bulkRemove_creatorOrNonMemberInTheBatch_nobodyIsRemoved() throws Exception {
+        mockMvc.perform(bulk(post(bulkUrl("remove")), admin, "{\"userIds\":[" + member.getId() + "," + admin.getId() + "]}"))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(bulk(post(bulkUrl("remove")), admin, "{\"userIds\":[" + member.getId() + "," + outsider.getId() + "]}"))
+                .andExpect(status().isNotFound());
+
+        assertThat(peladaRepository.findMemberIds(pelada.getId(), List.of(admin.getId(), member.getId())))
+                .containsExactlyInAnyOrder(admin.getId(), member.getId());
+    }
+
+    @Test
+    void bulkActions_targetFromAnotherPelada_notFound() throws Exception {
+        Pelada other = peladaRepository.save(Pelada.builder().name("Other").dayOfWeek("MONDAY").timeOfDay("20:00")
+                .duration(1f).creator(outsider).members(new HashSet<>(Set.of(outsider))).admins(new HashSet<>(Set.of(outsider))).build());
+
+        mockMvc.perform(bulk(put(bulkUrl("stars")), admin, "{\"userIds\":[" + outsider.getId() + "],\"stars\":1}"))
+                .andExpect(status().isNotFound());
+        // An admin of another pelada can't act on this one
+        mockMvc.perform(bulk(put("/api/v1/peladas/" + other.getId() + "/players/stars"), admin,
+                        "{\"userIds\":[" + outsider.getId() + "],\"stars\":1}"))
+                .andExpect(status().isForbidden());
+    }
+
+    private User joinedMember(String username) {
+        User user = userRepository.save(User.builder()
+                .email(username + "@test.com").username(username).password("hash").build());
+        pelada.getMembers().add(user);
+        peladaRepository.save(pelada);
+        return user;
+    }
+
+    private String bulkUrl(String action) {
+        return "/api/v1/peladas/" + pelada.getId() + "/players/" + action;
+    }
+
+    private org.springframework.test.web.servlet.RequestBuilder bulk(
+            org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder request, User caller, String body) {
+        return request.contentType(MediaType.APPLICATION_JSON)
+                .header("Authorization", bearerToken(caller.getId(), caller.getEmail()))
+                .content(body);
+    }
+
     private static String mensalistaUrl(Pelada pelada, User user) {
         return "/api/v1/peladas/" + pelada.getId() + "/players/" + user.getId() + "/mensalista";
     }

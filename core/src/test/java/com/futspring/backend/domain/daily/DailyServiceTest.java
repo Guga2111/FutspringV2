@@ -417,4 +417,29 @@ class DailyServiceTest {
                 .isInstanceOf(AppException.class)
                 .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.NOT_FOUND));
     }
+
+    // --- removeFromUpcomingSessions ---
+
+    @Test
+    void removeFromUpcomingSessions_batchesEverySessionThatHasNotStarted() {
+        List<Daily> upcoming = List.of(scheduledDaily);
+        when(dailyRepository.findByPeladaAndStatusIn(eq(pelada), argThat(statuses ->
+                statuses.containsAll(Set.of(DailyStatus.SCHEDULED, DailyStatus.CONFIRMED))
+                        && statuses.stream().noneMatch(DailyStatus.LOCKED::contains))))
+                .thenReturn(upcoming);
+
+        dailyService.removeFromUpcomingSessions(pelada, List.of(member, outsider));
+
+        verify(dailyAttendanceService).removeAttendees(upcoming, List.of(member, outsider));
+        verify(dailyTeamManagementService).removePlayersFromTeams(upcoming, List.of(member, outsider));
+    }
+
+    @Test
+    void removeFromUpcomingSessions_withoutUpcomingSessions_doesNothing() {
+        when(dailyRepository.findByPeladaAndStatusIn(eq(pelada), any())).thenReturn(List.of());
+
+        dailyService.removeFromUpcomingSessions(pelada, List.of(member));
+
+        verifyNoInteractions(dailyAttendanceService, dailyTeamManagementService);
+    }
 }

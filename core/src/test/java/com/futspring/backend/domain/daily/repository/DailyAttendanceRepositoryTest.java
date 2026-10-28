@@ -85,6 +85,20 @@ class DailyAttendanceRepositoryTest {
     }
 
     @Test
+    void findByDailyInAndUserIn_onlyTheGivenSessionsAndPlayers() {
+        User cid = user("cid");
+        attendanceRepository.saveAndFlush(new DailyAttendance(first, ana, T0));
+        attendanceRepository.saveAndFlush(new DailyAttendance(first, bia, T0));
+        attendanceRepository.saveAndFlush(new DailyAttendance(second, ana, T0));
+        attendanceRepository.saveAndFlush(new DailyAttendance(second, cid, T0));
+
+        assertThat(attendanceRepository.findByDailyInAndUserIn(List.of(first, second), List.of(ana, cid)))
+                .extracting(a -> a.getDaily().getId() + ":" + a.getUser().getUsername())
+                .containsExactlyInAnyOrder(first.getId() + ":ana", second.getId() + ":ana", second.getId() + ":cid");
+        assertThat(attendanceRepository.findByDailyInAndUserIn(List.of(first), List.of(cid))).isEmpty();
+    }
+
+    @Test
     void findBumpVictim_isTheDiaristaConfirmedLast_mensalistasAreNeverVictims() {
         User cid = user("cid");
         attendanceRepository.saveAndFlush(new DailyAttendance(first, ana, T0));

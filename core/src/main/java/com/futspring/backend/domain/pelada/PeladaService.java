@@ -177,90 +177,126 @@ public class PeladaService {
 
     @Transactional
     public void removePlayer(Long peladaId, Long targetUserId, String currentUserEmail) {
-        User caller = userAuthHelper.getAuthenticatedUser(currentUserEmail);
-        Pelada pelada = findPelada(peladaId);
-        accessHelper.requireAdmin(pelada, caller);
-
-        User target = findMember(pelada, targetUserId);
-        if (accessHelper.isCreator(pelada, target)) {
-            throw new AppException(HttpStatus.FORBIDDEN, "O criador da pelada não pode ser removido");
-        }
-
-        pelada.getMembers().remove(target);
-        pelada.getAdmins().remove(target);
-        // A player who comes back starts again with the default stars, as a diarista
-        playerStarsRepository.deleteByPeladaAndUser(pelada, target);
-        mensalistaRepository.deleteByPeladaAndUser(pelada, target);
-        // Frees their spot in the sessions that haven't started; past sessions keep their results
-        dailyService.removeFromUpcomingSessions(pelada, target);
-        peladaRepository.save(pelada);
-    }
-
-    // Any admin sets any member's stars in this pelada, their own included
-    @Transactional
-    public PeladaMemberDTO setPlayerStars(Long peladaId, Long targetUserId, int stars, String currentUserEmail) {
-        User caller = userAuthHelper.getAuthenticatedUser(currentUserEmail);
-        Pelada pelada = findPelada(peladaId);
-        accessHelper.requireAdmin(pelada, caller);
-
-        User target = findMember(pelada, targetUserId);
-        PeladaPlayerStars rating = playerStarsRepository.findByPeladaAndUser(pelada, target)
-                .orElseGet(() -> PeladaPlayerStars.builder().pelada(pelada).user(target).build());
-        rating.setStars(stars);
-        playerStarsRepository.save(rating);
-
-        return PeladaMemberDTO.from(target, accessHelper.isAdmin(pelada, target), stars,
-                mensalistaRepository.existsByPeladaAndUser(pelada, target));
+        removePlayers(peladaId, List.of(targetUserId), currentUserEmail);
     }
 
     /**
-     * Any admin marks or unmarks any member as mensalista (idempotent). The pelada row is locked before
-     * counting, so two admins at once can't go past maxMensalistas.
+     * Removes several members at once, all or nothing: one target that isn't a member (404) or the creator (403)
+     * fails the whole batch before anything changes.
      */
     @Transactional
+    public void removePlayers(Long peladaId, List<Long> targetUserIds, String currentUserEmail) {
+        User caller = userAuthHelper.getAuthenticatedUser(currentUserEmail);
+        Pelada pelada = findPelada(peladaId);
+        accessHelper.requireAdmin(pelada, caller);
+
+        List<User> targets = findMembers(pelada, targetUserIds);
+        if (targets.stream().anyMatch(t -> accessHelper.isCreator(pelada, t))) {
+            throw new AppException(HttpStatus.FORBIDDEN, "O criador da pelada não pode ser removido");
+        }
+
+        targets.forEach(pelada.getMembers()::remove);
+        targets.forEach(pelada.getAdmins()::remove);
+        // A player who comes back starts again with the default stars, as a diarista
+        playerStarsRepository.deleteByPeladaAndUserIn(pelada, targets);
+        mensalistaRepository.deleteByPeladaAndUserIn(pelada, targets);
+        // Frees their spots in the sessions that haven't started; past sessions keep their results
+        dailyService.removeFromUpcomingSessions(pelada, targets);
+        peladaRepository.save(pelada);
+    }
+
+    @Transactional
+    public PeladaMemberDTO setPlayerStars(Long peladaId, Long targetUserId, int stars, String currentUserEmail) {
+        return setPlayersStars(peladaId, List.of(targetUserId), stars, currentUserEmail).get(0);
+    }
+
+    // Any admin sets any member's stars in this pelada, their own included; the same value for every target
+    @Transactional
+    public List<PeladaMemberDTO> setPlayersStars(Long peladaId, List<Long> targetUserIds, int stars, String currentUserEmail) {
+        User caller = userAuthHelper.getAuthenticatedUser(currentUserEmail);
+        Pelada pelada = findPelada(peladaId);
+        accessHelper.requireAdmin(pelada, caller);
+
+        List<User> targets = findMembers(pelada, targetUserIds);
+        Map<Long, PeladaPlayerStars> existing = playerStarsRepository.findByPeladaAndUserIn(pelada, targets).stream()
+                .collect(Collectors.toMap(s -> s.getUser().getId(), s -> s));
+        List<PeladaPlayerStars> ratings = targets.stream()
+                .map(t -> existing.getOrDefault(t.getId(), PeladaPlayerStars.builder().pelada(pelada).user(t).build()))
+                .toList();
+        ratings.forEach(r -> r.setStars(stars));
+        playerStarsRepository.saveAll(ratings);
+
+        return toMemberDTOs(pelada, targets);
+    }
+
+    @Transactional
     public PeladaMemberDTO setMensalista(Long peladaId, Long targetUserId, boolean isMensalista, String currentUserEmail) {
+        return setMensalistas(peladaId, List.of(targetUserId), isMensalista, currentUserEmail).get(0);
+    }
+
+    /**
+     * Any admin marks or unmarks members as mensalistas (idempotent per member). The pelada row is locked before
+     * counting, so two admins at once can't go past maxMensalistas; a batch that doesn't fit changes nobody (the
+     * system never picks who gets the status).
+     */
+    @Transactional
+    public List<PeladaMemberDTO> setMensalistas(Long peladaId, List<Long> targetUserIds, boolean isMensalista,
+                                                String currentUserEmail) {
         User caller = userAuthHelper.getAuthenticatedUser(currentUserEmail);
         Pelada pelada = peladaRepository.findByIdForUpdate(peladaId)
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Pelada não encontrada"));
         accessHelper.requireAdmin(pelada, caller);
 
-        User target = findMember(pelada, targetUserId);
-        boolean already = mensalistaRepository.existsByPeladaAndUser(pelada, target);
-        if (isMensalista && !already) {
-            long count = mensalistaRepository.countByPelada(pelada);
-            if (count >= pelada.getMaxMensalistas()) {
-                throw new AppException(HttpStatus.CONFLICT,
-                        "Limite de mensalistas atingido (" + count + "/" + pelada.getMaxMensalistas() + ")");
+        List<User> targets = findMembers(pelada, targetUserIds);
+        Set<Long> current = mensalistaRepository.findUserIdsByPelada(pelada);
+        if (isMensalista) {
+            List<User> toAdd = targets.stream().filter(t -> !current.contains(t.getId())).toList();
+            int max = pelada.getMaxMensalistas();
+            if (current.size() + toAdd.size() > max) {
+                throw new AppException(HttpStatus.CONFLICT, toAdd.size() == 1
+                        ? "Limite de mensalistas atingido (" + current.size() + "/" + max + ")"
+                        : "Limite de mensalistas atingido: cabem " + Math.max(0, max - current.size())
+                                + ", foram selecionados " + toAdd.size());
             }
-            mensalistaRepository.save(PeladaMensalista.builder().pelada(pelada).user(target).build());
-        } else if (!isMensalista && already) {
-            mensalistaRepository.deleteByPeladaAndUser(pelada, target);
+            mensalistaRepository.saveAll(toAdd.stream()
+                    .map(t -> PeladaMensalista.builder().pelada(pelada).user(t).build())
+                    .toList());
+        } else {
+            List<User> toRemove = targets.stream().filter(t -> current.contains(t.getId())).toList();
+            if (!toRemove.isEmpty()) {
+                mensalistaRepository.deleteByPeladaAndUserIn(pelada, toRemove);
+            }
         }
 
-        int stars = playerStarsRepository.findByPeladaAndUser(pelada, target)
-                .map(PeladaPlayerStars::getStars)
-                .orElse(PeladaPlayerStars.DEFAULT_STARS);
-        return PeladaMemberDTO.from(target, accessHelper.isAdmin(pelada, target), stars, isMensalista);
+        return toMemberDTOs(pelada, targets);
     }
 
     @Transactional
     public void setAdmin(Long peladaId, Long targetUserId, boolean isAdmin, String currentUserEmail) {
+        setAdmins(peladaId, List.of(targetUserId), isAdmin, currentUserEmail);
+    }
+
+    // Only members can be admins, and the creator always is one; idempotent per member
+    @Transactional
+    public List<PeladaMemberDTO> setAdmins(Long peladaId, List<Long> targetUserIds, boolean isAdmin, String currentUserEmail) {
         User caller = userAuthHelper.getAuthenticatedUser(currentUserEmail);
         Pelada pelada = findPelada(peladaId);
         accessHelper.requireAdmin(pelada, caller);
 
-        // Only members can be admins
-        User target = findMember(pelada, targetUserId);
-        if (accessHelper.isCreator(pelada, target)) {
+        List<User> targets = findMembers(pelada, targetUserIds);
+        if (targets.stream().anyMatch(t -> accessHelper.isCreator(pelada, t))) {
             throw new AppException(HttpStatus.FORBIDDEN, "O criador da pelada é sempre administrador");
         }
 
         if (isAdmin) {
-            pelada.getAdmins().add(target);
+            pelada.getAdmins().addAll(targets);
         } else {
-            pelada.getAdmins().remove(target);
+            targets.forEach(pelada.getAdmins()::remove);
         }
-        peladaRepository.save(pelada);
+        // Flushed so the admin ids read for the response see the change
+        peladaRepository.saveAndFlush(pelada);
+
+        return toMemberDTOs(pelada, targets);
     }
 
     // Matches username or email, but only returns public fields (no email)
@@ -373,11 +409,34 @@ public class PeladaService {
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Usuário não encontrado"));
     }
 
-    private User findMember(Pelada pelada, Long userId) {
-        User target = findUser(userId);
-        if (!accessHelper.isMember(pelada, target)) {
-            throw new AppException(HttpStatus.NOT_FOUND, "O jogador não é membro desta pelada");
+    /**
+     * The members with these ids, in the same order, in two queries. Any id that isn't a member fails the whole
+     * batch with 404, naming the player when the user exists.
+     */
+    private List<User> findMembers(Pelada pelada, List<Long> userIds) {
+        Map<Long, User> users = userRepository.findAllById(userIds).stream()
+                .collect(Collectors.toMap(User::getId, u -> u));
+        Set<Long> memberIds = new HashSet<>(peladaRepository.findMemberIds(pelada.getId(), userIds));
+        for (Long id : userIds) {
+            if (!memberIds.contains(id)) {
+                User user = users.get(id);
+                throw new AppException(HttpStatus.NOT_FOUND, user == null
+                        ? "O jogador não é membro desta pelada"
+                        : user.getUsername() + " não é membro desta pelada");
+            }
         }
-        return target;
+        return userIds.stream().map(users::get).toList();
+    }
+
+    // The targets as the members grid shows them, in a fixed number of queries
+    private List<PeladaMemberDTO> toMemberDTOs(Pelada pelada, List<User> targets) {
+        Set<Long> adminIds = new HashSet<>(peladaRepository.findAdminIds(pelada.getId()));
+        Map<Long, Integer> stars = playerStarsRepository.findStarsByPelada(pelada);
+        Set<Long> mensalistaIds = mensalistaRepository.findUserIdsByPelada(pelada);
+        return targets.stream()
+                .map(t -> PeladaMemberDTO.from(t, adminIds.contains(t.getId()),
+                        stars.getOrDefault(t.getId(), PeladaPlayerStars.DEFAULT_STARS),
+                        mensalistaIds.contains(t.getId())))
+                .toList();
     }
 }

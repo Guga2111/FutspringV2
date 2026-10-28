@@ -116,15 +116,18 @@ public class DailyService {
     }
 
     /**
-     * Takes a member who left the pelada out of its sessions that haven't started: attendance and sorted teams.
-     * Locked sessions (live, finished, canceled) are history and stay as they are.
+     * Takes members who left the pelada out of its sessions that haven't started: attendance and sorted teams.
+     * Locked sessions (live, finished, canceled) are history and stay as they are. A fixed number of queries,
+     * whatever the number of members and sessions.
      */
-    public void removeFromUpcomingSessions(Pelada pelada, User user) {
+    public void removeFromUpcomingSessions(Pelada pelada, Collection<User> users) {
         Set<DailyStatus> upcoming = EnumSet.complementOf(EnumSet.copyOf(DailyStatus.LOCKED));
-        for (Daily daily : dailyRepository.findByPeladaAndStatusIn(pelada, upcoming)) {
-            dailyAttendanceService.removeAttendee(daily, user);
-            dailyTeamManagementService.removePlayerFromTeams(daily, user);
+        List<Daily> dailies = dailyRepository.findByPeladaAndStatusIn(pelada, upcoming);
+        if (dailies.isEmpty() || users.isEmpty()) {
+            return;
         }
+        dailyAttendanceService.removeAttendees(dailies, users);
+        dailyTeamManagementService.removePlayersFromTeams(dailies, users);
     }
 
     /**

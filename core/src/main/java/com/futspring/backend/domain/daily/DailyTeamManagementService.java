@@ -19,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -178,9 +179,9 @@ public class DailyTeamManagementService {
 
     /** Deletes every team of the daily (join rows first). Used by sort, import from message and daily delete. */
     // The team keeps its other players; the admin re-sorts or swaps
-    void removePlayerFromTeams(Daily daily, User user) {
-        for (Team team : teamRepository.findByDailyWithPlayers(daily)) {
-            team.getPlayers().remove(user);
+    void removePlayersFromTeams(Collection<Daily> dailies, Collection<User> users) {
+        for (Team team : teamRepository.findByDailyInWithPlayers(dailies)) {
+            team.getPlayers().removeAll(users);
         }
     }
 

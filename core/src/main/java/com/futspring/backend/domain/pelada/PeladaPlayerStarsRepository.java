@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -14,6 +15,8 @@ import java.util.stream.Collectors;
 public interface PeladaPlayerStarsRepository extends JpaRepository<PeladaPlayerStars, Long> {
 
     Optional<PeladaPlayerStars> findByPeladaAndUser(Pelada pelada, User user);
+
+    List<PeladaPlayerStars> findByPeladaAndUserIn(Pelada pelada, Collection<User> users);
 
     // [userId, stars] of the members that have a row
     @Query("SELECT s.user.id, s.stars FROM PeladaPlayerStars s WHERE s.pelada = :pelada")
@@ -34,8 +37,8 @@ public interface PeladaPlayerStarsRepository extends JpaRepository<PeladaPlayerS
     Double averageStarsByUser(@Param("userId") Long userId);
 
     @Modifying
-    @Query("DELETE FROM PeladaPlayerStars s WHERE s.pelada = :pelada AND s.user = :user")
-    void deleteByPeladaAndUser(@Param("pelada") Pelada pelada, @Param("user") User user);
+    @Query("DELETE FROM PeladaPlayerStars s WHERE s.pelada = :pelada AND s.user IN :users")
+    void deleteByPeladaAndUserIn(@Param("pelada") Pelada pelada, @Param("users") Collection<User> users);
 
     @Modifying
     @Query("DELETE FROM PeladaPlayerStars s WHERE s.pelada = :pelada")
