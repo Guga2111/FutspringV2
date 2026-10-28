@@ -2,6 +2,7 @@ package com.futspring.backend.domain.notification;
 
 import com.futspring.backend.domain.notification.dto.NotificationPreferenceDTO;
 import com.futspring.backend.domain.user.User;
+import com.futspring.backend.domain.user.UserRepository;
 import com.futspring.backend.shared.exception.AppException;
 import com.futspring.backend.shared.helper.UserAuthenticationHelper;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +27,8 @@ public class NotificationPreferenceService {
 
     private final UserAuthenticationHelper userAuthHelper;
     private final NotificationPreferenceRepository preferenceRepository;
+    private final UserRepository userRepository;
+    private final UnsubscribeTokens unsubscribeTokens;
 
     @Transactional(readOnly = true)
     public List<NotificationPreferenceDTO> get(String currentUserEmail) {
@@ -52,6 +55,28 @@ public class NotificationPreferenceService {
         preferenceRepository.findByIdUserIdIn(userIds).forEach(p ->
                 result.get(p.getId().getUserId()).put(p.getCategory(), p.isEmailEnabled()));
         return result;
+    }
+
+    // Public (the e-mail's link, or the mail provider's one-click): the token says which user and category
+    @Transactional
+    public NotificationPreferenceDTO unsubscribe(String token) {
+        return setByToken(token, false);
+    }
+
+    @Transactional
+    public NotificationPreferenceDTO resubscribe(String token) {
+        return setByToken(token, true);
+    }
+
+    private NotificationPreferenceDTO setByToken(String token, boolean emailEnabled) {
+        UnsubscribeTokens.Target target = unsubscribeTokens.verify(token).orElseThrow(NotificationPreferenceService::invalidLink);
+        User user = userRepository.findById(target.userId()).orElseThrow(NotificationPreferenceService::invalidLink);
+        set(user, target.category(), emailEnabled);
+        return new NotificationPreferenceDTO(target.category(), emailEnabled);
+    }
+
+    private static AppException invalidLink() {
+        return new AppException(HttpStatus.BAD_REQUEST, "Link inválido");
     }
 
     void set(User user, NotificationCategory category, boolean emailEnabled) {

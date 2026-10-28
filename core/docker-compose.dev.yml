@@ -16,6 +16,7 @@ services:
       RESEND_API_KEY: ${RESEND_API_KEY:-}
       MAIL_FROM: ${MAIL_FROM:-Futspring <no-reply@futspring.luisgosampaio.com>}
       APP_URL: ${APP_URL:-http://localhost:5173}
+      API_URL: ${API_URL:-http://localhost:8080}
     volumes:
       - ./uploads:/app/uploads
     depends_on:

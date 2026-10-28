@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -19,10 +20,18 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
+
+    /**
+     * Public routes authorized by a token in the request (the notification e-mail's unsubscribe link), not by the
+     * session: JwtAuthFilter ignores the Authorization header on them and AuthRateLimitFilter limits them.
+     */
+    public static final Set<String> EMAIL_LINK_PATHS = Set.of(
+            "/api/v1/notifications/unsubscribe", "/api/v1/notifications/resubscribe");
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -43,6 +52,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/v1/auth/**").permitAll()
                 .requestMatchers("/api/v1/files/**").permitAll()
                 .requestMatchers("/ws/**").permitAll()
+                .requestMatchers(HttpMethod.POST, EMAIL_LINK_PATHS.toArray(String[]::new)).permitAll()
                 .anyRequest().authenticated()
             )
             .exceptionHandling(ex -> ex

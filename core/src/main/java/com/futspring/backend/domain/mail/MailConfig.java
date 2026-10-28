@@ -26,6 +26,10 @@ public class MailConfig {
     @Value("${app.frontend-url}")
     private String frontendUrl;
 
+    // Public base URL of this API, for links a mail provider calls directly (List-Unsubscribe one-click)
+    @Value("${app.api-url}")
+    private String apiUrl;
+
     @Bean
     public EmailSender emailSender(RestClient.Builder builder) {
         return resendApiKey.isBlank() ? new NoopEmailSender() : new ResendEmailSender(resendClient(builder), from);
