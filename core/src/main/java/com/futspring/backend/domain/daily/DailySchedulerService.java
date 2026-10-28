@@ -10,7 +10,8 @@ import org.springframework.context.ApplicationEventPublisher;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.Clock;
 import java.time.DayOfWeek;
@@ -31,23 +32,27 @@ public class DailySchedulerService {
     private final PeladaRepository peladaRepository;
     private final DailyRepository dailyRepository;
     private final ApplicationEventPublisher eventPublisher;
+    private final PlatformTransactionManager transactionManager;
     private final Clock clock;
 
-    // Hourly: creates the next daily of each pelada once its day starts at most 24 h from now, in the pelada's zone
+    // Hourly: creates the next daily of each pelada once its day starts at most 24 h from now, in the pelada's zone.
+    // One transaction per pelada: a failing pelada rolls back only its own daily and notifications
     @Scheduled(cron = "0 0 * * * *")
-    @Transactional
     public void autoCreateDailies() {
         List<Pelada> peladas = peladaRepository.findByAutoCreateDailyEnabledTrue();
         Instant now = Instant.now(clock);
+        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
 
-        for (Pelada pelada : peladas) {
-            // One bad pelada must not abort the run for the others
+        peladas.forEach(pelada -> {
             try {
-                createNextDailyIfDue(pelada, now);
+                // Reloaded inside the transaction: the listed peladas are detached, and SESSION_CREATED reads the
+                // lazy members
+                transaction.executeWithoutResult(status -> peladaRepository.findById(pelada.getId())
+                        .ifPresent(managed -> createNextDailyIfDue(managed, now)));
             } catch (RuntimeException e) {
                 log.error("Auto-create daily failed for pelada {} (dayOfWeek={})", pelada.getId(), pelada.getDayOfWeek(), e);
             }
-        }
+        });
     }
 
     private void createNextDailyIfDue(Pelada pelada, Instant instant) {

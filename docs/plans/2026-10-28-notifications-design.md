@@ -334,7 +334,7 @@ Decisions taken while building PR 3:
 - [x] 1. Recipient queries in `NotificationRepository` (`findReminderRecipients`, `findWindowOpenRecipients`, each with the `NOT EXISTS` on the same recipient, type and session) and `NotificationRepositoryTest`.
 - [x] 2. `ScheduledNotificationJob` (every 15 min, `Clock`, one `TransactionTemplate` per pelada in a try/catch), saving through `NotificationService.notifyScheduled`; `ScheduledNotificationJobTest` on H2.
 - [x] 3. `NotificationRetentionJob` at 04:00 (two bulk deletes) and its boundary test.
-- [x] 4. `DailySchedulerService` reads the `Clock` in each pelada's `timeZone` (known gap narrowed to `nextDaily`).
+- [x] 4. `DailySchedulerService` reads the `Clock` in each pelada's `timeZone` (known gap narrowed to `nextDaily`) and runs each pelada in its own transaction.
 
 Decisions taken while building PR 4:
 - No migration: V10's CHECK already accepts both types and `uq_notifications_scheduled` exists (`FlywayMigrationTest` still checks it).
@@ -343,7 +343,8 @@ Decisions taken while building PR 4:
 - Candidates come from one query with a coarse UTC date range (today − 1 … today + 2); the exact window is checked in Java with `AttendanceWindow`, so the pelada's zone and DST are respected. The window check runs before the pelada's transaction, so a bad zone fails only that pelada.
 - `DIARISTA_WINDOW_OPEN` only while confirmed < capacity (checked when the window is processed; a session that fills before the run gets only the reminders). Recipients: every member without a mensalista row, creator and admins included.
 - Retention is its own `NotificationRetentionJob` in `domain/notification` (same 04:00 cron as `PasswordResetTokenCleanup`, which stays in `auth`). No index on `created_at`: a daily scan of a small table.
-- The scheduler's zone fix covers `DailySchedulerService` only; `nextDaily`'s "from today" stays in Known gaps. Also noted there: `autoCreateDailies` runs every pelada in one `@Transactional`, so a repository error in one pelada makes the whole run roll back even though it is caught (not changed here).
+- The scheduler's zone fix covers `DailySchedulerService` only; `nextDaily`'s "from today" stays in Known gaps.
+- `DailySchedulerService.autoCreateDailies` ran every pelada in one `@Transactional`, so a database error in one pelada was caught but still rolled back the whole run (rollback-only). It now uses one `TransactionTemplate` per pelada, like the new job, and reloads the pelada by id inside it: the listed peladas are detached, and `SESSION_CREATED` reads the lazy `members` (`LazyInitializationException` otherwise). `DailySchedulerTransactionTest` runs it with no test transaction, which is how that case was caught.
 - Resend quota as specified: `SESSION_REMINDER` e-mails by default (≈ one per unconfirmed mensalista per session; `maxMensalistas` defaults to 0), `DIARISTA_WINDOW_OPEN` doesn't.
 - Client: nothing to change; `utils/notifications.test.ts` already covers the text, `/daily/:id` link and toast of both types.
 - `docs/melhorias-escritas-a-mao.md` is untracked and stays out of this PR.
