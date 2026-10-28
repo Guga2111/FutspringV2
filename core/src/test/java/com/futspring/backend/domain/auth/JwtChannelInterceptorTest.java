@@ -93,6 +93,26 @@ class JwtChannelInterceptorTest {
     }
 
     @Test
+    void subscribe_ownNotificationQueue_isAccepted() {
+        Message<?> message = frame(StompCommand.SUBSCRIBE, null, "/user/queue/notifications", "member@example.com");
+
+        assertThat(interceptor.preSend(message, channel)).isSameAs(message);
+        verifyNoInteractions(peladaRepository);
+    }
+
+    @Test
+    void subscribe_notificationQueue_withoutUser_isRejected() {
+        assertThatThrownBy(() -> interceptor.preSend(frame(StompCommand.SUBSCRIBE, null, "/user/queue/notifications", null), channel))
+                .isInstanceOf(MessageDeliveryException.class);
+    }
+
+    @Test
+    void subscribe_otherUsersNotificationQueue_isRejected() {
+        assertThatThrownBy(() -> interceptor.preSend(frame(StompCommand.SUBSCRIBE, null, "/user/other@example.com/queue/notifications", "member@example.com"), channel))
+                .isInstanceOf(MessageDeliveryException.class);
+    }
+
+    @Test
     void subscribe_otherDestination_isRejected() {
         assertThatThrownBy(() -> interceptor.preSend(frame(StompCommand.SUBSCRIBE, null, "/topic/other", "member@example.com"), channel))
                 .isInstanceOf(MessageDeliveryException.class);

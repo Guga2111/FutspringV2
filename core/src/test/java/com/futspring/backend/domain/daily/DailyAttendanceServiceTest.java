@@ -1,5 +1,6 @@
 package com.futspring.backend.domain.daily;
 
+import com.futspring.backend.domain.notification.NotificationRepository;
 import com.futspring.backend.domain.daily.dto.DailyListItemDTO;
 import com.futspring.backend.domain.daily.entity.Daily;
 import com.futspring.backend.domain.daily.entity.DailyStatus;
@@ -41,6 +42,9 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class DailyAttendanceServiceTest {
+
+    @Mock
+    NotificationRepository notificationRepository;
 
     // Session: Friday 2026-10-30 20:00 in São Paulo (23:00Z); diaristas confirm from Thursday 20:00 (2026-10-29T23:00Z)
     static final Instant NOW = Instant.parse("2026-10-30T12:00:00Z");
@@ -320,6 +324,7 @@ class DailyAttendanceServiceTest {
 
         assertThat(attendance.users(scheduledDaily)).doesNotContain(member);
         assertThat(result).isNotNull();
+        verify(eventPublisher).publishEvent(new AttendanceChangedByAdminEvent(scheduledDaily, admin, List.of(member), false));
     }
 
     @Test
@@ -548,7 +553,10 @@ class DailyAttendanceServiceTest {
 
         assertThat(result.getConfirmedPlayerCount()).isEqualTo(3);
         verify(attendanceRepository, never()).findBumpVictim(any());
-        verifyNoInteractions(bumpRepository, eventPublisher);
+        verifyNoInteractions(bumpRepository);
+        // the only event is the notification of the confirmed player, no bump
+        verify(eventPublisher).publishEvent(new AttendanceChangedByAdminEvent(scheduledDaily, admin, List.of(member), true));
+        verifyNoMoreInteractions(eventPublisher);
         verify(mensalistaRepository, never()).existsByPeladaAndUser(pelada, member);
     }
 
@@ -562,7 +570,10 @@ class DailyAttendanceServiceTest {
         DailyListItemDTO result = attendanceService.adminConfirmAll(100L, "admin@example.com");
 
         assertThat(result.getConfirmedPlayerCount()).isEqualTo(4);
-        verifyNoInteractions(bumpRepository, eventPublisher);
+        verifyNoInteractions(bumpRepository);
+        verify(eventPublisher).publishEvent(argThat((Object e) -> e instanceof AttendanceChangedByAdminEvent a
+                && a.confirmed() && a.players().size() == 4));
+        verifyNoMoreInteractions(eventPublisher);
     }
 
     @Test
@@ -593,7 +604,7 @@ class DailyAttendanceServiceTest {
         return new DailyAttendanceService(userAuthHelper, new PeladaAccessHelper(peladaRepository), dailyRepository,
                 attendanceRepository, bumpRepository, mensalistaRepository, userRepository,
                 new DailyListItemAssembler(attendanceRepository, teamRepository, matchRepository, mensalistaRepository), eventPublisher,
-                Clock.fixed(now, ZoneOffset.UTC));
+                Clock.fixed(now, ZoneOffset.UTC), notificationRepository);
     }
 
     private User addMember(long id) {

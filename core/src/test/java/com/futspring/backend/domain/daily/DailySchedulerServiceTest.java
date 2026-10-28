@@ -1,5 +1,6 @@
 package com.futspring.backend.domain.daily;
 
+import org.springframework.context.ApplicationEventPublisher;
 import com.futspring.backend.domain.daily.entity.Daily;
 import com.futspring.backend.domain.daily.entity.DailyStatus;
 import com.futspring.backend.domain.daily.repository.DailyRepository;
@@ -12,11 +13,16 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.SimpleTransactionStatus;
 
+import java.time.Clock;
 import java.time.DayOfWeek;
+import java.time.Instant;
 import java.time.LocalDate;
-import java.util.Collections;
+import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -26,21 +32,38 @@ import static org.mockito.Mockito.*;
 class DailySchedulerServiceTest {
 
     @Mock
+    ApplicationEventPublisher eventPublisher;
+
+    @Mock
     PeladaRepository peladaRepository;
     @Mock
     DailyRepository dailyRepository;
+    @Mock
+    PlatformTransactionManager transactionManager;
 
     DailySchedulerService schedulerService;
 
     @BeforeEach
     void setUp() {
-        schedulerService = new DailySchedulerService(peladaRepository, dailyRepository);
+        schedulerService = new DailySchedulerService(peladaRepository, dailyRepository, eventPublisher,
+                transactionManager, Clock.fixed(NOW, ZoneOffset.UTC));
+        lenient().when(transactionManager.getTransaction(any())).thenReturn(new SimpleTransactionStatus());
     }
 
-    // The scheduler creates a daily the day before (next occurrence's midnight 0-24 h ahead), so tests
-    // use tomorrow's pelada; today's only matches between 00:00 and 00:59 and made the suite time-dependent
+    // Thu 29/10/2026 09:00 in São Paulo (the default zone): the scheduler creates a daily the day before (next
+    // occurrence's midnight 0-24 h ahead in the pelada's zone), so the tests use Friday's pelada
+    private static final Instant NOW = Instant.parse("2026-10-29T12:00:00Z");
+
     private static LocalDate tomorrow() {
-        return LocalDate.now().plusDays(1);
+        return LocalDate.of(2026, 10, 30);
+    }
+
+    // The peladas the run lists; each is reloaded by id inside its own transaction
+    private void enabled(Pelada... peladas) {
+        when(peladaRepository.findByAutoCreateDailyEnabledTrue()).thenReturn(List.of(peladas));
+        for (Pelada pelada : peladas) {
+            lenient().when(peladaRepository.findById(pelada.getId())).thenReturn(Optional.of(pelada));
+        }
     }
 
     private Pelada peladaForDay(DayOfWeek day) {
@@ -56,11 +79,12 @@ class DailySchedulerServiceTest {
 
     @Test
     void autoCreateDailies_nopeladasEnabled_doesNothing() {
-        when(peladaRepository.findByAutoCreateDailyEnabledTrue()).thenReturn(Collections.emptyList());
+        enabled();
 
         schedulerService.autoCreateDailies();
 
         verify(dailyRepository, never()).save(any());
+        verifyNoInteractions(eventPublisher);
     }
 
     @Test
@@ -68,7 +92,7 @@ class DailySchedulerServiceTest {
         DayOfWeek tomorrowDow = tomorrow().getDayOfWeek();
         Pelada pelada = peladaForDay(tomorrowDow);
 
-        when(peladaRepository.findByAutoCreateDailyEnabledTrue()).thenReturn(List.of(pelada));
+        enabled(pelada);
         when(dailyRepository.existsByPeladaAndDailyDate(eq(pelada), any())).thenReturn(false);
         when(dailyRepository.save(any(Daily.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -77,6 +101,8 @@ class DailySchedulerServiceTest {
         ArgumentCaptor<Daily> captor = ArgumentCaptor.forClass(Daily.class);
         verify(dailyRepository).save(captor.capture());
         assertThat(captor.getValue().getStatus()).isEqualTo(DailyStatus.SCHEDULED);
+        // created by the system: no actor, so every member is notified
+        verify(eventPublisher).publishEvent(new DailyCreatedEvent(captor.getValue(), null));
     }
 
     @Test
@@ -84,7 +110,7 @@ class DailySchedulerServiceTest {
         DayOfWeek tomorrowDow = tomorrow().getDayOfWeek();
         Pelada pelada = peladaForDay(tomorrowDow);
 
-        when(peladaRepository.findByAutoCreateDailyEnabledTrue()).thenReturn(List.of(pelada));
+        enabled(pelada);
         when(dailyRepository.existsByPeladaAndDailyDate(eq(pelada), any())).thenReturn(false);
         when(dailyRepository.save(any(Daily.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -100,7 +126,7 @@ class DailySchedulerServiceTest {
         DayOfWeek tomorrowDow = tomorrow().getDayOfWeek();
         Pelada pelada = peladaForDay(tomorrowDow);
 
-        when(peladaRepository.findByAutoCreateDailyEnabledTrue()).thenReturn(List.of(pelada));
+        enabled(pelada);
         when(dailyRepository.existsByPeladaAndDailyDate(eq(pelada), any())).thenReturn(true);
 
         schedulerService.autoCreateDailies();
@@ -117,7 +143,7 @@ class DailySchedulerServiceTest {
         Pelada pelada2 = Pelada.builder().id(2L).name("P2").dayOfWeek(tomorrowDow.name())
                 .timeOfDay("20:00").duration(1.5f).autoCreateDailyEnabled(true).build();
 
-        when(peladaRepository.findByAutoCreateDailyEnabledTrue()).thenReturn(List.of(pelada1, pelada2));
+        enabled(pelada1, pelada2);
         when(dailyRepository.existsByPeladaAndDailyDate(eq(pelada1), any())).thenReturn(false);
         when(dailyRepository.existsByPeladaAndDailyDate(eq(pelada2), any())).thenReturn(false);
         when(dailyRepository.save(any(Daily.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -136,7 +162,7 @@ class DailySchedulerServiceTest {
         Pelada pelada2 = Pelada.builder().id(2L).name("P2").dayOfWeek(tomorrowDow.name())
                 .timeOfDay("20:00").duration(1.5f).autoCreateDailyEnabled(true).build();
 
-        when(peladaRepository.findByAutoCreateDailyEnabledTrue()).thenReturn(List.of(pelada1, pelada2));
+        enabled(pelada1, pelada2);
         when(dailyRepository.existsByPeladaAndDailyDate(eq(pelada1), any())).thenReturn(true);
         when(dailyRepository.existsByPeladaAndDailyDate(eq(pelada2), any())).thenReturn(false);
         when(dailyRepository.save(any(Daily.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -151,7 +177,7 @@ class DailySchedulerServiceTest {
         DayOfWeek tomorrowDow = tomorrow().getDayOfWeek();
         Pelada pelada = peladaForDay(tomorrowDow);
 
-        when(peladaRepository.findByAutoCreateDailyEnabledTrue()).thenReturn(List.of(pelada));
+        enabled(pelada);
         when(dailyRepository.existsByPeladaAndDailyDate(eq(pelada), any())).thenReturn(false);
         when(dailyRepository.save(any(Daily.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -161,5 +187,55 @@ class DailySchedulerServiceTest {
         verify(dailyRepository).save(captor.capture());
         assertThat(captor.getValue().getPelada()).isEqualTo(pelada);
         assertThat(captor.getValue().getDailyDate()).isEqualTo(tomorrow());
+    }
+
+    // 23:30 in São Paulo is already Friday 02:30 in UTC: the pelada's own day decides, not the server's
+    @Test
+    void autoCreateDailies_usesEachPeladasTimeZone() {
+        schedulerService = new DailySchedulerService(peladaRepository, dailyRepository, eventPublisher,
+                transactionManager, Clock.fixed(Instant.parse("2026-10-30T02:30:00Z"), ZoneOffset.UTC));
+        Pelada saoPaulo = peladaForDay(DayOfWeek.FRIDAY);
+        Pelada tokyo = Pelada.builder().id(2L).name("Tokyo").dayOfWeek("SATURDAY").timeOfDay("10:00")
+                .duration(1f).autoCreateDailyEnabled(true).timeZone("Asia/Tokyo").build();
+        Pelada utc = Pelada.builder().id(3L).name("UTC").dayOfWeek("FRIDAY").timeOfDay("10:00")
+                .duration(1f).autoCreateDailyEnabled(true).timeZone("UTC").build();
+
+        enabled(saoPaulo, tokyo, utc);
+        when(dailyRepository.existsByPeladaAndDailyDate(any(), any())).thenReturn(false);
+        when(dailyRepository.save(any(Daily.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        schedulerService.autoCreateDailies();
+
+        ArgumentCaptor<Daily> captor = ArgumentCaptor.forClass(Daily.class);
+        verify(dailyRepository, times(2)).save(captor.capture());
+        // São Paulo: Friday starts in 30 min; Tokyo (Fri 11:30): Saturday in 12.5 h; UTC: Friday already started
+        assertThat(captor.getAllValues()).extracting(d -> d.getPelada().getName(), Daily::getDailyDate)
+                .containsExactly(tuple("Pelada", LocalDate.of(2026, 10, 30)), tuple("Tokyo", LocalDate.of(2026, 10, 31)));
+    }
+
+    @Test
+    void autoCreateDailies_oneFailingPelada_doesNotStopTheOthers() {
+        DayOfWeek tomorrowDow = tomorrow().getDayOfWeek();
+        Pelada failing = Pelada.builder().id(1L).name("P1").dayOfWeek(tomorrowDow.name())
+                .timeOfDay("18:00").duration(2f).autoCreateDailyEnabled(true).build();
+        Pelada ok = Pelada.builder().id(2L).name("P2").dayOfWeek(tomorrowDow.name())
+                .timeOfDay("20:00").duration(1.5f).autoCreateDailyEnabled(true).build();
+
+        enabled(failing, ok);
+        when(dailyRepository.existsByPeladaAndDailyDate(any(), any())).thenReturn(false);
+        when(dailyRepository.save(any(Daily.class))).thenAnswer(inv -> {
+            Daily daily = inv.getArgument(0);
+            if (daily.getPelada().equals(failing)) {
+                throw new IllegalStateException("database down");
+            }
+            return daily;
+        });
+
+        schedulerService.autoCreateDailies();
+
+        verify(eventPublisher).publishEvent(argThat((Object e) -> e instanceof DailyCreatedEvent created
+                && created.daily().getPelada().equals(ok)));
+        verify(transactionManager).rollback(any());
+        verify(transactionManager).commit(any());
     }
 }

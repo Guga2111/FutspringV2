@@ -1,5 +1,7 @@
 package com.futspring.backend.domain.pelada;
 
+import com.futspring.backend.domain.notification.NotificationRepository;
+import org.springframework.context.ApplicationEventPublisher;
 import com.futspring.backend.domain.chat.MessageRepository;
 import com.futspring.backend.domain.daily.DailyService;
 import com.futspring.backend.domain.daily.repository.DailyAttendanceBumpRepository;
@@ -33,6 +35,12 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class PeladaServiceImageTest {
 
+    @Mock
+    NotificationRepository notificationRepository;
+
+    @Mock
+    ApplicationEventPublisher eventPublisher;
+
     @Mock DailyRepository dailyRepository;
     @Mock DailyAttendanceRepository attendanceRepository;
     @Mock DailyAttendanceBumpRepository bumpRepository;
@@ -65,7 +73,8 @@ class PeladaServiceImageTest {
     @BeforeEach
     void setUp() {
         peladaService = new PeladaService(peladaRepository, playerStarsRepository, mensalistaRepository, userRepository, dailyRepository, attendanceRepository, bumpRepository, rankingRepository, messageRepository,
-                fileUploadService, userAuthHelper, new PeladaAccessHelper(peladaRepository), dailyService, aggregateRebuildService);
+                fileUploadService, userAuthHelper, new PeladaAccessHelper(peladaRepository), dailyService, aggregateRebuildService,
+                notificationRepository, eventPublisher);
 
         admin = User.builder().id(1L).email("admin@example.com").username("admin").password("hash").build();
         member = User.builder().id(2L).email("member@example.com").username("member").password("hash").build();

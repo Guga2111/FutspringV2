@@ -10,6 +10,7 @@ import com.futspring.backend.domain.daily.repository.DailyAttendanceBumpReposito
 import com.futspring.backend.domain.daily.repository.DailyAttendanceRepository;
 import com.futspring.backend.domain.daily.repository.DailyRepository;
 import com.futspring.backend.domain.file.FileUploadService;
+import com.futspring.backend.domain.notification.NotificationRepository;
 import com.futspring.backend.domain.pelada.dto.CreatePeladaRequestDTO;
 import com.futspring.backend.domain.pelada.dto.PeladaDetailResponseDTO;
 import com.futspring.backend.domain.pelada.dto.PeladaMemberDTO;
@@ -24,6 +25,7 @@ import com.futspring.backend.domain.user.User;
 import com.futspring.backend.domain.user.UserRepository;
 import com.futspring.backend.domain.user.dto.PublicUserDTO;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -61,6 +63,8 @@ public class PeladaService {
     private final PeladaAccessHelper accessHelper;
     private final DailyService dailyService;
     private final AggregateRebuildService aggregateRebuildService;
+    private final NotificationRepository notificationRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public PeladaResponseDTO createPelada(CreatePeladaRequestDTO request, String currentUserEmail) {
@@ -173,6 +177,7 @@ public class PeladaService {
 
         pelada.getMembers().add(target);
         peladaRepository.save(pelada);
+        eventPublisher.publishEvent(new MembersAddedEvent(pelada, caller, List.of(target)));
     }
 
     @Transactional
@@ -203,6 +208,7 @@ public class PeladaService {
         // Frees their spots in the sessions that haven't started; past sessions keep their results
         dailyService.removeFromUpcomingSessions(pelada, targets);
         peladaRepository.save(pelada);
+        eventPublisher.publishEvent(new MembersRemovedEvent(pelada, caller, targets));
     }
 
     @Transactional
@@ -261,11 +267,13 @@ public class PeladaService {
             mensalistaRepository.saveAll(toAdd.stream()
                     .map(t -> PeladaMensalista.builder().pelada(pelada).user(t).build())
                     .toList());
+            eventPublisher.publishEvent(new MensalistasChangedEvent(pelada, caller, toAdd, true));
         } else {
             List<User> toRemove = targets.stream().filter(t -> current.contains(t.getId())).toList();
             if (!toRemove.isEmpty()) {
                 mensalistaRepository.deleteByPeladaAndUserIn(pelada, toRemove);
             }
+            eventPublisher.publishEvent(new MensalistasChangedEvent(pelada, caller, toRemove, false));
         }
 
         return toMemberDTOs(pelada, targets);
@@ -288,6 +296,9 @@ public class PeladaService {
             throw new AppException(HttpStatus.FORBIDDEN, "O criador da pelada é sempre administrador");
         }
 
+        // Only members whose status changes are notified (the route is idempotent)
+        Set<Long> adminsBefore = new HashSet<>(peladaRepository.findAdminIds(pelada.getId()));
+        List<User> changed = targets.stream().filter(t -> adminsBefore.contains(t.getId()) != isAdmin).toList();
         if (isAdmin) {
             pelada.getAdmins().addAll(targets);
         } else {
@@ -295,6 +306,7 @@ public class PeladaService {
         }
         // Flushed so the admin ids read for the response see the change
         peladaRepository.saveAndFlush(pelada);
+        eventPublisher.publishEvent(new AdminsChangedEvent(pelada, caller, changed, isAdmin));
 
         return toMemberDTOs(pelada, targets);
     }
@@ -350,7 +362,7 @@ public class PeladaService {
 
     /**
      * Deletes the pelada and everything that belongs to it: dailies (with results, teams and attendance),
-     * chat messages and rankings. Global Stats of the players who played here are rebuilt without it.
+     * chat messages, notifications and rankings. Global Stats of the players who played here are rebuilt without it.
      */
     @Transactional
     public void deletePelada(Long peladaId, String currentUserEmail) {
@@ -365,6 +377,7 @@ public class PeladaService {
             affected.addAll(dailyService.deleteDailyData(daily));
         }
         messageRepository.deleteByPelada(pelada);
+        notificationRepository.deleteByPelada(pelada);
         rankingRepository.deleteByPelada(pelada);
         playerStarsRepository.deleteByPelada(pelada);
         mensalistaRepository.deleteByPelada(pelada);
@@ -422,7 +435,9 @@ public class PeladaService {
         }
 
         pelada.setCreator(target);
-        return PeladaResponseDTO.forAdmin(peladaRepository.save(pelada));
+        PeladaResponseDTO response = PeladaResponseDTO.forAdmin(peladaRepository.save(pelada));
+        eventPublisher.publishEvent(new PeladaTransferredEvent(pelada, caller, target));
+        return response;
     }
 
     // IANA region ids only (America/Sao_Paulo), not offsets like "-03:00"

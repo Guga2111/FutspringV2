@@ -30,6 +30,7 @@ import com.futspring.backend.domain.stats.repository.UserDailyStatsRepository;
 import com.futspring.backend.domain.user.User;
 import com.futspring.backend.domain.user.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -62,6 +63,7 @@ public class DailyResultsService {
     private final LeagueTableEntryRepository leagueTableEntryRepository;
     private final DailyAwardRepository dailyAwardRepository;
     private final DailyListItemAssembler dailyListItemAssembler;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public List<MatchDTO> submitResults(Long id, List<MatchResultDTO> results, String currentUserEmail) {
@@ -260,15 +262,20 @@ public class DailyResultsService {
         List<User> puskasWinners = resolveWinners(sessionPlayers, puskasWinnerIds, "Puskás");
         List<User> wiltballWinners = resolveWinners(sessionPlayers, wiltballWinnerIds, "Bola Murcha");
 
-        closeSession(daily, teamsWithPlayers, matches, puskasWinners, wiltballWinners);
+        // Finalizing again (to change the voted awards) doesn't announce the awards a second time
+        boolean firstFinalize = daily.getStatus() != DailyStatus.FINISHED;
+        DailyAward award = closeSession(daily, teamsWithPlayers, matches, puskasWinners, wiltballWinners);
+        eventPublisher.publishEvent(new DailyFinalizedEvent(daily, caller, sessionPlayers.values(), firstFinalize,
+                award.getPuskasWinners(), award.getWiltballWinners(),
+                award.getArtilheiroWinners(), award.getGarcomWinners()));
     }
 
     /**
      * Computes the session's UserDailyStats, league table and awards from its matches, rebuilds Ranking/Stats and
      * marks the daily FINISHED. The session's players are the players on its teams (the ones with match stats),
-     * not the confirmed list, which can change after the teams are sorted.
+     * not the confirmed list, which can change after the teams are sorted. Returns the saved awards.
      */
-    private void closeSession(Daily daily, List<Team> teamsWithPlayers, List<Match> matches,
+    private DailyAward closeSession(Daily daily, List<Team> teamsWithPlayers, List<Match> matches,
                               List<User> puskasWinners, List<User> wiltballWinners) {
         Pelada pelada = daily.getPelada();
         Map<Long, User> sessionPlayers = sessionPlayers(teamsWithPlayers);
@@ -355,6 +362,7 @@ public class DailyResultsService {
         daily.setStatus(DailyStatus.FINISHED);
         daily.setFinished(true);
         dailyRepository.save(daily);
+        return award;
     }
 
     private static Map<Long, User> sessionPlayers(List<Team> teamsWithPlayers) {

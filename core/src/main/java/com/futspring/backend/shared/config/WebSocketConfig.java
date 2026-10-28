@@ -26,7 +26,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void configureMessageBroker(MessageBrokerRegistry registry) {
-        // /topic: pelada chat rooms; /queue: per-user error replies (/user/queue/errors)
+        // /topic: pelada chat rooms; /queue: per-user error replies and notifications (/user/queue/errors, /user/queue/notifications)
         registry.enableSimpleBroker("/topic", "/queue");
         registry.setApplicationDestinationPrefixes("/app");
     }

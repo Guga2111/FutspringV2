@@ -11,17 +11,8 @@ import org.springframework.data.repository.query.Param;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
-import java.util.Optional;
 
 public interface DailyAttendanceBumpRepository extends JpaRepository<DailyAttendanceBump, Long> {
-
-    // Everything the bump e-mail needs, in one query (it runs after the commit, outside the transaction)
-    @Query("""
-        SELECT b FROM DailyAttendanceBump b
-        JOIN FETCH b.user JOIN FETCH b.bumpedBy JOIN FETCH b.daily d JOIN FETCH d.pelada
-        WHERE b.id = :id
-        """)
-    Optional<DailyAttendanceBump> findByIdWithDetails(@Param("id") Long id);
 
     // The session's bump history, newest first
     @Query("""
@@ -42,6 +33,15 @@ public interface DailyAttendanceBumpRepository extends JpaRepository<DailyAttend
     @Modifying
     @Query("UPDATE DailyAttendanceBump b SET b.seenAt = :now WHERE b.daily = :daily AND b.user = :user AND b.seenAt IS NULL")
     int markSeen(@Param("daily") Daily daily, @Param("user") User user, @Param("now") Instant now);
+
+    // The user's bumps of several sessions at once (reading every notification)
+    @Modifying
+    @Query("""
+        UPDATE DailyAttendanceBump b SET b.seenAt = :now
+        WHERE b.user = :user AND b.daily.id IN :dailyIds AND b.seenAt IS NULL
+        """)
+    int markSeenInDailies(@Param("user") User user, @Param("dailyIds") Collection<Long> dailyIds,
+                          @Param("now") Instant now);
 
     @Modifying
     @Query("DELETE FROM DailyAttendanceBump b WHERE b.daily = :daily")

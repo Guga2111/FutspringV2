@@ -1,11 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from "react"
-import { Client } from "@stomp/stompjs"
-import SockJS from "sockjs-client"
+import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"
 import { getChatHistory } from "@/api/chat"
+import { useRealtime } from "@/hooks/useRealtime"
 import type { MessageDTO } from "@/types/chat"
 
-export type ConnectionState = "connected" | "reconnecting" | "failed"
 export const MAX_MESSAGE_LENGTH = 500
 
 interface History {
@@ -13,14 +11,13 @@ interface History {
   messages: MessageDTO[]
 }
 
-// Chat of one pelada: last 50 messages over REST, then live messages over STOMP (/topic/pelada/{id}).
-// The server only accepts the connection with a valid token and the subscription for members; send errors
-// come back on /user/queue/errors. Reconnects with exponential backoff (1 s, 2 s, 4 s), then gives up.
-export function usePeladaChat(peladaId: number, token: string | null) {
+// Chat of one pelada: last 50 messages over REST, then live messages over STOMP (/topic/pelada/{id}) through the
+// user's shared connection (RealtimeProvider, which owns the token and the reconnects). The server only accepts
+// the subscription for members; send errors come back on /user/queue/errors.
+export function usePeladaChat(peladaId: number) {
   const [history, setHistory] = useState<History | null>(null)
   const [live, setLive] = useState<History>({ peladaId, messages: [] })
-  const [connectionState, setConnectionState] = useState<ConnectionState>("reconnecting")
-  const clientRef = useRef<Client | null>(null)
+  const { connectionState, subscribe, publish } = useRealtime()
 
   useEffect(() => {
     let cancelled = false
@@ -37,85 +34,45 @@ export function usePeladaChat(peladaId: number, token: string | null) {
   }, [peladaId])
 
   useEffect(() => {
-    let retryCount = 0
-    let deactivating = false
-    let reconnectTimer: ReturnType<typeof setTimeout> | null = null
-
-    const scheduleReconnect = (client: Client) => {
-      if (deactivating || reconnectTimer !== null) return
-      if (retryCount >= 3) {
-        setConnectionState("failed")
-        return
+    const unsubscribeTopic = subscribe(`/topic/pelada/${peladaId}`, (body) => {
+      try {
+        const message: MessageDTO = JSON.parse(body)
+        setLive((prev) =>
+          prev.peladaId === peladaId
+            ? { peladaId, messages: [...prev.messages, message] }
+            : { peladaId, messages: [message] },
+        )
+      } catch {
+        // ignore malformed frames
       }
-      const delay = 2 ** retryCount * 1000
-      retryCount += 1
-      setConnectionState("reconnecting")
-      reconnectTimer = setTimeout(() => {
-        reconnectTimer = null
-        if (!deactivating) client.activate()
-      }, delay)
-    }
-
-    const client = new Client({
-      webSocketFactory: () => new SockJS("/ws"),
-      connectHeaders: token ? { Authorization: `Bearer ${token}` } : {},
-      reconnectDelay: 0,
-      onConnect: () => {
-        retryCount = 0
-        setConnectionState("connected")
-        client.subscribe(`/topic/pelada/${peladaId}`, (frame) => {
-          try {
-            const message: MessageDTO = JSON.parse(frame.body)
-            setLive((prev) =>
-              prev.peladaId === peladaId
-                ? { peladaId, messages: [...prev.messages, message] }
-                : { peladaId, messages: [message] },
-            )
-          } catch {
-            // ignore malformed frames
-          }
-        })
-        client.subscribe("/user/queue/errors", (frame) => {
-          try {
-            const error: { message?: string } = JSON.parse(frame.body)
-            toast.error(error.message ?? "Não foi possível enviar a mensagem")
-          } catch {
-            toast.error("Não foi possível enviar a mensagem")
-          }
-        })
-      },
-      onDisconnect: () => scheduleReconnect(client),
-      onWebSocketError: () => scheduleReconnect(client),
-      onStompError: () => scheduleReconnect(client),
     })
-
-    client.activate()
-    clientRef.current = client
-
+    const unsubscribeErrors = subscribe("/user/queue/errors", (body) => {
+      try {
+        const error: { message?: string } = JSON.parse(body)
+        toast.error(error.message ?? "Não foi possível enviar a mensagem")
+      } catch {
+        toast.error("Não foi possível enviar a mensagem")
+      }
+    })
     return () => {
-      deactivating = true
-      if (reconnectTimer !== null) clearTimeout(reconnectTimer)
-      void client.deactivate()
-      clientRef.current = null
+      unsubscribeTopic()
+      unsubscribeErrors()
     }
-  }, [peladaId, token])
+  }, [peladaId, subscribe])
 
   const send = useCallback(
     (content: string): boolean => {
-      const client = clientRef.current
-      if (!client || !client.connected) {
+      if (connectionState !== "connected") {
         toast.error("Sem conexão com o chat")
         return false
       }
-      try {
-        client.publish({ destination: `/app/pelada/${peladaId}/send`, body: JSON.stringify({ content }) })
-        return true
-      } catch {
+      if (!publish(`/app/pelada/${peladaId}/send`, JSON.stringify({ content }))) {
         toast.error("Não foi possível enviar a mensagem")
         return false
       }
+      return true
     },
-    [peladaId],
+    [peladaId, connectionState, publish],
   )
 
   const historyMessages = history?.peladaId === peladaId ? history.messages : null

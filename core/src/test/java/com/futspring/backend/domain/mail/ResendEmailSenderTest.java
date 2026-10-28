@@ -9,6 +9,7 @@ import org.springframework.web.client.RestClient;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.List;
+import java.util.Map;
 
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.*;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
@@ -32,10 +33,29 @@ class ResendEmailSenderTest {
                 .andExpect(jsonPath("$.attachments[0].filename").value("logo.png"))
                 .andExpect(jsonPath("$.attachments[0].content_id").value("logo"))
                 .andExpect(jsonPath("$.attachments[0].content_type").value("image/png"))
+                .andExpect(jsonPath("$.headers").doesNotExist())
                 .andRespond(withSuccess("{\"id\":\"1\"}", MediaType.APPLICATION_JSON));
 
         sender.send("ana@example.com", "Assunto", "<p>oi</p>",
                 List.of(new InlineImage("logo", "logo.png", "image/png", png)));
+
+        server.verify();
+    }
+
+    @Test
+    void send_withHeaders_sendsThem() {
+        RestClient.Builder builder = RestClient.builder().baseUrl("https://api.resend.com");
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        ResendEmailSender sender = new ResendEmailSender(builder.build(), "Futspring <no-reply@example.com>");
+
+        server.expect(requestTo("https://api.resend.com/emails"))
+                .andExpect(jsonPath("$.headers['List-Unsubscribe']").value("<https://api.example.com/u?token=t>"))
+                .andExpect(jsonPath("$.headers['List-Unsubscribe-Post']").value("List-Unsubscribe=One-Click"))
+                .andRespond(withSuccess("{\"id\":\"1\"}", MediaType.APPLICATION_JSON));
+
+        sender.send("ana@example.com", "Assunto", "<p>oi</p>", List.of(), Map.of(
+                "List-Unsubscribe", "<https://api.example.com/u?token=t>",
+                "List-Unsubscribe-Post", "List-Unsubscribe=One-Click"));
 
         server.verify();
     }

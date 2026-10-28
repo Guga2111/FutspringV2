@@ -1,6 +1,7 @@
 package com.futspring.backend.domain.auth;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.futspring.backend.shared.config.SecurityConfig;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import io.github.bucket4j.Bandwidth;
@@ -20,10 +21,12 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * 10 requests per minute per client IP on each POST /api/v1/auth/ route (login, register, forgot-password,
- * reset-password).
+ * reset-password) and on the public e-mail link routes (notifications unsubscribe / resubscribe).
  * Buckets live in a bounded, expiring Caffeine cache. The client IP comes from getRemoteAddr(), which
  * reflects X-Forwarded-For because server.forward-headers-strategy=framework (the API only listens on
  * 127.0.0.1 behind nginx). In-memory: one API instance only.
@@ -33,9 +36,10 @@ import java.util.Set;
 public class AuthRateLimitFilter extends OncePerRequestFilter {
 
     static final int REQUESTS_PER_MINUTE = 10;
-    private static final Set<String> LIMITED_PATHS = Set.of(
-            "/api/v1/auth/login", "/api/v1/auth/register",
-            "/api/v1/auth/forgot-password", "/api/v1/auth/reset-password");
+    private static final Set<String> LIMITED_PATHS = Stream.concat(
+            Stream.of("/api/v1/auth/login", "/api/v1/auth/register",
+                    "/api/v1/auth/forgot-password", "/api/v1/auth/reset-password"),
+            SecurityConfig.EMAIL_LINK_PATHS.stream()).collect(Collectors.toUnmodifiableSet());
 
     private final ObjectMapper objectMapper;
 

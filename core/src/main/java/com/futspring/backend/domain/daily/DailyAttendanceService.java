@@ -8,6 +8,8 @@ import com.futspring.backend.domain.daily.repository.DailyAttendanceBumpReposito
 import com.futspring.backend.domain.daily.repository.DailyAttendanceRepository;
 import com.futspring.backend.domain.daily.repository.DailyRepository;
 import com.futspring.backend.domain.pelada.Pelada;
+import com.futspring.backend.domain.notification.NotificationRepository;
+import com.futspring.backend.domain.notification.NotificationType;
 import com.futspring.backend.domain.pelada.PeladaMensalistaRepository;
 import com.futspring.backend.shared.exception.AppException;
 import com.futspring.backend.shared.helper.PeladaAccessHelper;
@@ -40,6 +42,7 @@ public class DailyAttendanceService {
     private final DailyListItemAssembler dailyListItemAssembler;
     private final ApplicationEventPublisher eventPublisher;
     private final Clock clock;
+    private final NotificationRepository notificationRepository;
 
     /**
      * The caller confirms themselves. Mensalistas any time (while the session isn't locked); diaristas only from
@@ -105,6 +108,7 @@ public class DailyAttendanceService {
 
         // Admins skip the window and the capacity, and never bump anyone
         attendanceRepository.save(new DailyAttendance(daily, target, Instant.now(clock)));
+        eventPublisher.publishEvent(new AttendanceChangedByAdminEvent(daily, caller, List.of(target), true));
         return dailyListItemAssembler.toListItem(daily, caller);
     }
 
@@ -120,6 +124,7 @@ public class DailyAttendanceService {
         if (attendanceRepository.deleteByDailyAndUser(daily, target) == 0) {
             throw new AppException(HttpStatus.BAD_REQUEST, "O jogador não está confirmado nesta sessão");
         }
+        eventPublisher.publishEvent(new AttendanceChangedByAdminEvent(daily, caller, List.of(target), false));
 
         return dailyListItemAssembler.toListItem(daily, caller);
     }
@@ -140,16 +145,23 @@ public class DailyAttendanceService {
                 .map(member -> new DailyAttendance(daily, member, now))
                 .toList();
         attendanceRepository.saveAll(added);
+        eventPublisher.publishEvent(new AttendanceChangedByAdminEvent(daily, caller,
+                added.stream().map(DailyAttendance::getUser).toList(), true));
         return dailyListItemAssembler.toListItem(daily, caller);
     }
 
-    /** The caller dismisses the "you lost your spot" alert of this session; other users' bumps are untouched. */
+    /**
+     * The caller dismisses the "you lost your spot" alert of this session; other users' bumps are untouched. The
+     * bump's notification is read with it.
+     */
     @Transactional
     public void markBumpsSeen(Long dailyId, String currentUserEmail) {
         User caller = userAuthHelper.getAuthenticatedUser(currentUserEmail);
         Daily daily = findDaily(dailyId);
         accessHelper.requireMember(daily.getPelada(), caller);
-        bumpRepository.markSeen(daily, caller, Instant.now(clock));
+        Instant now = Instant.now(clock);
+        bumpRepository.markSeen(daily, caller, now);
+        notificationRepository.markRead(caller, NotificationType.DIARISTA_BUMPED, daily, now);
     }
 
     void clearAttendees(Daily daily) {
