@@ -6,14 +6,15 @@ Futspring manages amateur soccer groups ("peladas"): members and admins, match-d
 
 ## Stack
 
-- Java 17, Spring Boot 3.2.3, Maven (`./mvnw`)
+- Java 25, Spring Boot 3.5.16, Maven (`./mvnw`). Lombok runs through `annotationProcessorPaths` (JDK 23+ no longer picks processors up from the classpath)
 - Spring Web MVC, Spring Data JPA (Hibernate), Spring Security, Bean Validation
 - Spring WebSocket — STOMP over SockJS, in-memory simple broker (chat)
-- PostgreSQL 15 (runtime, Supabase in production), H2 in PostgreSQL mode (tests)
+- PostgreSQL 17 (runtime: Supabase in production, `postgres:17-alpine` in dev), H2 in PostgreSQL mode (tests)
 - JJWT 0.11.5 (HS256), Bucket4j 8.7 + Caffeine (login/register rate limit, in memory), Lombok
-- Tests: JUnit 5, Mockito, AssertJ, spring-security-test, Testcontainers 1.21 (overridden in `pom.xml`: Boot's 1.19 can't talk to Docker 29)
-- Flyway 9 (schema migrations, see [Database schema & migrations](#database-schema--migrations))
-- Not present: Swagger/springdoc, Actuator, Redis, caching, MapStruct/ModelMapper
+- Tests: JUnit 5, Mockito (inline mock maker loaded as a Surefire `-javaagent`, JEP 451), AssertJ, spring-security-test, Testcontainers 1.21 (managed by Boot)
+- Flyway 11 + `flyway-database-postgresql` (schema migrations, see [Database schema & migrations](#database-schema--migrations))
+- Spring Boot Actuator + Micrometer Prometheus registry, on an internal management port (see [Observability](#observability))
+- Not present: Swagger/springdoc, Redis, caching, MapStruct/ModelMapper
 
 ## Commands
 
@@ -24,15 +25,19 @@ Run from `core/`:
 ./mvnw test                                      # all tests (H2, src/test/resources/application.properties)
 ./mvnw test -Dtest=PeladaServiceTest             # one test class
 ./mvnw clean package -DskipTests                 # build jar
-docker compose up --build                        # API + postgres:15-alpine (docker-compose.yml, dev)
+./mvnw test -Dtest=ContractSnapshotTest -Dcontract.update=true   # rewrite the JSON contract snapshots (see Testing)
+docker compose -f docker-compose.dev.yml up --build   # API + postgres:17-alpine (dev seed)
+docker compose -f docker-compose.dev.yml down -v      # drop the dev database (needed once: a Postgres 15 volume can't be opened by 17)
+../ops/loadtest/run.sh pr1                       # local load test of the image (see Observability)
 ```
 
 CI (`.github/workflows/ci-backend.yml`) runs `./mvnw -B verify` (every test, including `FlywayMigrationTest` and `MigrationDataTest`) on pushes and PRs to `main`/`dev` that touch `core/`. Run `./mvnw test` before finishing any backend change.
 
 ### CI/CD
 
-- `.github/workflows/deploy.yml` runs on every push to `main` (and manually): it calls both CI workflows, writes `.env` from the GitHub secrets, runs `scripts/deploy.sh`, then smoke-tests `APP_URL` (200) and `<API_URL>/api/v1/files/__smoke-test__.png` (404 from `FileController`). A protected route can't be used: Spring Security answers 401 on any unknown path, so it wouldn't catch a wrong `API_URL` prefix.
-- `scripts/deploy.sh` (tracked, no secrets) builds the frontend with bun and an amd64 Docker image, rsyncs `client/dist` to `/var/www/futspring`, copies the image, `core/docker-compose.prod.yml` and `.env` to `~/projects/futspring` on the VPS, backs up the database with `pg_dump` (when `PG_DUMP_URL` is set, last 10 kept in `backups/`), starts the stack with `docker compose` (API on `127.0.0.1:${API_PORT:-8081}`, uploads in `/opt/futspring-uploads`) and waits up to 2 min for the 401 that proves Flyway and `validate` passed; otherwise it prints the logs and fails. It refuses a `.env` containing `DDL_AUTO`.
+- `.github/workflows/deploy.yml` runs on every push to `main` (and manually): it calls both CI workflows, writes `.env` from the GitHub secrets, runs `scripts/deploy.sh`, then smoke-tests `APP_URL` (200) and `<API_URL>/readyz` (200 through nginx, so a wrong `API_URL` prefix fails too).
+- `scripts/deploy.sh` (tracked, no secrets) builds the frontend with bun and an amd64 Docker image, rsyncs `client/dist` to `/var/www/futspring`, copies the image, `core/docker-compose.prod.yml` and `.env` to `~/projects/futspring` on the VPS, backs up the database with `pg_dump` (when `PG_DUMP_URL` is set, last 10 kept in `backups/`), creates the shared `observability` network (idempotent), `chown`s `/opt/futspring-uploads` to uid 10001 (the image's user), starts the stack with `docker compose` (API on `127.0.0.1:${API_PORT:-8081}`, `mem_limit: 1g`, on its own network and `observability`) and waits up to 2 min for the container's `healthy` state (the image's `HEALTHCHECK` is readiness on the management port, so Flyway migrated and `validate` passed); otherwise it prints the logs and fails. It refuses a `.env` containing `DDL_AUTO`.
+- `.github/workflows/deploy-observability.yml` deploys the shared Prometheus + Grafana stack (`ops/observability/`, see its README) on pushes to `main` that touch it, independently from the API.
 - Locally: put the production values in `.env` at the repo root (gitignored, keys in `core/.env.example`) and run `VPS_IP=… VITE_API_URL=… ./scripts/deploy.sh`.
 
 | GitHub | Name | Notes |
@@ -41,7 +46,9 @@ CI (`.github/workflows/ci-backend.yml`) runs `./mvnw -B verify` (every test, inc
 | secret | `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, `JWT_SECRET` | required |
 | secret | `RESEND_API_KEY` | optional for now; without it the API sends no e-mails (the deploy warns) |
 | secret | `PG_DUMP_URL` | optional; libpq URL on the Supabase session pooler (5432) for the pre-migration backup |
+| secret | `GRAFANA_ADMIN_PASSWORD` | required by `deploy-observability.yml` |
 | variable | `VPS_IP`, `APP_URL` | required |
+| variable | `GRAFANA_ROOT_URL` | `deploy-observability.yml`; defaults to `https://grafana.luisgosampaio.com` |
 | variable | `VPS_USER` (`root`), `API_URL` (baked in as `VITE_API_URL` and written to `.env` as the API's `API_URL`, defaults to `APP_URL`; production is `https://futspring.luisgosampaio.com/api` because nginx's `location /api/` strips the prefix before proxying to `:8081`), `ALLOWED_ORIGINS` (defaults to `APP_URL`), `API_PORT` (`8081`), `JWT_EXPIRATION_MS`, `MAIL_FROM` (defaults to `Futspring <no-reply@futspring.luisgosampaio.com>`) | optional |
 
 ## Configuration & environment
@@ -66,10 +73,11 @@ Locally, `docker-compose.dev.yml` passes `RESEND_API_KEY`, `MAIL_FROM`, `APP_URL
 
 - Uploads go to `app.uploads.dir=/app/uploads` (container path; override it when running outside Docker). Multipart limit is 10 MB, but `FileUploadService` enforces 5 MB.
 - `server.forward-headers-strategy=framework`: behind nginx, `getRemoteAddr()` is the client IP (rate limiting). The API only listens on `127.0.0.1`.
-- Hibernate: `show-sql=false`, `batch_size=50`, ordered inserts/updates. `spring.jpa.open-in-view` is not set, so it is **on** (default).
+- Hibernate: `show-sql=false`, `batch_size=50`, ordered inserts/updates; the dialect is detected from the connection (not set). `spring.jpa.open-in-view` is not set, so it is **on** (default).
+- Management (Actuator): `management.server.port=9091`, endpoints `health`, `info`, `metrics`, `prometheus`, `threaddump`, health details always shown (only reachable on 9091), probes on, `add-additional-paths` serves `/livez` and `/readyz` on the main port too, every metric tagged `application=futspring`, percentile histograms for `http.server.requests`.
 - `DataInitializer` (`@Profile("dev")`) seeds an empty database with 20 users (password `senha123`; admin `leal@futspring.com`), the pelada "Pelada do Fut", 7 weekly finished dailies and 1 scheduled daily for today. Each finished daily gets teams (4 teams of 5, or 3 teams / 15 confirmed players in two of the weeks so histories differ), 6 matches with random results from a fixed seed (`new Random(2026)`), and is closed through `DailyResultsService.submitResults` + `finalizeDaily`, so match stats, league table, `UserDailyStats`, `Ranking`, `Stats` and awards follow the real rules.
   It only runs with the `dev` profile, never in tests or production.
-- Test config (`src/test/resources/application.properties`): H2 PostgreSQL mode, `create-drop`, Flyway disabled, fixed test JWT secret, 1 h TTL, uploads in a temp dir.
+- Test config (`src/test/resources/application.properties`, which replaces the main file in tests, so any property tests need is repeated there): H2 PostgreSQL mode, `create-drop`, Flyway disabled, fixed test JWT secret, 1 h TTL, uploads in a temp dir, the same management settings on a random port.
 - **Secrets:** all credentials come from the environment (`.env`, `.env.example` documents the keys). Never write a password, DB URL with credentials, or JWT secret into a tracked file, script, compose file or doc.
 
 ## Package layout
@@ -80,7 +88,7 @@ Features live under `domain/`, one package per domain (`domain/daily`, `domain/p
 com.futspring.backend
 ├── FutSpringApplication        main class, @EnableScheduling, @EnableAsync (e-mails)
 ├── shared/
-│   ├── config/                 SecurityConfig (filter chain, BCrypt), CorsConfig (ALLOWED_ORIGINS + CorsConfigurationSource, used by
+│   ├── config/                 SecurityConfig (actuator + API filter chains, BCrypt), CorsConfig (ALLOWED_ORIGINS + CorsConfigurationSource, used by
 │   │                           SecurityConfig and WebSocketConfig), JwtConfig (@Value secret + TTL), WebSocketConfig (STOMP /ws, SockJS,
 │   │                           broker /topic, app prefix /app, JwtChannelInterceptor), TimeConfig (Clock bean, UTC; Clock.fixed in tests)
 │   ├── exception/              AppException (RuntimeException + HttpStatus), ErrorResponse, GlobalExceptionHandler
@@ -216,11 +224,11 @@ New status-like fields must be Java enums stored with `@Enumerated(EnumType.STRI
 
 ### How the schema is managed
 
-- **Flyway 9** (`flyway-core`, version managed by Spring Boot 3.2; Postgres support is built into 9.x, so there is no `flyway-database-postgresql`) runs `src/main/resources/db/migration/V*.sql` at startup, before JPA.
+- **Flyway 11** (`flyway-core` + `flyway-database-postgresql`, versions managed by Spring Boot 3.5; since Flyway 10 each database lives in its own module) runs `src/main/resources/db/migration/V*.sql` at startup, before JPA.
 - Hibernate runs with `ddl-auto=${DDL_AUTO:validate}`: it never changes the schema, only checks that the tables match the entities, and the app fails to start if they don't. `DDL_AUTO` is not set by `deploy.sh` or the compose files (the deploy fails if `.env` sets it); keep the default.
 - `spring.flyway.baseline-on-migrate=true` + `baseline-version=1`: a database that already has tables but no `flyway_schema_history` (production, an old dev volume) is marked as V1 without running it, and only later versions run. An empty database runs V1 and builds the whole schema.
 - `V1__baseline.sql` is the schema Hibernate generated from the entities on 2026-10-03 (PostgreSQL 15, `pg_dump --schema-only`), not a dump of production. Production's tables were built by `ddl-auto=update` from the same entities. Checked against a copy of production on 2026-10-04: same columns and constraints, except two leftover nullable columns `daily_awards.puskas_winner_id` / `wiltball_winner_id` (all null, FKs to `users`) that no entity maps; V4 drops them.
-- Production runs PostgreSQL 17 (Supabase); Flyway 9.22 logs "PostgreSQL 17 is newer than this version of Flyway" but works. Upgrading means Flyway 10 + `flyway-database-postgresql`.
+- Production (Supabase), dev (`docker-compose.dev.yml`) and the migration tests all run PostgreSQL 17, which Flyway 11 supports (the old Flyway 9 "newer than this version" warning is gone).
 - Tests: H2 `create-drop` with Flyway disabled for the unit/integration tests; `FlywayMigrationTest` (Testcontainers, `postgres:17-alpine` like production, skipped without Docker) runs every migration on an empty Postgres and validates it against the entities; `MigrationDataTest` runs the data-changing migrations (V4, V5, V8, V9) against production-shaped rows.
 
 | Version | What it does |
@@ -252,8 +260,9 @@ New status-like fields must be Java enums stored with `@Enumerated(EnumType.STRI
 
 ### Filter chain (`S/shared/config/SecurityConfig.java`)
 
+- Two chains. `actuatorFilterChain` (`@Order(1)`, `EndpointRequest.toAnyEndpoint()`) permits every actuator endpoint: they are only served on the management port 9091, which Docker never publishes (Boot applies the security filter to that port too, so without this chain Prometheus would get 401). `filterChain` (`@Order(2)`) is everything else.
 - CSRF disabled, stateless sessions, JSON 401 entry point.
-- Public: `/api/v1/auth/**`, `/api/v1/files/**`, `/ws/**` (the STOMP layer authenticates itself, see WebSocket) and `POST /api/v1/notifications/unsubscribe` / `/resubscribe` (`SecurityConfig.EMAIL_LINK_PATHS`, authorized by the HMAC token in the request). Everything else requires a valid token.
+- Public: `/api/v1/auth/**`, `/api/v1/files/**`, `/ws/**` (the STOMP layer authenticates itself, see WebSocket), `GET /livez` / `/readyz` (probes, `https://futspring.luisgosampaio.com/api/readyz` through nginx) and `POST /api/v1/notifications/unsubscribe` / `/resubscribe` (`SecurityConfig.EMAIL_LINK_PATHS`, authorized by the HMAC token in the request). Everything else requires a valid token.
 - `JwtAuthFilter` runs before `UsernamePasswordAuthenticationFilter`. It accepts a Bearer token only through `AccessTokenVerifier`: valid signature, not expired, the user still exists and the `ver` claim equals `users.token_version` (one indexed query per authenticated request). Otherwise it returns 401 on **any** path, including the public ones, except `EMAIL_LINK_PATHS`, where it ignores the header (`shouldNotFilter`): a visitor whose stored session expired must still be able to use the e-mail's link, and those routes never read the caller.
 - No roles: authorities are always empty, there is no `@PreAuthorize`/`@EnableMethodSecurity`. **All authorization is done in services** (see [Ownership](#ownership--authorization)).
 - Passwords: BCrypt (strength 10).
@@ -293,7 +302,7 @@ New status-like fields must be Java enums stored with `@Enumerated(EnumType.STRI
 ### Notification e-mails
 
 - **When:** the type is emailable (`NotificationType.emailable`), the recipient's category is on (their `notification_preferences` row, else `NotificationCategory.defaultEmail`) and the sender is real (`EmailSender.enabled()`; the no-op only logs). The preferences of every recipient of a batch are read in one query.
-- **Dispatch:** `NotificationDelivery` calls `NotificationEmailDispatcher.dispatch(ids)` after the commit; it only queues a task on its **own** single-thread `ThreadPoolTaskExecutor` (queue of 500). The executor is created by the dispatcher, not exposed as a bean: an `Executor` bean would replace Spring Boot's default `@Async` executor. The task builds the e-mails in a short read-only transaction (`findAllByIdInWithRefs` + preferences) and sends them **outside** it, one by one, through `EmailPacer` (Bucket4j: one send every 500 ms, no burst, so never more than Resend's ~2 requests/s; 30 e-mails ≈ 15 s). A full queue, a failed build or a failed send is only logged; no retry. The Resend batch endpoint isn't used because it doesn't take attachments (the logo is `cid:`).
+- **Dispatch:** `NotificationDelivery` calls `NotificationEmailDispatcher.dispatch(ids)` after the commit; it only queues a task on its **own** single-thread `ThreadPoolTaskExecutor` (queue of 500). The executor is created by the dispatcher, not exposed as a bean: an `Executor` bean would replace Spring Boot's default `@Async` executor. The task builds the e-mails in a short read-only transaction (`findAllByIdInWithRefs` + preferences) and sends them **outside** it, one by one, through `EmailPacer` (Bucket4j: one send every 500 ms, no burst, so never more than Resend's ~2 requests/s; 30 e-mails ≈ 15 s). A full queue, a failed build or a failed send is only logged; no retry. The Resend batch endpoint isn't used because it doesn't take attachments (the logo is `cid:`). Metrics: `futspring.email.queue.size`, `futspring.email.sent{result=ok|failed}`, `futspring.email.dropped` (full queue).
 - **Text and template:** `NotificationEmailContent.of(notification)` is an exhaustive `switch` over `NotificationType` (a new type doesn't compile without its subject, title, body and CTA); the dates come from `AttendanceWindow` in the pelada's zone. `NotificationEmail` fills `resources/email/notification.html` (same structure and inline logo as the reset e-mail) in one pass, HTML-escaping every value, so a pelada or user name can never fill another placeholder.
 - **Unsubscribe:** the footer says which category is on and links to "Desativar" (`${app.frontend-url}/notifications/unsubscribe?token=…`, a page that POSTs the token) and "Preferências" (`/settings/notifications`). The token (`UnsubscribeTokens`) is `base64url("userId:CATEGORY")` + `.` + HMAC-SHA256, keyed by an HMAC of `JWT_SECRET` with the context `"notification-unsubscribe"`; not stored, no expiry, it only turns that category of that user off or on. Every e-mail also carries `List-Unsubscribe: <${app.api-url}/api/v1/notifications/unsubscribe?token=…>` and `List-Unsubscribe-Post: List-Unsubscribe=One-Click` (RFC 8058), so Gmail / Yahoo can unsubscribe with a POST straight to the API.
 - **Quota:** production is on Resend's free plan (100 e-mails/day, 3,000/month, shared with the password reset). That is enough at today's scale (it takes roughly 30 peladas of 40 players to matter); if it gets tight, the plan upgrade or the daily digest (phase 2) are the next steps. `SESSION_REMINDER` (Attendance, on by default) adds about one e-mail per unconfirmed mensalista per session; `DIARISTA_WINDOW_OPEN` is Session (off by default).
@@ -494,8 +503,25 @@ When an endpoint or DTO changes, update this table, the frontend `src/api/*` + `
 - **Aggregates:** compute in the DB with grouped queries (as finalize does: `aggregateStatsByUsers`), not by looping and querying per user.
 - **Transactions:** `@Transactional` on writes, `@Transactional(readOnly = true)` on reads. `open-in-view` is on, so lazy loads in controllers silently work; don't rely on it — build DTOs inside the service transaction.
 - **Pagination:** any list that grows with time (messages, dailies, match history) takes a `Pageable` with a capped `size` (chat: 1–100).
+- **Image:** `core/Dockerfile` is multi-stage on `eclipse-temurin:25` (noble): Maven dependencies in their own layer, the jar extracted into layers (`jarmode=tools extract --layers`, so a code change only replaces the last one), an AOT cache (JEP 483/514) recorded in a training stage that refreshes the context without a database, a non-root user (uid 10001), `-XX:MaxRAMPercentage=75 -XX:+ExitOnOutOfMemoryError` against the container's `mem_limit` (1g) and a `HEALTHCHECK` on readiness. Measured locally (same Postgres 17): startup 3.1 s with Java 17 / Boot 3.2, 3.1 s with Java 25 / Boot 3.5 without the cache, 1.8 s with it; the image grew from 309 MB to 532 MB (the cache is 125 MB).
 - **Single instance assumptions:** the in-memory STOMP broker, the rate-limit cache, the notification e-mail queue and pacer (e-mails still queued are lost on a restart) and `@Scheduled` (no ShedLock) only work with one API instance. Two instances would both run `ScheduledNotificationJob`; `uq_notifications_scheduled` makes the second insert fail and that pelada's transaction roll back (logged).
 - **Scheduler:** `DailySchedulerService` runs hourly with the `Clock` read in each pelada's `timeZone`; each pelada runs in its own `TransactionTemplate` in a try/catch (reloaded by id inside it: the listed peladas are detached and `SESSION_CREATED` reads the lazy members), so a failing pelada rolls back only its own daily and notifications and is logged. `dayOfWeek` is validated on create/update. `ScheduledNotificationJob` runs every 15 min: one query for the candidate sessions (pelada fetched, a coarse date range, the exact window checked in Java), then per pelada its own `TransactionTemplate` in a try/catch (a failing pelada rolls back only its rows) with two recipient queries and one count per due session. `NotificationRetentionJob` runs at 04:00 with two bulk deletes (no index on `created_at`: a daily scan of a small table).
+
+## Observability
+
+- **Probes:** `/livez` and `/readyz` on the main port (public), the rest of Actuator on `management.server.port=9091` (internal, never published): `health` (with details), `info`, `metrics`, `prometheus`, `threaddump`. The image's `HEALTHCHECK` and the deploy's `healthy` wait use readiness on 9091; the `deploy.yml` smoke test uses `<API_URL>/readyz`.
+- **Metrics** (Micrometer, Prometheus format at `:9091/actuator/prometheus`, tag `application=futspring`): the built-in JVM (heap, GC, threads), Hikari, Tomcat, `http.server.requests` (with percentile histograms), `tasks.scheduled.execution` and the rate-limit Caffeine cache (`cache="futspring.ratelimit"`), plus the domain ones:
+
+  | Metric | Type | Where |
+  |--------|------|-------|
+  | `futspring.email.queue.size` | gauge | `NotificationEmailDispatcher` executor queue |
+  | `futspring.email.sent` (`result=ok\|failed`) | counter | `NotificationEmailDispatcher`, each send |
+  | `futspring.email.dropped` | counter | `NotificationEmailDispatcher`, full queue |
+  | `futspring.ratelimit.rejected` (`route`) | counter | `AuthRateLimitFilter`, each 429 |
+  | `futspring.notifications.push` (`result=ok\|failed`) | counter | `NotificationPushService`, each STOMP send |
+
+- **Stack:** Prometheus + Grafana + node-exporter + cAdvisor in `ops/observability/` (README there), shared by the VPS, deployed by `deploy-observability.yml`. The API joins the external `observability` network and is scraped at `futspring-api:9091` (the compose service name: Tomcat rejects the container name's underscore in `Host`). Grafana at `https://grafana.luisgosampaio.com` (login only) has the provisioned **Futspring** dashboard (requests, latency, errors, JVM, threads, Hikari, e-mail, pushes, 429s, container CPU/RAM) plus JVM (Micrometer), Node Exporter Full and cAdvisor.
+- **Load test:** `ops/loadtest/run.sh <label>` builds the image and runs it locally with the production limits (`--cpus=1 --memory=1g`), Postgres 17 and the dev seed, logs in as the seed admin and runs `oha` with a random mix of `GET /peladas/my`, `/peladas/{id}`, `/dailies/{id}`, `/peladas/{id}/ranking`, `/peladas/{id}/attendance` at 50 / 200 / 500 connections for 60 s each (`CONCURRENCY`, `DURATION`, `SKIP_BUILD`, `IMAGE` override). The table (RPS, p50/p95/p99, non-2xx, live threads) goes to `ops/loadtest/results/<label>-<date>.md`; `JFR=1` also summarizes `jdk.VirtualThreadPinned`. Never against production.
 
 ## Testing
 
@@ -507,6 +533,8 @@ Tests live in `src/test/java/com/futspring/backend`, in the same domain packages
 - **Attendance** — `DailyAttendanceServiceTest` uses `Clock.fixed` and `support/InMemoryAttendance` (lenient stubs that back `DailyAttendanceRepository` with an in-memory list); `AttendanceWindowTest` covers zones and the Canadian DST change; `DailyAttendanceRepositoryTest` the victim query; `AttendanceConcurrencyTest` (Testcontainers Postgres, no test transaction, skipped without Docker) races diaristas for the last spot and expects exactly one to get it.
 - **Notifications** — `NotificationServiceTest` (recipients per type, actor excluded, collapse, awards only on the first finalize, delivery only after commit, through `TransactionSynchronizationManager`); `NotificationPushServiceTest` (each recipient's e-mail and unread count, the team on `TEAMS_SORTED`, one failed send doesn't stop the others, failures only logged); `NotificationControllerTest` (REST, the bump `seenAt` ↔ `readAt` sync both ways, one event per path end to end, deleting a daily / pelada with notifications on H2, preferences GET/PUT and validation, public unsubscribe / resubscribe with no session, a stale session header, the one-click form POST, invalid tokens and the rate limit); `NotificationEmailContentTest` (every type renders subject, title, body and CTA; escaping and one-pass placeholders); `NotificationEmailDispatcherTest` (send matrix type × preference × default, headers, pacing per send, failures only logged, nothing queued without a real sender); `EmailPacerTest` (fake clock: never more than 2 sends in a second); `UnsubscribeTokensTest` (tampered, swapped category or user, another secret); `NotificationRepositoryTest` (scheduled recipients: mensalista vs diarista, creator and admins as diaristas, confirmed and already-notified left out, scoped to the session); `ScheduledNotificationJobTest` (`@DataJpaTest` on H2 with `Clock.fixed`: recipients, full session, locked / canceled / started sessions, the window edge, idempotent runs through `NOT EXISTS` alone, the Toronto DST change, a session created inside its window, a failing pelada not stopping the others, nothing delivered without a commit); `NotificationRetentionJobTest` (the 90 / 180-day boundaries); `DailySchedulerTransactionTest` (`@DataJpaTest` with no test transaction: a failing pelada rolls back alone, the other commits its daily and `SESSION_CREATED`, delivered after the commit). The publishing services' tests verify the events they publish.
 - **WebSocket** — `JwtChannelInterceptorTest` covers CONNECT/SUBSCRIBE/SEND rules (the notification queue included).
+- **Contract** — `contract/ContractSnapshotTest` (`@JsonTest`, the application's `ObjectMapper`) guards the JSON the web app reads. Every top-level response DTO, filled by `ContractFixtures` (every field set from its name and type, so a class turned into a record gets the same values), must serialize to `src/test/resources/contract/<Dto>.json`, compared as trees (property order doesn't matter); every request body the client sends (`contract/requests/<Dto>.json`, taken from `client/src/api`) must deserialize and keep every value. A new response field fails the test: regenerate with `-Dcontract.update=true` only for an intended change and review the diff against `client/src/types`. The snapshots record today's quirk: a primitive `boolean isX` field with `@JsonProperty("isX")` is written twice, as `isX` and as `x` (from Lombok's `isX()` getter); the client only reads `isX`.
+- **Actuator** — `ActuatorExposureTest` (`@AutoConfigureObservability`): `/livez`, `/readyz` public on the main port, no actuator endpoint served there, `/actuator/prometheus` and health details on the management port without a token. The domain counters are checked in `NotificationEmailDispatcherTest`, `NotificationPushServiceTest` and `AuthControllerTest` (`SimpleMeterRegistry` / the context's registry).
 - **Migration tests** — `FlywayMigrationTest` applies every migration to a Postgres container and starts the app with `validate`; `MigrationDataTest` migrates to a version, inserts production-shaped rows and checks what the next migration does. A new migration or entity change must keep them green (needs Docker).
 - When adding an endpoint: a controller test (happy path, validation 400, 403 for non-member/non-admin, 404) and service tests for the rules, including the ownership cases listed in [Rules for new code](#rules-for-new-code).
 - Mockito strict stubs are on: remove stubs a test doesn't use (`UnnecessaryStubbingException`).
@@ -585,7 +613,7 @@ Don't introduce these. Some exist already ("Found in"); fix them when the change
 | 3 | Endpoints that read another user's data with no relationship check, or expose email | Check the relationship; return a public DTO without PII (`PublicUserDTO`) | — |
 | 4 | Unauthorized WebSocket subscriptions / anonymous CONNECT | Authorize `SUBSCRIBE` to `/topic/pelada/{id}` for members only; reject CONNECT without a valid token | — |
 | 5 | Secrets in tracked or deployable files (DB password, JWT secret, Supabase URL) | Environment variables / `.env` (gitignored); rotate anything that leaked | `docker-compose.dev.yml` (dev values) |
-| 6 | Multi-line `"..."` string in `@Query` (doesn't compile on Java 17) or mismatched aliases | Text block `"""..."""`, one alias | — |
+| 6 | Multi-line `"..."` string in `@Query` (doesn't compile) or mismatched aliases | Text block `"""..."""`, one alias | — |
 | 7 | Catch-all handler that swallows the exception without logging | `log.error` in the catch-all; specific handlers for framework exceptions | — |
 | 8 | Lombok `@Data` on entities (equals/hashCode over every field and lazy collections; `toString` triggers lazy loads) | `@Getter @Setter`, id-based equals/hashCode, no collection in `toString` | — |
 | 9 | Magic strings for status/position duplicated across services | Java enums (`DailyStatus`, `Position`) with `EnumType.STRING`, one shared set of locked statuses | `User.position` (a validated string) |

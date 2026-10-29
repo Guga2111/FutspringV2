@@ -1,6 +1,6 @@
 # Java 25, Spring Boot 4, virtual threads and observability
 
-Date: 2026-10-29 · Status: approved, not implemented · Delivery: 4 PRs, each merged `dev → main` and deployed before the next starts (see [Delivery](#delivery))
+Date: 2026-10-29 · Status: approved; PR 1 implemented (on `dev`, not deployed) · Delivery: 4 PRs, each merged `dev → main` and deployed before the next starts (see [Delivery](#delivery))
 
 ## Goal
 
@@ -207,6 +207,29 @@ After PR 1 is in production, leave it **one week** before merging PR 3 (PR 2 can
 - `ActuatorExposureTest` (`BaseIntegrationTest`): `/livez` and `/readyz` 200 without a token; `/actuator/health` and `/actuator/prometheus` not served on the main port; with a `management.server.port` set to a random port, `/actuator/prometheus` answers and contains `futspring_` metrics.
 - Unit tests for the new counters/gauge where the code changed (dispatcher, rate-limit filter).
 - `ContractSnapshotTest` (above).
+
+### Implementation (PR 1)
+
+- [x] **PR 1 done** (2026-10-29, commits on `dev`; not merged to `main` nor deployed yet)
+
+Decisions and findings:
+
+- **Boot 3.5.16 already brings Flyway 11** (and Hibernate 6.6, Spring 6.2, Lombok 1.18.46, Testcontainers 1.21.4, Byte Buddy 1.17.8). `flyway-database-postgresql` is added here, not in PR 2, and the Flyway "PostgreSQL 17 is newer" warning is already gone. The `testcontainers.version` override was removed (managed 1.21.4).
+- **Lombok** is declared in the compiler's `annotationProcessorPaths`: JDK 23+ no longer runs processors found on the classpath, so nothing compiled without it. Lombok itself prints a `sun.misc.Unsafe` warning at compile time (its own code, nothing to fix here).
+- **Deprecations fixed now:** `UriComponentsBuilder.fromHttpUrl` → `fromUriString`; `HandlerMethodValidationException.getAllValidationResults` → `getParameterValidationResults`; Bucket4j `Bandwidth.classic` / `Refill` → `Bandwidth.builder()` (the builder already exists in 8.7, so PR 2 only bumps the version); Hibernate `HHH90000025`: the explicit `hibernate.dialect` was removed from the main and test config (planned for PR 2, but Boot 3.5 already reports it). The AOT training run, which has no database, names the dialect on its command line. `./mvnw -Dmaven.compiler.showDeprecation=true test-compile` reports nothing.
+- **Hibernate 6.6 is stricter on flush:** a managed entity referencing one deleted by a bulk `DELETE` now throws `TransientObjectException`. Only `PeladaControllerTest.deletePelada_withFinishedDailyAndMessages…` hit it, because it finalizes and deletes in the same test transaction; in production those are separate requests with fresh persistence contexts. The test now flushes and clears before the request; no production code changed.
+- **Security:** a second `SecurityFilterChain` (`@Order(1)`, `EndpointRequest.toAnyEndpoint()`, `permitAll`) because Boot applies the security filter to the management port too (Prometheus got 401 without it). `/actuator/**` on the main port answers 401 (not served).
+- `src/test/resources/application.properties` replaces the main file in tests, so the management block is repeated there (port 0).
+- **Contract snapshot:** `ContractFixtures` fills each DTO by reflection, with values derived from field name and type only, so PR 4's records produce identical JSON; 24 response snapshots, 27 request bodies (round-trip check: every value the client sends survives deserialization). Reviewed against `client/src/types`: every name the client reads matches. Two findings, recorded, not fixed (zero JSON changes in this PR):
+  1. Every primitive `boolean isX` field annotated `@JsonProperty("isX")` is serialized **twice**, as `isX` and as `x` (Lombok's `isX()` getter): `isAdmin`/`admin`, `isFinished`/`finished`, `isConfirmed`/`confirmed`, `isMensalista`/`mensalista` (`PeladaMemberDTO`, `PeladaResponseDTO` and `NextDailyDTO`, `DailyListItemDTO`, `DailyDetailDTO`, `PeladaAttendanceDTO.Row`). The client never reads the short names. Records (PR 4) will drop them, so **PR 4 must decide**: drop them deliberately (update the snapshots in a reviewed commit) or keep them with `@JsonProperty`.
+  2. Client `sortTeams` / `swapPlayers` (`client/src/api/dailies.ts`) are typed `Promise<DailyDetail>`, but the API returns `List<TeamDTO>`. Harmless today (`useDailyActions` ignores the value and reloads); fix the client type when touching it.
+- **Image:** `--application-filename app.jar` on `extract` (otherwise the jar keeps its Maven name). The AOT training refreshes the context without a database (Flyway off, `ddl-auto=none`, no JDBC metadata access) and works; no fallback needed. Startup measured locally against Postgres 17: **3.1 s** (Java 17 / Boot 3.2 image) → **3.1 s** (Java 25 / Boot 3.5, cache disabled) → **1.8 s** (with the AOT cache, −42%). Image 309 MB → 532 MB (`app.aot` is 125 MB). `curl` is installed in the runtime stage (not in the base image).
+- **Deploy:** `mem_limit: 1g` for the API to start with (heap max ≈ 768 MB); revisit with the Grafana numbers. Idle RSS measured locally ≈ 430 MiB.
+- **Observability stack:** images pinned to `prom/prometheus:v3.15.1`, `grafana/grafana-oss:13.0.2`, `prom/node-exporter:v1.12.1`, `ghcr.io/google/cadvisor:v0.60.6` (cAdvisor moved to ghcr.io after v0.52). Grafana `mem_limit` raised to **384m** (≈ 160 MiB idle already); `GF_PLUGINS_PREINSTALL_DISABLED` and empty `plugins/` / `alerting/` provisioning folders silence startup errors. Prometheus scrapes **`futspring-api:9091`** (compose service name): Tomcat answers 400 to the container name `futspring_api` (underscore in `Host`). Community dashboards 4701, 1860, 14282 downloaded and versioned with the datasource pinned to uid `prometheus`; the Futspring dashboard is generated JSON (24 panels) and every query was checked against a local Prometheus.
+- The **virtual vs platform threads** panel shows `jvm_threads_live` (platform threads only) and executor activity; series about virtual threads (pinning, via `micrometer-java21`) come with PR 3.
+- `deploy-observability.yml` smoke test: Grafana `/api/health` and the stack's own targets must be up; a project target (`futspring-api`) only warns, because on a push to `main` the API deploy runs at the same time and takes longer.
+- **Load test** (`ops/loadtest/run.sh`) lives in PR 1, so the baseline runs on this image: `oha --urls-from-file` (random mix), live platform threads sampled from the management port, `JFR=1` summarizes `jdk.VirtualThreadPinned`; requests aborted by oha's deadline are not counted as errors. Baseline: `ops/loadtest/results/pr1-2026-10-29.md`.
+- **Pending manual steps (owner):** DNS `grafana.luisgosampaio.com`, the nginx site + certbot (`ops/observability/README.md`), secret `GRAFANA_ADMIN_PASSWORD` and variable `GRAFANA_ROOT_URL`; then the `dev → main` PR and the one-week production baseline before PR 3.
 
 ## PR 2 — Spring Boot 4
 

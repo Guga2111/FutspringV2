@@ -3,7 +3,8 @@
 Manager for amateur soccer groups ("peladas"): members and admins, match-day sessions ("dailies") with attendance, team sorting, results, league table, awards, pelada ranking, player stats and chat.
 
 - `client/` — React 19 + TypeScript + Vite + Tailwind 3 + shadcn/ui (package manager: **bun**)
-- `core/` — Spring Boot 3.2 + Java 17 + PostgreSQL, REST under `/api/v1` + STOMP chat on `/ws`
+- `core/` — Spring Boot 3.5 + Java 25 + PostgreSQL 17, REST under `/api/v1` + STOMP chat on `/ws`, Actuator on the internal port 9091
+- `ops/` — `observability/` (Prometheus + Grafana stack shared by the VPS, its own deploy workflow) and `loadtest/` (local load test of the API image)
 - `scripts/deploy.sh` — builds the frontend and the API image and ships them to the VPS; run by the CD workflow on every push to `main` (`.github/workflows/`, see CI/CD in BACKEND.md). Secrets come from GitHub / `.env`, never from the script
 
 ## Required reading
