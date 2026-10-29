@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   futspring-api-dev:
     build: . # Constrói a imagem a partir do Dockerfile na pasta atual
@@ -23,7 +21,9 @@ services:
       - futspring-postgres-dev
 
   futspring-postgres-dev:
-    image: postgres:15-alpine
+    # same major version as production (Supabase). A volume created by Postgres 15 can't be opened:
+    # docker compose -f docker-compose.dev.yml down -v (the dev data is the DataInitializer seed)
+    image: postgres:17-alpine
     container_name: futspring_postgres_dev
     ports:
       - "5432:5432" # Expõe a porta para o DBeaver, etc.

@@ -131,19 +131,16 @@ jobs:
       - name: Run deploy.sh
         run: ./scripts/deploy.sh
 
-      # No health endpoint, so probe the public file route for a file that doesn't exist: the app
-      # answers 404 only once it is up (Flyway migrated, Hibernate validated the schema) AND the
-      # request reached /api/v1/files. A wrong API_URL prefix lands on a protected path (401) and
-      # a stopped API gives 502, so both fail here. A protected route can't be used: Spring
-      # Security answers 401 on any unknown path, so it wouldn't catch a wrong prefix.
+      # Through nginx and the public API prefix (nginx strips /api): 200 from /readyz only when the API is up and
+      # ready AND API_URL points at it. Every other actuator endpoint stays on the internal management port.
       - name: Smoke test
         run: |
           set -uo pipefail
           for attempt in $(seq 1 12); do
             web=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "${APP_URL}/" || true)
-            api=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "${VITE_API_URL}/api/v1/files/__smoke-test__.png" || true)
-            if [[ "$web" == "200" && "$api" == "404" ]]; then
-              echo "Frontend 200 and API 404 on /api/v1/files/__smoke-test__.png (attempt ${attempt})."
+            api=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "${VITE_API_URL}/readyz" || true)
+            if [[ "$web" == "200" && "$api" == "200" ]]; then
+              echo "Frontend 200 and API 200 on /readyz (attempt ${attempt})."
               exit 0
             fi
             echo "Not ready yet: web=${web} api=${api} (attempt ${attempt}/12), retrying in 10s..."
