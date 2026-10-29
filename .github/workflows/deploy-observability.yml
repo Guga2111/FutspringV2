@@ -1,0 +1,120 @@
+name: CD - Deploy observability stack
+
+# The shared Prometheus + Grafana stack of the VPS (ops/observability). Independent from the API deploy.
+on:
+  push:
+    branches: [main]
+    paths: [ops/observability/**, .github/workflows/deploy-observability.yml]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-observability
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy observability to VPS
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+
+    env:
+      VPS_IP: ${{ vars.VPS_IP }}
+      VPS_USER: ${{ vars.VPS_USER || 'root' }}
+      REMOTE_DIR: observability
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure SSH key
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.VPS_SSH_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.VPS_SSH_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${VPS_IP}" || -z "${SSH_PRIVATE_KEY}" ]]; then
+            echo "Missing VPS_IP (variable) or VPS_SSH_KEY (secret)"
+            exit 1
+          fi
+          umask 077
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/id_deploy
+          if [[ -n "${SSH_KNOWN_HOSTS}" ]]; then
+            printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          else
+            ssh-keyscan -H "$VPS_IP" >> ~/.ssh/known_hosts 2>/dev/null
+          fi
+          cat > ~/.ssh/config << EOF2
+          Host $VPS_IP
+            User $VPS_USER
+            IdentityFile ~/.ssh/id_deploy
+            IdentitiesOnly yes
+            BatchMode yes
+            StrictHostKeyChecking yes
+          EOF2
+
+      - name: Write .env from secrets
+        env:
+          GRAFANA_ADMIN_PASSWORD: ${{ secrets.GRAFANA_ADMIN_PASSWORD }}
+          GRAFANA_ROOT_URL: ${{ vars.GRAFANA_ROOT_URL || 'https://grafana.luisgosampaio.com' }}
+        run: |
+          set -euo pipefail
+          umask 077
+          if [[ -z "${GRAFANA_ADMIN_PASSWORD}" ]]; then
+            echo "Missing required secret: GRAFANA_ADMIN_PASSWORD"
+            exit 1
+          fi
+          {
+            printf 'GRAFANA_ADMIN_PASSWORD=%s\n' "$GRAFANA_ADMIN_PASSWORD"
+            printf 'GRAFANA_ROOT_URL=%s\n' "$GRAFANA_ROOT_URL"
+          } > ops/observability/.env
+
+      - name: Upload and start the stack
+        run: |
+          set -euo pipefail
+          ssh "${VPS_USER}@${VPS_IP}" "mkdir -p ~/${REMOTE_DIR}"
+          # --delete keeps removed dashboards / configs from lingering; data lives in Docker volumes
+          rsync -az --delete ops/observability/ "${VPS_USER}@${VPS_IP}:~/${REMOTE_DIR}/"
+          ssh "${VPS_USER}@${VPS_IP}" bash << 'ENDSSH'
+          set -euo pipefail
+          cd ~/observability
+          chmod 600 .env
+          docker network create observability >/dev/null 2>&1 || true
+          docker compose up -d --remove-orphans
+          # Prometheus reads its config only at start
+          docker compose restart prometheus
+          ENDSSH
+
+      # Grafana answers on 127.0.0.1:8088 only, so it is checked over SSH. The stack's own targets must be up; a
+      # project's target (futspring-api) only warns: on a push to main the API deploy runs at the same time and
+      # takes longer, and it checks its own health
+      - name: Smoke test
+        run: |
+          set -uo pipefail
+          STACK_JOBS="prometheus node-exporter cadvisor"
+          for attempt in $(seq 1 12); do
+            grafana=$(ssh "${VPS_USER}@${VPS_IP}" "curl -s -o /dev/null -w '%{http_code}' --max-time 5 http://127.0.0.1:8088/api/health" || true)
+            targets=$(ssh "${VPS_USER}@${VPS_IP}" "docker exec prometheus wget -qO- localhost:9090/api/v1/targets" || true)
+            down=$(printf '%s' "$targets" | python3 -c "import sys,json; t=json.load(sys.stdin)['data']['activeTargets']; print(' '.join(x['labels']['job'] for x in t if x['health']!='up'))" 2>/dev/null || echo "unreadable")
+            stack_down=""
+            for job in $STACK_JOBS unreadable; do
+              [[ " ${down} " == *" ${job} "* ]] && stack_down="${stack_down} ${job}"
+            done
+            if [[ "$grafana" == "200" && -z "$stack_down" ]]; then
+              echo "Grafana 200 and the stack's targets up (attempt ${attempt})."
+              if [[ -n "${down// /}" ]]; then
+                echo "::warning::Prometheus targets still down: ${down} (a project deploy may still be running)."
+              fi
+              exit 0
+            fi
+            echo "Not ready yet: grafana=${grafana} down=${down:-none} (attempt ${attempt}/12), retrying in 10s..."
+            sleep 10
+          done
+          echo "Smoke test failed after 2 minutes."
+          ssh "${VPS_USER}@${VPS_IP}" "cd ~/observability && docker compose ps && docker compose logs --tail 50"
+          exit 1
+
+      - name: Clean up secrets from runner
+        if: always()
+        run: shred -u ops/observability/.env ~/.ssh/id_deploy 2>/dev/null || rm -f ops/observability/.env ~/.ssh/id_deploy

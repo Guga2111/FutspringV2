@@ -1,0 +1,27 @@
+# Scrape targets of the shared stack. Another project joins by attaching its container to the external
+# "observability" network and adding a job here.
+global:
+  scrape_interval: 30s
+  scrape_timeout: 10s
+
+scrape_configs:
+  - job_name: futspring-api
+    metrics_path: /actuator/prometheus
+    static_configs:
+      # management port of the API (never published on the host). The compose service name, not the container
+      # name futspring_api: Tomcat answers 400 to a Host header with an underscore
+      - targets: ["futspring-api:9091"]
+        labels:
+          project: futspring
+
+  - job_name: node-exporter
+    static_configs:
+      - targets: ["node-exporter:9100"]
+
+  - job_name: cadvisor
+    static_configs:
+      - targets: ["cadvisor:8080"]
+
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]
