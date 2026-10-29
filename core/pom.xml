@@ -62,6 +62,16 @@
             <artifactId>flyway-database-postgresql</artifactId>
         </dependency>
 
+        <!-- Actuator (probes, metrics on the internal management port) + Prometheus registry -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-registry-prometheus</artifactId>
+        </dependency>
+
         <!-- Lombok -->
         <dependency>
             <groupId>org.projectlombok</groupId>

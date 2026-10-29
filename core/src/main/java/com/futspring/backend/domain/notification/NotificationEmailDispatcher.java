@@ -2,6 +2,9 @@ package com.futspring.backend.domain.notification;
 
 import com.futspring.backend.domain.mail.EmailSender;
 import com.futspring.backend.domain.mail.MailConfig;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.MeterRegistry;
 import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,7 +25,8 @@ import java.util.concurrent.Executor;
  * real EmailSender is configured. Runs on its own single thread with a bounded queue, paced by EmailPacer; never on
  * the default @Async pool, whose several threads would break the pacing. The executor is owned here, not a bean:
  * an Executor bean would replace Spring Boot's default async executor. A full queue or a failed send is only
- * logged (no retry); the in-app notification is already stored.
+ * logged (no retry); the in-app notification is already stored. Metrics: futspring.email.queue.size,
+ * futspring.email.sent (result=ok|failed) and futspring.email.dropped (full queue).
  */
 @Slf4j
 @Component
@@ -39,6 +43,9 @@ public class NotificationEmailDispatcher {
     private final TransactionOperations readOnlyTransaction;
     private final EmailPacer pacer;
     private final Executor executor;
+    private final Counter sentOk;
+    private final Counter sentFailed;
+    private final Counter dropped;
 
     record OutgoingEmail(Long notificationId, Long recipientId, String to, String subject, String html,
                          Map<String, String> headers) { }
@@ -48,15 +55,16 @@ public class NotificationEmailDispatcher {
                                        NotificationPreferenceService preferenceService,
                                        UnsubscribeTokens unsubscribeTokens, EmailSender emailSender,
                                        MailConfig mailConfig, PlatformTransactionManager transactionManager,
-                                       EmailPacer pacer) {
+                                       EmailPacer pacer, MeterRegistry meterRegistry) {
         this(notificationRepository, preferenceService, unsubscribeTokens, emailSender, mailConfig,
-                readOnly(transactionManager), pacer, singleThreadExecutor());
+                readOnly(transactionManager), pacer, singleThreadExecutor(), meterRegistry);
     }
 
     NotificationEmailDispatcher(NotificationRepository notificationRepository,
                                 NotificationPreferenceService preferenceService,
                                 UnsubscribeTokens unsubscribeTokens, EmailSender emailSender, MailConfig mailConfig,
-                                TransactionOperations readOnlyTransaction, EmailPacer pacer, Executor executor) {
+                                TransactionOperations readOnlyTransaction, EmailPacer pacer, Executor executor,
+                                MeterRegistry meterRegistry) {
         this.notificationRepository = notificationRepository;
         this.preferenceService = preferenceService;
         this.unsubscribeTokens = unsubscribeTokens;
@@ -65,6 +73,15 @@ public class NotificationEmailDispatcher {
         this.readOnlyTransaction = readOnlyTransaction;
         this.pacer = pacer;
         this.executor = executor;
+        Gauge.builder("futspring.email.queue.size", executor,
+                        e -> e instanceof ThreadPoolTaskExecutor pool ? pool.getQueueSize() : 0)
+                .description("Notification e-mails waiting to be sent")
+                .register(meterRegistry);
+        this.sentOk = sentCounter(meterRegistry, "ok");
+        this.sentFailed = sentCounter(meterRegistry, "failed");
+        this.dropped = Counter.builder("futspring.email.dropped")
+                .description("Notification e-mail batches not queued because the queue was full")
+                .register(meterRegistry);
     }
 
     // Called after the commit, on the request's thread: only queues the work
@@ -75,6 +92,7 @@ public class NotificationEmailDispatcher {
         try {
             executor.execute(() -> send(notificationIds));
         } catch (TaskRejectedException e) {
+            dropped.increment();
             log.warn("E-mail queue full: notifications {} were not e-mailed", notificationIds);
         }
     }
@@ -93,11 +111,13 @@ public class NotificationEmailDispatcher {
                 pacer.acquire();
                 emailSender.send(email.to(), email.subject(), email.html(), List.of(NotificationEmail.LOGO),
                         email.headers());
+                sentOk.increment();
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 return;
             } catch (RuntimeException e) {
                 // one recipient's failure doesn't stop the others
+                sentFailed.increment();
                 log.warn("Could not e-mail notification {} to user {}", email.notificationId(), email.recipientId(), e);
             }
         }
@@ -142,6 +162,13 @@ public class NotificationEmailDispatcher {
         if (executor instanceof ThreadPoolTaskExecutor pool) {
             pool.shutdown();
         }
+    }
+
+    private static Counter sentCounter(MeterRegistry meterRegistry, String result) {
+        return Counter.builder("futspring.email.sent")
+                .description("Notification e-mails handed to the e-mail provider")
+                .tag("result", result)
+                .register(meterRegistry);
     }
 
     private static TransactionOperations readOnly(PlatformTransactionManager transactionManager) {

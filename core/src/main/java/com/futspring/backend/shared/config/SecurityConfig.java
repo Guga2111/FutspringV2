@@ -4,8 +4,10 @@ import com.futspring.backend.domain.auth.AuthRateLimitFilter;
 import com.futspring.backend.domain.auth.JwtAuthFilter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.boot.actuate.autoconfigure.security.servlet.EndpointRequest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -38,7 +40,23 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
+    /**
+     * Actuator endpoints. They are served only on management.server.port (9091), which Docker never publishes, so
+     * Prometheus scrapes them without a token. Boot applies the security filter to the management port too.
+     */
     @Bean
+    @Order(1)
+    public SecurityFilterChain actuatorFilterChain(HttpSecurity http) throws Exception {
+        http
+            .securityMatcher(EndpointRequest.toAnyEndpoint())
+            .csrf(AbstractHttpConfigurer::disable)
+            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .authorizeHttpRequests(auth -> auth.anyRequest().permitAll());
+        return http.build();
+    }
+
+    @Bean
+    @Order(2)
     public SecurityFilterChain filterChain(HttpSecurity http,
                                            JwtAuthFilter jwtAuthFilter,
                                            AuthRateLimitFilter authRateLimitFilter,
@@ -52,6 +70,8 @@ public class SecurityConfig {
                 .requestMatchers("/api/v1/auth/**").permitAll()
                 .requestMatchers("/api/v1/files/**").permitAll()
                 .requestMatchers("/ws/**").permitAll()
+                // liveness / readiness probes (management.endpoint.health.probes.add-additional-paths)
+                .requestMatchers(HttpMethod.GET, "/livez", "/readyz").permitAll()
                 .requestMatchers(HttpMethod.POST, EMAIL_LINK_PATHS.toArray(String[]::new)).permitAll()
                 .anyRequest().authenticated()
             )
