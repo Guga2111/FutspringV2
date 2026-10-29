@@ -6,10 +6,12 @@ import com.futspring.backend.support.BaseIntegrationTest;
 import com.futspring.backend.domain.user.User;
 import com.futspring.backend.domain.user.UserRepository;
 import org.junit.jupiter.api.Test;
+import io.micrometer.core.instrument.MeterRegistry;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -20,6 +22,9 @@ class AuthControllerTest extends BaseIntegrationTest {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private MeterRegistry meterRegistry;
 
     @Test
     void register_success() throws Exception {
@@ -136,5 +141,8 @@ class AuthControllerTest extends BaseIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(body))
                 .andExpect(status().isTooManyRequests());
+        // 15 requests against a bucket of 10: at least 5 rejections counted for the route
+        assertThat(meterRegistry.get("futspring.ratelimit.rejected").tag("route", "/api/v1/auth/login")
+                .counter().count()).isGreaterThanOrEqualTo(5);
     }
 }

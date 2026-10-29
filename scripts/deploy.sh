@@ -79,8 +79,6 @@ set -euo pipefail
 cd ${REMOTE_DIR}
 chmod 600 .env
 
-API_PORT=\$(grep '^API_PORT=' .env | cut -d= -f2- || true)
-API_PORT=\${API_PORT:-8081}
 PG_DUMP_URL=\$(grep '^PG_DUMP_URL=' .env | cut -d= -f2- || true)
 
 echo "Loading Docker image ${VERSION}..."
@@ -106,24 +104,31 @@ fi
 # The old deploy ran a plain 'docker run' container that holds the API port
 docker rm -f futspring-api 2>/dev/null || true
 
+# Shared with the observability stack (ops/observability), which scrapes the API on it
+docker network create observability >/dev/null 2>&1 || true
+
+# The image runs as uid 10001; idempotent
+mkdir -p /opt/futspring-uploads
+chown -R 10001:10001 /opt/futspring-uploads
+
 echo "Starting containers..."
 docker compose -f docker-compose.prod.yml up -d --no-build --remove-orphans
 
-# No health endpoint: an unauthenticated request to a protected route answers 401
-# once the app is up, i.e. after Flyway migrated and Hibernate validated the schema
-echo "Waiting for the API on port \${API_PORT}..."
-status=""
+# The image's HEALTHCHECK probes readiness on the internal management port: healthy means Flyway migrated
+# and Hibernate validated the schema
+echo "Waiting for the API container to be healthy..."
+health=""
 for attempt in \$(seq 1 24); do
-  status=\$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 "http://127.0.0.1:\${API_PORT}/api/v1/peladas/my" || true)
-  if [[ "\${status}" == "401" ]]; then
-    echo "API is up (attempt \${attempt})."
+  health=\$(docker inspect -f '{{.State.Health.Status}}' futspring_api 2>/dev/null || true)
+  if [[ "\${health}" == "healthy" ]]; then
+    echo "API is healthy (attempt \${attempt})."
     break
   fi
   sleep 5
 done
 
-if [[ "\${status}" != "401" ]]; then
-  echo "API did not start after 2 minutes (last status: \${status})."
+if [[ "\${health}" != "healthy" ]]; then
+  echo "API was not healthy after 2 minutes (last status: \${health})."
   docker compose -f docker-compose.prod.yml ps
   docker compose -f docker-compose.prod.yml logs --tail 100 ${SERVICE}
   exit 1

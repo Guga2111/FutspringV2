@@ -6,6 +6,7 @@ import com.futspring.backend.domain.mail.MailConfig;
 import com.futspring.backend.domain.pelada.Pelada;
 import com.futspring.backend.domain.user.User;
 import com.futspring.backend.shared.config.JwtConfig;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -13,6 +14,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.core.task.TaskRejectedException;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.transaction.support.TransactionOperations;
 import org.springframework.web.client.RestClientException;
@@ -23,6 +25,7 @@ import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -38,6 +41,7 @@ class NotificationEmailDispatcherTest {
     @Mock EmailPacer pacer;
 
     NotificationEmailDispatcher dispatcher;
+    SimpleMeterRegistry meterRegistry;
     UnsubscribeTokens tokens;
     List<Runnable> queued;
     User leal;
@@ -57,9 +61,10 @@ class NotificationEmailDispatcherTest {
         NotificationPreferenceService preferenceService =
                 new NotificationPreferenceService(null, preferenceRepository, null, tokens);
         queued = new ArrayList<>();
+        meterRegistry = new SimpleMeterRegistry();
         Executor executor = queued::add;
         dispatcher = new NotificationEmailDispatcher(notificationRepository, preferenceService, tokens, emailSender,
-                mailConfig, TransactionOperations.withoutTransaction(), pacer, executor);
+                mailConfig, TransactionOperations.withoutTransaction(), pacer, executor, meterRegistry);
 
         leal = User.builder().id(1L).email("leal@example.com").username("Leal").password("hash").build();
         ana = User.builder().id(2L).email("ana@example.com").username("ana").password("hash").build();
@@ -196,6 +201,41 @@ class NotificationEmailDispatcherTest {
         runQueued();
 
         assertThat(sentTo()).containsExactly("ana@example.com", "bia@example.com");
+        assertThat(meterRegistry.get("futspring.email.sent").tag("result", "ok").counter().count()).isEqualTo(1);
+        assertThat(meterRegistry.get("futspring.email.sent").tag("result", "failed").counter().count()).isEqualTo(1);
+    }
+
+    @Test
+    void theQueueSizeGauge_readsTheExecutorQueue() throws InterruptedException {
+        ThreadPoolTaskExecutor pool = new ThreadPoolTaskExecutor();
+        pool.setCorePoolSize(1);
+        pool.setMaxPoolSize(1);
+        pool.setQueueCapacity(10);
+        pool.initialize();
+        SimpleMeterRegistry registry = new SimpleMeterRegistry();
+        new NotificationEmailDispatcher(notificationRepository,
+                new NotificationPreferenceService(null, preferenceRepository, null, tokens), tokens, emailSender,
+                new MailConfig(), TransactionOperations.withoutTransaction(), pacer, pool, registry);
+        CountDownLatch running = new CountDownLatch(1);
+        CountDownLatch release = new CountDownLatch(1);
+        try {
+            pool.execute(() -> {
+                running.countDown();
+                try {
+                    release.await();
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            });
+            running.await();
+            pool.execute(() -> { });
+            pool.execute(() -> { });
+
+            assertThat(registry.get("futspring.email.queue.size").gauge().value()).isEqualTo(2);
+        } finally {
+            release.countDown();
+            pool.shutdown();
+        }
     }
 
     @Test
@@ -239,11 +279,12 @@ class NotificationEmailDispatcherTest {
         NotificationEmailDispatcher full = new NotificationEmailDispatcher(notificationRepository,
                 new NotificationPreferenceService(null, preferenceRepository, null, tokens), tokens, emailSender,
                 new MailConfig(), TransactionOperations.withoutTransaction(), pacer,
-                task -> { throw new TaskRejectedException("full"); });
+                task -> { throw new TaskRejectedException("full"); }, meterRegistry);
 
         full.dispatch(List.of(1L));
 
         verifyNoInteractions(notificationRepository);
+        assertThat(meterRegistry.get("futspring.email.dropped").counter().count()).isEqualTo(1);
     }
 
     @Test

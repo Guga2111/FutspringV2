@@ -5,6 +5,7 @@ import com.futspring.backend.domain.daily.repository.TeamRepository;
 import com.futspring.backend.domain.notification.dto.NotificationPushDTO;
 import com.futspring.backend.domain.pelada.Pelada;
 import com.futspring.backend.domain.user.User;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -32,6 +33,7 @@ class NotificationPushServiceTest {
     @Mock SimpMessagingTemplate messagingTemplate;
 
     NotificationPushService service;
+    SimpleMeterRegistry meterRegistry;
     User admin;
     User member;
     User other;
@@ -40,8 +42,9 @@ class NotificationPushServiceTest {
 
     @BeforeEach
     void setUp() {
+        meterRegistry = new SimpleMeterRegistry();
         service = new NotificationPushService(notificationRepository, new NotificationDTOAssembler(teamRepository),
-                messagingTemplate);
+                messagingTemplate, meterRegistry);
         admin = User.builder().id(1L).email("admin@example.com").username("admin").password("hash").build();
         member = User.builder().id(2L).email("member@example.com").username("member").password("hash").build();
         other = User.builder().id(3L).email("other@example.com").username("other").password("hash").build();
@@ -113,6 +116,9 @@ class NotificationPushServiceTest {
 
         assertThat(sentTo("other@example.com", 1)).singleElement()
                 .satisfies(p -> assertThat(p.getUnreadCount()).isZero());
+        assertThat(meterRegistry.get("futspring.notifications.push").tag("result", "ok").counter().count()).isEqualTo(1);
+        assertThat(meterRegistry.get("futspring.notifications.push").tag("result", "failed").counter().count())
+                .isEqualTo(1);
     }
 
     @Test

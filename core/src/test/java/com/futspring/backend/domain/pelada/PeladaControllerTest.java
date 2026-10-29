@@ -22,6 +22,7 @@ import com.futspring.backend.domain.stats.repository.StatsRepository;
 import com.futspring.backend.support.BaseIntegrationTest;
 import com.futspring.backend.domain.user.User;
 import com.futspring.backend.domain.user.UserRepository;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -51,6 +52,7 @@ class PeladaControllerTest extends BaseIntegrationTest {
     @Autowired private StatsRepository statsRepository;
     @Autowired private DailyResultsService dailyResultsService;
     @Autowired private ChatService chatService;
+    @Autowired private EntityManager entityManager;
     @Autowired private PeladaMensalistaRepository mensalistaRepository;
 
     private User admin;
@@ -540,6 +542,10 @@ class PeladaControllerTest extends BaseIntegrationTest {
         dailyResultsService.finalizeDaily(daily.getId(), List.of(), List.of(), admin.getEmail());
         chatService.saveAndBroadcast(pelada.getId(), member.getEmail(), "Bora!");
         assertThat(statsRepository.findByUser(admin).orElseThrow().getGoals()).isEqualTo(2);
+        // The delete runs in its own request in production: start from an empty persistence context, or the
+        // stats and notifications built above stay managed and Hibernate 6.6 rejects them once their daily is gone
+        entityManager.flush();
+        entityManager.clear();
 
         mockMvc.perform(delete("/api/v1/peladas/" + pelada.getId())
                 .header("Authorization", bearerToken(admin.getId(), admin.getEmail())))

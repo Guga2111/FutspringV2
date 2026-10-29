@@ -1,0 +1,13 @@
+{
+  "rows" : [ {
+    "dailyId" : 309,
+    "date" : "2026-10-31",
+    "peladaId" : 995,
+    "peladaName" : "peladaName",
+    "goals" : 145,
+    "assists" : 403,
+    "matchesPlayed" : 583,
+    "wins" : 560,
+    "result" : "result"
+  } ]
+}

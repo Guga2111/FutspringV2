@@ -1,0 +1,17 @@
+{
+  "id" : 356,
+  "dailyDate" : "2026-10-31",
+  "dailyTime" : "dailyTime",
+  "status" : "SCHEDULED",
+  "confirmedPlayerCount" : 560,
+  "teamCount" : 467,
+  "matchCount" : 187,
+  "championImage" : "championImage",
+  "capacity" : 547,
+  "startsAt" : "2026-10-31T23:00:00Z",
+  "confirmOpensAt" : "2026-10-31T23:00:00Z",
+  "finished" : true,
+  "confirmed" : true,
+  "isFinished" : true,
+  "isConfirmed" : true
+}

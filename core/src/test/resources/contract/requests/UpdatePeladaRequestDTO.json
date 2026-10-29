@@ -1,0 +1,13 @@
+{
+  "name": "Pelada do Fut",
+  "dayOfWeek": "SUNDAY",
+  "timeOfDay": "09:30",
+  "duration": 2,
+  "address": "Rua B, 20",
+  "reference": "",
+  "autoCreateDailyEnabled": false,
+  "timeZone": "America/Manaus",
+  "numberOfTeams": 4,
+  "playersPerTeam": 6,
+  "maxMensalistas": 10
+}

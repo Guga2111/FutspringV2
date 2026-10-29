@@ -1,0 +1,31 @@
+{
+  "notification" : {
+    "id" : 356,
+    "type" : "DIARISTA_BUMPED",
+    "category" : "SESSION",
+    "award" : "PUSKAS",
+    "createdAt" : "2026-10-31T23:00:00Z",
+    "readAt" : "2026-10-31T23:00:00Z",
+    "pelada" : {
+      "id" : 356,
+      "name" : "name",
+      "image" : "image"
+    },
+    "daily" : {
+      "id" : 356,
+      "date" : "2026-10-31",
+      "time" : "time"
+    },
+    "actor" : {
+      "id" : 356,
+      "username" : "username",
+      "image" : "image",
+      "position" : "position"
+    },
+    "team" : {
+      "name" : "name",
+      "color" : "color"
+    }
+  },
+  "unreadCount" : 169
+}

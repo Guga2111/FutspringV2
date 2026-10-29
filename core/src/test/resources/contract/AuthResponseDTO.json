@@ -1,0 +1,11 @@
+{
+  "token" : "token",
+  "user" : {
+    "id" : 356,
+    "email" : "email",
+    "username" : "username",
+    "image" : "image",
+    "backgroundImage" : "backgroundImage",
+    "position" : "position"
+  }
+}

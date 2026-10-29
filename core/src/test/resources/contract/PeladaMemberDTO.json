@@ -1,0 +1,11 @@
+{
+  "id" : 356,
+  "username" : "username",
+  "image" : "image",
+  "stars" : 538,
+  "position" : "position",
+  "admin" : true,
+  "mensalista" : true,
+  "isAdmin" : true,
+  "isMensalista" : true
+}

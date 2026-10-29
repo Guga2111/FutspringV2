@@ -1,0 +1,44 @@
+{
+  "id" : 356,
+  "name" : "name",
+  "dayOfWeek" : "dayOfWeek",
+  "timeOfDay" : "timeOfDay",
+  "duration" : 605.5,
+  "address" : "address",
+  "reference" : "reference",
+  "image" : "image",
+  "autoCreateDailyEnabled" : true,
+  "memberCount" : 254,
+  "numberOfTeams" : 495,
+  "playersPerTeam" : 905,
+  "timeZone" : "timeZone",
+  "nextDaily" : {
+    "id" : 356,
+    "date" : "2026-10-31",
+    "time" : "time",
+    "status" : "SCHEDULED",
+    "confirmedCount" : 697,
+    "capacity" : 547,
+    "startsAt" : "2026-10-31T23:00:00Z",
+    "confirmOpensAt" : "2026-10-31T23:00:00Z",
+    "bump" : {
+      "user" : {
+        "id" : 356,
+        "username" : "username",
+        "image" : "image",
+        "position" : "position"
+      },
+      "bumpedBy" : {
+        "id" : 356,
+        "username" : "username",
+        "image" : "image",
+        "position" : "position"
+      },
+      "bumpedAt" : "2026-10-31T23:00:00Z"
+    },
+    "confirmed" : true,
+    "isConfirmed" : true
+  },
+  "admin" : true,
+  "isAdmin" : true
+}

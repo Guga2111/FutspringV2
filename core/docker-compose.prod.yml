@@ -10,6 +10,8 @@ services:
       # Only reachable through nginx on the host
       - "127.0.0.1:${API_PORT:-8081}:8080"
     restart: unless-stopped
+    # The JVM takes 75% of it as max heap (MaxRAMPercentage in the image); revisit with the Grafana numbers
+    mem_limit: 1g
     environment:
       SPRING_PROFILES_ACTIVE: prod
       DB_URL: ${DB_URL}
@@ -24,9 +26,19 @@ services:
       MAIL_FROM: ${MAIL_FROM}
       # DDL_AUTO is intentionally absent: Flyway owns the schema, Hibernate validates it
     volumes:
+      # owned by uid 10001 (the image's user); deploy.sh chowns it
       - /opt/futspring-uploads:/app/uploads
+    # default: the project network; observability: Prometheus scrapes futspring_api:9091 (never published)
+    networks:
+      - default
+      - observability
     logging:
       driver: json-file
       options:
         max-size: "10m"
         max-file: "3"
+
+networks:
+  observability:
+    # created by deploy.sh and the observability deploy (docker network create observability)
+    external: true

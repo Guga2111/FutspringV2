@@ -1,0 +1,10 @@
+{
+  "id" : 356,
+  "content" : "content",
+  "sentAt" : "sentAt",
+  "sender" : {
+    "id" : 356,
+    "username" : "username",
+    "image" : "image"
+  }
+}

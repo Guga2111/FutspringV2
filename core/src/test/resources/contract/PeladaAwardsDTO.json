@@ -1,0 +1,15 @@
+{
+  "totalCategories" : 641,
+  "totalAwardsDistributed" : 474,
+  "categories" : [ {
+    "type" : "type",
+    "name" : "name",
+    "description" : "description",
+    "topWinners" : [ {
+      "userId" : 95,
+      "username" : "username",
+      "userImage" : "userImage",
+      "count" : 344
+    } ]
+  } ]
+}

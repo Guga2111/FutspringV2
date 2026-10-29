@@ -54,7 +54,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(HandlerMethodValidationException.class)
     public ResponseEntity<Map<String, Object>> handleMethodValidation(HandlerMethodValidationException ex) {
         Map<String, String> fieldErrors = new LinkedHashMap<>();
-        ex.getAllValidationResults().forEach(result -> {
+        ex.getParameterValidationResults().forEach(result -> {
             String name = result.getMethodParameter().getParameterName();
             for (MessageSourceResolvable error : result.getResolvableErrors()) {
                 String field = error instanceof FieldError fieldError ? fieldError.getField() : name;

@@ -2,6 +2,7 @@ package com.futspring.backend.domain.notification;
 
 import com.futspring.backend.domain.notification.dto.NotificationDTO;
 import com.futspring.backend.domain.notification.dto.NotificationPushDTO;
+import io.micrometer.core.instrument.MeterRegistry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -16,7 +17,7 @@ import java.util.stream.Collectors;
 /**
  * Sends committed notifications to their recipients over STOMP (/user/queue/notifications; the session principal
  * is the e-mail). Runs on the default async pool after the commit. A failure is only logged: the row is stored and
- * the client recounts on reconnect.
+ * the client recounts on reconnect. Each send counts in futspring.notifications.push (result=ok|failed).
  */
 @Slf4j
 @Service
@@ -24,10 +25,12 @@ import java.util.stream.Collectors;
 public class NotificationPushService {
 
     static final String QUEUE = "/queue/notifications";
+    static final String PUSH_METRIC = "futspring.notifications.push";
 
     private final NotificationRepository notificationRepository;
     private final NotificationDTOAssembler dtoAssembler;
     private final SimpMessagingTemplate messagingTemplate;
+    private final MeterRegistry meterRegistry;
 
     // Three queries whatever the size: the rows with their references, the teams of TEAMS_SORTED, the counts
     @Async
@@ -55,7 +58,9 @@ public class NotificationPushService {
         try {
             messagingTemplate.convertAndSendToUser(notification.getRecipient().getEmail(), QUEUE,
                     new NotificationPushDTO(dto, unreadCount));
+            meterRegistry.counter(PUSH_METRIC, "result", "ok").increment();
         } catch (RuntimeException e) {
+            meterRegistry.counter(PUSH_METRIC, "result", "failed").increment();
             log.warn("Could not push notification {} to user {}", notification.getId(),
                     notification.getRecipient().getId(), e);
         }
