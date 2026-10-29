@@ -4,9 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.futspring.backend.shared.config.SecurityConfig;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
-import io.github.bucket4j.Bandwidth;
 import io.github.bucket4j.Bucket;
-import io.github.bucket4j.Refill;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -58,8 +56,8 @@ public class AuthRateLimitFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
         String key = request.getRequestURI() + "|" + request.getRemoteAddr();
         Bucket bucket = buckets.get(key, k -> Bucket.builder()
-                .addLimit(Bandwidth.classic(REQUESTS_PER_MINUTE,
-                        Refill.intervally(REQUESTS_PER_MINUTE, Duration.ofMinutes(1))))
+                .addLimit(limit -> limit.capacity(REQUESTS_PER_MINUTE)
+                        .refillIntervally(REQUESTS_PER_MINUTE, Duration.ofMinutes(1)))
                 .build());
 
         if (!bucket.tryConsume(1)) {

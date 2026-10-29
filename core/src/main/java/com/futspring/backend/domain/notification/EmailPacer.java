@@ -1,9 +1,7 @@
 package com.futspring.backend.domain.notification;
 
-import io.github.bucket4j.Bandwidth;
 import io.github.bucket4j.BlockingStrategy;
 import io.github.bucket4j.Bucket;
-import io.github.bucket4j.Refill;
 import io.github.bucket4j.TimeMeter;
 import org.springframework.stereotype.Component;
 
@@ -31,7 +29,7 @@ public class EmailPacer {
     // Tests pass a fake clock and a strategy that advances it instead of sleeping
     EmailPacer(TimeMeter timeMeter, BlockingStrategy blockingStrategy) {
         this.bucket = Bucket.builder()
-                .addLimit(Bandwidth.classic(1, Refill.greedy(1, INTERVAL)))
+                .addLimit(limit -> limit.capacity(1).refillGreedy(1, INTERVAL))
                 .withCustomTimePrecision(timeMeter)
                 .build();
         this.blockingStrategy = blockingStrategy;

@@ -125,11 +125,11 @@ public class NotificationEmailDispatcher {
         String token = unsubscribeTokens.create(n.getRecipient().getId(), category);
         String appUrl = mailConfig.getFrontendUrl();
         String html = NotificationEmail.html(content, category, appUrl,
-                UriComponentsBuilder.fromHttpUrl(appUrl).path(content.ctaPath()).toUriString(),
-                UriComponentsBuilder.fromHttpUrl(appUrl).path("/settings/notifications").toUriString(),
-                UriComponentsBuilder.fromHttpUrl(appUrl).path("/notifications/unsubscribe")
+                UriComponentsBuilder.fromUriString(appUrl).path(content.ctaPath()).toUriString(),
+                UriComponentsBuilder.fromUriString(appUrl).path("/settings/notifications").toUriString(),
+                UriComponentsBuilder.fromUriString(appUrl).path("/notifications/unsubscribe")
                         .queryParam("token", token).toUriString());
-        String oneClick = UriComponentsBuilder.fromHttpUrl(mailConfig.getApiUrl()).path(UNSUBSCRIBE_PATH)
+        String oneClick = UriComponentsBuilder.fromUriString(mailConfig.getApiUrl()).path(UNSUBSCRIBE_PATH)
                 .queryParam("token", token).toUriString();
         return new OutgoingEmail(n.getId(), n.getRecipient().getId(), n.getRecipient().getEmail(), content.subject(),
                 html, Map.of(

@@ -26,7 +26,7 @@ public class PasswordResetEmailListener {
     @TransactionalEventListener
     public void onResetRequested(PasswordResetRequestedEvent event) {
         String appUrl = mailConfig.getFrontendUrl();
-        String link = UriComponentsBuilder.fromHttpUrl(appUrl)
+        String link = UriComponentsBuilder.fromUriString(appUrl)
                 .path("/reset-password")
                 .queryParam("token", event.rawToken())
                 .toUriString();
