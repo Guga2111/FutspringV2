@@ -73,12 +73,14 @@ services:
     image: ghcr.io/google/cadvisor:v0.60.6
     container_name: cadvisor
     restart: unless-stopped
-    # 2 vCPU shared by every project: slow housekeeping, only Docker containers, no expensive metrics
+    # 2 vCPU shared by every project: slow housekeeping, only Docker containers, no expensive metrics.
+    # disk / diskIO stay off: the disk metrics walk every container's overlay files (du), which took minutes per
+    # container on the VPS, pinned cAdvisor at its memory limit and pushed the load average past 11
     command:
       - --docker_only=true
       - --housekeeping_interval=30s
       - --store_container_labels=false
-      - --disable_metrics=advtcp,cpu_topology,cpuset,hugetlb,memory_numa,percpu,process,referenced_memory,resctrl,sched,tcp,udp
+      - --disable_metrics=disk,diskIO,advtcp,cpu_topology,cpuset,hugetlb,memory_numa,percpu,process,referenced_memory,resctrl,sched,tcp,udp
     privileged: true
     devices:
       - /dev/kmsg
