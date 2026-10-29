@@ -9,7 +9,7 @@ or run it by hand) to `~/observability` on the VPS; independent from the API dep
 | prometheus | `prom/prometheus:v3.15.1` | none | 512m | scrape 30 s, retention 15 days / 2 GB, volume `prometheus_data` |
 | grafana | `grafana/grafana-oss:13.0.2` | `127.0.0.1:8088` | 384m | login only (no sign-up, no anonymous), volume `grafana_data` |
 | node-exporter | `prom/node-exporter:v1.12.1` | none | 64m | host `/proc`, `/sys`, `/` read-only |
-| cadvisor | `ghcr.io/google/cadvisor:v0.60.6` | none | 256m | Docker containers only, housekeeping 30 s, heavy metrics off |
+| cadvisor | `ghcr.io/google/cadvisor:v0.60.6` | none | 256m | Docker containers only, housekeeping 30 s, heavy metrics off (disk usage included: it walks every container's files) |
 
 Prometheus is never exposed. Grafana is only reachable through nginx at `https://grafana.luisgosampaio.com`.
 
