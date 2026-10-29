@@ -1,0 +1,13 @@
+{
+  "userId" : 95,
+  "totalSessions" : 690,
+  "rows" : [ {
+    "dailyId" : 309,
+    "date" : "2026-10-31",
+    "goals" : 145,
+    "assists" : 403,
+    "matchesPlayed" : 583,
+    "wins" : 560,
+    "wonSession" : true
+  } ]
+}

@@ -1,0 +1,15 @@
+{
+  "id" : 356,
+  "team1Id" : 56,
+  "team1Name" : "team1Name",
+  "team2Id" : 17,
+  "team2Name" : "team2Name",
+  "team1Score" : 495,
+  "team2Score" : 646,
+  "winnerId" : 83,
+  "playerStats" : [ {
+    "userId" : 95,
+    "goals" : 145,
+    "assists" : 403
+  } ]
+}

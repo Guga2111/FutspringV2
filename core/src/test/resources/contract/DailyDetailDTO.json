@@ -1,0 +1,128 @@
+{
+  "id" : 356,
+  "dailyDate" : "2026-10-31",
+  "dailyTime" : "dailyTime",
+  "status" : "SCHEDULED",
+  "championImage" : "championImage",
+  "confirmedPlayers" : [ {
+    "id" : 356,
+    "username" : "username",
+    "image" : "image",
+    "stars" : 538,
+    "position" : "position",
+    "confirmedAt" : "2026-10-31T23:00:00Z",
+    "isMensalista" : true
+  } ],
+  "teams" : [ {
+    "id" : 356,
+    "name" : "name",
+    "totalStars" : 382,
+    "averageStars" : 597.5,
+    "color" : "color",
+    "players" : [ {
+      "id" : 356,
+      "username" : "username",
+      "image" : "image",
+      "stars" : 538,
+      "position" : "position",
+      "confirmedAt" : "2026-10-31T23:00:00Z",
+      "isMensalista" : true
+    } ]
+  } ],
+  "matches" : [ {
+    "id" : 356,
+    "team1Id" : 56,
+    "team1Name" : "team1Name",
+    "team2Id" : 17,
+    "team2Name" : "team2Name",
+    "team1Score" : 495,
+    "team2Score" : 646,
+    "winnerId" : 83,
+    "playerStats" : [ {
+      "userId" : 95,
+      "goals" : 145,
+      "assists" : 403
+    } ]
+  } ],
+  "playerStats" : [ {
+    "userId" : 95,
+    "username" : "username",
+    "goals" : 145,
+    "assists" : 403,
+    "matchesPlayed" : 583,
+    "wins" : 560
+  } ],
+  "leagueTable" : [ {
+    "teamId" : 681,
+    "teamName" : "teamName",
+    "position" : 970,
+    "wins" : 560,
+    "draws" : 296,
+    "losses" : 570,
+    "goalsFor" : 562,
+    "goalsAgainst" : 18,
+    "goalDiff" : 729,
+    "points" : 924
+  } ],
+  "award" : {
+    "puskasWinnerIds" : [ 811 ],
+    "puskasWinnerNames" : [ "puskasWinnerNames" ],
+    "wiltballWinnerIds" : [ 153 ],
+    "wiltballWinnerNames" : [ "wiltballWinnerNames" ],
+    "artilheiroWinnerIds" : [ 103 ],
+    "artilheiroWinnerNames" : [ "artilheiroWinnerNames" ],
+    "garcomWinnerIds" : [ 361 ],
+    "garcomWinnerNames" : [ "garcomWinnerNames" ]
+  },
+  "peladaId" : 995,
+  "peladaName" : "peladaName",
+  "numberOfTeams" : 495,
+  "playersPerTeam" : 905,
+  "peladaMembers" : [ {
+    "id" : 356,
+    "username" : "username",
+    "image" : "image",
+    "stars" : 538,
+    "position" : "position",
+    "confirmedAt" : "2026-10-31T23:00:00Z",
+    "isMensalista" : true
+  } ],
+  "capacity" : 547,
+  "timeZone" : "timeZone",
+  "startsAt" : "2026-10-31T23:00:00Z",
+  "confirmOpensAt" : "2026-10-31T23:00:00Z",
+  "myBump" : {
+    "user" : {
+      "id" : 356,
+      "username" : "username",
+      "image" : "image",
+      "position" : "position"
+    },
+    "bumpedBy" : {
+      "id" : 356,
+      "username" : "username",
+      "image" : "image",
+      "position" : "position"
+    },
+    "bumpedAt" : "2026-10-31T23:00:00Z"
+  },
+  "bumps" : [ {
+    "user" : {
+      "id" : 356,
+      "username" : "username",
+      "image" : "image",
+      "position" : "position"
+    },
+    "bumpedBy" : {
+      "id" : 356,
+      "username" : "username",
+      "image" : "image",
+      "position" : "position"
+    },
+    "bumpedAt" : "2026-10-31T23:00:00Z"
+  } ],
+  "finished" : true,
+  "admin" : true,
+  "isFinished" : true,
+  "isAdmin" : true
+}

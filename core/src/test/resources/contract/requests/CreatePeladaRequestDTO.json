@@ -1,0 +1,13 @@
+{
+  "name": "Pelada do Fut",
+  "dayOfWeek": "SATURDAY",
+  "timeOfDay": "20:00",
+  "duration": 1.5,
+  "address": "Rua A, 10",
+  "reference": "Quadra 2",
+  "autoCreateDailyEnabled": true,
+  "numberOfTeams": 3,
+  "playersPerTeam": 5,
+  "timeZone": "America/Sao_Paulo",
+  "maxMensalistas": 8
+}

@@ -1,0 +1,16 @@
+{
+  "id" : 356,
+  "name" : "name",
+  "totalStars" : 382,
+  "averageStars" : 597.5,
+  "color" : "color",
+  "players" : [ {
+    "id" : 356,
+    "username" : "username",
+    "image" : "image",
+    "stars" : 538,
+    "position" : "position",
+    "confirmedAt" : "2026-10-31T23:00:00Z",
+    "isMensalista" : true
+  } ]
+}

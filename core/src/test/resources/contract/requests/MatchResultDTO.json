@@ -1,0 +1,29 @@
+[
+  {
+    "matchId": 11,
+    "team1Id": 1,
+    "team2Id": 2,
+    "team1Score": 2,
+    "team2Score": 1,
+    "playerStats": [
+      {
+        "userId": 2,
+        "goals": 2,
+        "assists": 0
+      },
+      {
+        "userId": 3,
+        "goals": 0,
+        "assists": 1
+      }
+    ]
+  },
+  {
+    "matchId": null,
+    "team1Id": 1,
+    "team2Id": 3,
+    "team1Score": 0,
+    "team2Score": 0,
+    "playerStats": []
+  }
+]

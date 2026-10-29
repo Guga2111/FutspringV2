@@ -1,0 +1,14 @@
+{
+  "from" : "2026-10-31",
+  "to" : "2026-10-31",
+  "totalSessions" : 690,
+  "rows" : [ {
+    "userId" : 95,
+    "username" : "username",
+    "userImage" : "userImage",
+    "sessionsAttended" : 95,
+    "rate" : 89.5,
+    "mensalista" : true,
+    "isMensalista" : true
+  } ]
+}

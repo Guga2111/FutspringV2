@@ -1,0 +1,28 @@
+{
+  "id" : 356,
+  "creatorId" : 240,
+  "name" : "name",
+  "dayOfWeek" : "dayOfWeek",
+  "timeOfDay" : "timeOfDay",
+  "duration" : 605.5,
+  "address" : "address",
+  "reference" : "reference",
+  "image" : "image",
+  "autoCreateDailyEnabled" : true,
+  "memberCount" : 254,
+  "numberOfTeams" : 495,
+  "playersPerTeam" : 905,
+  "timeZone" : "timeZone",
+  "maxMensalistas" : 529,
+  "members" : [ {
+    "id" : 356,
+    "username" : "username",
+    "image" : "image",
+    "stars" : 538,
+    "position" : "position",
+    "admin" : true,
+    "mensalista" : true,
+    "isAdmin" : true,
+    "isMensalista" : true
+  } ]
+}

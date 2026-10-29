@@ -1,0 +1,34 @@
+{
+  "teams": [
+    {
+      "colorName": "Azul",
+      "colorHex": "#3b82f6",
+      "players": [
+        {
+          "userId": 2,
+          "totalGoals": 3,
+          "totalAssists": 1
+        }
+      ]
+    },
+    {
+      "colorName": "Vermelho",
+      "colorHex": "#ef4444",
+      "players": [
+        {
+          "userId": 3,
+          "totalGoals": 0,
+          "totalAssists": 2
+        }
+      ]
+    }
+  ],
+  "matches": [
+    {
+      "team1ColorName": "Azul",
+      "team1Score": 2,
+      "team2ColorName": "Vermelho",
+      "team2Score": 1
+    }
+  ]
+}
