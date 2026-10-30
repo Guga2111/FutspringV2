@@ -1,6 +1,6 @@
 # Java 25, Spring Boot 4, virtual threads and observability
 
-Date: 2026-10-29 · Status: approved; PR 1 deployed; PR 2 implemented (on `dev`, not deployed) · Delivery: 4 PRs, each merged `dev → main` and deployed before the next starts (see [Delivery](#delivery))
+Date: 2026-10-29 · Status: approved; PR 1 deployed; PR 2 merged to `main` ([#34](https://github.com/Guga2111/FutspringV2/pull/34)); deployment not verified here; PR 3 implemented and locally validated, production acceptance pending · Delivery: 4 PRs, each merged `dev → main` and deployed before the next starts (see [Delivery](#delivery))
 
 ## Goal
 
@@ -275,6 +275,7 @@ Decisions and findings:
 
 ```properties
 spring.threads.virtual.enabled=true
+spring.task.execution.mode=force                  # STOMP also declares Executor beans
 spring.datasource.hikari.maximum-pool-size=10      # explicit, see below
 spring.datasource.hikari.connection-timeout=5000
 ```
@@ -286,9 +287,9 @@ What it changes and what stays:
 | Tomcat request handling | one virtual thread per request instead of the 200-thread pool |
 | `@Async` (`NotificationPushService`, `PasswordResetEmailListener`) | Boot's `SimpleAsyncTaskExecutor` on virtual threads: **unbounded**. Each push opens a read transaction, so concurrency is bounded by Hikari, not by a pool. Acceptable at today's volume; a `spring.task.execution.simple.concurrency-limit` is set if the Hikari pending metric shows bursts |
 | `@Scheduled` jobs | virtual-thread scheduler; behaviour unchanged (each pelada already runs in its own `TransactionTemplate`) |
-| `NotificationEmailDispatcher` | **stays a single-thread executor with its 500-slot queue** (pacing to Resend's 2 req/s depends on it). It may use `setVirtualThreads(true)` with core = max = 1; the serialization is what matters |
-| STOMP channels (simple broker) | verify which executor Boot 4 uses for `clientInbound/OutboundChannel` with virtual threads on; no change unless the threaddump shows otherwise |
-| `ResendEmailSender` (`RestClient`) | blocking I/O on a virtual thread, which is the case virtual threads are made for |
+| `NotificationEmailDispatcher` | **stays a single platform thread with its 500-slot queue** (core = max = 1, existing pacing to Resend's 2 req/s). Its executor remains private, not a bean |
+| STOMP channels (simple broker) | Boot 4.1's WebSocket configurer assigns the application executor to both channels once it exists; with `mode=force` both use the same virtual-thread `SimpleAsyncTaskExecutor`. `WebSocketConfig` is unchanged |
+| `ResendEmailSender` (`RestClient`) | blocking I/O on a virtual thread for password resets; notification e-mails stay on the dispatcher's platform thread |
 
 - **Hikari is the real limit.** With platform threads, Tomcat's 200 threads already exceeded the 10 connections; with virtual threads the queue in front of Hikari can grow more. The pool stays at 10 (Supabase session pooler limits apply); `connection-timeout` 5 s turns a saturated pool into a fast 500 instead of a 30 s hang. The `PESSIMISTIC_WRITE` locks (daily, pelada, reset token) keep a connection while waiting, so watch `hikaricp.connections.pending` together with lock waits.
 - **Pinning:** `-Djdk.tracePinnedThreads` no longer exists in Java 24+. Use JFR: the load test runs the container with `-XX:StartFlightRecording` and the report lists `jdk.VirtualThreadPinned` events (`jfr print --events jdk.VirtualThreadPinned`). Expected: none or only short ones in native/class-init frames.
@@ -308,6 +309,41 @@ Expectation stated up front: most routes are database-bound and Hikari caps them
 - `jvm.threads.live` clearly lower under load;
 - no long `jdk.VirtualThreadPinned` events (> 20 ms);
 - one week in production with no regression on the Futspring dashboard.
+
+### Implementation (PR 3)
+
+- [x] Virtual threads and explicit Hikari limits in both main and test properties; no new executor bean, frontend, JSON, entity or migration changes.
+- [x] Integration verification: real HTTP, proxied `@Async`, one-shot `@Scheduled`, both STOMP executor beans and Hikari settings. PostgreSQL attendance race uses `newVirtualThreadPerTaskExecutor()`, retaining its simultaneous start, one confirmation and seven conflicts.
+- [x] `./mvnw test` and `./mvnw verify`: 738 tests each, zero failures/errors/skips, including the 51 unchanged contract snapshots, `AttendanceConcurrencyTest`, `FlywayMigrationTest` and `MigrationDataTest` (PostgreSQL 17).
+- [x] Image `futspring-api:pr3` built; AOT training refreshed the context without a database and produced `app.aot` (140,967,936 bytes). Dockerfile and runtime JVM flags remain unchanged.
+- [x] Local load acceptance in the repeated run: p95 **66 ms (50)** and **245 ms (200)**, below the original PR2 limits of **1321/3629 ms** and below the repeated PR2 values. Zero non-2xx/client errors at every level, at most 28 platform threads and zero JFR pinning events. Container readiness/health passed. The first run and its 500-connection errors are retained below.
+- [ ] Production acceptance: verify PR2 deployment after merge #34, collect the production baseline, PR3 deployment/readiness and a week without regression in Grafana. Local results do not complete this criterion; no deployment is performed here.
+
+Decisions and findings:
+
+- **STOMP affects auto-configuration.** Enabling virtual threads alone did not create `applicationTaskExecutor`: the existing STOMP `Executor` beans made Boot back off. `spring.task.execution.mode=force` keeps Boot's default executor available for `@Async`. Boot's existing WebSocket configurer then assigns that same executor to the inbound and outbound channels (identity and virtual execution verified in the integration test); no change to `WebSocketConfig` is necessary. The original assumption that these channels necessarily remain platform pools was not correct once the application executor exists.
+- **Scheduler coexistence.** STOMP's existing `messageBrokerTaskScheduler` also makes scheduling auto-configuration back off. `TaskSchedulingConfig`, imported through `@ImportAutoConfiguration`, runs after `TaskSchedulingAutoConfiguration` and imports Boot 4.1's public `DefaultTaskSchedulerConfiguration`. That supplies the named virtual-thread `taskScheduler` used by `@Scheduled` while preserving the STOMP/SockJS scheduler. This uses Boot's own builders and lifecycle, with no hand-built executor. See [Boot task execution and scheduling](https://docs.spring.io/spring-boot/reference/features/task-execution-and-scheduling.html) and [the default scheduler configuration](https://docs.spring.io/spring-boot/api/java/org/springframework/boot/autoconfigure/task/DefaultTaskSchedulerConfiguration.html).
+- **E-mail serialization.** `NotificationEmailDispatcher` is unchanged: its private platform-thread executor has core = max = 1 and 500 queue slots; existing pacing and sender behavior are retained. Password reset `@Async` now uses a virtual thread. No async concurrency limit is introduced; watch Hikari pending/acquire and lock waits before deciding on one.
+- **Measurement tooling.** `JFR=1` explicitly enables pinning events at threshold 0 ms (the profile default filters short events); the report counts all events, those >20 ms and the maximum. The duration parser also handles ISO-8601 minutes/hours. The script exchanges a real STOMP message before warm-up, captures an internal thread dump and samples platform threads/Hikari pending every eight seconds. Actuator's thread dump does not include virtual threads, so the integration test, not their absence in the dump, establishes the executor type. No `micrometer-java21` binder is added in this PR; pinning is measured with JFR locally and the existing Grafana thread panel still measures platform threads.
+- **Environment interruption.** The initial image build ran out of host disk space and OrbStack stopped; its AOT training had finished but the image export and the concurrent suite failed. After space recovered and OrbStack restarted, both full Maven commands passed with Docker and the image build completed. These failed attempts are not used as performance evidence.
+
+#### Local load evidence (2026-10-30)
+
+Every new run used Postgres 17, the disposable dev seed, `--cpus=1 --memory=1g`, 15 s warm-up and 60 s at each of 50/200/500 connections. Both new image comparisons used `JFR=1` with pinning threshold 0 ms. The PR2 image was preserved before rebuilding PR3 (`07a07f82be84…`); PR3 used `3b82f72254bb…`. Image IDs are in the reports. The report's commit field identifies the harness workspace, not the source revision of a preserved image.
+
+| Connections | PR1 historical RPS / p95 ms | PR2 historical RPS / p95 ms | PR2 repeat RPS / p95 ms | PR3 repeat RPS / p95 ms | Platform threads PR2 repeat → PR3 repeat |
+|---|---|---|---|---|---|
+| 50 | 77 / 1586 | 95 / 1201 | 214 / 586 | 1728 / 66 | 89 → 28 |
+| 200 | 132 / 4073 | 154 / 3299 | 409 / 1313 | 1644 / 245 | 232 → 27 |
+| 500 | 314 / 3685 | 266 / 3722 | 591 / 1400 | 1358 / 812 | 232 → 27 |
+
+- Reports: [PR1 baseline](../../ops/loadtest/results/pr1-2026-10-29.md), [PR2 baseline](../../ops/loadtest/results/pr2-2026-10-29.md), [PR2 repeated with JFR](../../ops/loadtest/results/pr2-repeat-2026-10-30.md), [PR3 initial](../../ops/loadtest/results/pr3-2026-10-30.md), [PR3 repeated with HTTP/error evidence](../../ops/loadtest/results/pr3-repeat-2026-10-30.md).
+- **Initial PR3:** p95 96/234/801 ms, platform threads 28/26/26. Zero errors at 50/200; six non-2xx at 500, with 24 Hikari timeout log lines. JFR: five events, maximum 1.736 ms, none >20 ms. The initial report did not retain status distribution/full error logs, so it cannot map each failed response retrospectively to its exception.
+- **Repeated PR3:** p50 23/95/299 ms, p95 66/245/812 ms, p99 130/742/1350 ms. All 103,627 / 98,464 / 80,971 completed requests returned HTTP 200; zero client errors, acquisition timeouts or logged exceptions. JFR: zero pinning events. The full synthetic API log is retained locally as `ops/loadtest/results/pr3-repeat-2026-10-30-api.log` (gitignored); the versioned report contains its status/exception summary.
+- **Hikari pending:** sampled peaks 40/139/415 on repeated PR3 versus 39/190/189 on repeated PR2. At 500, virtual threads allow more requests to wait in front of the same ten connections. The initial Hikari timeouts show why the five-second acquisition timeout and production pending/acquire/lock-wait monitoring matter. No async concurrency limit was added.
+- **Runtime STOMP:** real CONNECT / SUBSCRIBE / SEND / MESSAGE succeeded on both images. PR2's dump showed two inbound and two outbound platform threads with `ThreadPoolExecutor` stacks; PR3 showed none with those platform names. Separately, `VirtualThreadsTest` executed tasks on both actual channel executor beans and verified that they are the same `SimpleAsyncTaskExecutor` as `applicationTaskExecutor` and that both tasks run on virtual threads. Absence from the actuator dump alone is not treated as proof.
+- **Readiness and AOT:** both repeated containers finished `healthy`; public `/readyz` returned 200 before each load. The `Started FutSpringApplication in … seconds` log line reported 10.422 s for repeated PR2 and 10.286 s for repeated PR3. This measures Spring startup before the dev seed runner, not elapsed time to readiness; the historical PR1 report note claiming that this number includes the seed is superseded here. The harness waits for readiness before login/load. AOT training and cache use succeeded; no Dockerfile fallback was needed.
+- **Interpretation:** the repeated comparison improves latency and throughput and reduces platform threads by about 88% at 200/500 connections. The historical PR2 and its repeat also differ substantially, so these laptop runs establish local acceptance, not a production speed-up forecast. Production baseline/deploy/week-long Grafana acceptance remains unchecked.
 
 ## PR 4 — Records and modern Java
 

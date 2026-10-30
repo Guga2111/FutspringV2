@@ -6,7 +6,7 @@
 #   SKIP_BUILD=1 IMAGE=futspring-api:x ops/loadtest/run.sh pr2
 #   JFR=1 ops/loadtest/run.sh pr3                # also records JFR and summarizes jdk.VirtualThreadPinned
 #
-# Needs Docker, oha (brew install oha), python3, and for JFR=1 a local JDK 21+ (jfr on the PATH or in JAVA_HOME).
+# Needs Docker, oha (brew install oha), python3, Node 22+, and for JFR=1 a local JDK 25 (jfr on PATH or JAVA_HOME).
 # Writes ops/loadtest/results/<label>-<date>.md.
 set -euo pipefail
 
@@ -29,6 +29,7 @@ SEED_EMAIL="leal@futspring.com"   # DataInitializer (dev profile)
 SEED_PASSWORD="senha123"
 
 command -v oha >/dev/null || { echo "oha not found: brew install oha"; exit 1; }
+command -v node >/dev/null || { echo "Node 22+ required for the STOMP executor probe"; exit 1; }
 
 cleanup() {
   docker rm -f "${API}" "${PG}" >/dev/null 2>&1 || true
@@ -53,7 +54,8 @@ until docker exec "${PG}" pg_isready -U futspring -d futspringdb >/dev/null 2>&1
 # Same JVM options as the image, plus the flight recording when asked
 JAVA_OPTS="-XX:MaxRAMPercentage=75 -XX:+ExitOnOutOfMemoryError -XX:AOTCache=/app/app.aot"
 if [[ "${JFR}" == "1" ]]; then
-  JAVA_OPTS="${JAVA_OPTS} -XX:StartFlightRecording=filename=/tmp/loadtest.jfr,settings=profile,dumponexit=true"
+  # profile normally filters short pinning events; record all of them and report >20 ms separately.
+  JAVA_OPTS="${JAVA_OPTS} -XX:StartFlightRecording=filename=/tmp/loadtest.jfr,settings=profile,dumponexit=true,jdk.VirtualThreadPinned#enabled=true,jdk.VirtualThreadPinned#threshold=0ms"
 fi
 docker run -d --name "${API}" --network "${NET}" --cpus=1 --memory=1g -p "127.0.0.1:${PORT}:8080" \
   -e SPRING_PROFILES_ACTIVE=dev \
@@ -88,8 +90,24 @@ ${API_URL}/api/v1/peladas/${PELADA_ID}/ranking
 ${API_URL}/api/v1/peladas/${PELADA_ID}/attendance
 EOF
 
+API_URL="${API_URL}" TOKEN="${TOKEN}" PELADA_ID="${PELADA_ID}" \
+  node "${BASE_DIR}/ops/loadtest/stomp-probe.mjs"
+STOMP=$(docker exec "${API}" curl -fsS localhost:9091/actuator/threaddump | python3 -c '
+import json, sys
+threads = json.load(sys.stdin)["threads"]
+for prefix in ("clientInboundChannel-", "clientOutboundChannel-"):
+    found = [t for t in threads if t["threadName"].startswith(prefix)]
+    pool = all(any(f["className"] == "java.util.concurrent.ThreadPoolExecutor" for f in t["stackTrace"]) for t in found)
+    print(f"{prefix}: {len(found)} platform threads" + (f", ThreadPoolExecutor stacks={pool}" if found else " (virtual threads are absent from this actuator dump; see VirtualThreadsTest)"))
+')
+
 threads() {
   docker exec "${API}" curl -s localhost:9091/actuator/metrics/jvm.threads.live \
+    | python3 -c "import sys,json; print(int(json.load(sys.stdin)['measurements'][0]['value']))" 2>/dev/null || echo "?"
+}
+
+pending() {
+  docker exec "${API}" curl -fsS localhost:9091/actuator/metrics/hikaricp.connections.pending \
     | python3 -c "import sys,json; print(int(json.load(sys.stdin)['measurements'][0]['value']))" 2>/dev/null || echo "?"
 }
 
@@ -100,13 +118,18 @@ ROWS=""
 for c in ${CONCURRENCY}; do
   echo "Running ${c} connections for ${DURATION}..."
   # sample the live platform threads while the level runs
-  ( for _ in $(seq 1 6); do sleep 8; threads; done > "${WORK}/threads-${c}.txt" ) &
+  ( for _ in $(seq 1 6); do
+      sleep 8
+      threads >> "${WORK}/threads-${c}.txt"
+      pending >> "${WORK}/pending-${c}.txt"
+    done ) &
   sampler=$!
   oha --no-tui --output-format json -z "${DURATION}" -c "${c}" -H "${AUTH}" \
     --urls-from-file "${WORK}/urls.txt" > "${WORK}/oha-${c}.json"
   wait "${sampler}" || true
   peak=$(grep -E '^[0-9]+$' "${WORK}/threads-${c}.txt" | sort -n | tail -1 || true)
-  ROWS+=$(python3 - "${WORK}/oha-${c}.json" "${c}" "${peak:-?}" << 'PY'
+  pending_peak=$(grep -E '^[0-9]+$' "${WORK}/pending-${c}.txt" | sort -n | tail -1 || true)
+  ROWS+=$(python3 - "${WORK}/oha-${c}.json" "${c}" "${peak:-?}" "${pending_peak:-?}" << 'PY'
 import json, sys
 d = json.load(open(sys.argv[1]))
 s, p = d["summary"], d.get("latencyPercentiles", {})
@@ -117,25 +140,40 @@ non2xx = sum(v for k, v in codes.items() if not k.startswith("2"))
 errors = sum(v for k, v in d.get("errorDistribution", {}).items() if "deadline" not in k)
 ms = lambda v: f"{v * 1000:.0f}" if v is not None else "?"
 print(f"| {sys.argv[2]} | {s['requestsPerSec']:.0f} | {ms(p.get('p50'))} | {ms(p.get('p95'))} | {ms(p.get('p99'))} "
-      f"| {total} | {non2xx} | {errors} | {sys.argv[3]} |")
+      f"| {total} | {non2xx} | {errors} | {sys.argv[3]} | {sys.argv[4]} |")
 PY
 )$'\n'
 done
+
+# Preserve error classification before removing the disposable container.
+docker logs "${API}" > "${WORK}/api.log" 2>&1
+# Keep local evidence for failures; logs contain only this disposable seed, and *.log is gitignored.
+cp "${WORK}/api.log" "${OUT_DIR}/${LABEL}-$(date +%Y-%m-%d)-api.log"
+HIKARI_TIMEOUTS=$(grep -c 'Connection is not available, request timed out' "${WORK}/api.log" || true)
+UNHANDLED=$(grep -c 'Unhandled' "${WORK}/api.log" || true)
+ERROR_DETAILS=$(python3 - "${WORK}/api.log" "${WORK}" << 'PY'
+from collections import Counter
+from pathlib import Path
+import json, re, sys
+log = Path(sys.argv[1]).read_text()
+causes = Counter(re.findall(r'^(?:Caused by: )?((?:java|org|com)\.[\w.$]+(?:Exception|Error))(?::|$)', log, re.M))
+waits = [int(value) for value in re.findall(r'request timed out after (\d+)ms', log)]
+for path in sorted(Path(sys.argv[2]).glob('oha-*.json'), key=lambda p: int(p.stem.split('-')[1])):
+    codes = json.loads(path.read_text()).get('statusCodeDistribution', {})
+    print(f"{path.stem.removeprefix('oha-')} connections: HTTP {codes}")
+print('Exception occurrences (including nested causes): ' + (', '.join(f'{name}={count}' for name, count in sorted(causes.items())) or 'none'))
+print(f'Hikari acquisition timeout durations: {min(waits)}–{max(waits)} ms' if waits else 'No Hikari acquisition timeouts')
+PY
+)
+HEALTH=$(docker inspect -f '{{.State.Health.Status}}' "${API}")
 
 PINNED="not recorded (run with JFR=1)"
 if [[ "${JFR}" == "1" ]]; then
   docker stop -t 30 "${API}" >/dev/null
   docker cp "${API}:/tmp/loadtest.jfr" "${WORK}/loadtest.jfr"
-  JFR_BIN="$(command -v jfr || echo "${JAVA_HOME:-}/bin/jfr")"
-  PINNED=$("${JFR_BIN}" print --json --events jdk.VirtualThreadPinned "${WORK}/loadtest.jfr" | python3 -c "
-import sys, json, re
-events = json.load(sys.stdin)['recording']['events']
-def ms(e):
-    m = re.match(r'PT([0-9.]+)S', e['values']['duration'])
-    return float(m.group(1)) * 1000 if m else 0.0
-long_ = [ms(e) for e in events if ms(e) > 20]
-print(f'{len(events)} events, {len(long_)} longer than 20 ms' + (f' (max {max(long_):.0f} ms)' if long_ else ''))
-")
+  JFR_BIN="${JAVA_HOME:+${JAVA_HOME}/bin/}jfr"
+  PINNED=$("${JFR_BIN}" print --json --events jdk.VirtualThreadPinned "${WORK}/loadtest.jfr" \
+    | python3 "${BASE_DIR}/ops/loadtest/jfr-summary.py")
 fi
 
 {
@@ -145,15 +183,30 @@ fi
   echo "|---|---|"
   echo "| Commit | \`$(git -C "${BASE_DIR}" rev-parse --short HEAD)\`$(git -C "${BASE_DIR}" diff --quiet || echo ' (dirty)') |"
   echo "| Image | \`${IMAGE}\` |"
+  echo "| Image ID | \`$(docker image inspect -f '{{.Id}}' "${IMAGE}")\` |"
   echo "| Limits | \`--cpus=1 --memory=1g\`, Postgres 17 with the dev seed, same Docker host |"
   echo "| Mix | random among \`GET /peladas/my\`, \`/peladas/{id}\`, \`/dailies/{id}\`, \`/peladas/{id}/ranking\`, \`/peladas/{id}/attendance\` |"
   echo "| Duration | ${DURATION} per level, after a 15 s warm-up at 20 connections |"
   echo "| Startup | ${STARTUP} s |"
   echo "| JFR pinning | ${PINNED} |"
+  echo "| Container health after load | ${HEALTH} |"
+  echo "| Hikari timeout log lines / unhandled exceptions | ${HIKARI_TIMEOUTS} / ${UNHANDLED} (log counts, not request counts) |"
   echo
-  echo "| Connections | RPS | p50 (ms) | p95 (ms) | p99 (ms) | Requests | Non-2xx | Client errors | Live threads (peak) |"
-  echo "|---|---|---|---|---|---|---|---|---|"
+  echo "| Connections | RPS | p50 (ms) | p95 (ms) | p99 (ms) | Requests | Non-2xx | Client errors | Live threads (peak) | Hikari pending (peak) |"
+  echo "|---|---|---|---|---|---|---|---|---|---|"
   printf '%s' "${ROWS}"
+  echo
+  echo 'STOMP runtime inspection after a real CONNECT / SUBSCRIBE / SEND / MESSAGE (before warm-up):'
+  echo
+  printf '%s\n' "${STOMP}"
+  echo
+  echo 'HTTP status and error evidence (full API log retained locally as a gitignored *-api.log):'
+  echo
+  echo '```text'
+  printf '%s\n' "${ERROR_DETAILS}"
+  echo '```'
+  echo
+  echo 'Thread and Hikari peaks are sampled every 8 s (six samples per level). JFR covers startup, warm-up and all levels.'
 } > "${RESULT}"
 
 cat "${RESULT}"

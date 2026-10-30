@@ -80,32 +80,34 @@ class AttendanceConcurrencyTest {
             attendanceRepository.save(new DailyAttendance(daily, user, Instant.now()));
         }
 
-        ExecutorService pool = Executors.newFixedThreadPool(RACERS);
-        CountDownLatch start = new CountDownLatch(1);
-        List<Future<HttpStatus>> results = new ArrayList<>();
-        Long dailyId = daily.getId();
-        for (User racer : racers) {
-            results.add(pool.submit(() -> {
-                start.await();
-                try {
-                    attendanceService.confirmAttendance(dailyId, racer.getEmail());
-                    return HttpStatus.OK;
-                } catch (AppException e) {
-                    return e.getStatus();
-                }
-            }));
-        }
-        start.countDown();
-        pool.shutdown();
-        assertThat(pool.awaitTermination(30, TimeUnit.SECONDS)).isTrue();
+        try (ExecutorService pool = Executors.newVirtualThreadPerTaskExecutor()) {
+            CountDownLatch start = new CountDownLatch(1);
+            List<Future<HttpStatus>> results = new ArrayList<>();
+            Long dailyId = daily.getId();
+            for (User racer : racers) {
+                results.add(pool.submit(() -> {
+                    assertThat(Thread.currentThread().isVirtual()).isTrue();
+                    start.await();
+                    try {
+                        attendanceService.confirmAttendance(dailyId, racer.getEmail());
+                        return HttpStatus.OK;
+                    } catch (AppException e) {
+                        return e.getStatus();
+                    }
+                }));
+            }
+            start.countDown();
+            pool.shutdown();
+            assertThat(pool.awaitTermination(30, TimeUnit.SECONDS)).isTrue();
 
-        List<HttpStatus> statuses = new ArrayList<>();
-        for (Future<HttpStatus> result : results) {
-            statuses.add(result.get());
+            List<HttpStatus> statuses = new ArrayList<>();
+            for (Future<HttpStatus> result : results) {
+                statuses.add(result.get());
+            }
+            assertThat(statuses).filteredOn(HttpStatus.OK::equals).hasSize(1);
+            assertThat(statuses).filteredOn(HttpStatus.CONFLICT::equals).hasSize(RACERS - 1);
+            assertThat(attendanceRepository.countByDaily(daily)).isEqualTo(4);
         }
-        assertThat(statuses).filteredOn(HttpStatus.OK::equals).hasSize(1);
-        assertThat(statuses).filteredOn(HttpStatus.CONFLICT::equals).hasSize(RACERS - 1);
-        assertThat(attendanceRepository.countByDaily(daily)).isEqualTo(4);
     }
 
     private List<User> users(String prefix, int count) {
