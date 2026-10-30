@@ -1,6 +1,6 @@
 package com.futspring.backend.domain.auth;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 import com.futspring.backend.shared.config.SecurityConfig;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -25,7 +25,7 @@ import java.util.Optional;
 public class JwtAuthFilter extends OncePerRequestFilter {
 
     private final AccessTokenVerifier tokenVerifier;
-    private final ObjectMapper objectMapper;
+    private final JsonMapper objectMapper;
 
     // The e-mail link routes act on the user in their own token, so a stale session in the browser (or none) must
     // not turn them into a 401

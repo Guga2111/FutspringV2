@@ -7,7 +7,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import java.util.Date;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 
 import static org.assertj.core.api.Assertions.*;
 
@@ -142,6 +143,34 @@ class JwtServiceTest {
     void userIdClaim_returnsCorrectId() {
         String token = jwtService.generateToken(123L, "user@example.com", 0);
         assertThat(jwtService.extractAllClaims(token).get("userId", Long.class)).isEqualTo(123L);
+    }
+
+    // --- tokens issued before the JJWT 0.11 → 0.13 upgrade (Boot 4) must keep working: no forced logout ---
+
+    // Signed by the JJWT 0.11.5 code path (HS256, same test secret), expires in 2100
+    private static final String LEGACY_TOKEN = "eyJhbGciOiJIUzI1NiJ9."
+            + "eyJzdWIiOiJsZWdhY3lAZnV0c3ByaW5nLmNvbSIsInVzZXJJZCI6NDIsImVtYWlsIjoibGVnYWN5QGZ1dHNwcmluZy5jb20iLCJ2ZXIiOjMs"
+            + "ImlhdCI6MTc2MTcwMDAwMCwiZXhwIjo0MTAyNDQ0ODAwfQ.PEYkeK-Xfp1D6ritJnzEasx7Hw30XMy5M3W1DedWYjw";
+
+    @Test
+    void legacyToken_isStillAcceptedWithTheSameClaims() {
+        Claims claims = jwtService.extractAllClaims(LEGACY_TOKEN);
+        assertThat(claims.getSubject()).isEqualTo("legacy@futspring.com");
+        assertThat(claims.get("userId", Long.class)).isEqualTo(42L);
+        assertThat(claims.get("email", String.class)).isEqualTo("legacy@futspring.com");
+        assertThat(claims.get(JwtService.VERSION_CLAIM, Integer.class)).isEqualTo(3);
+    }
+
+    @Test
+    void generateToken_isStillSignedWithHs256_evenWithALongSecret() {
+        JwtConfig longConfig = new JwtConfig();
+        ReflectionTestUtils.setField(longConfig, "secret", "x".repeat(64));
+        ReflectionTestUtils.setField(longConfig, "expirationMs", 3600000L);
+
+        String token = new JwtService(longConfig).generateToken(1L, "user@example.com", 0);
+        String header = new String(Base64.getUrlDecoder().decode(token.substring(0, token.indexOf('.'))),
+                StandardCharsets.UTF_8);
+        assertThat(header).contains("\"alg\":\"HS256\"");
     }
 
     @Test
