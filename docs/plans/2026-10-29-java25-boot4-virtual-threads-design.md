@@ -1,6 +1,6 @@
 # Java 25, Spring Boot 4, virtual threads and observability
 
-Date: 2026-10-29 · Status: approved; PR 1 implemented (on `dev`, not deployed) · Delivery: 4 PRs, each merged `dev → main` and deployed before the next starts (see [Delivery](#delivery))
+Date: 2026-10-29 · Status: approved; PR 1 deployed; PR 2 implemented (on `dev`, not deployed) · Delivery: 4 PRs, each merged `dev → main` and deployed before the next starts (see [Delivery](#delivery))
 
 ## Goal
 
@@ -237,7 +237,7 @@ Start with OpenRewrite (`org.openrewrite.recipe:rewrite-spring`, recipe `Upgrade
 
 | Area | Change |
 |------|--------|
-| Parent | `spring-boot-starter-parent` → latest **4.0.x** |
+| Parent | `spring-boot-starter-parent` → latest **4.1.x** (4.1 was GA by the time PR 2 started and 4.0's OSS support ends in Dec 2026) |
 | Starters (Boot 4 is modular) | `spring-boot-starter-web` → `spring-boot-starter-webmvc`; add `spring-boot-starter-flyway` (Flyway autoconfig is no longer in core) + `flyway-database-postgresql` (Flyway 11); test starters per module (`spring-boot-starter-webmvc-test`, `spring-boot-starter-data-jpa-test`, `spring-boot-starter-security-test`…) and the moved test annotations (`@AutoConfigureMockMvc`, `@DataJpaTest`, `@JsonTest` packages) |
 | Jackson 3 | `com.fasterxml.jackson.databind` → `tools.jackson.databind` in the 11 files that import it (`SecurityConfig` injects `ObjectMapper` for the 401 body; prefer `JsonMapper`); annotations stay in `com.fasterxml.jackson.annotation`. New defaults checked by the contract test: alphabetical property order (harmless), `FAIL_ON_NULL_FOR_PRIMITIVES` and `FAIL_ON_TRAILING_TOKENS` on. Fix each failure explicitly (a primitive that can be null becomes a wrapper with `@NotNull`); don't use a blanket "Jackson 2 defaults" switch unless a failure can't be fixed locally, and then document it |
 | Hibernate 7 | `validate` must still pass against V1–V10 (`FlywayMigrationTest`); remove the explicit `hibernate.dialect` (detected); check the native/JPQL queries in the aggregate repositories (`DailyAwardRepository`, `UserDailyStatsRepository`) and `@Lock` queries with their tests |
@@ -250,6 +250,26 @@ Start with OpenRewrite (`org.openrewrite.recipe:rewrite-spring`, recipe `Upgrade
 | Config | `application.properties` keys renamed by Boot 4 (the `spring-boot-properties-migrator` dependency during the PR, removed before merge) |
 
 Acceptance: contract snapshots unchanged; existing production JWTs still valid after the deploy (no forced logout); Flyway 11 logs no "newer than this version" warning; Grafana shows no regression in p95 / error rate over the days after the deploy.
+
+### Implementation (PR 2)
+
+- [x] **PR 2 done** (2026-10-29, commits on `dev`; not merged to `main` nor deployed yet)
+
+Decisions and findings:
+
+- **Boot 4.1.2**, not 4.0.x (decided when PR 2 started). It brings Spring Framework 7.0, Security 7.1, Hibernate 7.4, Jackson 3.1, **Flyway 12.4** (not 11: the design's "Flyway 11" lines are superseded; PostgreSQL 17 is supported, no "newer" warning), JUnit Jupiter 6, Mockito 5.23, Testcontainers 2.0, Lombok 1.18.48.
+- **OpenRewrite** (`UpgradeSpringBoot_4_0`) was run once as an inventory and its source changes were discarded: besides the useful renames it rewrote unrelated code (Mockito static imports, `Paths.get` → `Path.of`, `@Query(nativeQuery)` → `@NativeQuery`, `Math.random`), which is PR 4 territory or noise. The pom and imports were changed by hand.
+- **Starters:** `spring-boot-starter-webmvc`, `-flyway`, and **`-restclient`** (not in the design: `MailConfig` injects `RestClient.Builder`, whose auto-configuration left the web starter). Test: `-webmvc-test`, `-data-jpa-test`, `-security-test`, `-actuator-test` (for `@AutoConfigureMetrics`, which replaces `@AutoConfigureObservability`) and `spring-boot-resttestclient` (`TestRestTemplate` now needs `@AutoConfigureTestRestTemplate`).
+- **Jackson 3:** only 5 files imported databind (3 main, 2 test), not 11. They inject `JsonMapper`. The contract test passed **unchanged on the first run** (51 cases): no date, null, primitive or name difference, so no mapper customization and no "Jackson 2 defaults" switch. `ContractSnapshotTest` uses `writerWithDefaultPrettyPrinter()` (the mapper is immutable) and `properties()` instead of `fields()`. `jjwt-jackson` 0.13 still uses Jackson 2, which stays on the classpath only as its runtime dependency (Boot 4 doesn't auto-configure it).
+- **Hibernate 7 / Boot 4 naming:** the physical naming strategy now separates a digit from the next capital, so `Match.team1Score` maps to `team1_score` while the column is `team1score`. H2 (`create-drop`) didn't notice; `FlywayMigrationTest` did (`validate` would have failed in production at startup). Fixed in the mapping (`@Column(name = "team1score")` / `team2score`), as the design required; no migration. No other entity field has a digit before a capital. Native/JPQL aggregate queries and the `@Lock` queries passed unchanged; `AttendanceConcurrencyTest` green.
+- **JJWT 0.13:** `JwtService` builds the key once and signs with `Jwts.SIG.HS256` explicitly (with a ≥ 64-byte secret JJWT would pick HS512, and with ≥ 48 bytes HS384). `JwtServiceTest` keeps a token produced by the 0.11.5 code before the bump; it validates with the same claims, so production sessions survive the deploy.
+- **Bucket4j** `com.bucket4j:bucket4j_jdk17-core` 8.21.0: no code change (the `Bandwidth.builder()` API was adopted in PR 1).
+- **springdoc 3.2.0** (built against Boot 4.1.2). `springdoc.api-docs.enabled` / `springdoc.swagger-ui.enabled` = `${API_DOCS_ENABLED:false}`; `true` only in `docker-compose.dev.yml`. `SecurityConfig` adds the `permitAll` for `/v3/api-docs/**`, `/swagger-ui/**`, `/swagger-ui.html` only when enabled. `OpenApiConfig` declares the `bearer` scheme as the global requirement. `OpenApiDocsTest` covers both states. Not added to `core/.env.example`: production must not set it.
+- **Spring Security 7:** only `EndpointRequest` moved (`org.springframework.boot.security.autoconfigure.actuate.web.servlet`); no `AntPathRequestMatcher` existed.
+- **Properties:** `spring-boot-properties-migrator` was added while starting the dev stack and reported **no** renamed key; removed before the commit. `./mvnw -Dmaven.compiler.showDeprecation=true test-compile` reports nothing.
+- **Image:** the Dockerfile is unchanged; the AOT training run (no database) still refreshes the context on Boot 4. Dev stack on a fresh Postgres 17: V1–V10 applied, `validate` ok, started in 2.1 s (with the cache, including the first migration), login, protected routes, Swagger UI with a token and `:9091/actuator/prometheus` checked by hand.
+- **Load test** (`ops/loadtest/results/pr2-2026-10-29.md`, same machine as PR 1, one run each): 0 errors at every level. 50 conn: 77 → 95 RPS, p95 1586 → 1201 ms; 200 conn: 132 → 154 RPS, p95 4073 → 3299 ms; 500 conn: 314 → 266 RPS, p50 1294 → 1707 ms, p95/p99 about the same (3685/5105 → 3722/5030 ms). Live threads unchanged (≈ 230 peak). This is the PR 2 baseline for PR 3; the 500-connection drop is worth re-running next to PR 3's numbers before reading anything into it.
+- **Local dev volume:** a dev volume still created by Postgres 15 can't start under 17 (the PR 1 step `docker compose -f docker-compose.dev.yml down -v` applies).
 
 ## PR 3 — Virtual threads
 

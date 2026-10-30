@@ -6,15 +6,17 @@ Futspring manages amateur soccer groups ("peladas"): members and admins, match-d
 
 ## Stack
 
-- Java 25, Spring Boot 3.5.16, Maven (`./mvnw`). Lombok runs through `annotationProcessorPaths` (JDK 23+ no longer picks processors up from the classpath)
+- Java 25, Spring Boot 4.1.2 (Spring Framework 7, Spring Security 7, Hibernate 7.4), Maven (`./mvnw`). Boot 4 is modular: each technology has its own starter (`spring-boot-starter-webmvc`, `-flyway`, `-restclient`…) and its own test starter (`-webmvc-test`, `-data-jpa-test`, `-security-test`, `-actuator-test`, `spring-boot-resttestclient`). Lombok runs through `annotationProcessorPaths` (JDK 23+ no longer picks processors up from the classpath)
 - Spring Web MVC, Spring Data JPA (Hibernate), Spring Security, Bean Validation
+- Jackson 3 (`tools.jackson.*`; annotations stay in `com.fasterxml.jackson.annotation`); inject `JsonMapper`. Jackson 2 is on the classpath only as `jjwt-jackson`'s runtime dependency
 - Spring WebSocket — STOMP over SockJS, in-memory simple broker (chat)
 - PostgreSQL 17 (runtime: Supabase in production, `postgres:17-alpine` in dev), H2 in PostgreSQL mode (tests)
-- JJWT 0.11.5 (HS256), Bucket4j 8.7 + Caffeine (login/register rate limit, in memory), Lombok
-- Tests: JUnit 5, Mockito (inline mock maker loaded as a Surefire `-javaagent`, JEP 451), AssertJ, spring-security-test, Testcontainers 1.21 (managed by Boot)
-- Flyway 11 + `flyway-database-postgresql` (schema migrations, see [Database schema & migrations](#database-schema--migrations))
+- JJWT 0.13 (HS256), Bucket4j 8.21 (`bucket4j_jdk17-core`) + Caffeine (login/register rate limit, in memory), Lombok
+- Tests: JUnit Jupiter 6, Mockito 5 (inline mock maker loaded as a Surefire `-javaagent`, JEP 451), AssertJ, spring-security-test, Testcontainers 2 (`testcontainers-postgresql`, managed by Boot)
+- Flyway 12 (`spring-boot-starter-flyway`) + `flyway-database-postgresql` (schema migrations, see [Database schema & migrations](#database-schema--migrations))
 - Spring Boot Actuator + Micrometer Prometheus registry, on an internal management port (see [Observability](#observability))
-- Not present: Swagger/springdoc, Redis, caching, MapStruct/ModelMapper
+- springdoc-openapi 3 (OpenAPI document + Swagger UI), served only when `API_DOCS_ENABLED=true` (dev)
+- Not present: Redis, caching, MapStruct/ModelMapper
 
 ## Commands
 
@@ -26,7 +28,7 @@ Run from `core/`:
 ./mvnw test -Dtest=PeladaServiceTest             # one test class
 ./mvnw clean package -DskipTests                 # build jar
 ./mvnw test -Dtest=ContractSnapshotTest -Dcontract.update=true   # rewrite the JSON contract snapshots (see Testing)
-docker compose -f docker-compose.dev.yml up --build   # API + postgres:17-alpine (dev seed)
+docker compose -f docker-compose.dev.yml up --build   # API + postgres:17-alpine (dev seed); Swagger UI on http://localhost:8080/swagger-ui.html
 docker compose -f docker-compose.dev.yml down -v      # drop the dev database (needed once: a Postgres 15 volume can't be opened by 17)
 ../ops/loadtest/run.sh pr1                       # local load test of the image (see Observability)
 ```
@@ -68,6 +70,7 @@ There is a single `src/main/resources/application.properties`; there are no `app
 | `RESEND_API_KEY` | Resend API key (`app.mail.resend-api-key`); empty means no e-mail is sent | — |
 | `MAIL_FROM` | sender (`app.mail.from`), must belong to the domain verified in Resend (`futspring.luisgosampaio.com`) | `Futspring <no-reply@futspring.luisgosampaio.com>` |
 | `SPRING_PROFILES_ACTIVE` | `dev` runs the seed (`docker-compose.dev.yml`), `prod` in production | — |
+| `API_DOCS_ENABLED` | serves the OpenAPI document (`/v3/api-docs`) and Swagger UI (`/swagger-ui.html`) and makes them public (`springdoc.api-docs.enabled` / `springdoc.swagger-ui.enabled`); `true` in `docker-compose.dev.yml`, unset in production (the web app is the only client) | `false` |
 
 Locally, `docker-compose.dev.yml` passes `RESEND_API_KEY`, `MAIL_FROM`, `APP_URL` and `API_URL` from `core/.env` (gitignored, next to the compose file). Compose only uses `.env` to fill `${…}` in the file, so a new variable reaches the container only when it is listed under `environment`.
 
@@ -170,7 +173,7 @@ New code goes in the domain it belongs to (a new feature is a new package under 
 
 ## Domain model
 
-All entities use IDENTITY ids and **LAZY** fetching, Lombok `@Getter @Setter` (no `@Data`), `@ToString` with the id only, and id-based `equals`/`hashCode` that is safe with Hibernate proxies (`EntityIdentity`). `Daily.status` is the `DailyStatus` enum (`EnumType.STRING`, same DB values as before); `User.position` is a string validated by `UpdateProfileRequest`.
+All entities use IDENTITY ids and **LAZY** fetching, Lombok `@Getter @Setter` (no `@Data`), `@ToString` with the id only, and id-based `equals`/`hashCode` that is safe with Hibernate proxies (`EntityIdentity`). `Daily.status` is the `DailyStatus` enum (`EnumType.STRING`, same DB values as before); `User.position` is a string validated by `UpdateProfileRequest`. Since Boot 4 the physical naming strategy separates a digit from the next capital (`team1Score` → `team1_score`); columns created before with the old name carry an explicit `@Column` (`Match.team1score` / `team2score`), and new fields should avoid a digit before a capital or name the column.
 
 | Entity | Table | Fields / relations |
 |--------|-------|--------------------|
@@ -224,11 +227,11 @@ New status-like fields must be Java enums stored with `@Enumerated(EnumType.STRI
 
 ### How the schema is managed
 
-- **Flyway 11** (`flyway-core` + `flyway-database-postgresql`, versions managed by Spring Boot 3.5; since Flyway 10 each database lives in its own module) runs `src/main/resources/db/migration/V*.sql` at startup, before JPA.
+- **Flyway 12** (`spring-boot-starter-flyway` + `flyway-database-postgresql`, versions managed by Spring Boot; since Flyway 10 each database lives in its own module) runs `src/main/resources/db/migration/V*.sql` at startup, before JPA.
 - Hibernate runs with `ddl-auto=${DDL_AUTO:validate}`: it never changes the schema, only checks that the tables match the entities, and the app fails to start if they don't. `DDL_AUTO` is not set by `deploy.sh` or the compose files (the deploy fails if `.env` sets it); keep the default.
 - `spring.flyway.baseline-on-migrate=true` + `baseline-version=1`: a database that already has tables but no `flyway_schema_history` (production, an old dev volume) is marked as V1 without running it, and only later versions run. An empty database runs V1 and builds the whole schema.
 - `V1__baseline.sql` is the schema Hibernate generated from the entities on 2026-10-03 (PostgreSQL 15, `pg_dump --schema-only`), not a dump of production. Production's tables were built by `ddl-auto=update` from the same entities. Checked against a copy of production on 2026-10-04: same columns and constraints, except two leftover nullable columns `daily_awards.puskas_winner_id` / `wiltball_winner_id` (all null, FKs to `users`) that no entity maps; V4 drops them.
-- Production (Supabase), dev (`docker-compose.dev.yml`) and the migration tests all run PostgreSQL 17, which Flyway 11 supports (the old Flyway 9 "newer than this version" warning is gone).
+- Production (Supabase), dev (`docker-compose.dev.yml`) and the migration tests all run PostgreSQL 17, which Flyway 12 supports (no "newer than this version" warning).
 - Tests: H2 `create-drop` with Flyway disabled for the unit/integration tests; `FlywayMigrationTest` (Testcontainers, `postgres:17-alpine` like production, skipped without Docker) runs every migration on an empty Postgres and validates it against the entities; `MigrationDataTest` runs the data-changing migrations (V4, V5, V8, V9) against production-shaped rows.
 
 | Version | What it does |
@@ -262,7 +265,7 @@ New status-like fields must be Java enums stored with `@Enumerated(EnumType.STRI
 
 - Two chains. `actuatorFilterChain` (`@Order(1)`, `EndpointRequest.toAnyEndpoint()`) permits every actuator endpoint: they are only served on the management port 9091, which Docker never publishes (Boot applies the security filter to that port too, so without this chain Prometheus would get 401). `filterChain` (`@Order(2)`) is everything else.
 - CSRF disabled, stateless sessions, JSON 401 entry point.
-- Public: `/api/v1/auth/**`, `/api/v1/files/**`, `/ws/**` (the STOMP layer authenticates itself, see WebSocket), `GET /livez` / `/readyz` (probes, `https://futspring.luisgosampaio.com/api/readyz` through nginx) and `POST /api/v1/notifications/unsubscribe` / `/resubscribe` (`SecurityConfig.EMAIL_LINK_PATHS`, authorized by the HMAC token in the request). Everything else requires a valid token.
+- Public: `/api/v1/auth/**`, `/api/v1/files/**`, `/ws/**` (the STOMP layer authenticates itself, see WebSocket), `GET /livez` / `/readyz` (probes, `https://futspring.luisgosampaio.com/api/readyz` through nginx) and `POST /api/v1/notifications/unsubscribe` / `/resubscribe` (`SecurityConfig.EMAIL_LINK_PATHS`, authorized by the HMAC token in the request). With `API_DOCS_ENABLED=true` (dev only), `GET /v3/api-docs/**`, `/swagger-ui/**` and `/swagger-ui.html` too; otherwise they aren't served and fall under the authenticated rule. Everything else requires a valid token.
 - `JwtAuthFilter` runs before `UsernamePasswordAuthenticationFilter`. It accepts a Bearer token only through `AccessTokenVerifier`: valid signature, not expired, the user still exists and the `ver` claim equals `users.token_version` (one indexed query per authenticated request). Otherwise it returns 401 on **any** path, including the public ones, except `EMAIL_LINK_PATHS`, where it ignores the header (`shouldNotFilter`): a visitor whose stored session expired must still be able to use the e-mail's link, and those routes never read the caller.
 - No roles: authorities are always empty, there is no `@PreAuthorize`/`@EnableMethodSecurity`. **All authorization is done in services** (see [Ownership](#ownership--authorization)).
 - Passwords: BCrypt (strength 10).
@@ -527,14 +530,15 @@ When an endpoint or DTO changes, update this table, the frontend `src/api/*` + `
 
 Tests live in `src/test/java/com/futspring/backend`, in the same domain packages as the code they test (`domain/daily/DailyServiceTest`, `domain/stats/repository/UserDailyStatsRepositoryTest`…); shared test helpers (`BaseIntegrationTest`, `MembershipStubs`) are in `support/`, migration tests at the root.
 
-- **Service unit tests** — JUnit 5 + Mockito + AssertJ, one class per service (`PeladaServiceTest`, `DailyServiceTest`, `DailyAttendanceServiceTest`…). Mock repositories and `UserAuthenticationHelper`; build a real `PeladaAccessHelper` over the mocked `PeladaRepository` and call `MembershipStubs.stubMembership(peladaRepository, pelada…)` so the exists queries answer from the entities' member/admin sets.
+- **Service unit tests** — JUnit Jupiter 6 + Mockito + AssertJ, one class per service (`PeladaServiceTest`, `DailyServiceTest`, `DailyAttendanceServiceTest`…). Mock repositories and `UserAuthenticationHelper`; build a real `PeladaAccessHelper` over the mocked `PeladaRepository` and call `MembershipStubs.stubMembership(peladaRepository, pelada…)` so the exists queries answer from the entities' member/admin sets.
 - **Controller integration tests** — extend `BaseIntegrationTest` (`@SpringBootTest(RANDOM_PORT)`, `@AutoConfigureMockMvc`, `@Transactional`, real JWTs from `JwtService`).
 - **Repository tests** — `@DataJpaTest` on H2 (`UserRepositoryTest`, `DailyRepositoryTest`, `UserDailyStatsRepositoryTest`, `DailyAwardRepositoryTest` for the native award queries).
 - **Attendance** — `DailyAttendanceServiceTest` uses `Clock.fixed` and `support/InMemoryAttendance` (lenient stubs that back `DailyAttendanceRepository` with an in-memory list); `AttendanceWindowTest` covers zones and the Canadian DST change; `DailyAttendanceRepositoryTest` the victim query; `AttendanceConcurrencyTest` (Testcontainers Postgres, no test transaction, skipped without Docker) races diaristas for the last spot and expects exactly one to get it.
 - **Notifications** — `NotificationServiceTest` (recipients per type, actor excluded, collapse, awards only on the first finalize, delivery only after commit, through `TransactionSynchronizationManager`); `NotificationPushServiceTest` (each recipient's e-mail and unread count, the team on `TEAMS_SORTED`, one failed send doesn't stop the others, failures only logged); `NotificationControllerTest` (REST, the bump `seenAt` ↔ `readAt` sync both ways, one event per path end to end, deleting a daily / pelada with notifications on H2, preferences GET/PUT and validation, public unsubscribe / resubscribe with no session, a stale session header, the one-click form POST, invalid tokens and the rate limit); `NotificationEmailContentTest` (every type renders subject, title, body and CTA; escaping and one-pass placeholders); `NotificationEmailDispatcherTest` (send matrix type × preference × default, headers, pacing per send, failures only logged, nothing queued without a real sender); `EmailPacerTest` (fake clock: never more than 2 sends in a second); `UnsubscribeTokensTest` (tampered, swapped category or user, another secret); `NotificationRepositoryTest` (scheduled recipients: mensalista vs diarista, creator and admins as diaristas, confirmed and already-notified left out, scoped to the session); `ScheduledNotificationJobTest` (`@DataJpaTest` on H2 with `Clock.fixed`: recipients, full session, locked / canceled / started sessions, the window edge, idempotent runs through `NOT EXISTS` alone, the Toronto DST change, a session created inside its window, a failing pelada not stopping the others, nothing delivered without a commit); `NotificationRetentionJobTest` (the 90 / 180-day boundaries); `DailySchedulerTransactionTest` (`@DataJpaTest` with no test transaction: a failing pelada rolls back alone, the other commits its daily and `SESSION_CREATED`, delivered after the commit). The publishing services' tests verify the events they publish.
 - **WebSocket** — `JwtChannelInterceptorTest` covers CONNECT/SUBSCRIBE/SEND rules (the notification queue included).
-- **Contract** — `contract/ContractSnapshotTest` (`@JsonTest`, the application's `ObjectMapper`) guards the JSON the web app reads. Every top-level response DTO, filled by `ContractFixtures` (every field set from its name and type, so a class turned into a record gets the same values), must serialize to `src/test/resources/contract/<Dto>.json`, compared as trees (property order doesn't matter); every request body the client sends (`contract/requests/<Dto>.json`, taken from `client/src/api`) must deserialize and keep every value. A new response field fails the test: regenerate with `-Dcontract.update=true` only for an intended change and review the diff against `client/src/types`. The snapshots record today's quirk: a primitive `boolean isX` field with `@JsonProperty("isX")` is written twice, as `isX` and as `x` (from Lombok's `isX()` getter); the client only reads `isX`.
-- **Actuator** — `ActuatorExposureTest` (`@AutoConfigureObservability`): `/livez`, `/readyz` public on the main port, no actuator endpoint served there, `/actuator/prometheus` and health details on the management port without a token. The domain counters are checked in `NotificationEmailDispatcherTest`, `NotificationPushServiceTest` and `AuthControllerTest` (`SimpleMeterRegistry` / the context's registry).
+- **Contract** — `contract/ContractSnapshotTest` (`@JsonTest`, the application's `JsonMapper`) guards the JSON the web app reads. Every top-level response DTO, filled by `ContractFixtures` (every field set from its name and type, so a class turned into a record gets the same values), must serialize to `src/test/resources/contract/<Dto>.json`, compared as trees (property order doesn't matter); every request body the client sends (`contract/requests/<Dto>.json`, taken from `client/src/api`) must deserialize and keep every value. A new response field fails the test: regenerate with `-Dcontract.update=true` only for an intended change and review the diff against `client/src/types`. The snapshots record today's quirk: a primitive `boolean isX` field with `@JsonProperty("isX")` is written twice, as `isX` and as `x` (from Lombok's `isX()` getter); the client only reads `isX`.
+- **Tokens and docs** — `JwtServiceTest` keeps a token signed by the old JJWT 0.11 code (HS256, test secret, expiring in 2100): it must keep validating with the same claims, so a library upgrade never logs everyone out; tokens stay HS256 even with a 64-byte secret (JJWT would otherwise pick HS512). `OpenApiDocsTest`: docs not public by default, public with the `bearer` scheme when enabled.
+- **Actuator** — `ActuatorExposureTest` (`@AutoConfigureMetrics`, `@AutoConfigureTestRestTemplate`): `/livez`, `/readyz` public on the main port, no actuator endpoint served there, `/actuator/prometheus` and health details on the management port without a token. The domain counters are checked in `NotificationEmailDispatcherTest`, `NotificationPushServiceTest` and `AuthControllerTest` (`SimpleMeterRegistry` / the context's registry).
 - **Migration tests** — `FlywayMigrationTest` applies every migration to a Postgres container and starts the app with `validate`; `MigrationDataTest` migrates to a version, inserts production-shaped rows and checks what the next migration does. A new migration or entity change must keep them green (needs Docker).
 - When adding an endpoint: a controller test (happy path, validation 400, 403 for non-member/non-admin, 404) and service tests for the rules, including the ownership cases listed in [Rules for new code](#rules-for-new-code).
 - Mockito strict stubs are on: remove stubs a test doesn't use (`UnnecessaryStubbingException`).
