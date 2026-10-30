@@ -2,9 +2,10 @@ package com.futspring.backend.shared.config;
 
 import com.futspring.backend.domain.auth.AuthRateLimitFilter;
 import com.futspring.backend.domain.auth.JwtAuthFilter;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.boot.actuate.autoconfigure.security.servlet.EndpointRequest;
+import org.springframework.boot.security.autoconfigure.actuate.web.servlet.EndpointRequest;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
@@ -61,20 +62,28 @@ public class SecurityConfig {
                                            JwtAuthFilter jwtAuthFilter,
                                            AuthRateLimitFilter authRateLimitFilter,
                                            CorsConfigurationSource corsConfigurationSource,
-                                           ObjectMapper objectMapper) throws Exception {
+                                           JsonMapper objectMapper,
+                                           @Value("${springdoc.api-docs.enabled:false}") boolean apiDocsEnabled)
+            throws Exception {
         http
             .cors(cors -> cors.configurationSource(corsConfigurationSource))
             .csrf(AbstractHttpConfigurer::disable)
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/v1/auth/**").permitAll()
-                .requestMatchers("/api/v1/files/**").permitAll()
-                .requestMatchers("/ws/**").permitAll()
-                // liveness / readiness probes (management.endpoint.health.probes.add-additional-paths)
-                .requestMatchers(HttpMethod.GET, "/livez", "/readyz").permitAll()
-                .requestMatchers(HttpMethod.POST, EMAIL_LINK_PATHS.toArray(String[]::new)).permitAll()
-                .anyRequest().authenticated()
-            )
+            .authorizeHttpRequests(auth -> {
+                auth
+                    .requestMatchers("/api/v1/auth/**").permitAll()
+                    .requestMatchers("/api/v1/files/**").permitAll()
+                    .requestMatchers("/ws/**").permitAll()
+                    // liveness / readiness probes (management.endpoint.health.probes.add-additional-paths)
+                    .requestMatchers(HttpMethod.GET, "/livez", "/readyz").permitAll()
+                    .requestMatchers(HttpMethod.POST, EMAIL_LINK_PATHS.toArray(String[]::new)).permitAll();
+                // OpenAPI docs and Swagger UI: public only where they are served (API_DOCS_ENABLED, dev)
+                if (apiDocsEnabled) {
+                    auth.requestMatchers(HttpMethod.GET, "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html")
+                        .permitAll();
+                }
+                auth.anyRequest().authenticated();
+            })
             .exceptionHandling(ex -> ex
                 .authenticationEntryPoint((request, response, authException) -> {
                     response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);

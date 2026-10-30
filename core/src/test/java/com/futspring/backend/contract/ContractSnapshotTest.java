@@ -1,9 +1,8 @@
 package com.futspring.backend.contract;
 
-import com.fasterxml.jackson.databind.JavaType;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
+import tools.jackson.databind.JavaType;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
 import com.futspring.backend.domain.auth.dto.AuthResponseDTO;
 import com.futspring.backend.domain.auth.dto.ForgotPasswordRequestDTO;
 import com.futspring.backend.domain.auth.dto.LoginRequestDTO;
@@ -60,7 +59,6 @@ import org.springframework.boot.test.autoconfigure.json.JsonTest;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -83,7 +81,7 @@ class ContractSnapshotTest {
     private static final boolean UPDATE = Boolean.getBoolean("contract.update");
 
     @Autowired
-    private ObjectMapper objectMapper;
+    private JsonMapper objectMapper;
 
     // Top-level response bodies; nested DTOs (members, teams, refs…) are covered inside them
     static Stream<Class<?>> responses() {
@@ -125,8 +123,7 @@ class ContractSnapshotTest {
 
         if (UPDATE) {
             Files.createDirectories(CONTRACT);
-            Files.writeString(snapshot, objectMapper.copy().enable(SerializationFeature.INDENT_OUTPUT)
-                    .writeValueAsString(actual) + "\n");
+            Files.writeString(snapshot, objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(actual) + "\n");
             return;
         }
         if (!Files.exists(snapshot)) {
@@ -152,8 +149,7 @@ class ContractSnapshotTest {
     private static void assertContains(JsonNode actual, JsonNode expected, String path) {
         if (expected.isObject()) {
             assertThat(actual.isObject()).as(path).isTrue();
-            for (Iterator<Map.Entry<String, JsonNode>> it = expected.fields(); it.hasNext(); ) {
-                Map.Entry<String, JsonNode> field = it.next();
+            for (Map.Entry<String, JsonNode> field : expected.properties()) {
                 assertThat(actual.has(field.getKey())).as(path + "." + field.getKey() + " was not read").isTrue();
                 assertContains(actual.get(field.getKey()), field.getValue(), path + "." + field.getKey());
             }

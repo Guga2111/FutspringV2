@@ -1,6 +1,6 @@
 package com.futspring.backend.domain.auth;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 import com.futspring.backend.shared.config.SecurityConfig;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
@@ -40,7 +40,7 @@ public class AuthRateLimitFilter extends OncePerRequestFilter {
                     "/api/v1/auth/forgot-password", "/api/v1/auth/reset-password"),
             SecurityConfig.EMAIL_LINK_PATHS.stream()).collect(Collectors.toUnmodifiableSet());
 
-    private final ObjectMapper objectMapper;
+    private final JsonMapper objectMapper;
     private final MeterRegistry meterRegistry;
 
     private final Cache<String, Bucket> buckets = Caffeine.newBuilder()
@@ -49,7 +49,7 @@ public class AuthRateLimitFilter extends OncePerRequestFilter {
             .recordStats()
             .build();
 
-    public AuthRateLimitFilter(ObjectMapper objectMapper, MeterRegistry meterRegistry) {
+    public AuthRateLimitFilter(JsonMapper objectMapper, MeterRegistry meterRegistry) {
         this.objectMapper = objectMapper;
         this.meterRegistry = meterRegistry;
         CaffeineCacheMetrics.monitor(meterRegistry, buckets, "futspring.ratelimit");

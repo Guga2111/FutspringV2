@@ -31,8 +31,12 @@ public class Match {
     @JoinColumn(name = "team2_id", nullable = false)
     private Team team2;
 
+    // explicit: since Boot 4 the naming strategy splits a digit from the next capital (team1_score), but the
+    // columns were created as team1score
+    @Column(name = "team1score")
     private Integer team1Score;
 
+    @Column(name = "team2score")
     private Integer team2Score;
 
     @ManyToOne(fetch = FetchType.LAZY)
