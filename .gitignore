@@ -33,3 +33,7 @@ uploads/
 
 # Private docs
 docs/analise-de-mercado.md
+
+# Private financial files (temporary receipts are excluded from durable backups).
+finance-receipts/
+finance-qr/

@@ -1,0 +1,34 @@
+import { describe, expect, it } from "vitest"
+import { financeMoneySchema, financeSignedMoneySchema, financeListSchema, financeCashSchema, financeReplacementSchema, financeImageSchema } from "@/schemas/finance"
+
+describe("finance contracts", () => {
+  it("keeps exact decimal strings and rejects precision/coercion", () => {
+    expect(financeMoneySchema.parse("999999999999.99")).toBe("999999999999.99")
+    for (const value of [45, 45.12, "45", "45.0", "45.001", "-1.00", "NaN", "1e2", "1000000000000.00"]) expect(financeMoneySchema.safeParse(value).success).toBe(false)
+    expect(financeSignedMoneySchema.parse("-5.00")).toBe("-5.00")
+  })
+  it("models configurable collections without formulas", () => {
+    const list = { name: "Mensalidade de novembro", classification: "MONTHLY", description: "Quatro diárias", dueDate: "2026-11-05", dailyId: null, components: [{ name: "Campo", amount: "160.00" }, { name: "Juiz", amount: "20.00" }], pixKey: "pix", pixRecipient: "Gestor", qrId: null, reason: "" }
+    expect(financeListSchema.safeParse(list).success).toBe(true)
+    expect(financeListSchema.safeParse({ ...list, components: [] }).success).toBe(false)
+    expect(financeListSchema.safeParse({ ...list, components: [{ name: "Campo", amount: "=40*4" }] }).success).toBe(false)
+  })
+  it("requires realized expenses and audited opening balances", () => {
+    const base = { kind: "EXPENSE", amount: "20.00", description: "Juiz", category: "Arbitragem", effectiveDate: "", method: "CASH", listId: null, dailyId: null, reason: "" }
+    expect(financeCashSchema.safeParse(base).success).toBe(true)
+    expect(financeCashSchema.safeParse({ ...base, category: "" }).success).toBe(false)
+    expect(financeCashSchema.safeParse({ ...base, amount: "-1.00" }).success).toBe(false)
+    expect(financeCashSchema.safeParse({ ...base, kind: "OPENING", amount: "-20.00", reason: "Reconciliação inicial" }).success).toBe(true)
+  })
+  it("requires exactly one replacement identity", () => {
+    expect(financeReplacementSchema.safeParse({ userId: 1, guestName: "", reason: "Troca" }).success).toBe(true)
+    expect(financeReplacementSchema.safeParse({ userId: null, guestName: "Convidado", reason: "Troca" }).success).toBe(true)
+    expect(financeReplacementSchema.safeParse({ userId: 1, guestName: "Convidado", reason: "Troca" }).success).toBe(false)
+    expect(financeReplacementSchema.safeParse({ userId: null, guestName: "", reason: "Troca" }).success).toBe(false)
+  })
+  it("restricts financial images to JPEG/PNG and 5 MiB", () => {
+    expect(financeImageSchema.safeParse(new File(["png"], "a.png", { type: "image/png" })).success).toBe(true)
+    expect(financeImageSchema.safeParse(new File(["webp"], "a.webp", { type: "image/webp" })).success).toBe(false)
+    expect(financeImageSchema.safeParse(new File([new Uint8Array(5 * 1024 * 1024 + 1)], "a.png", { type: "image/png" })).success).toBe(false)
+  })
+})

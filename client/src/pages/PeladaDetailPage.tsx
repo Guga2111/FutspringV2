@@ -27,6 +27,8 @@ import { CreateSessionDialog } from "@/components/pelada/CreateSessionDialog";
 import { SetPlayerStarsDialog } from "@/components/pelada/SetPlayerStarsDialog";
 import { RankingCommandButton } from "@/components/pelada/RankingCommandButton";
 
+const FinanceTab = lazy(() => import("@/components/finance/FinanceTab").then(m => ({ default: m.FinanceTab })))
+
 // Lazy so recharts only downloads when the dialog is first opened
 const PlayerHistoryDialog = lazy(() =>
   import("@/components/pelada/PlayerHistoryDialog").then((m) => ({
@@ -156,11 +158,12 @@ export default function PeladaDetailPage() {
 
           <div className="min-w-0">
               <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col gap-5">
-                <TabsList variant="pill" className="self-start max-md:flex-wrap max-md:rounded-tile">
+                <TabsList variant="pill" className="h-auto max-w-full self-start flex-wrap max-md:grid max-md:grid-cols-3 max-md:rounded-tile">
                   <TabsTrigger variant="pill" value="members">Membros</TabsTrigger>
                   <TabsTrigger variant="pill" value="sessions">Sessões</TabsTrigger>
                   <TabsTrigger variant="pill" value="ranking">Ranking</TabsTrigger>
                   <TabsTrigger variant="pill" value="awards">Prêmios</TabsTrigger>
+                  <TabsTrigger variant="pill" value="finance">Financeiro</TabsTrigger>
                   {isCurrentUserAdmin && <TabsTrigger variant="pill" value="invitations">Convites</TabsTrigger>}
                 </TabsList>
 
@@ -229,6 +232,8 @@ export default function PeladaDetailPage() {
                   />
                 </TabsContent>
 
+                <TabsContent value="finance" className="mt-0">{activeTab === "finance" && <Suspense fallback={<DetailSkeleton />}><FinanceTab peladaId={pelada.id} userId={currentUser?.id ?? null} members={pelada.members} dailies={dailies} /></Suspense>}</TabsContent>
+
                 {isCurrentUserAdmin && <TabsContent value="invitations" className="mt-0"><PeladaInvitations peladaId={pelada.id} version={invitationVersion} onInvite={() => setShowInvitePlayer(true)} /></TabsContent>}
 
                 <TabsContent value="awards" className="mt-0">
@@ -237,7 +242,7 @@ export default function PeladaDetailPage() {
               </Tabs>
           </div>
 
-          {activeTab !== "invitations" && <PeladaChat
+          {activeTab !== "invitations" && activeTab !== "finance" && <PeladaChat
             peladaId={pelada.id}
             peladaName={pelada.name}
             memberCount={pelada.members.length}

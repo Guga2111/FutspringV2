@@ -53,3 +53,25 @@ Rollback: roll back application binaries while retaining additive schema and fin
 ## Acceptance
 
 Cover configurable monthly/daily/event lists; offline players and guests; partial/direct receipts; pending notices excluded from cash; duplicate confirmation; discounts/reversals/refunds/reopen; snapshot preservation; permissions and cross-pelada isolation; individual/transparent filtering; receipt authorization and exact 7/30-day expiry; cleanup restart/retry; daily detachment and pelada deletion protection; transaction/file rollback; API money contracts; additive migration and real PostgreSQL concurrency. Run `./mvnw test` and `bun run lint && bun run build && bun run test`.
+
+## Implementation and verification — 2026-10-31
+
+The additive V12 implementation is complete across REST, persistence, private files, preservation integrations and the lazy Financeiro tab. No new dependency was added. The initial approved design was committed as `5404d23`; the implementation and validation notes are versioned with the feature branch.
+
+Verification: `./mvnw test` (Java 25, 820 tests, no failures/errors/skips, including real PostgreSQL migration/concurrency/rollback); `bun run lint && bun run build && bun run test` (175 tests, no lint errors, existing TanStack Table compiler warning only). Browser checks used the production build and a disposable local H2 seed at 1440/768/375 px in both themes, with no horizontal overflow or JavaScript errors. A real partial-payment form submission changed received 65.00 → 90.00, outstanding 160.00 → 135.00 and cash 35.00 → 60.00 through the operation response. All six pelada tabs remained readable on mobile. Seed data was used only for verification and is not shipped as financial history.
+
+### Visual critique
+
+ROUND 3
+Seen in one second: the pelada's recorded cash and the selected collection's financial position.
+Idea (one sentence): keep the organizer's collection and payment review in the existing pelada interface.
+Live thing: receive/review a participant payment and reconcile the obligation and cash immediately.
+Layout words by section: existing pelada banner=context / finance summary=recorded cash / collection=conditions and totals / participants=payment actions / history=traceability.
+Scores: design 7 · usability 8 · creativity 6 · content 8 → overall 6.0 after cap.
+Caps applied: the full-page inspector retains two inherited shell failures (the existing pelada banner gradient and sidebar label contrast), capping its overall score at 6.0. No new gradient or raw palette color was introduced; finance source lint has 0 FAIL/0 WARN. The existing shell was preserved rather than expanding this feature into an application redesign.
+Top three problems (most visible first), each with the screenshot it shows in and the fix:
+1. Earlier tablet screenshots showed the added sixth tab overflowing; earlier mobile screenshots clipped tab labels. Fixed in PeladaDetailPage with wrapping at desktop/tablet and a three-column mobile tab grid. Final screenshots and the form-submission check confirm no clipping/overflow.
+2. Final desktop/tablet screenshots still show low contrast on the existing “Minhas peladas” sidebar heading (inspector: 2.5:1); the existing mobile brand/tab labels also receive contrast warnings. These shared shell styles were not changed by the finance feature and remain a separate existing accessibility issue.
+3. Final screenshots retain the pelada's existing decorative banner gradient and its large space above finance. It remains unchanged to preserve the established screen; a future shared-header revision can reduce its height and use a semantic flat surface.
+
+There are no new photographs, generated images, placeholder financial data or asset credits in the finance implementation. Private receipts must stay outside durable file backups; the deployed backup script remains SQL-only. No deployment or destructive rollback/contraction was performed.

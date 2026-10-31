@@ -1,6 +1,7 @@
 package com.futspring.backend.domain.daily;
 
 import com.futspring.backend.domain.daily.dto.AttendanceBumpDTO;
+import com.futspring.backend.domain.finance.FinancePreservation;
 import com.futspring.backend.domain.daily.dto.CreateDailyRequestDTO;
 import com.futspring.backend.domain.daily.dto.DailyDetailDTO.*;
 import com.futspring.backend.domain.daily.dto.DailyDetailDTO;
@@ -44,6 +45,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class DailyService {
 
+    private final FinancePreservation financePreservation;
     private final UserAuthenticationHelper userAuthHelper;
     private final PeladaAccessHelper accessHelper;
     private final DailyAttendanceService dailyAttendanceService;
@@ -120,6 +122,9 @@ public class DailyService {
         Pelada pelada = daily.getPelada();
         accessHelper.requireAdmin(pelada, caller);
 
+        peladaRepository.findByIdForUpdate(pelada.getId())
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Pelada não encontrada"));
+        financePreservation.detachDaily(daily, caller);
         Set<User> affected = deleteDailyData(daily);
         aggregateRebuildService.rebuild(pelada, affected);
     }
