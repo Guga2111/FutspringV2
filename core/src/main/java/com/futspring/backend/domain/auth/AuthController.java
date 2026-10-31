@@ -36,13 +36,13 @@ public class AuthController {
     // Always 204, whether or not the e-mail has an account
     @PostMapping("/forgot-password")
     public ResponseEntity<Void> forgotPassword(@Valid @RequestBody ForgotPasswordRequestDTO request) {
-        passwordResetService.requestReset(request.getEmail());
+        passwordResetService.requestReset(request.email());
         return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/reset-password")
     public ResponseEntity<Void> resetPassword(@Valid @RequestBody ResetPasswordRequestDTO request) {
-        passwordResetService.resetPassword(request.getToken(), request.getNewPassword());
+        passwordResetService.resetPassword(request.token(), request.newPassword());
         return ResponseEntity.noContent().build();
     }
 }

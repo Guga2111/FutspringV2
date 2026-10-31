@@ -68,9 +68,9 @@ public class AttendanceService {
                             .isMensalista(mensalistaIds.contains(member.getId()))
                             .build();
                 })
-                .sorted(Comparator.comparingDouble(PeladaAttendanceDTO.Row::getRate).reversed()
-                        .thenComparing(Comparator.comparingLong(PeladaAttendanceDTO.Row::getSessionsAttended).reversed())
-                        .thenComparing(PeladaAttendanceDTO.Row::getUsername, String.CASE_INSENSITIVE_ORDER))
+                .sorted(Comparator.comparingDouble(PeladaAttendanceDTO.Row::rate).reversed()
+                        .thenComparing(Comparator.comparingLong(PeladaAttendanceDTO.Row::sessionsAttended).reversed())
+                        .thenComparing(PeladaAttendanceDTO.Row::username, String.CASE_INSENSITIVE_ORDER))
                 .collect(Collectors.toList());
 
         return PeladaAttendanceDTO.builder()

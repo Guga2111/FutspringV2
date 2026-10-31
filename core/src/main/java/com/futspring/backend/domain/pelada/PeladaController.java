@@ -72,7 +72,7 @@ public class PeladaController {
             @Valid @RequestBody AddPlayerRequestDTO request,
             @AuthenticationPrincipal String email
     ) {
-        peladaService.addPlayer(id, request.getUserId(), email);
+        peladaService.addPlayer(id, request.userId(), email);
         return ResponseEntity.ok().build();
     }
 
@@ -93,7 +93,7 @@ public class PeladaController {
             @Valid @RequestBody BulkSetAdminRequestDTO request,
             @AuthenticationPrincipal String email
     ) {
-        return ResponseEntity.ok(peladaService.setAdmins(id, request.getUserIds(), request.getIsAdmin(), email));
+        return ResponseEntity.ok(peladaService.setAdmins(id, request.userIds(), request.isAdmin(), email));
     }
 
     @PutMapping("/{id}/players/mensalista")
@@ -102,7 +102,7 @@ public class PeladaController {
             @Valid @RequestBody BulkSetMensalistaRequestDTO request,
             @AuthenticationPrincipal String email
     ) {
-        return ResponseEntity.ok(peladaService.setMensalistas(id, request.getUserIds(), request.getIsMensalista(), email));
+        return ResponseEntity.ok(peladaService.setMensalistas(id, request.userIds(), request.isMensalista(), email));
     }
 
     @PutMapping("/{id}/players/stars")
@@ -111,7 +111,7 @@ public class PeladaController {
             @Valid @RequestBody BulkSetStarsRequestDTO request,
             @AuthenticationPrincipal String email
     ) {
-        return ResponseEntity.ok(peladaService.setPlayersStars(id, request.getUserIds(), request.getStars(), email));
+        return ResponseEntity.ok(peladaService.setPlayersStars(id, request.userIds(), request.stars(), email));
     }
 
     // POST instead of DELETE with a body, which proxies and axios handle poorly
@@ -121,7 +121,7 @@ public class PeladaController {
             @Valid @RequestBody BulkRemovePlayersRequestDTO request,
             @AuthenticationPrincipal String email
     ) {
-        peladaService.removePlayers(id, request.getUserIds(), email);
+        peladaService.removePlayers(id, request.userIds(), email);
         return ResponseEntity.noContent().build();
     }
 
@@ -132,7 +132,7 @@ public class PeladaController {
             @Valid @RequestBody SetAdminRequestDTO request,
             @AuthenticationPrincipal String email
     ) {
-        peladaService.setAdmin(id, userId, request.getIsAdmin(), email);
+        peladaService.setAdmin(id, userId, request.isAdmin(), email);
         return ResponseEntity.ok().build();
     }
 
@@ -143,7 +143,7 @@ public class PeladaController {
             @Valid @RequestBody SetMensalistaRequestDTO request,
             @AuthenticationPrincipal String email
     ) {
-        return ResponseEntity.ok(peladaService.setMensalista(id, userId, request.getIsMensalista(), email));
+        return ResponseEntity.ok(peladaService.setMensalista(id, userId, request.isMensalista(), email));
     }
 
     @PutMapping("/{id}/players/{userId}/stars")
@@ -153,7 +153,7 @@ public class PeladaController {
             @Valid @RequestBody UpdatePlayerStarsRequestDTO request,
             @AuthenticationPrincipal String email
     ) {
-        return ResponseEntity.ok(peladaService.setPlayerStars(id, userId, request.getStars(), email));
+        return ResponseEntity.ok(peladaService.setPlayerStars(id, userId, request.stars(), email));
     }
 
     @PutMapping("/{id}")
@@ -180,7 +180,7 @@ public class PeladaController {
             @Valid @RequestBody TransferCreatorRequestDTO request,
             @AuthenticationPrincipal String email
     ) {
-        return ResponseEntity.ok(peladaService.transferCreator(id, request.getUserId(), email));
+        return ResponseEntity.ok(peladaService.transferCreator(id, request.userId(), email));
     }
 
     @GetMapping("/{id}/ranking")

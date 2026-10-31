@@ -1,30 +1,20 @@
 package com.futspring.backend.domain.chat.dto;
 
 import com.futspring.backend.domain.chat.Message;
-import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 
-@Data
 @Builder
-@NoArgsConstructor
-@AllArgsConstructor
-public class MessageDTO {
+public record MessageDTO(
+        Long id,
+        String content,
+        String sentAt,
+        SenderDTO sender) {
 
-    private Long id;
-    private String content;
-    private String sentAt;
-    private SenderDTO sender;
-
-    @Data
     @Builder
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class SenderDTO {
-        private Long id;
-        private String username;
-        private String image;
+    public record SenderDTO(
+            Long id,
+            String username,
+            String image) {
     }
 
     public static MessageDTO from(Message message) {

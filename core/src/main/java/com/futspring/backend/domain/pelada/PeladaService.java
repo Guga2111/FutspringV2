@@ -71,17 +71,17 @@ public class PeladaService {
         User user = userAuthHelper.getAuthenticatedUser(currentUserEmail);
 
         Pelada pelada = Pelada.builder()
-                .name(request.getName().trim())
-                .dayOfWeek(request.getDayOfWeek())
-                .timeOfDay(request.getTimeOfDay())
-                .duration(request.getDuration())
-                .address(request.getAddress())
-                .reference(request.getReference())
-                .autoCreateDailyEnabled(request.isAutoCreateDailyEnabled())
-                .numberOfTeams(request.getNumberOfTeams())
-                .playersPerTeam(request.getPlayersPerTeam())
-                .timeZone(request.getTimeZone() == null ? Pelada.DEFAULT_TIME_ZONE : validTimeZone(request.getTimeZone()))
-                .maxMensalistas(request.getMaxMensalistas())
+                .name(request.name().trim())
+                .dayOfWeek(request.dayOfWeek())
+                .timeOfDay(request.timeOfDay())
+                .duration(request.duration())
+                .address(request.address())
+                .reference(request.reference())
+                .autoCreateDailyEnabled(request.autoCreateDailyEnabled())
+                .numberOfTeams(request.numberOfTeams())
+                .playersPerTeam(request.playersPerTeam())
+                .timeZone(request.timeZone() == null ? Pelada.DEFAULT_TIME_ZONE : validTimeZone(request.timeZone()))
+                .maxMensalistas(request.maxMensalistas())
                 .creator(user)
                 .build();
         requireMaxWithinCapacity(pelada.getMaxMensalistas(), pelada);
@@ -329,24 +329,24 @@ public class PeladaService {
         Pelada pelada = findPelada(peladaId);
         accessHelper.requireAdmin(pelada, caller);
 
-        if (request.getName() != null) pelada.setName(request.getName().trim());
-        if (request.getDayOfWeek() != null) pelada.setDayOfWeek(request.getDayOfWeek());
-        if (request.getTimeOfDay() != null) pelada.setTimeOfDay(request.getTimeOfDay());
-        if (request.getDuration() != null) pelada.setDuration(request.getDuration());
-        if (request.getAddress() != null) pelada.setAddress(request.getAddress());
-        if (request.getReference() != null) pelada.setReference(request.getReference());
-        if (request.getAutoCreateDailyEnabled() != null) pelada.setAutoCreateDailyEnabled(request.getAutoCreateDailyEnabled());
-        if (request.getTimeZone() != null) pelada.setTimeZone(validTimeZone(request.getTimeZone()));
-        boolean capacityChanged = request.getNumberOfTeams() != null || request.getPlayersPerTeam() != null;
-        if (capacityChanged || request.getMaxMensalistas() != null) {
+        if (request.name() != null) pelada.setName(request.name().trim());
+        if (request.dayOfWeek() != null) pelada.setDayOfWeek(request.dayOfWeek());
+        if (request.timeOfDay() != null) pelada.setTimeOfDay(request.timeOfDay());
+        if (request.duration() != null) pelada.setDuration(request.duration());
+        if (request.address() != null) pelada.setAddress(request.address());
+        if (request.reference() != null) pelada.setReference(request.reference());
+        if (request.autoCreateDailyEnabled() != null) pelada.setAutoCreateDailyEnabled(request.autoCreateDailyEnabled());
+        if (request.timeZone() != null) pelada.setTimeZone(validTimeZone(request.timeZone()));
+        boolean capacityChanged = request.numberOfTeams() != null || request.playersPerTeam() != null;
+        if (capacityChanged || request.maxMensalistas() != null) {
             // Same lock as setMensalista: the count can't change while the limit is checked
             peladaRepository.findByIdForUpdate(peladaId);
-            if (request.getNumberOfTeams() != null) pelada.setNumberOfTeams(request.getNumberOfTeams());
-            if (request.getPlayersPerTeam() != null) pelada.setPlayersPerTeam(request.getPlayersPerTeam());
+            if (request.numberOfTeams() != null) pelada.setNumberOfTeams(request.numberOfTeams());
+            if (request.playersPerTeam() != null) pelada.setPlayersPerTeam(request.playersPerTeam());
             // The limit (new or current) must fit the resulting capacity
-            int max = request.getMaxMensalistas() != null ? request.getMaxMensalistas() : pelada.getMaxMensalistas();
+            int max = request.maxMensalistas() != null ? request.maxMensalistas() : pelada.getMaxMensalistas();
             requireMaxWithinCapacity(max, pelada);
-            if (request.getMaxMensalistas() != null) {
+            if (request.maxMensalistas() != null) {
                 long current = mensalistaRepository.countByPelada(pelada);
                 if (current > max) {
                     // The system never picks who loses the status

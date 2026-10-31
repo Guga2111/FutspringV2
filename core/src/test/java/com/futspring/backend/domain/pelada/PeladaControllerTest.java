@@ -96,6 +96,47 @@ class PeladaControllerTest extends BaseIntegrationTest {
     }
 
     @Test
+    void createPelada_omittedSettings_areSavedWithDefaults() throws Exception {
+        mockMvc.perform(post("/api/v1/peladas")
+                .contentType(MediaType.APPLICATION_JSON)
+                .header("Authorization", bearerToken(admin.getId(), admin.getEmail()))
+                .content("""
+                        {"name":"Defaults", "dayOfWeek":"FRIDAY", "timeOfDay":"20:00", "duration":1.5}
+                        """))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.numberOfTeams").value(2))
+                .andExpect(jsonPath("$.playersPerTeam").value(5))
+                .andExpect(jsonPath("$.autoCreateDailyEnabled").value(false))
+                .andExpect(jsonPath("$.timeZone").value("America/Sao_Paulo"));
+    }
+
+    @Test
+    void createPelada_explicitZeroSettings_returnValidationErrors() throws Exception {
+        mockMvc.perform(post("/api/v1/peladas")
+                .contentType(MediaType.APPLICATION_JSON)
+                .header("Authorization", bearerToken(admin.getId(), admin.getEmail()))
+                .content("""
+                        {"name":"Invalid", "dayOfWeek":"FRIDAY", "timeOfDay":"20:00", "duration":1.5,
+                         "numberOfTeams":0, "playersPerTeam":0}
+                        """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.numberOfTeams").value("Mínimo de 2 times"))
+                .andExpect(jsonPath("$.errors.playersPerTeam").value("Mínimo de 2 jogadores por time"));
+    }
+
+    @Test
+    void createPelada_explicitNullTeamSetting_isRejected() throws Exception {
+        mockMvc.perform(post("/api/v1/peladas")
+                .contentType(MediaType.APPLICATION_JSON)
+                .header("Authorization", bearerToken(admin.getId(), admin.getEmail()))
+                .content("""
+                        {"name":"Invalid", "dayOfWeek":"FRIDAY", "timeOfDay":"20:00", "duration":1.5,
+                         "numberOfTeams":null}
+                        """))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     void createPelada_unauthenticated() throws Exception {
         mockMvc.perform(post("/api/v1/peladas")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -630,30 +671,15 @@ class PeladaControllerTest extends BaseIntegrationTest {
 
     // admin's team beats member's team 2-0; admin scores both goals
     private PopulateDailyRequestDTO twoTeamsOneMatch() {
-        PopulateDailyRequestDTO.ParsedPlayerDTO p1 = new PopulateDailyRequestDTO.ParsedPlayerDTO();
-        p1.setUserId(admin.getId());
-        p1.setTotalGoals(2);
-        PopulateDailyRequestDTO.ParsedPlayerDTO p2 = new PopulateDailyRequestDTO.ParsedPlayerDTO();
-        p2.setUserId(member.getId());
+        PopulateDailyRequestDTO.ParsedPlayerDTO p1 = new PopulateDailyRequestDTO.ParsedPlayerDTO(admin.getId(), 2, 0);
+        PopulateDailyRequestDTO.ParsedPlayerDTO p2 = new PopulateDailyRequestDTO.ParsedPlayerDTO(member.getId(), 0, 0);
 
-        PopulateDailyRequestDTO.ParsedTeamDTO red = new PopulateDailyRequestDTO.ParsedTeamDTO();
-        red.setColorName("Vermelho");
-        red.setColorHex("#ef4444");
-        red.setPlayers(List.of(p1));
-        PopulateDailyRequestDTO.ParsedTeamDTO blue = new PopulateDailyRequestDTO.ParsedTeamDTO();
-        blue.setColorName("Azul");
-        blue.setColorHex("#3b82f6");
-        blue.setPlayers(List.of(p2));
+        PopulateDailyRequestDTO.ParsedTeamDTO red = new PopulateDailyRequestDTO.ParsedTeamDTO("Vermelho", "#ef4444", List.of(p1));
+        PopulateDailyRequestDTO.ParsedTeamDTO blue = new PopulateDailyRequestDTO.ParsedTeamDTO("Azul", "#3b82f6", List.of(p2));
 
-        PopulateDailyRequestDTO.ParsedMatchDTO match = new PopulateDailyRequestDTO.ParsedMatchDTO();
-        match.setTeam1ColorName("Vermelho");
-        match.setTeam1Score(2);
-        match.setTeam2ColorName("Azul");
-        match.setTeam2Score(0);
+        PopulateDailyRequestDTO.ParsedMatchDTO match = new PopulateDailyRequestDTO.ParsedMatchDTO("Vermelho", 2, "Azul", 0);
 
-        PopulateDailyRequestDTO request = new PopulateDailyRequestDTO();
-        request.setTeams(List.of(red, blue));
-        request.setMatches(List.of(match));
+        PopulateDailyRequestDTO request = new PopulateDailyRequestDTO(List.of(red, blue), List.of(match));
         return request;
     }
 

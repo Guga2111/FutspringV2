@@ -32,7 +32,7 @@ public class ChatController {
         if (principal == null) {
             throw new AppException(HttpStatus.UNAUTHORIZED, "Não autenticado");
         }
-        MessageDTO messageDTO = chatService.saveAndBroadcast(peladaId, principal.getName(), request.getContent());
+        MessageDTO messageDTO = chatService.saveAndBroadcast(peladaId, principal.getName(), request.content());
         messagingTemplate.convertAndSend("/topic/pelada/" + peladaId, messageDTO);
     }
 

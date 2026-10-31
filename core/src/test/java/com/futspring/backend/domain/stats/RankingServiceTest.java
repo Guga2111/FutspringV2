@@ -100,10 +100,10 @@ class RankingServiceTest {
 
         assertThat(result).isNotEmpty();
         RankingDTO adminRank = result.stream()
-                .filter(r -> r.getUserId().equals(1L))
+                .filter(r -> r.userId().equals(1L))
                 .findFirst().orElseThrow();
-        assertThat(adminRank.getGoals()).isEqualTo(10);
-        assertThat(adminRank.getAssists()).isEqualTo(5);
+        assertThat(adminRank.goals()).isEqualTo(10);
+        assertThat(adminRank.assists()).isEqualTo(5);
     }
 
     @Test
@@ -116,8 +116,8 @@ class RankingServiceTest {
 
         assertThat(result).hasSize(2); // both members included
         result.forEach(r -> {
-            assertThat(r.getGoals()).isEqualTo(0);
-            assertThat(r.getAssists()).isEqualTo(0);
+            assertThat(r.goals()).isEqualTo(0);
+            assertThat(r.assists()).isEqualTo(0);
         });
     }
 
@@ -133,8 +133,8 @@ class RankingServiceTest {
         List<RankingDTO> result = rankingService.getRanking(10L, "admin@example.com");
 
         // Both have 5 goals, player has more assists so should be first
-        assertThat(result.get(0).getUserId()).isEqualTo(2L);
-        assertThat(result.get(1).getUserId()).isEqualTo(1L);
+        assertThat(result.get(0).userId()).isEqualTo(2L);
+        assertThat(result.get(1).userId()).isEqualTo(1L);
     }
 
     @Test
@@ -147,7 +147,7 @@ class RankingServiceTest {
 
         // pelada has 2 members: admin and player
         assertThat(result).hasSize(2);
-        assertThat(result.stream().map(RankingDTO::getUserId))
+        assertThat(result.stream().map(RankingDTO::userId))
                 .containsExactlyInAnyOrder(1L, 2L);
     }
 
@@ -191,8 +191,8 @@ class RankingServiceTest {
 
         List<RankingDTO> result = rankingService.getRanking(10L, "admin@example.com");
 
-        assertThat(result.get(0).getAssists()).isEqualTo(5);
-        assertThat(result.get(1).getAssists()).isEqualTo(2);
+        assertThat(result.get(0).assists()).isEqualTo(5);
+        assertThat(result.get(1).assists()).isEqualTo(2);
     }
 
     // ── getPlayerPeladaStats tests ──────────────────────────────────────────────
@@ -210,16 +210,16 @@ class RankingServiceTest {
 
         PlayerPeladaStatsDTO result = rankingService.getPlayerPeladaStats(10L, 2L, "admin@example.com");
 
-        assertThat(result.getUserId()).isEqualTo(2L);
-        assertThat(result.getGoals()).isEqualTo(7);
-        assertThat(result.getAssists()).isEqualTo(3);
-        assertThat(result.getMatchesPlayed()).isEqualTo(10);
-        assertThat(result.getWins()).isEqualTo(4);
-        assertThat(result.getMatchWins()).isEqualTo(6);
-        assertThat(result.getArtilheiroWins()).isEqualTo(1);
-        assertThat(result.getGarcomWins()).isEqualTo(1);
-        assertThat(result.getPuskasWins()).isEqualTo(0);
-        assertThat(result.getBolaMurchaWins()).isEqualTo(0);
+        assertThat(result.userId()).isEqualTo(2L);
+        assertThat(result.goals()).isEqualTo(7);
+        assertThat(result.assists()).isEqualTo(3);
+        assertThat(result.matchesPlayed()).isEqualTo(10);
+        assertThat(result.wins()).isEqualTo(4);
+        assertThat(result.matchWins()).isEqualTo(6);
+        assertThat(result.artilheiroWins()).isEqualTo(1);
+        assertThat(result.garcomWins()).isEqualTo(1);
+        assertThat(result.puskasWins()).isEqualTo(0);
+        assertThat(result.bolaMurchaWins()).isEqualTo(0);
     }
 
     @Test
@@ -233,15 +233,15 @@ class RankingServiceTest {
 
         PlayerPeladaStatsDTO result = rankingService.getPlayerPeladaStats(10L, 2L, "admin@example.com");
 
-        assertThat(result.getGoals()).isEqualTo(0);
-        assertThat(result.getAssists()).isEqualTo(0);
-        assertThat(result.getMatchesPlayed()).isEqualTo(0);
-        assertThat(result.getWins()).isEqualTo(0);
-        assertThat(result.getMatchWins()).isEqualTo(0);
-        assertThat(result.getArtilheiroWins()).isEqualTo(0);
-        assertThat(result.getGarcomWins()).isEqualTo(0);
-        assertThat(result.getPuskasWins()).isEqualTo(0);
-        assertThat(result.getBolaMurchaWins()).isEqualTo(0);
+        assertThat(result.goals()).isEqualTo(0);
+        assertThat(result.assists()).isEqualTo(0);
+        assertThat(result.matchesPlayed()).isEqualTo(0);
+        assertThat(result.wins()).isEqualTo(0);
+        assertThat(result.matchWins()).isEqualTo(0);
+        assertThat(result.artilheiroWins()).isEqualTo(0);
+        assertThat(result.garcomWins()).isEqualTo(0);
+        assertThat(result.puskasWins()).isEqualTo(0);
+        assertThat(result.bolaMurchaWins()).isEqualTo(0);
     }
 
     @Test
@@ -255,8 +255,8 @@ class RankingServiceTest {
 
         PlayerPeladaStatsDTO result = rankingService.getPlayerPeladaStats(10L, 2L, "admin@example.com");
 
-        assertThat(result.getPuskasWins()).isEqualTo(2);
-        assertThat(result.getBolaMurchaWins()).isEqualTo(1);
+        assertThat(result.puskasWins()).isEqualTo(2);
+        assertThat(result.bolaMurchaWins()).isEqualTo(1);
     }
 
     @Test
@@ -328,19 +328,19 @@ class RankingServiceTest {
 
         PlayerPeladaHistoryDTO result = rankingService.getPlayerPeladaHistory(10L, 2L, null, "admin@example.com");
 
-        assertThat(result.getUserId()).isEqualTo(2L);
-        assertThat(result.getTotalSessions()).isEqualTo(2);
-        assertThat(result.getRows()).hasSize(2);
-        PlayerPeladaHistoryDTO.Row first = result.getRows().get(0);
-        assertThat(first.getDailyId()).isEqualTo(21L);
-        assertThat(first.getDate()).isEqualTo(LocalDate.of(2026, 9, 26));
-        assertThat(first.getGoals()).isEqualTo(2);
-        assertThat(first.getAssists()).isEqualTo(1);
-        assertThat(first.getMatchesPlayed()).isEqualTo(4);
-        assertThat(first.getWins()).isEqualTo(3);
-        assertThat(first.isWonSession()).isTrue();
-        assertThat(result.getRows().get(1).getDailyId()).isEqualTo(20L);
-        assertThat(result.getRows().get(1).isWonSession()).isFalse();
+        assertThat(result.userId()).isEqualTo(2L);
+        assertThat(result.totalSessions()).isEqualTo(2);
+        assertThat(result.rows()).hasSize(2);
+        PlayerPeladaHistoryDTO.Row first = result.rows().get(0);
+        assertThat(first.dailyId()).isEqualTo(21L);
+        assertThat(first.date()).isEqualTo(LocalDate.of(2026, 9, 26));
+        assertThat(first.goals()).isEqualTo(2);
+        assertThat(first.assists()).isEqualTo(1);
+        assertThat(first.matchesPlayed()).isEqualTo(4);
+        assertThat(first.wins()).isEqualTo(3);
+        assertThat(first.wonSession()).isTrue();
+        assertThat(result.rows().get(1).dailyId()).isEqualTo(20L);
+        assertThat(result.rows().get(1).wonSession()).isFalse();
     }
 
     @Test
@@ -351,9 +351,9 @@ class RankingServiceTest {
 
         PlayerPeladaHistoryDTO result = rankingService.getPlayerPeladaHistory(10L, 1L, 5, "player@example.com");
 
-        assertThat(result.getUserId()).isEqualTo(1L);
-        assertThat(result.getTotalSessions()).isZero();
-        assertThat(result.getRows()).isEmpty();
+        assertThat(result.userId()).isEqualTo(1L);
+        assertThat(result.totalSessions()).isZero();
+        assertThat(result.rows()).isEmpty();
         verify(userDailyStatsRepository, never()).countHistoryByUserAndPelada(anyLong(), anyLong());
     }
 
@@ -403,8 +403,8 @@ class RankingServiceTest {
 
         PlayerPeladaHistoryDTO result = rankingService.getPlayerPeladaHistory(10L, 2L, 2, "admin@example.com");
 
-        assertThat(result.getRows()).extracting(PlayerPeladaHistoryDTO.Row::getDailyId).containsExactly(31L, 30L);
-        assertThat(result.getTotalSessions()).isEqualTo(9);
+        assertThat(result.rows()).extracting(PlayerPeladaHistoryDTO.Row::dailyId).containsExactly(31L, 30L);
+        assertThat(result.totalSessions()).isEqualTo(9);
     }
 
     @Test

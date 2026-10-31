@@ -51,8 +51,8 @@ public class AwardsService {
                 buildCategory("BOLA_MURCHA", "Bola Murcha", "Pior desempenho da sessão", winnersByCategory));
 
         int totalDistributed = categories.stream()
-                .flatMap(c -> c.getTopWinners().stream())
-                .mapToInt(AwardWinnerDTO::getCount)
+                .flatMap(c -> c.topWinners().stream())
+                .mapToInt(AwardWinnerDTO::count)
                 .sum();
 
         return PeladaAwardsDTO.builder()
@@ -65,8 +65,8 @@ public class AwardsService {
     private AwardCategoryDTO buildCategory(String type, String name, String description,
                                            Map<String, List<AwardWinnerDTO>> winnersByCategory) {
         List<AwardWinnerDTO> winners = new ArrayList<>(winnersByCategory.getOrDefault(type, List.of()));
-        winners.sort(Comparator.comparingInt(AwardWinnerDTO::getCount).reversed()
-                .thenComparing(AwardWinnerDTO::getUsername, String.CASE_INSENSITIVE_ORDER));
+        winners.sort(Comparator.comparingInt(AwardWinnerDTO::count).reversed()
+                .thenComparing(AwardWinnerDTO::username, String.CASE_INSENSITIVE_ORDER));
         return AwardCategoryDTO.builder()
                 .type(type)
                 .name(name)

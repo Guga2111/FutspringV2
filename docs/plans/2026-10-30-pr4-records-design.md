@@ -31,3 +31,12 @@ The wire shape stays compatible with both API versions for the existing client: 
 - Keep approved snapshot removals in a separate commit, listing the removed keys.
 - Commit only task-related changes on `dev`; leave existing unrelated untracked files untouched.
 - Open a PR from `dev` to `main` with validation results, removed keys, and confirmation that no migration is required. Do not merge.
+
+## Implementation evidence — 2026-10-30
+
+- All 49 top-level domain DTOs and their 22 nested DTOs are records (2 top-level DTOs were already records). Existing builders and mapping factories remain; stats factories receive award counts before construction.
+- Jackson 3 rejects omitted primitive constructor components. DTO-local Jackson builders preserve the previous creation defaults and zero-valued match/player-stat inputs while keeping explicit nulls invalid; no global mapper setting changes.
+- The 51 original contract tests and 25 focused regression cases pass without snapshot regeneration. Three controller regressions verify omitted creation defaults and explicit zero/null rejection through HTTP.
+- `JAVA_HOME=…/25-open DOCKER_HOST=unix://…/docker.sock ./mvnw -B verify`: **766 tests, 0 failures, 0 errors, 0 skipped; BUILD SUCCESS**. `FlywayMigrationTest` (2 tests), `MigrationDataTest` (5), and `AttendanceConcurrencyTest` all executed against PostgreSQL 17.
+- Snapshot comparison against the pre-conversion baseline permits exactly 11 duplicate-key deletions across six files. Every removed key retains its corresponding `is…` value; no other snapshot or request-fixture changes. Original property ordering is retained to keep the diff limited to deletions.
+- All existing validation and JSON annotations are preserved. No entity, migration, dependency, permission rule, or frontend source changes. Frontend checks were not run because its changes are documentation-only, as approved above.

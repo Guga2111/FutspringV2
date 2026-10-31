@@ -5,53 +5,46 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
-import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 
 // Partial update: null fields are left unchanged
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
 @Builder
-public class UpdatePeladaRequestDTO {
+public record UpdatePeladaRequestDTO(
+        @Size(min = 1, max = 100, message = "O nome deve ter entre 1 e 100 caracteres")
+        String name,
 
-    @Size(min = 1, max = 100, message = "O nome deve ter entre 1 e 100 caracteres")
-    private String name;
+        @Pattern(regexp = DayOfWeekPattern.REGEX, message = DayOfWeekPattern.MESSAGE)
+        String dayOfWeek,
 
-    @Pattern(regexp = DayOfWeekPattern.REGEX, message = DayOfWeekPattern.MESSAGE)
-    private String dayOfWeek;
+        @Pattern(regexp = "^([01]\\d|2[0-3]):[0-5]\\d(:[0-5]\\d)?$", message = "Horário inválido (HH:mm)")
+        String timeOfDay,
 
-    @Pattern(regexp = "^([01]\\d|2[0-3]):[0-5]\\d(:[0-5]\\d)?$", message = "Horário inválido (HH:mm)")
-    private String timeOfDay;
+        @Positive(message = "A duração deve ser maior que zero")
+        Float duration,
 
-    @Positive(message = "A duração deve ser maior que zero")
-    private Float duration;
+        @Size(max = 255, message = "Máximo de 255 caracteres")
+        String address,
 
-    @Size(max = 255, message = "Máximo de 255 caracteres")
-    private String address;
+        @Size(max = 255, message = "Máximo de 255 caracteres")
+        String reference,
 
-    @Size(max = 255, message = "Máximo de 255 caracteres")
-    private String reference;
+        Boolean autoCreateDailyEnabled,
 
-    private Boolean autoCreateDailyEnabled;
+        // IANA zone (America/Sao_Paulo); unknown → 400
+        @Size(min = 1, max = 64, message = "O fuso horário deve ter entre 1 e 64 caracteres")
+        String timeZone,
 
-    // IANA zone (America/Sao_Paulo); unknown → 400
-    @Size(min = 1, max = 64, message = "O fuso horário deve ter entre 1 e 64 caracteres")
-    private String timeZone;
+        // The new capacity applies to the sessions already scheduled too: nobody is removed, a session with more
+        // confirmed players than spots is just over the limit
+        @Min(value = 2, message = "Mínimo de 2 times")
+        @Max(value = 10, message = "Máximo de 10 times")
+        Integer numberOfTeams,
 
-    // The new capacity applies to the sessions already scheduled too: nobody is removed, a session with more
-    // confirmed players than spots is just over the limit
-    @Min(value = 2, message = "Mínimo de 2 times")
-    @Max(value = 10, message = "Máximo de 10 times")
-    private Integer numberOfTeams;
+        @Min(value = 2, message = "Mínimo de 2 jogadores por time")
+        @Max(value = 20, message = "Máximo de 20 jogadores por time")
+        Integer playersPerTeam,
 
-    @Min(value = 2, message = "Mínimo de 2 jogadores por time")
-    @Max(value = 20, message = "Máximo de 20 jogadores por time")
-    private Integer playersPerTeam;
-
-    // between the current number of mensalistas and the session capacity, else 409
-    @Min(value = 0, message = "O limite de mensalistas não pode ser negativo")
-    private Integer maxMensalistas;
+        // between the current number of mensalistas and the session capacity, else 409
+        @Min(value = 0, message = "O limite de mensalistas não pode ser negativo")
+        Integer maxMensalistas) {
 }

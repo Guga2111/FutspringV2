@@ -125,29 +125,19 @@ class PeladaServiceTest {
             return p;
         });
 
-        CreatePeladaRequestDTO req = new CreatePeladaRequestDTO();
-        req.setName("New Pelada");
-        req.setDayOfWeek("FRIDAY");
-        req.setTimeOfDay("20:00");
-        req.setDuration(1.5f);
-        req.setNumberOfTeams(2);
-        req.setPlayersPerTeam(5);
+        CreatePeladaRequestDTO req = new CreatePeladaRequestDTO("New Pelada", "FRIDAY", "20:00", 1.5f, null, null, false, 2, 5, null, 0);
 
         PeladaResponseDTO result = peladaService.createPelada(req, "admin@example.com");
 
         assertThat(result).isNotNull();
-        assertThat(result.getName()).isEqualTo("New Pelada");
+        assertThat(result.name()).isEqualTo("New Pelada");
     }
 
     @Test
     void createPelada_callerNotFound_throwsUnauthorized() {
         when(userAuthHelper.getAuthenticatedUser("ghost@example.com")).thenThrow(new AppException(HttpStatus.NOT_FOUND, "User not found"));
 
-        CreatePeladaRequestDTO req = new CreatePeladaRequestDTO();
-        req.setName("Pelada");
-        req.setDayOfWeek("FRIDAY");
-        req.setTimeOfDay("20:00");
-        req.setDuration(1.5f);
+        CreatePeladaRequestDTO req = new CreatePeladaRequestDTO("Pelada", "FRIDAY", "20:00", 1.5f, null, null, false, 2, 5, null, 0);
 
         assertThatThrownBy(() -> peladaService.createPelada(req, "ghost@example.com"))
                 .isInstanceOf(AppException.class)
@@ -163,11 +153,7 @@ class PeladaServiceTest {
             return p;
         });
 
-        CreatePeladaRequestDTO req = new CreatePeladaRequestDTO();
-        req.setName("Pelada");
-        req.setDayOfWeek("MONDAY");
-        req.setTimeOfDay("19:00");
-        req.setDuration(2.0f);
+        CreatePeladaRequestDTO req = new CreatePeladaRequestDTO("Pelada", "MONDAY", "19:00", 2.0f, null, null, false, 2, 5, null, 0);
 
         peladaService.createPelada(req, "admin@example.com");
 
@@ -185,7 +171,7 @@ class PeladaServiceTest {
         List<PeladaResponseDTO> result = peladaService.getMyPeladas("admin@example.com");
 
         assertThat(result).hasSize(1);
-        assertThat(result.get(0).getName()).isEqualTo("Sunday Pelada");
+        assertThat(result.get(0).name()).isEqualTo("Sunday Pelada");
     }
 
     @Test
@@ -217,7 +203,7 @@ class PeladaServiceTest {
         PeladaDetailResponseDTO result = peladaService.getPeladaDetail(10L, "member@example.com");
 
         assertThat(result).isNotNull();
-        assertThat(result.getName()).isEqualTo("Sunday Pelada");
+        assertThat(result.name()).isEqualTo("Sunday Pelada");
     }
 
     @Test
@@ -495,8 +481,8 @@ class PeladaServiceTest {
 
         verify(playerStarsRepository).saveAll(argThat((List<PeladaPlayerStars> rows) -> rows.size() == 1
                 && rows.get(0).getPelada() == pelada && rows.get(0).getUser() == member && rows.get(0).getStars() == 5));
-        assertThat(result.getId()).isEqualTo(2L);
-        assertThat(result.getStars()).isEqualTo(5);
+        assertThat(result.id()).isEqualTo(2L);
+        assertThat(result.stars()).isEqualTo(5);
         assertThat(result.isAdmin()).isFalse();
     }
 
@@ -522,7 +508,7 @@ class PeladaServiceTest {
 
         PeladaMemberDTO result = peladaService.setPlayerStars(10L, 1L, 5, "admin@example.com");
 
-        assertThat(result.getStars()).isEqualTo(5);
+        assertThat(result.stars()).isEqualTo(5);
         assertThat(result.isAdmin()).isTrue();
     }
 
@@ -567,7 +553,7 @@ class PeladaServiceTest {
         List<PublicUserDTO> result = peladaService.searchUsers("ali");
 
         assertThat(result).hasSize(1);
-        assertThat(result.get(0).getUsername()).isEqualTo("admin");
+        assertThat(result.get(0).username()).isEqualTo("admin");
     }
 
     @Test
@@ -595,13 +581,11 @@ class PeladaServiceTest {
         when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
         when(peladaRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        UpdatePeladaRequestDTO req = new UpdatePeladaRequestDTO();
-        req.setName("Updated Name");
-        req.setDayOfWeek("MONDAY");
+        UpdatePeladaRequestDTO req = new UpdatePeladaRequestDTO("Updated Name", "MONDAY", null, null, null, null, null, null, null, null, null);
 
         PeladaResponseDTO result = peladaService.updatePelada(10L, req, "admin@example.com");
 
-        assertThat(result.getName()).isEqualTo("Updated Name");
+        assertThat(result.name()).isEqualTo("Updated Name");
     }
 
     @Test
@@ -609,8 +593,7 @@ class PeladaServiceTest {
         when(userAuthHelper.getAuthenticatedUser("member@example.com")).thenReturn(member);
         when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
 
-        UpdatePeladaRequestDTO req = new UpdatePeladaRequestDTO();
-        req.setName("Hacked Name");
+        UpdatePeladaRequestDTO req = new UpdatePeladaRequestDTO("Hacked Name", null, null, null, null, null, null, null, null, null, null);
 
         assertThatThrownBy(() -> peladaService.updatePelada(10L, req, "member@example.com"))
                 .isInstanceOf(AppException.class)
@@ -622,7 +605,7 @@ class PeladaServiceTest {
         when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(peladaRepository.findById(999L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> peladaService.updatePelada(999L, new UpdatePeladaRequestDTO(), "admin@example.com"))
+        assertThatThrownBy(() -> peladaService.updatePelada(999L, UpdatePeladaRequestDTO.builder().build(), "admin@example.com"))
                 .isInstanceOf(AppException.class)
                 .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.NOT_FOUND));
     }
@@ -631,7 +614,7 @@ class PeladaServiceTest {
     void updatePelada_callerNotFound_throwsUnauthorized() {
         when(userAuthHelper.getAuthenticatedUser("ghost@example.com")).thenThrow(new AppException(HttpStatus.NOT_FOUND, "User not found"));
 
-        assertThatThrownBy(() -> peladaService.updatePelada(10L, new UpdatePeladaRequestDTO(), "ghost@example.com"))
+        assertThatThrownBy(() -> peladaService.updatePelada(10L, UpdatePeladaRequestDTO.builder().build(), "ghost@example.com"))
                 .isInstanceOf(AppException.class)
                 .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.NOT_FOUND));
     }
@@ -642,12 +625,12 @@ class PeladaServiceTest {
         when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
         when(peladaRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        UpdatePeladaRequestDTO req = new UpdatePeladaRequestDTO();
+        UpdatePeladaRequestDTO req = new UpdatePeladaRequestDTO(null, null, null, null, null, null, null, null, null, null, null);
         // all null — should not change anything
 
         PeladaResponseDTO result = peladaService.updatePelada(10L, req, "admin@example.com");
 
-        assertThat(result.getName()).isEqualTo("Sunday Pelada");
+        assertThat(result.name()).isEqualTo("Sunday Pelada");
     }
 
     // --- deletePelada ---
@@ -726,7 +709,7 @@ class PeladaServiceTest {
         verify(mensalistaRepository).saveAll(argThat((List<PeladaMensalista> rows) -> rows.size() == 1
                 && rows.get(0).getPelada() == pelada && rows.get(0).getUser() == member));
         assertThat(result.isMensalista()).isTrue();
-        assertThat(result.getStars()).isEqualTo(PeladaPlayerStars.DEFAULT_STARS);
+        assertThat(result.stars()).isEqualTo(PeladaPlayerStars.DEFAULT_STARS);
     }
 
     @Test
@@ -795,7 +778,7 @@ class PeladaServiceTest {
         List<PeladaMemberDTO> result = peladaService.setAdmins(10L, List.of(2L, 3L), true, "admin@example.com");
 
         assertThat(pelada.getAdmins()).contains(member, outsider);
-        assertThat(result).extracting(PeladaMemberDTO::getId).containsExactly(2L, 3L);
+        assertThat(result).extracting(PeladaMemberDTO::id).containsExactly(2L, 3L);
         assertThat(result).allMatch(PeladaMemberDTO::isAdmin);
     }
 
@@ -878,7 +861,7 @@ class PeladaServiceTest {
         verify(playerStarsRepository).saveAll(argThat((List<PeladaPlayerStars> rows) -> rows.size() == 2
                 && rows.get(0).getUser() == admin && rows.get(0).getId() == null
                 && rows.get(1) == existing && rows.stream().allMatch(r -> r.getStars() == 4)));
-        assertThat(result).extracting(PeladaMemberDTO::getStars).containsExactly(4, 4);
+        assertThat(result).extracting(PeladaMemberDTO::stars).containsExactly(4, 4);
     }
 
     @Test
@@ -947,17 +930,14 @@ class PeladaServiceTest {
     void createPelada_withoutTimeZone_usesSaoPaulo_invalidZone_throwsBadRequest() {
         when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(peladaRepository.save(any(Pelada.class))).thenAnswer(inv -> inv.getArgument(0));
-        CreatePeladaRequestDTO req = new CreatePeladaRequestDTO();
-        req.setName("P");
-        req.setDayOfWeek("FRIDAY");
-        req.setTimeOfDay("20:00");
-        req.setDuration(1f);
+        CreatePeladaRequestDTO req = new CreatePeladaRequestDTO("P", "FRIDAY", "20:00", 1f, null, null, false, 2, 5, null, 0);
 
         peladaService.createPelada(req, "admin@example.com");
         verify(peladaRepository).save(argThat(p -> p.getTimeZone().equals("America/Sao_Paulo") && p.getMaxMensalistas() == 0));
 
-        req.setTimeZone("-03:00");
-        assertThatThrownBy(() -> peladaService.createPelada(req, "admin@example.com"))
+        CreatePeladaRequestDTO invalid = new CreatePeladaRequestDTO(
+                "P", "FRIDAY", "20:00", 1f, null, null, false, 2, 5, "-03:00", 0);
+        assertThatThrownBy(() -> peladaService.createPelada(invalid, "admin@example.com"))
                 .hasMessage("Fuso horário inválido")
                 .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.BAD_REQUEST));
     }

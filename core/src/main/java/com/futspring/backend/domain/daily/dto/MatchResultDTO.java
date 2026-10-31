@@ -3,46 +3,52 @@ package com.futspring.backend.domain.daily.dto;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.Builder;
+import tools.jackson.databind.annotation.JsonDeserialize;
+import tools.jackson.databind.annotation.JsonPOJOBuilder;
 
 import java.util.List;
 
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-public class MatchResultDTO {
+@Builder
+@JsonDeserialize(builder = MatchResultDTO.MatchResultDTOBuilder.class)
+public record MatchResultDTO(
+        // null creates a new match; otherwise it must be a match of the route's daily
+        Long matchId,
 
-    // null creates a new match; otherwise it must be a match of the route's daily
-    private Long matchId;
+        @NotNull(message = "Informe o time 1")
+        Long team1Id,
 
-    @NotNull(message = "Informe o time 1")
-    private Long team1Id;
+        @NotNull(message = "Informe o time 2")
+        Long team2Id,
 
-    @NotNull(message = "Informe o time 2")
-    private Long team2Id;
+        @Min(value = 0, message = "O placar não pode ser negativo")
+        int team1Score,
 
-    @Min(value = 0, message = "O placar não pode ser negativo")
-    private int team1Score;
+        @Min(value = 0, message = "O placar não pode ser negativo")
+        int team2Score,
 
-    @Min(value = 0, message = "O placar não pode ser negativo")
-    private int team2Score;
+        List<@Valid PlayerStatInputDTO> playerStats) {
 
-    private List<@Valid PlayerStatInputDTO> playerStats;
+    @Builder
+    @JsonDeserialize(builder = PlayerStatInputDTO.PlayerStatInputDTOBuilder.class)
+    public record PlayerStatInputDTO(
+            @NotNull(message = "Informe o jogador")
+            Long userId,
 
-    @Data
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class PlayerStatInputDTO {
+            @Min(value = 0, message = "Gols não podem ser negativos")
+            int goals,
 
-        @NotNull(message = "Informe o jogador")
-        private Long userId;
+            @Min(value = 0, message = "Assistências não podem ser negativas")
+            int assists) {
 
-        @Min(value = 0, message = "Gols não podem ser negativos")
-        private int goals;
+        // Keep omitted primitive inputs at zero; Jackson still rejects explicit nulls.
+        @JsonPOJOBuilder(withPrefix = "")
+        public static class PlayerStatInputDTOBuilder {
+        }
+    }
 
-        @Min(value = 0, message = "Assistências não podem ser negativas")
-        private int assists;
+    // Keep omitted primitive inputs at zero; Jackson still rejects explicit nulls.
+    @JsonPOJOBuilder(withPrefix = "")
+    public static class MatchResultDTOBuilder {
     }
 }

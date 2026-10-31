@@ -184,7 +184,7 @@ Mutations: `try { await api…; toast.success(…) } catch (error) { toast.error
 
 ## Types
 
-- `src/types/*` — API response DTOs, matching the backend field names exactly.
+- `src/types/*` — API response DTOs, matching the backend field names exactly. The backend uses Java records; boolean flags remain `isAdmin`, `isFinished`, `isConfirmed`, and `isMensalista`. PR4 removes only their unused duplicate aliases `admin`, `finished`, `confirmed`, and `mensalista`; client payloads, types, schemas, and behavior are unchanged. Omitted create-pelada settings still default to 2 teams / 5 players per team; partial updates still leave null or omitted fields unchanged.
 - `src/api/*` — request payload types next to the function that sends them.
 - Component prop types and view models stay next to the component/hook that owns them.
 - Status values use a union type and typed maps (`types/daily.ts`, `DailyStatusBadge`); do the same for new enum-like fields:

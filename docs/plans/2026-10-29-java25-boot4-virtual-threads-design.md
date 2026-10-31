@@ -41,12 +41,12 @@ The management port 9091 lives inside the API container's network namespace and 
 - GraalVM native image, Spring Modulith, JSpecify null-safety.
 - Removing Lombok from **entities** (they stay `@Getter @Setter` + `EntityIdentity`).
 - The other projects' nginx or their `0.0.0.0` port bindings (`8080`, `8082`–`8085` bypass nginx; worth fixing, separately).
-- Frontend changes. The JSON contract stays identical; if a field would change, the backend is fixed, not the client.
+- Frontend code changes. The JSON contract stays identical except for PR4's approved unused duplicate boolean aliases; any other difference is fixed in the backend.
 
 ## Global acceptance criteria (every PR)
 
 1. `./mvnw verify` green, including `FlywayMigrationTest` and `MigrationDataTest` (Docker).
-2. The contract snapshot test passes **without regenerating snapshots** (PR 2 and PR 4 must not touch `src/test/resources/contract/`).
+2. The contract snapshot test passes without changes in PRs 2 and 3. PR4 may remove only the approved duplicate boolean aliases `admin`, `finished`, `confirmed`, and `mensalista` where the corresponding `is…` property remains, in a separate snapshot commit; all other fields and request round trips stay unchanged.
 3. The deploy waits for the container's `healthy` state; the `deploy.yml` smoke test gets 200 from `<API_URL>/readyz`.
 4. No Flyway migration is added. Rollback = revert the merge on `main` and redeploy; with no schema change it is always safe.
 5. `core/docs/BACKEND.md` (and the root `CLAUDE.md` stack line) describe the new state in the same PR.
@@ -349,10 +349,10 @@ Every new run used Postgres 17, the disposable dev seed, `--cpus=1 --memory=1g`,
 
 ### DTOs as records
 
-- The 48 DTO classes in `domain/*/dto/` (2 are already records) become `record`s. `@Builder` stays where tests use it (Lombok supports it on records; 338 `.builder()` calls in tests keep compiling); `@Data`/`@Setter`/`@NoArgsConstructor` go.
+- The 49 top-level DTOs in `domain/*/dto/` (2 were already records) and their 22 nested DTOs become `record`s. `@Builder` stays where tests use it (Lombok supports it on records; 338 `.builder()` calls in tests keep compiling); `@Data`/`@Setter`/`@NoArgsConstructor` go.
 - Validation annotations move to the record components (`record UpdatePlayerStarsRequestDTO(@NotNull @Min(1) @Max(5) Integer stars)`); nested lists keep `List<@Valid …>`.
 - Static factories (`from(entity)`) stay as static methods on the record.
-- Where a service mutates a DTO after building it (setters), build it complete instead or add a `with…` method. List them first (`grep` for `.set` on DTO types) and handle each one.
+- Where a service mutates a DTO after building it (setters), build it complete instead. PR4 supplies statistics award counts up front and adds no copy framework or compatibility getters. List them first (`grep` for `.set` on DTO types) and handle each one.
 - **JSON names:** a `boolean isAdmin` record component serializes as `"isAdmin"`, whereas a Lombok `boolean isAdmin` field with getter `isAdmin()` may have serialized as `"admin"`. The contract snapshot is the authority: if it fails, add `@JsonProperty` to keep the **current** name; never change a name the frontend reads.
 - **Duplicated boolean keys** (found in PR 1): today every primitive `boolean isX` with `@JsonProperty("isX")` is also written as `x` (`admin`, `finished`, `confirmed`, `mensalista`). The client never reads them (checked against `client/src/types` and the code), and records only write `isX`. They are dropped **on purpose**: one separate, reviewed commit regenerates only those snapshots (`-Dcontract.update=true`) and lists the removed keys in the commit message and the PR description. It is the only snapshot change PR 4 may make; any other difference is fixed in the code. No `@JsonProperty` is added to keep the short names. Not done before PR 4: PRs 2 and 3 must not touch the snapshots, and PR 4 already rewrites these DTOs.
 - Entities are untouched.
@@ -379,7 +379,7 @@ Acceptance: contract snapshots unchanged except the duplicated boolean keys abov
 | 1 | commits on `dev` → PR `dev → main` | CI green, API `healthy`, observability stack up with the Grafana subdomain, dashboards receiving production data. Then the one-week baseline starts |
 | 2 | `dev → main` | CI green, contract snapshots unchanged, existing JWTs valid |
 | 3 | `dev → main` | load test table + one week of baseline in the description, criteria above met |
-| 4 | `dev → main` | CI green, contract snapshots unchanged |
+| 4 | `dev → main` | CI green, contract snapshots unchanged except approved duplicate boolean-key removals (their own commit) |
 
 Each PR description lists what changed in the deploy (new secrets/variables, manual steps such as the nginx block in PR 1) and states that there is no migration.
 

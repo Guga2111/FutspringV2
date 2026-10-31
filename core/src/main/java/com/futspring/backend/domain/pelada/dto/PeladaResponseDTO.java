@@ -4,61 +4,51 @@ import com.futspring.backend.domain.daily.dto.AttendanceBumpDTO;
 import com.futspring.backend.domain.daily.entity.DailyStatus;
 import com.futspring.backend.domain.pelada.Pelada;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 
 import java.time.Instant;
 import java.time.LocalDate;
 
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
 @Builder
-public class PeladaResponseDTO {
+public record PeladaResponseDTO(
+        Long id,
+        String name,
+        String dayOfWeek,
+        String timeOfDay,
+        Float duration,
+        String address,
+        String reference,
+        String image,
+        boolean autoCreateDailyEnabled,
+        int memberCount,
+        int numberOfTeams,
+        int playersPerTeam,
+        // IANA zone of the sessions (the frontend shows startsAt / confirmOpensAt in it)
+        String timeZone,
+        // whether the caller administers the pelada
+        @JsonProperty("isAdmin")
+        boolean isAdmin,
+        // next SCHEDULED/CONFIRMED session from today on; only filled by GET /peladas/my and /users/{id}/peladas
+        NextDailyDTO nextDaily) {
 
-    private Long id;
-    private String name;
-    private String dayOfWeek;
-    private String timeOfDay;
-    private Float duration;
-    private String address;
-    private String reference;
-    private String image;
-    private boolean autoCreateDailyEnabled;
-    private int memberCount;
-    private int numberOfTeams;
-    private int playersPerTeam;
-    // IANA zone of the sessions (the frontend shows startsAt / confirmOpensAt in it)
-    private String timeZone;
-    // whether the caller administers the pelada
-    @JsonProperty("isAdmin")
-    private boolean isAdmin;
-    // next SCHEDULED/CONFIRMED session from today on; only filled by GET /peladas/my and /users/{id}/peladas
-    private NextDailyDTO nextDaily;
-
-    @Data
-    @NoArgsConstructor
-    @AllArgsConstructor
     @Builder
-    public static class NextDailyDTO {
-        private Long id;
-        private LocalDate date;
-        private String time;
-        private DailyStatus status;
-        private int confirmedCount;
-        // numberOfTeams × playersPerTeam
-        private int capacity;
-        // whether the caller confirmed attendance
-        @JsonProperty("isConfirmed")
-        private boolean isConfirmed;
-        // session start, in the pelada's zone
-        private Instant startsAt;
-        // from when the caller may confirm themselves; null for mensalistas. The server re-checks it
-        private Instant confirmOpensAt;
-        // the caller's bump in this session not dismissed yet, or null
-        private AttendanceBumpDTO bump;
+    public record NextDailyDTO(
+            Long id,
+            LocalDate date,
+            String time,
+            DailyStatus status,
+            int confirmedCount,
+            // numberOfTeams × playersPerTeam
+            int capacity,
+            // whether the caller confirmed attendance
+            @JsonProperty("isConfirmed")
+            boolean isConfirmed,
+            // session start, in the pelada's zone
+            Instant startsAt,
+            // from when the caller may confirm themselves; null for mensalistas. The server re-checks it
+            Instant confirmOpensAt,
+            // the caller's bump in this session not dismissed yet, or null
+            AttendanceBumpDTO bump) {
     }
 
     /** Create/update responses: the caller is an admin (both routes require it). */

@@ -88,12 +88,12 @@ class AttendanceServiceTest {
 
         PeladaAttendanceDTO result = attendanceService.getAttendanceRanking(10L, "ana@example.com");
 
-        assertThat(result.getFrom()).isEqualTo(from);
-        assertThat(result.getTo()).isEqualTo(to);
-        assertThat(result.getTotalSessions()).isEqualTo(4);
-        assertThat(result.getRows()).extracting(PeladaAttendanceDTO.Row::getUserId).containsExactly(2L, 1L, 3L);
-        assertThat(result.getRows()).extracting(PeladaAttendanceDTO.Row::getSessionsAttended).containsExactly(4L, 2L, 0L);
-        assertThat(result.getRows()).extracting(PeladaAttendanceDTO.Row::getRate).containsExactly(1.0, 0.5, 0.0);
+        assertThat(result.from()).isEqualTo(from);
+        assertThat(result.to()).isEqualTo(to);
+        assertThat(result.totalSessions()).isEqualTo(4);
+        assertThat(result.rows()).extracting(PeladaAttendanceDTO.Row::userId).containsExactly(2L, 1L, 3L);
+        assertThat(result.rows()).extracting(PeladaAttendanceDTO.Row::sessionsAttended).containsExactly(4L, 2L, 0L);
+        assertThat(result.rows()).extracting(PeladaAttendanceDTO.Row::rate).containsExactly(1.0, 0.5, 0.0);
     }
 
     @Test
@@ -106,7 +106,7 @@ class AttendanceServiceTest {
 
         PeladaAttendanceDTO result = attendanceService.getAttendanceRanking(10L, "ana@example.com");
 
-        assertThat(result.getRows()).extracting(PeladaAttendanceDTO.Row::getUsername)
+        assertThat(result.rows()).extracting(PeladaAttendanceDTO.Row::username)
                 .containsExactly("ana", "Bruno", "carla");
     }
 
@@ -120,10 +120,10 @@ class AttendanceServiceTest {
 
         PeladaAttendanceDTO result = attendanceService.getAttendanceRanking(10L, "bruno@example.com");
 
-        assertThat(result.getTotalSessions()).isZero();
-        assertThat(result.getRows()).hasSize(3).allSatisfy(row -> {
-            assertThat(row.getRate()).isZero();
-            assertThat(row.getSessionsAttended()).isZero();
+        assertThat(result.totalSessions()).isZero();
+        assertThat(result.rows()).hasSize(3).allSatisfy(row -> {
+            assertThat(row.rate()).isZero();
+            assertThat(row.sessionsAttended()).isZero();
         });
     }
 
@@ -137,7 +137,7 @@ class AttendanceServiceTest {
 
         PeladaAttendanceDTO result = attendanceService.getAttendanceRanking(10L, "ana@example.com");
 
-        assertThat(result.getRows()).extracting(PeladaAttendanceDTO.Row::getUserId)
+        assertThat(result.rows()).extracting(PeladaAttendanceDTO.Row::userId)
                 .containsExactlyInAnyOrder(1L, 2L, 3L);
     }
 
@@ -152,8 +152,8 @@ class AttendanceServiceTest {
 
         PeladaAttendanceDTO result = attendanceService.getAttendanceRanking(10L, "ana@example.com");
 
-        assertThat(result.getRows())
-                .extracting(PeladaAttendanceDTO.Row::getUserId, PeladaAttendanceDTO.Row::isMensalista)
+        assertThat(result.rows())
+                .extracting(PeladaAttendanceDTO.Row::userId, PeladaAttendanceDTO.Row::isMensalista)
                 .containsExactlyInAnyOrder(tuple(1L, true), tuple(2L, false), tuple(3L, false));
     }
 

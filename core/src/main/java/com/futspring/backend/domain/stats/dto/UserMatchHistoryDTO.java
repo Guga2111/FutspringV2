@@ -1,34 +1,24 @@
 package com.futspring.backend.domain.stats.dto;
 
-import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
 import java.util.List;
 
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
 @Builder
-public class UserMatchHistoryDTO {
+public record UserMatchHistoryDTO(
+        List<MatchRow> rows) {
 
-    private List<MatchRow> rows;
-
-    @Data
-    @NoArgsConstructor
-    @AllArgsConstructor
     @Builder
-    public static class MatchRow {
-        private Long dailyId;
-        private LocalDate date;
-        private Long peladaId;
-        private String peladaName;
-        private int goals;
-        private int assists;
-        private int matchesPlayed;
-        private int wins;
-        private String result;
+    public record MatchRow(
+            Long dailyId,
+            LocalDate date,
+            Long peladaId,
+            String peladaName,
+            int goals,
+            int assists,
+            int matchesPlayed,
+            int wins,
+            String result) {
     }
 }
