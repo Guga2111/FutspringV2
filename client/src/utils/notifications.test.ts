@@ -7,6 +7,7 @@ import { mergeNotifications, notificationPlainText, notificationToast, notificat
 function make(type: NotificationType, overrides: Partial<NotificationResponse> = {}): NotificationResponse {
   return {
     id: 1,
+    invitationId: null,
     type,
     category: notificationTypeCategory[type],
     award: null,
@@ -34,6 +35,8 @@ const cases: [NotificationType, Partial<NotificationResponse>, string, string | 
   ["DIARISTA_WINDOW_OPEN", { actor: null }, "As confirmações abriram na Pelada do Fut: sáb, 31/10 às 20:00", "/daily/100"],
   ["TEAMS_SORTED", { team: { name: "Time Azul", color: "blue" } }, "Times sorteados para sáb, 31/10: você está no Time Azul", "/daily/100"],
   ["SESSION_FINISHED", {}, "Sessão de sáb, 31/10 da Pelada do Fut finalizada: veja o resultado", "/daily/100"],
+  ["PELADA_INVITATION", { ...noDaily, invitationId: 42 }, "Leal convidou você para a Pelada do Fut", "/invitations/42"],
+  ["MEMBER_JOINED", noDaily, "Leal entrou na Pelada do Fut", "/pelada/10"],
   ["ADDED_TO_PELADA", noDaily, "Leal adicionou você à Pelada do Fut", "/pelada/10"],
   ["REMOVED_FROM_PELADA", noDaily, "Você foi removido da Pelada do Fut", null],
   ["ADMIN_GRANTED", noDaily, "Você agora é admin da Pelada do Fut", "/pelada/10"],

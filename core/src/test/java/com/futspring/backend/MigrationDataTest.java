@@ -151,6 +151,31 @@ class MigrationDataTest {
         assertThatThrownBy(() -> flyway(null).migrate()).isInstanceOf(FlywayException.class);
     }
 
+    @Test
+    void v11_preservesExistingMembershipSportingHistoryAndLegacyNotifications() throws SQLException {
+        flyway("10").migrate();
+        execute("INSERT INTO users(id,email,username,password) VALUES(1,'legacy@test.com','Legacy','hash')");
+        execute("INSERT INTO peladas(id,name,day_of_week,time_of_day,duration,auto_create_daily_enabled,number_of_teams,players_per_team,created_at,creator_id) "
+                + "VALUES(1,'Existing','SATURDAY','19:00',1,false,2,5,now(),1)");
+        execute("INSERT INTO pelada_members(pelada_id,user_id) VALUES(1,1)");
+        execute("INSERT INTO dailies(id,pelada_id,daily_date,daily_time,status,is_finished,created_at) VALUES(1,1,current_date,'19:00','FINISHED',true,now())");
+        execute("INSERT INTO user_daily_stats(id,daily_id,user_id,goals,assists,matches_played,wins,won_session) VALUES(1,1,1,2,1,3,2,true)");
+        execute("INSERT INTO notifications(id,recipient_id,type,pelada_id,created_at) VALUES(1,1,'ADDED_TO_PELADA',1,now())");
+        flyway(null).migrate();
+        try (Connection c = connect(); Statement st = c.createStatement(); ResultSet rs = st.executeQuery("""
+                SELECT s.goals, s.assists, s.matches_played, n.type, n.invitation_id
+                FROM user_daily_stats s JOIN pelada_members m ON m.user_id=s.user_id
+                JOIN notifications n ON n.recipient_id=m.user_id
+                """)) {
+            assertThat(rs.next()).isTrue();
+            assertThat(rs.getInt(1)).isEqualTo(2); assertThat(rs.getInt(2)).isEqualTo(1); assertThat(rs.getInt(3)).isEqualTo(3);
+            assertThat(rs.getString(4)).isEqualTo("ADDED_TO_PELADA"); assertThat(rs.getObject(5)).isNull();
+        }
+        try (Connection c = connect(); Statement st = c.createStatement(); ResultSet rs = st.executeQuery("SELECT count(*) FROM pelada_link_blocks")) {
+            rs.next(); assertThat(rs.getInt(1)).isZero();
+        }
+    }
+
     private static Flyway flyway(String target) {
         var config = Flyway.configure()
                 .dataSource(POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword())

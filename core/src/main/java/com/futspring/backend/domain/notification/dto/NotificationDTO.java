@@ -16,6 +16,7 @@ import java.time.LocalDate;
 @Builder
 public record NotificationDTO(
         Long id,
+        Long invitationId,
         NotificationType type,
         NotificationCategory category,
         NotificationAward award,
@@ -32,6 +33,7 @@ public record NotificationDTO(
         Daily daily = n.getDaily();
         return NotificationDTO.builder()
                 .id(n.getId())
+                .invitationId(n.getInvitationId())
                 .type(n.getType())
                 .category(n.getType().category())
                 .award(n.getAward())

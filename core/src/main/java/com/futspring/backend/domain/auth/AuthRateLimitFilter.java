@@ -57,20 +57,27 @@ public class AuthRateLimitFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        return !"POST".equals(request.getMethod()) || !LIMITED_PATHS.contains(request.getRequestURI());
+        return !isInvitePreview(request) && (!"POST".equals(request.getMethod()) || !LIMITED_PATHS.contains(request.getRequestURI()));
+    }
+
+    private static boolean isInvitePreview(HttpServletRequest request) {
+        return "GET".equals(request.getMethod()) && request.getRequestURI().matches("/api/v1/invite-links/[^/]+");
     }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
-        String key = request.getRequestURI() + "|" + request.getRemoteAddr();
+        boolean preview = isInvitePreview(request);
+        int capacity = preview ? 60 : REQUESTS_PER_MINUTE;
+        String route = preview ? "/api/v1/invite-links/*" : request.getRequestURI();
+        String key = route + "|" + request.getRemoteAddr();
         Bucket bucket = buckets.get(key, k -> Bucket.builder()
-                .addLimit(limit -> limit.capacity(REQUESTS_PER_MINUTE)
-                        .refillIntervally(REQUESTS_PER_MINUTE, Duration.ofMinutes(1)))
+                .addLimit(limit -> limit.capacity(capacity)
+                        .refillIntervally(capacity, Duration.ofMinutes(1)))
                 .build());
 
         if (!bucket.tryConsume(1)) {
-            meterRegistry.counter("futspring.ratelimit.rejected", "route", request.getRequestURI()).increment();
+            meterRegistry.counter("futspring.ratelimit.rejected", "route", route).increment();
             response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
             response.setContentType("application/json");
             response.setCharacterEncoding("UTF-8");

@@ -111,6 +111,15 @@ const views: Record<NotificationType, ViewBuilder> = {
     icon: Flag,
     parts: [t(`Sessão de ${sessionDate(n)} da `), b(peladaName(n)), t(" finalizada: veja o resultado")],
   }),
+  PELADA_INVITATION: (n) => ({
+    icon: UserPlus,
+    href: n.invitationId ? `/invitations/${n.invitationId}` : "/home",
+    parts: [b(actorName(n)), t(" convidou você para a "), b(peladaName(n))],
+  }),
+  MEMBER_JOINED: (n) => ({
+    icon: UserCheck,
+    parts: [b(actorName(n)), t(" entrou na "), b(peladaName(n))],
+  }),
   ADDED_TO_PELADA: (n) => ({
     icon: UserPlus,
     parts: n.actor ? [b(actorName(n)), t(" adicionou você à "), b(peladaName(n))] : [t("Você entrou na "), b(peladaName(n))],
@@ -177,6 +186,8 @@ export const notificationToast: Record<NotificationType, boolean> = {
   DIARISTA_WINDOW_OPEN: false,
   TEAMS_SORTED: false,
   SESSION_FINISHED: false,
+  PELADA_INVITATION: false,
+  MEMBER_JOINED: false,
   ADDED_TO_PELADA: false,
   REMOVED_FROM_PELADA: false,
   ADMIN_GRANTED: false,

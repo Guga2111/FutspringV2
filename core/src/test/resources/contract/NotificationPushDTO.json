@@ -1,6 +1,7 @@
 {
   "notification" : {
     "id" : 356,
+    "invitationId" : 213,
     "type" : "DIARISTA_BUMPED",
     "category" : "SESSION",
     "award" : "PUSKAS",

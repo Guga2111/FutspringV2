@@ -20,7 +20,8 @@ import { RankingTable, type RankingCol } from "@/components/pelada/RankingTable"
 import { AwardsTab } from "@/components/pelada/AwardsTab";
 import { PeladaBanner } from "@/components/pelada/PeladaBanner";
 import { DetailSkeleton } from "@/components/pelada/DetailSkeleton";
-import { AddPlayerDialog } from "@/components/pelada/AddPlayerDialog";
+import { PeladaInvitations } from "@/components/invitations/PeladaInvitations";
+import { InvitePlayerDialog } from "@/components/pelada/InvitePlayerDialog";
 import { ConfirmRemoveDialog } from "@/components/pelada/ConfirmRemoveDialog";
 import { CreateSessionDialog } from "@/components/pelada/CreateSessionDialog";
 import { SetPlayerStarsDialog } from "@/components/pelada/SetPlayerStarsDialog";
@@ -47,14 +48,15 @@ export default function PeladaDetailPage() {
     dailiesLoading,
     awardsLoading,
     accessDenied,
-    refetchPelada,
     refetchDailies,
     mergeDaily,
     mergeMembers,
     dropMembers,
   } = usePeladaDetail(id);
 
-  const [showAddPlayer, setShowAddPlayer] = useState(false);
+  const [activeTab, setActiveTab] = useState("members");
+  const [invitationVersion, setInvitationVersion] = useState(0);
+  const [showInvitePlayer, setShowInvitePlayer] = useState(false);
   const [confirmRemoveMember, setConfirmRemoveMember] =
     useState<PeladaMember | null>(null);
   const [starsMember, setStarsMember] = useState<PeladaMember | null>(null);
@@ -153,12 +155,13 @@ export default function PeladaDetailPage() {
           <PeladaBanner pelada={pelada} isCurrentUserAdmin={isCurrentUserAdmin} />
 
           <div className="min-w-0">
-              <Tabs defaultValue="members" className="flex flex-col gap-5">
-                <TabsList variant="pill" className="self-start">
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col gap-5">
+                <TabsList variant="pill" className="self-start max-md:flex-wrap max-md:rounded-tile">
                   <TabsTrigger variant="pill" value="members">Membros</TabsTrigger>
                   <TabsTrigger variant="pill" value="sessions">Sessões</TabsTrigger>
                   <TabsTrigger variant="pill" value="ranking">Ranking</TabsTrigger>
                   <TabsTrigger variant="pill" value="awards">Prêmios</TabsTrigger>
+                  {isCurrentUserAdmin && <TabsTrigger variant="pill" value="invitations">Convites</TabsTrigger>}
                 </TabsList>
 
                 <TabsContent value="members" className="mt-0">
@@ -174,7 +177,7 @@ export default function PeladaDetailPage() {
                     settingStars={settingStars}
                     removingMember={removingMember}
                     bulkPending={bulkPending}
-                    onAddPlayer={() => setShowAddPlayer(true)}
+                    onInvitePlayer={() => setShowInvitePlayer(true)}
                     onToggleAdmin={toggleAdmin}
                     onRemoveMember={setConfirmRemoveMember}
                     onSetStars={setStarsMember}
@@ -212,7 +215,7 @@ export default function PeladaDetailPage() {
                       creatorId={pelada.creatorId}
                       isAdmin={isCurrentUserAdmin}
                       onCreateSession={() => setShowCreateSession(true)}
-                      onAddPlayer={() => setShowAddPlayer(true)}
+                      onInvitePlayer={() => setShowInvitePlayer(true)}
                       onRemovePlayer={setConfirmRemoveMember}
                       onOpenHistory={() => openPlayerHistory(null)}
                     />
@@ -226,18 +229,20 @@ export default function PeladaDetailPage() {
                   />
                 </TabsContent>
 
+                {isCurrentUserAdmin && <TabsContent value="invitations" className="mt-0"><PeladaInvitations peladaId={pelada.id} version={invitationVersion} onInvite={() => setShowInvitePlayer(true)} /></TabsContent>}
+
                 <TabsContent value="awards" className="mt-0">
                   <AwardsTab awards={awards} isLoading={awardsLoading} />
                 </TabsContent>
               </Tabs>
           </div>
 
-          <PeladaChat
+          {activeTab !== "invitations" && <PeladaChat
             peladaId={pelada.id}
             peladaName={pelada.name}
             memberCount={pelada.members.length}
             currentUserId={currentUser?.id ?? null}
-          />
+          />}
         </main>
       ) : (
         <div className="flex items-center justify-center py-24">
@@ -257,12 +262,12 @@ export default function PeladaDetailPage() {
         </Suspense>
       )}
 
-      {showAddPlayer && pelada && (
-        <AddPlayerDialog
+      {showInvitePlayer && pelada && (
+        <InvitePlayerDialog
           peladaId={pelada.id}
           existingMemberIds={new Set(pelada.members.map((m) => m.id))}
-          onClose={() => setShowAddPlayer(false)}
-          onAdded={refetchPelada}
+          onClose={() => setShowInvitePlayer(false)}
+          onInvited={() => setInvitationVersion(v => v + 1)}
         />
       )}
 

@@ -44,6 +44,14 @@ class NotificationEmailContentTest {
     }
 
     @Test
+    void invitationLinksToTheDedicatedScreen() {
+        Notification n = notification(NotificationType.PELADA_INVITATION, null);
+        n.setInvitationId(42L);
+        assertThat(NotificationEmailContent.of(n).ctaPath()).isEqualTo("/invitations/42");
+        assertThat(NotificationEmailContent.of(n).body()).contains("7 dias");
+    }
+
+    @Test
     void everyAwardHasItsOwnName() {
         Arrays.stream(NotificationAward.values()).forEach(award -> {
             NotificationEmailContent content = NotificationEmailContent.of(notification(NotificationType.AWARD_WON, award));

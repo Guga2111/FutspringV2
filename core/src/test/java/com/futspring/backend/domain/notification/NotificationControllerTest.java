@@ -14,7 +14,7 @@ import com.futspring.backend.domain.pelada.Pelada;
 import com.futspring.backend.domain.pelada.PeladaMensalista;
 import com.futspring.backend.domain.pelada.PeladaMensalistaRepository;
 import com.futspring.backend.domain.pelada.PeladaRepository;
-import com.futspring.backend.domain.pelada.dto.AddPlayerRequestDTO;
+import com.futspring.backend.domain.pelada.dto.InvitePlayerRequestDTO;
 import com.futspring.backend.domain.user.User;
 import com.futspring.backend.domain.user.UserRepository;
 import com.futspring.backend.support.BaseIntegrationTest;
@@ -320,15 +320,15 @@ class NotificationControllerTest extends BaseIntegrationTest {
     }
 
     @Test
-    void addingAPlayer_notifiesThem() throws Exception {
-        mockMvc.perform(post("/api/v1/peladas/" + pelada.getId() + "/players")
+    void invitingAPlayer_notifiesThemWithoutMembership() throws Exception {
+        mockMvc.perform(post("/api/v1/peladas/" + pelada.getId() + "/invitations")
                         .contentType(MediaType.APPLICATION_JSON)
                         .header("Authorization", auth(admin))
-                        .content(objectMapper.writeValueAsString(new AddPlayerRequestDTO(other.getId()))))
+                        .content(objectMapper.writeValueAsString(new InvitePlayerRequestDTO(other.getId()))))
                 .andExpect(status().isOk());
 
         assertThat(notificationsOf(other)).singleElement().satisfies(n -> {
-            assertThat(n.getType()).isEqualTo(NotificationType.ADDED_TO_PELADA);
+            assertThat(n.getType()).isEqualTo(NotificationType.PELADA_INVITATION);
             assertThat(n.getPelada().getId()).isEqualTo(pelada.getId());
             assertThat(n.getDaily()).isNull();
         });
@@ -350,7 +350,7 @@ class NotificationControllerTest extends BaseIntegrationTest {
     @Test
     void deletingAPeladaWithNotifications_works() throws Exception {
         notify(member, NotificationType.SESSION_CREATED, Instant.now(), null);
-        notificationRepository.save(Notification.builder().recipient(member).type(NotificationType.ADDED_TO_PELADA)
+        notificationRepository.save(Notification.builder().recipient(member).type(NotificationType.PELADA_INVITATION)
                 .pelada(pelada).actor(admin).createdAt(Instant.now()).build());
         flushAndClear();
 

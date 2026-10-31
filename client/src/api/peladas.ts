@@ -57,10 +57,6 @@ export async function deletePelada(id: number): Promise<void> {
   await apiClient.delete(`/api/v1/peladas/${id}`)
 }
 
-export async function addPlayer(peladaId: number, userId: number): Promise<void> {
-  await apiClient.post(`/api/v1/peladas/${peladaId}/players`, { userId })
-}
-
 export async function removePlayer(peladaId: number, userId: number): Promise<void> {
   await apiClient.delete(`/api/v1/peladas/${peladaId}/players/${userId}`)
 }

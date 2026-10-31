@@ -2,7 +2,6 @@ package com.futspring.backend.domain.pelada;
 
 import com.futspring.backend.domain.chat.ChatService;
 import com.futspring.backend.domain.chat.dto.MessageDTO;
-import com.futspring.backend.domain.pelada.dto.AddPlayerRequestDTO;
 import com.futspring.backend.domain.pelada.dto.BulkRemovePlayersRequestDTO;
 import com.futspring.backend.domain.pelada.dto.BulkSetAdminRequestDTO;
 import com.futspring.backend.domain.pelada.dto.BulkSetMensalistaRequestDTO;
@@ -64,16 +63,6 @@ public class PeladaController {
             @AuthenticationPrincipal String email
     ) {
         return ResponseEntity.ok(peladaService.getPeladaDetail(id, email));
-    }
-
-    @PostMapping("/{id}/players")
-    public ResponseEntity<Void> addPlayer(
-            @PathVariable Long id,
-            @Valid @RequestBody AddPlayerRequestDTO request,
-            @AuthenticationPrincipal String email
-    ) {
-        peladaService.addPlayer(id, request.userId(), email);
-        return ResponseEntity.ok().build();
     }
 
     @DeleteMapping("/{id}/players/{userId}")
