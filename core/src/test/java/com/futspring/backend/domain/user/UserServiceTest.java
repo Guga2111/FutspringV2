@@ -58,7 +58,7 @@ class UserServiceTest {
         ProfileDTO result = userService.uploadUserImage(1L, file, "test@example.com");
 
         assertThat(result).isNotNull();
-        assertThat(result.getImage()).isEqualTo("photo.jpg");
+        assertThat(result.image()).isEqualTo("photo.jpg");
         verify(fileUploadService).uploadImage(file);
     }
 
@@ -135,7 +135,7 @@ class UserServiceTest {
         ProfileDTO result = userService.uploadBackgroundImage(1L, file, "test@example.com");
 
         assertThat(result).isNotNull();
-        assertThat(result.getBackgroundImage()).isEqualTo("bg.png");
+        assertThat(result.backgroundImage()).isEqualTo("bg.png");
         verify(fileUploadService).uploadImage(file);
     }
 

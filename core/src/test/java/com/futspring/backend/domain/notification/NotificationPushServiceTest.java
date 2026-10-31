@@ -74,13 +74,13 @@ class NotificationPushServiceTest {
         service.push(List.of(1L, 2L));
 
         assertThat(sentTo("member@example.com", 1)).singleElement().satisfies(p -> {
-            assertThat(p.getNotification().getId()).isEqualTo(1L);
-            assertThat(p.getNotification().getActor().getUsername()).isEqualTo("admin");
-            assertThat(p.getNotification().getDaily().getId()).isEqualTo(100L);
-            assertThat(p.getUnreadCount()).isEqualTo(4L);
+            assertThat(p.notification().id()).isEqualTo(1L);
+            assertThat(p.notification().actor().username()).isEqualTo("admin");
+            assertThat(p.notification().daily().id()).isEqualTo(100L);
+            assertThat(p.unreadCount()).isEqualTo(4L);
         });
         assertThat(sentTo("other@example.com", 1)).singleElement()
-                .satisfies(p -> assertThat(p.getUnreadCount()).isEqualTo(1L));
+                .satisfies(p -> assertThat(p.unreadCount()).isEqualTo(1L));
         verifyNoInteractions(teamRepository);
     }
 
@@ -98,9 +98,9 @@ class NotificationPushServiceTest {
         service.push(List.of(1L, 2L));
 
         assertThat(sentTo("member@example.com", 1)).singleElement()
-                .satisfies(p -> assertThat(p.getNotification().getTeam().getName()).isEqualTo("Time Azul"));
+                .satisfies(p -> assertThat(p.notification().team().name()).isEqualTo("Time Azul"));
         assertThat(sentTo("other@example.com", 1)).singleElement()
-                .satisfies(p -> assertThat(p.getNotification().getTeam().getName()).isEqualTo("Time Verde"));
+                .satisfies(p -> assertThat(p.notification().team().name()).isEqualTo("Time Verde"));
     }
 
     @Test
@@ -115,7 +115,7 @@ class NotificationPushServiceTest {
         service.push(List.of(1L, 2L));
 
         assertThat(sentTo("other@example.com", 1)).singleElement()
-                .satisfies(p -> assertThat(p.getUnreadCount()).isZero());
+                .satisfies(p -> assertThat(p.unreadCount()).isZero());
         assertThat(meterRegistry.get("futspring.notifications.push").tag("result", "ok").counter().count()).isEqualTo(1);
         assertThat(meterRegistry.get("futspring.notifications.push").tag("result", "failed").counter().count())
                 .isEqualTo(1);

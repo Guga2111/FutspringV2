@@ -47,7 +47,7 @@ public class DailyDTOMapper {
                 .sorted(Comparator.comparing(User::getUsername, String.CASE_INSENSITIVE_ORDER))
                 .map(user -> toPlayerDTO(user, starsByUserId))
                 .toList();
-        int totalStars = playerDTOs.stream().mapToInt(PlayerDTO::getStars).sum();
+        int totalStars = playerDTOs.stream().mapToInt(PlayerDTO::stars).sum();
         double averageStars = playerDTOs.isEmpty() ? 0.0
                 : Math.round(totalStars / (double) playerDTOs.size() * 100.0) / 100.0;
         return DailyDetailDTO.TeamDTO.builder()

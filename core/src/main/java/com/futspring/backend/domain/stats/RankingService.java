@@ -57,9 +57,9 @@ public class RankingService {
                     Ranking ranking = rankingByUserId.get(member.getId());
                     return ranking != null ? RankingDTO.fromRanking(ranking) : RankingDTO.fromUser(member);
                 })
-                .sorted(Comparator.comparingInt(RankingDTO::getGoals).reversed()
-                        .thenComparing(Comparator.comparingInt(RankingDTO::getAssists).reversed())
-                        .thenComparing(RankingDTO::getUsername, String.CASE_INSENSITIVE_ORDER))
+                .sorted(Comparator.comparingInt(RankingDTO::goals).reversed()
+                        .thenComparing(Comparator.comparingInt(RankingDTO::assists).reversed())
+                        .thenComparing(RankingDTO::username, String.CASE_INSENSITIVE_ORDER))
                 .collect(Collectors.toList());
     }
 

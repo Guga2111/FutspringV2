@@ -83,11 +83,11 @@ public class DailyResultsService {
         Set<Long> submittedMatchIds = new HashSet<>();
 
         for (MatchResultDTO result : results) {
-            if (result.getMatchId() != null && !submittedMatchIds.add(result.getMatchId())) {
+            if (result.matchId() != null && !submittedMatchIds.add(result.matchId())) {
                 throw new AppException(HttpStatus.BAD_REQUEST, "Partida repetida nos resultados");
             }
-            Team t1 = teamMap.get(result.getTeam1Id());
-            Team t2 = teamMap.get(result.getTeam2Id());
+            Team t1 = teamMap.get(result.team1Id());
+            Team t2 = teamMap.get(result.team2Id());
             if (t1 == null || t2 == null) {
                 throw new AppException(HttpStatus.BAD_REQUEST, "Os times informados não pertencem a esta sessão");
             }
@@ -96,9 +96,9 @@ public class DailyResultsService {
             }
 
             // The match id comes from the body: it must belong to this daily (never another pelada's match)
-            Match match = result.getMatchId() == null
+            Match match = result.matchId() == null
                     ? Match.builder().daily(daily).build()
-                    : matchRepository.findByIdAndDaily(result.getMatchId(), daily)
+                    : matchRepository.findByIdAndDaily(result.matchId(), daily)
                             .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Partida não encontrada nesta sessão"));
 
             Set<Long> team1Ids = t1.getPlayers().stream().map(User::getId).collect(Collectors.toSet());
@@ -106,34 +106,34 @@ public class DailyResultsService {
 
             // Validate player stats: players of these two teams only, sums within the team score
             Map<Long, MatchResultDTO.PlayerStatInputDTO> statsByUserId = new HashMap<>();
-            if (result.getPlayerStats() != null) {
+            if (result.playerStats() != null) {
                 int team1Goals = 0, team2Goals = 0, team1Assists = 0, team2Assists = 0;
-                for (MatchResultDTO.PlayerStatInputDTO stat : result.getPlayerStats()) {
-                    if (statsByUserId.put(stat.getUserId(), stat) != null) {
+                for (MatchResultDTO.PlayerStatInputDTO stat : result.playerStats()) {
+                    if (statsByUserId.put(stat.userId(), stat) != null) {
                         throw new AppException(HttpStatus.BAD_REQUEST, "Jogador repetido nas estatísticas da partida");
                     }
-                    if (team1Ids.contains(stat.getUserId())) {
-                        team1Goals += stat.getGoals();
-                        team1Assists += stat.getAssists();
-                    } else if (team2Ids.contains(stat.getUserId())) {
-                        team2Goals += stat.getGoals();
-                        team2Assists += stat.getAssists();
+                    if (team1Ids.contains(stat.userId())) {
+                        team1Goals += stat.goals();
+                        team1Assists += stat.assists();
+                    } else if (team2Ids.contains(stat.userId())) {
+                        team2Goals += stat.goals();
+                        team2Assists += stat.assists();
                     } else {
                         throw new AppException(HttpStatus.BAD_REQUEST, "Há estatísticas de um jogador que não está nesta partida");
                     }
                 }
-                requireWithinScore(t1, "gols", team1Goals, result.getTeam1Score());
-                requireWithinScore(t2, "gols", team2Goals, result.getTeam2Score());
-                requireWithinScore(t1, "assistências", team1Assists, result.getTeam1Score());
-                requireWithinScore(t2, "assistências", team2Assists, result.getTeam2Score());
+                requireWithinScore(t1, "gols", team1Goals, result.team1Score());
+                requireWithinScore(t2, "gols", team2Goals, result.team2Score());
+                requireWithinScore(t1, "assistências", team1Assists, result.team1Score());
+                requireWithinScore(t2, "assistências", team2Assists, result.team2Score());
             }
 
             match.setTeam1(t1);
             match.setTeam2(t2);
-            match.setTeam1Score(result.getTeam1Score());
-            match.setTeam2Score(result.getTeam2Score());
-            match.setWinner(result.getTeam1Score() > result.getTeam2Score() ? t1
-                    : result.getTeam2Score() > result.getTeam1Score() ? t2 : null);
+            match.setTeam1Score(result.team1Score());
+            match.setTeam2Score(result.team2Score());
+            match.setWinner(result.team1Score() > result.team2Score() ? t1
+                    : result.team2Score() > result.team1Score() ? t2 : null);
 
             Match savedMatch = matchRepository.save(match);
             savedMatches.add(savedMatch);
@@ -149,8 +149,8 @@ public class DailyResultsService {
                 statsToSave.add(PlayerMatchStat.builder()
                         .match(savedMatch)
                         .user(player)
-                        .goals(input != null ? input.getGoals() : 0)
-                        .assists(input != null ? input.getAssists() : 0)
+                        .goals(input != null ? input.goals() : 0)
+                        .assists(input != null ? input.assists() : 0)
                         .build());
             }
             playerMatchStatRepository.saveAll(statsToSave);
@@ -429,15 +429,15 @@ public class DailyResultsService {
         List<Long> allUserIds = new ArrayList<>();
         Set<Long> seenUsers = new HashSet<>();
         Set<String> seenColors = new HashSet<>();
-        for (PopulateDailyRequestDTO.ParsedTeamDTO team : request.getTeams()) {
-            if (!seenColors.add(team.getColorName().toLowerCase(Locale.ROOT))) {
-                throw new AppException(HttpStatus.BAD_REQUEST, "Time repetido: " + team.getColorName());
+        for (PopulateDailyRequestDTO.ParsedTeamDTO team : request.teams()) {
+            if (!seenColors.add(team.colorName().toLowerCase(Locale.ROOT))) {
+                throw new AppException(HttpStatus.BAD_REQUEST, "Time repetido: " + team.colorName());
             }
-            for (PopulateDailyRequestDTO.ParsedPlayerDTO player : team.getPlayers()) {
-                if (!seenUsers.add(player.getUserId())) {
+            for (PopulateDailyRequestDTO.ParsedPlayerDTO player : team.players()) {
+                if (!seenUsers.add(player.userId())) {
                     throw new AppException(HttpStatus.BAD_REQUEST, "Um jogador aparece em mais de um time");
                 }
-                allUserIds.add(player.getUserId());
+                allUserIds.add(player.userId());
             }
         }
 
@@ -460,14 +460,14 @@ public class DailyResultsService {
         attendanceRepository.deleteAllOfDaily(daily);
 
         Map<String, Team> colorToTeam = new HashMap<>();
-        for (PopulateDailyRequestDTO.ParsedTeamDTO parsedTeam : request.getTeams()) {
+        for (PopulateDailyRequestDTO.ParsedTeamDTO parsedTeam : request.teams()) {
             Team team = Team.builder()
                     .daily(daily)
-                    .name(parsedTeam.getColorName())
-                    .color(parsedTeam.getColorHex())
+                    .name(parsedTeam.colorName())
+                    .color(parsedTeam.colorHex())
                     .build();
-            parsedTeam.getPlayers().forEach(p -> team.getPlayers().add(userMap.get(p.getUserId())));
-            colorToTeam.put(parsedTeam.getColorName().toLowerCase(Locale.ROOT), teamRepository.save(team));
+            parsedTeam.players().forEach(p -> team.getPlayers().add(userMap.get(p.userId())));
+            colorToTeam.put(parsedTeam.colorName().toLowerCase(Locale.ROOT), teamRepository.save(team));
         }
 
         // The imported players are the session's attendance, in the message's order
@@ -477,27 +477,27 @@ public class DailyResultsService {
                 .toList());
 
         List<Match> savedMatches = new ArrayList<>();
-        if (request.getMatches() != null) {
-            for (PopulateDailyRequestDTO.ParsedMatchDTO parsedMatch : request.getMatches()) {
-                Team t1 = colorToTeam.get(parsedMatch.getTeam1ColorName().toLowerCase(Locale.ROOT));
-                Team t2 = colorToTeam.get(parsedMatch.getTeam2ColorName().toLowerCase(Locale.ROOT));
+        if (request.matches() != null) {
+            for (PopulateDailyRequestDTO.ParsedMatchDTO parsedMatch : request.matches()) {
+                Team t1 = colorToTeam.get(parsedMatch.team1ColorName().toLowerCase(Locale.ROOT));
+                Team t2 = colorToTeam.get(parsedMatch.team2ColorName().toLowerCase(Locale.ROOT));
                 if (t1 == null) {
-                    throw new AppException(HttpStatus.BAD_REQUEST, "Time desconhecido: " + parsedMatch.getTeam1ColorName());
+                    throw new AppException(HttpStatus.BAD_REQUEST, "Time desconhecido: " + parsedMatch.team1ColorName());
                 }
                 if (t2 == null) {
-                    throw new AppException(HttpStatus.BAD_REQUEST, "Time desconhecido: " + parsedMatch.getTeam2ColorName());
+                    throw new AppException(HttpStatus.BAD_REQUEST, "Time desconhecido: " + parsedMatch.team2ColorName());
                 }
                 if (t1.getId().equals(t2.getId())) {
-                    throw new AppException(HttpStatus.BAD_REQUEST, "Uma partida precisa de dois times diferentes: " + parsedMatch.getTeam1ColorName());
+                    throw new AppException(HttpStatus.BAD_REQUEST, "Uma partida precisa de dois times diferentes: " + parsedMatch.team1ColorName());
                 }
-                Team winner = parsedMatch.getTeam1Score() > parsedMatch.getTeam2Score() ? t1
-                        : parsedMatch.getTeam2Score() > parsedMatch.getTeam1Score() ? t2 : null;
+                Team winner = parsedMatch.team1Score() > parsedMatch.team2Score() ? t1
+                        : parsedMatch.team2Score() > parsedMatch.team1Score() ? t2 : null;
                 savedMatches.add(matchRepository.save(Match.builder()
                         .daily(daily)
                         .team1(t1)
                         .team2(t2)
-                        .team1Score(parsedMatch.getTeam1Score())
-                        .team2Score(parsedMatch.getTeam2Score())
+                        .team1Score(parsedMatch.team1Score())
+                        .team2Score(parsedMatch.team2Score())
                         .winner(winner)
                         .build()));
             }
@@ -507,14 +507,14 @@ public class DailyResultsService {
         Map<Long, Map<Long, Map<Long, Integer>>> teamGoalsDist = new HashMap<>();
         Map<Long, Map<Long, Map<Long, Integer>>> teamAssistsDist = new HashMap<>();
         Map<Long, Team> playerTeamMap = new HashMap<>();
-        for (PopulateDailyRequestDTO.ParsedTeamDTO parsedTeam : request.getTeams()) {
-            Team team = colorToTeam.get(parsedTeam.getColorName().toLowerCase(Locale.ROOT));
+        for (PopulateDailyRequestDTO.ParsedTeamDTO parsedTeam : request.teams()) {
+            Team team = colorToTeam.get(parsedTeam.colorName().toLowerCase(Locale.ROOT));
             List<Match> teamMatches = savedMatches.stream()
                     .filter(m -> m.getTeam1().getId().equals(team.getId()) || m.getTeam2().getId().equals(team.getId()))
                     .toList();
-            teamGoalsDist.put(team.getId(), distributeStats(parsedTeam.getPlayers(), teamMatches, team, true));
-            teamAssistsDist.put(team.getId(), distributeStats(parsedTeam.getPlayers(), teamMatches, team, false));
-            parsedTeam.getPlayers().forEach(p -> playerTeamMap.put(p.getUserId(), team));
+            teamGoalsDist.put(team.getId(), distributeStats(parsedTeam.players(), teamMatches, team, true));
+            teamAssistsDist.put(team.getId(), distributeStats(parsedTeam.players(), teamMatches, team, false));
+            parsedTeam.players().forEach(p -> playerTeamMap.put(p.userId(), team));
         }
 
         // PlayerMatchStats only for players on the two teams playing each match
@@ -555,9 +555,9 @@ public class DailyResultsService {
         // remaining[userId] = totalGoals or totalAssists to distribute
         Map<Long, Integer> remaining = new HashMap<>();
         for (PopulateDailyRequestDTO.ParsedPlayerDTO p : players) {
-            int count = isGoals ? p.getTotalGoals() : p.getTotalAssists();
+            int count = isGoals ? p.totalGoals() : p.totalAssists();
             if (count > 0) {
-                remaining.put(p.getUserId(), count);
+                remaining.put(p.userId(), count);
             }
         }
 
@@ -566,7 +566,7 @@ public class DailyResultsService {
         for (Match m : teamMatches) {
             Map<Long, Integer> matchMap = new HashMap<>();
             for (PopulateDailyRequestDTO.ParsedPlayerDTO p : players) {
-                matchMap.put(p.getUserId(), 0);
+                matchMap.put(p.userId(), 0);
             }
             result.put(m.getId(), matchMap);
         }

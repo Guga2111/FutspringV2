@@ -2,35 +2,28 @@ package com.futspring.backend.domain.stats.dto;
 
 import com.futspring.backend.domain.stats.entity.Stats;
 import com.futspring.backend.domain.user.User;
-import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
 @Builder
-public class StatsDTO {
+public record StatsDTO(
+        Long userId,
+        String username,
+        int goals,
+        int assists,
+        int matchesPlayed,
+        int wins,
+        int sessionsPlayed,
+        int matchWins,
+        int wiltballWins,
+        int artilheiroWins,
+        int garcomWins,
+        List<LocalDate> puskasDates) {
 
-    private Long userId;
-    private String username;
-    private int goals;
-    private int assists;
-    private int matchesPlayed;
-    private int wins;
-    private int sessionsPlayed;
-    private int matchWins;
-    private int wiltballWins;
-    private int artilheiroWins;
-    private int garcomWins;
-    private List<LocalDate> puskasDates;
-
-    public static StatsDTO fromStats(Stats stats) {
+    public static StatsDTO fromStats(Stats stats, int wiltballWins, int artilheiroWins, int garcomWins) {
         User user = stats.getUser();
         return StatsDTO.builder()
                 .userId(user.getId())
@@ -41,14 +34,14 @@ public class StatsDTO {
                 .wins(stats.getWins())
                 .sessionsPlayed(stats.getSessionsPlayed())
                 .matchWins(stats.getMatchWins())
-                .wiltballWins(0)
-                .artilheiroWins(0)
-                .garcomWins(0)
+                .wiltballWins(wiltballWins)
+                .artilheiroWins(artilheiroWins)
+                .garcomWins(garcomWins)
                 .puskasDates(stats.getPuskasDates())
                 .build();
     }
 
-    public static StatsDTO fromUser(User user) {
+    public static StatsDTO fromUser(User user, int wiltballWins, int artilheiroWins, int garcomWins) {
         return StatsDTO.builder()
                 .userId(user.getId())
                 .username(user.getUsername())
@@ -58,9 +51,9 @@ public class StatsDTO {
                 .wins(0)
                 .sessionsPlayed(0)
                 .matchWins(0)
-                .wiltballWins(0)
-                .artilheiroWins(0)
-                .garcomWins(0)
+                .wiltballWins(wiltballWins)
+                .artilheiroWins(artilheiroWins)
+                .garcomWins(garcomWins)
                 .puskasDates(new ArrayList<>())
                 .build();
     }

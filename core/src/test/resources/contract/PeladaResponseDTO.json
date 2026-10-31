@@ -36,9 +36,7 @@
       },
       "bumpedAt" : "2026-10-31T23:00:00Z"
     },
-    "confirmed" : true,
     "isConfirmed" : true
   },
-  "admin" : true,
   "isAdmin" : true
 }

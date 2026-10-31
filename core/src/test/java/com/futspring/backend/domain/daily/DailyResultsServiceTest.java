@@ -142,17 +142,13 @@ class DailyResultsServiceTest {
         when(leagueTableEntryRepository.findByDailyOrderByPositionAsc(inCourseDaily)).thenReturn(List.of());
         when(leagueTableEntryRepository.saveAll(any())).thenReturn(List.of());
 
-        MatchResultDTO result = new MatchResultDTO();
-        result.setTeam1Id(1L);
-        result.setTeam2Id(2L);
-        result.setTeam1Score(2);
-        result.setTeam2Score(1);
+        MatchResultDTO result = new MatchResultDTO(null, 1L, 2L, 2, 1, null);
 
         List<MatchDTO> response = resultsService.submitResults(100L, List.of(result), "admin@example.com");
 
         assertThat(response).hasSize(1);
-        assertThat(response.get(0).getTeam1Score()).isEqualTo(2);
-        assertThat(response.get(0).getTeam2Score()).isEqualTo(1);
+        assertThat(response.get(0).team1Score()).isEqualTo(2);
+        assertThat(response.get(0).team2Score()).isEqualTo(1);
     }
 
     @Test
@@ -163,12 +159,7 @@ class DailyResultsServiceTest {
         // match 999 exists, but in another pelada's daily: the scoped lookup does not find it
         when(matchRepository.findByIdAndDaily(999L, inCourseDaily)).thenReturn(Optional.empty());
 
-        MatchResultDTO result = new MatchResultDTO();
-        result.setMatchId(999L);
-        result.setTeam1Id(1L);
-        result.setTeam2Id(2L);
-        result.setTeam1Score(5);
-        result.setTeam2Score(0);
+        MatchResultDTO result = new MatchResultDTO(999L, 1L, 2L, 5, 0, null);
 
         assertThatThrownBy(() -> resultsService.submitResults(100L, List.of(result), "admin@example.com"))
                 .isInstanceOf(AppException.class)
@@ -187,12 +178,7 @@ class DailyResultsServiceTest {
         when(dailyRepository.findById(100L)).thenReturn(Optional.of(inCourseDaily));
         when(teamRepository.findByDailyWithPlayers(inCourseDaily)).thenReturn(List.of(team1, team2));
 
-        MatchResultDTO result = new MatchResultDTO();
-        result.setTeam1Id(1L);
-        result.setTeam2Id(2L);
-        result.setTeam1Score(1);
-        result.setTeam2Score(0);
-        result.setPlayerStats(List.of(new MatchResultDTO.PlayerStatInputDTO(stranger.getId(), 1, 0)));
+        MatchResultDTO result = new MatchResultDTO(null, 1L, 2L, 1, 0, List.of(new MatchResultDTO.PlayerStatInputDTO(stranger.getId(), 1, 0)));
 
         assertThatThrownBy(() -> resultsService.submitResults(100L, List.of(result), "admin@example.com"))
                 .isInstanceOf(AppException.class)
@@ -206,9 +192,7 @@ class DailyResultsServiceTest {
         when(dailyRepository.findById(100L)).thenReturn(Optional.of(inCourseDaily));
         when(teamRepository.findByDailyWithPlayers(inCourseDaily)).thenReturn(List.of(team1, team2));
 
-        MatchResultDTO result = new MatchResultDTO();
-        result.setTeam1Id(1L);
-        result.setTeam2Id(1L);
+        MatchResultDTO result = new MatchResultDTO(null, 1L, 1L, 0, 0, null);
 
         assertThatThrownBy(() -> resultsService.submitResults(100L, List.of(result), "admin@example.com"))
                 .isInstanceOf(AppException.class)
@@ -295,11 +279,7 @@ class DailyResultsServiceTest {
         when(dailyRepository.findById(100L)).thenReturn(Optional.of(inCourseDaily));
         when(teamRepository.findByDailyWithPlayers(inCourseDaily)).thenReturn(List.of(team1, team2));
 
-        MatchResultDTO result = new MatchResultDTO();
-        result.setTeam1Id(99L); // unknown team
-        result.setTeam2Id(2L);
-        result.setTeam1Score(1);
-        result.setTeam2Score(0);
+        MatchResultDTO result = new MatchResultDTO(null, 99L, 2L, 1, 0, null); // unknown team
 
         assertThatThrownBy(() -> resultsService.submitResults(100L, List.of(result), "admin@example.com"))
                 .isInstanceOf(AppException.class)
@@ -539,12 +519,7 @@ class DailyResultsServiceTest {
         when(matchRepository.findByDaily(inCourseDaily)).thenReturn(List.of(kept, removed));
         when(leagueTableEntryRepository.findByDailyOrderByPositionAsc(inCourseDaily)).thenReturn(List.of());
 
-        MatchResultDTO result = new MatchResultDTO();
-        result.setMatchId(50L);
-        result.setTeam1Id(1L);
-        result.setTeam2Id(2L);
-        result.setTeam1Score(1);
-        result.setTeam2Score(0);
+        MatchResultDTO result = new MatchResultDTO(50L, 1L, 2L, 1, 0, null);
 
         resultsService.submitResults(100L, List.of(result), "admin@example.com");
 
@@ -567,12 +542,7 @@ class DailyResultsServiceTest {
         when(matchRepository.findByIdAndDaily(50L, inCourseDaily)).thenReturn(Optional.of(existing));
         when(matchRepository.save(existing)).thenReturn(existing);
 
-        MatchResultDTO result = new MatchResultDTO();
-        result.setMatchId(50L);
-        result.setTeam1Id(1L);
-        result.setTeam2Id(2L);
-        result.setTeam1Score(1);
-        result.setTeam2Score(0);
+        MatchResultDTO result = new MatchResultDTO(50L, 1L, 2L, 1, 0, null);
 
         assertThatThrownBy(() -> resultsService.submitResults(100L, List.of(result, result), "admin@example.com"))
                 .isInstanceOf(AppException.class)
@@ -599,17 +569,8 @@ class DailyResultsServiceTest {
         when(dailyAwardRepository.findByDaily(inCourseDaily)).thenReturn(Optional.of(award));
         stubCloseSession(Collections.emptyList());
 
-        MatchResultDTO result = new MatchResultDTO();
-        result.setMatchId(50L);
-        result.setTeam1Id(1L);
-        result.setTeam2Id(2L);
-        result.setTeam1Score(0);
-        result.setTeam2Score(2);
-        MatchResultDTO.PlayerStatInputDTO goals = new MatchResultDTO.PlayerStatInputDTO();
-        goals.setUserId(2L);
-        goals.setGoals(2);
-        goals.setAssists(0);
-        result.setPlayerStats(List.of(goals));
+        MatchResultDTO.PlayerStatInputDTO goals = new MatchResultDTO.PlayerStatInputDTO(2L, 2, 0);
+        MatchResultDTO result = new MatchResultDTO(50L, 1L, 2L, 0, 2, List.of(goals));
 
         resultsService.submitResults(100L, List.of(result), "admin@example.com");
 
@@ -638,14 +599,9 @@ class DailyResultsServiceTest {
             return t;
         });
 
-        PopulateDailyRequestDTO request = new PopulateDailyRequestDTO();
-        request.setTeams(List.of(parsedTeam("Azul", admin), parsedTeam("Vermelho", member)));
-        PopulateDailyRequestDTO.ParsedMatchDTO match = new PopulateDailyRequestDTO.ParsedMatchDTO();
-        match.setTeam1ColorName("Azul");
-        match.setTeam2ColorName("azul");
-        match.setTeam1Score(2);
-        match.setTeam2Score(1);
-        request.setMatches(List.of(match));
+        PopulateDailyRequestDTO.ParsedMatchDTO match = new PopulateDailyRequestDTO.ParsedMatchDTO("Azul", 2, "azul", 1);
+        PopulateDailyRequestDTO request = new PopulateDailyRequestDTO(
+                List.of(parsedTeam("Azul", admin), parsedTeam("Vermelho", member)), List.of(match));
 
         assertThatThrownBy(() -> resultsService.populateFromMessage(100L, request, "admin@example.com"))
                 .isInstanceOf(AppException.class)
@@ -654,12 +610,8 @@ class DailyResultsServiceTest {
     }
 
     private static PopulateDailyRequestDTO.ParsedTeamDTO parsedTeam(String color, User player) {
-        PopulateDailyRequestDTO.ParsedPlayerDTO parsedPlayer = new PopulateDailyRequestDTO.ParsedPlayerDTO();
-        parsedPlayer.setUserId(player.getId());
-        PopulateDailyRequestDTO.ParsedTeamDTO team = new PopulateDailyRequestDTO.ParsedTeamDTO();
-        team.setColorName(color);
-        team.setColorHex("#0000FF");
-        team.setPlayers(List.of(parsedPlayer));
+        PopulateDailyRequestDTO.ParsedPlayerDTO parsedPlayer = new PopulateDailyRequestDTO.ParsedPlayerDTO(player.getId(), 0, 0);
+        PopulateDailyRequestDTO.ParsedTeamDTO team = new PopulateDailyRequestDTO.ParsedTeamDTO(color, "#0000FF", List.of(parsedPlayer));
         return team;
     }
 }

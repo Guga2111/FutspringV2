@@ -76,8 +76,8 @@ public class DailyService {
 
         Daily daily = Daily.builder()
                 .pelada(pelada)
-                .dailyDate(request.getDailyDate())
-                .dailyTime(request.getDailyTime())
+                .dailyDate(request.dailyDate())
+                .dailyTime(request.dailyTime())
                 .build();
 
         Daily saved = dailyRepository.save(daily);

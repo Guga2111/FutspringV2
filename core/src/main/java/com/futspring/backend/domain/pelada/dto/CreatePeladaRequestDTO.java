@@ -7,51 +7,57 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.Builder;
+import tools.jackson.databind.annotation.JsonDeserialize;
+import tools.jackson.databind.annotation.JsonPOJOBuilder;
 
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-public class CreatePeladaRequestDTO {
+@Builder
+@JsonDeserialize(builder = CreatePeladaRequestDTO.CreatePeladaRequestDTOBuilder.class)
+public record CreatePeladaRequestDTO(
+        @NotBlank(message = "O nome é obrigatório")
+        @Size(max = 100, message = "Máximo de 100 caracteres")
+        String name,
 
-    @NotBlank(message = "O nome é obrigatório")
-    @Size(max = 100, message = "Máximo de 100 caracteres")
-    private String name;
+        @NotBlank(message = "O dia da semana é obrigatório")
+        @Pattern(regexp = DayOfWeekPattern.REGEX, message = DayOfWeekPattern.MESSAGE)
+        String dayOfWeek,
 
-    @NotBlank(message = "O dia da semana é obrigatório")
-    @Pattern(regexp = DayOfWeekPattern.REGEX, message = DayOfWeekPattern.MESSAGE)
-    private String dayOfWeek;
+        @NotBlank(message = "O horário é obrigatório")
+        @Pattern(regexp = "^([01]\\d|2[0-3]):[0-5]\\d(:[0-5]\\d)?$", message = "Horário inválido (HH:mm)")
+        String timeOfDay,
 
-    @NotBlank(message = "O horário é obrigatório")
-    @Pattern(regexp = "^([01]\\d|2[0-3]):[0-5]\\d(:[0-5]\\d)?$", message = "Horário inválido (HH:mm)")
-    private String timeOfDay;
+        @NotNull(message = "A duração é obrigatória")
+        @Positive(message = "A duração deve ser maior que zero")
+        Float duration,
 
-    @NotNull(message = "A duração é obrigatória")
-    @Positive(message = "A duração deve ser maior que zero")
-    private Float duration;
+        @Size(max = 255, message = "Máximo de 255 caracteres")
+        String address,
 
-    @Size(max = 255, message = "Máximo de 255 caracteres")
-    private String address;
+        @Size(max = 255, message = "Máximo de 255 caracteres")
+        String reference,
 
-    @Size(max = 255, message = "Máximo de 255 caracteres")
-    private String reference;
+        boolean autoCreateDailyEnabled,
 
-    private boolean autoCreateDailyEnabled = false;
+        @Min(value = 2, message = "Mínimo de 2 times")
+        @Max(value = 10, message = "Máximo de 10 times")
+        int numberOfTeams,
 
-    @Min(value = 2, message = "Mínimo de 2 times")
-    @Max(value = 10, message = "Máximo de 10 times")
-    private int numberOfTeams = 2;
+        @Min(value = 2, message = "Mínimo de 2 jogadores por time")
+        @Max(value = 20, message = "Máximo de 20 jogadores por time")
+        int playersPerTeam,
 
-    @Min(value = 2, message = "Mínimo de 2 jogadores por time")
-    @Max(value = 20, message = "Máximo de 20 jogadores por time")
-    private int playersPerTeam = 5;
+        // IANA zone (America/Sao_Paulo); missing → America/Sao_Paulo, unknown → 400
+        @Size(max = 64, message = "Máximo de 64 caracteres")
+        String timeZone,
 
-    // IANA zone (America/Sao_Paulo); missing → America/Sao_Paulo, unknown → 400
-    @Size(max = 64, message = "Máximo de 64 caracteres")
-    private String timeZone;
+        @Min(value = 0, message = "O limite de mensalistas não pode ser negativo")
+        int maxMensalistas) {
 
-    @Min(value = 0, message = "O limite de mensalistas não pode ser negativo")
-    private int maxMensalistas = 0;
+    // Jackson uses the builder so omitted settings keep their defaults. Explicit values, including zero,
+    // still reach Bean Validation unchanged. The canonical constructor remains available to Java callers.
+    @JsonPOJOBuilder(withPrefix = "")
+    public static class CreatePeladaRequestDTOBuilder {
+        private int numberOfTeams = 2;
+        private int playersPerTeam = 5;
+    }
 }

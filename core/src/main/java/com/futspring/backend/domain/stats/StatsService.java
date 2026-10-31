@@ -42,15 +42,14 @@ public class StatsService {
         User user = findUser(userId);
         requireCanView(user, userAuthHelper.getAuthenticatedUser(callerEmail));
 
-        StatsDTO dto = statsRepository.findByUser(user)
-                .map(StatsDTO::fromStats)
-                .orElseGet(() -> StatsDTO.fromUser(user));
         Map<String, Integer> awards = dailyAwardRepository.countAwardsByUser(userId).stream()
                 .collect(Collectors.toMap(row -> (String) row[0], row -> ((Number) row[1]).intValue()));
-        dto.setWiltballWins(awards.getOrDefault("BOLA_MURCHA", 0));
-        dto.setArtilheiroWins(awards.getOrDefault("ARTILHEIRO", 0));
-        dto.setGarcomWins(awards.getOrDefault("GARCOM", 0));
-        return dto;
+        int wiltballWins = awards.getOrDefault("BOLA_MURCHA", 0);
+        int artilheiroWins = awards.getOrDefault("ARTILHEIRO", 0);
+        int garcomWins = awards.getOrDefault("GARCOM", 0);
+        return statsRepository.findByUser(user)
+                .map(stats -> StatsDTO.fromStats(stats, wiltballWins, artilheiroWins, garcomWins))
+                .orElseGet(() -> StatsDTO.fromUser(user, wiltballWins, artilheiroWins, garcomWins));
     }
 
     @Transactional(readOnly = true)

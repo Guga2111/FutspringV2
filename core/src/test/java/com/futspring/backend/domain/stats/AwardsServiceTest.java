@@ -70,8 +70,8 @@ class AwardsServiceTest {
 
         PeladaAwardsDTO result = awardsService.getAwards(10L, "admin@example.com");
 
-        assertThat(result.getTotalCategories()).isEqualTo(4);
-        assertThat(result.getCategories()).hasSize(4);
+        assertThat(result.totalCategories()).isEqualTo(4);
+        assertThat(result.categories()).hasSize(4);
     }
 
     @Test
@@ -82,8 +82,8 @@ class AwardsServiceTest {
 
         PeladaAwardsDTO result = awardsService.getAwards(10L, "admin@example.com");
 
-        result.getCategories().forEach(cat ->
-                assertThat(cat.getTopWinners()).isEmpty());
+        result.categories().forEach(cat ->
+                assertThat(cat.topWinners()).isEmpty());
     }
 
     @Test
@@ -114,10 +114,10 @@ class AwardsServiceTest {
 
         PeladaAwardsDTO result = awardsService.getAwards(10L, "admin@example.com");
 
-        PeladaAwardsDTO.AwardCategoryDTO artilheiro = result.getCategories().stream()
-                .filter(c -> "ARTILHEIRO".equals(c.getType())).findFirst().orElseThrow();
+        PeladaAwardsDTO.AwardCategoryDTO artilheiro = result.categories().stream()
+                .filter(c -> "ARTILHEIRO".equals(c.type())).findFirst().orElseThrow();
 
-        assertThat(artilheiro.getTopWinners().get(0).getCount()).isEqualTo(2);
+        assertThat(artilheiro.topWinners().get(0).count()).isEqualTo(2);
     }
 
     @Test
@@ -140,11 +140,11 @@ class AwardsServiceTest {
 
         PeladaAwardsDTO result = awardsService.getAwards(10L, "admin@example.com");
 
-        PeladaAwardsDTO.AwardCategoryDTO artilheiro = result.getCategories().stream()
-                .filter(c -> "ARTILHEIRO".equals(c.getType())).findFirst().orElseThrow();
+        PeladaAwardsDTO.AwardCategoryDTO artilheiro = result.categories().stream()
+                .filter(c -> "ARTILHEIRO".equals(c.type())).findFirst().orElseThrow();
 
         // the client shows the top 3 and expands to the rest ("Ver todos" in AwardsTab)
-        assertThat(artilheiro.getTopWinners()).hasSize(5);
+        assertThat(artilheiro.topWinners()).hasSize(5);
     }
 
     @Test
@@ -168,12 +168,12 @@ class AwardsServiceTest {
 
         PeladaAwardsDTO result = awardsService.getAwards(10L, "admin@example.com");
 
-        PeladaAwardsDTO.AwardCategoryDTO puskas = result.getCategories().stream()
-                .filter(c -> "PUSKAS".equals(c.getType())).findFirst().orElseThrow();
+        PeladaAwardsDTO.AwardCategoryDTO puskas = result.categories().stream()
+                .filter(c -> "PUSKAS".equals(c.type())).findFirst().orElseThrow();
 
         // player1 has 2 wins, player2 has 1 — player1 should be first
-        assertThat(puskas.getTopWinners().get(0).getUserId()).isEqualTo(2L);
-        assertThat(puskas.getTopWinners().get(0).getCount()).isEqualTo(2);
+        assertThat(puskas.topWinners().get(0).userId()).isEqualTo(2L);
+        assertThat(puskas.topWinners().get(0).count()).isEqualTo(2);
     }
 
     @Test
@@ -195,11 +195,11 @@ class AwardsServiceTest {
 
         PeladaAwardsDTO result = awardsService.getAwards(10L, "admin@example.com");
 
-        int sumFromCategories = result.getCategories().stream()
-                .flatMap(c -> c.getTopWinners().stream())
-                .mapToInt(PeladaAwardsDTO.AwardWinnerDTO::getCount)
+        int sumFromCategories = result.categories().stream()
+                .flatMap(c -> c.topWinners().stream())
+                .mapToInt(PeladaAwardsDTO.AwardWinnerDTO::count)
                 .sum();
-        assertThat(result.getTotalAwardsDistributed()).isEqualTo(sumFromCategories);
+        assertThat(result.totalAwardsDistributed()).isEqualTo(sumFromCategories);
     }
 
     @Test
@@ -248,10 +248,10 @@ class AwardsServiceTest {
 
         PeladaAwardsDTO result = awardsService.getAwards(10L, "admin@example.com");
 
-        PeladaAwardsDTO.AwardCategoryDTO artilheiro = result.getCategories().stream()
-                .filter(c -> "ARTILHEIRO".equals(c.getType())).findFirst().orElseThrow();
+        PeladaAwardsDTO.AwardCategoryDTO artilheiro = result.categories().stream()
+                .filter(c -> "ARTILHEIRO".equals(c.type())).findFirst().orElseThrow();
 
-        assertThat(artilheiro.getTopWinners()).hasSize(2);
+        assertThat(artilheiro.topWinners()).hasSize(2);
     }
 
     // What DailyAwardRepository.countWinnersByPelada returns for these awards: [category, userId, username, image, count]

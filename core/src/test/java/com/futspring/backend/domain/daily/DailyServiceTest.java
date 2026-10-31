@@ -134,9 +134,7 @@ class DailyServiceTest {
             return d;
         });
 
-        CreateDailyRequestDTO req = new CreateDailyRequestDTO();
-        req.setDailyDate(LocalDate.now().plusDays(7));
-        req.setDailyTime("18:00");
+        CreateDailyRequestDTO req = new CreateDailyRequestDTO(LocalDate.now().plusDays(7), "18:00");
 
         DailyListItemDTO result = dailyService.createDaily(10L, req, "admin@example.com");
 
@@ -149,9 +147,7 @@ class DailyServiceTest {
     void createDaily_callerNotFound_throwsNotFound() {
         when(userAuthHelper.getAuthenticatedUser("ghost@example.com")).thenThrow(new AppException(HttpStatus.NOT_FOUND, "User not found"));
 
-        CreateDailyRequestDTO req = new CreateDailyRequestDTO();
-        req.setDailyDate(LocalDate.now().plusDays(7));
-        req.setDailyTime("18:00");
+        CreateDailyRequestDTO req = new CreateDailyRequestDTO(LocalDate.now().plusDays(7), "18:00");
 
         assertThatThrownBy(() -> dailyService.createDaily(10L, req, "ghost@example.com"))
                 .isInstanceOf(AppException.class)
@@ -163,9 +159,7 @@ class DailyServiceTest {
         when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(peladaRepository.findById(999L)).thenReturn(Optional.empty());
 
-        CreateDailyRequestDTO req = new CreateDailyRequestDTO();
-        req.setDailyDate(LocalDate.now().plusDays(7));
-        req.setDailyTime("18:00");
+        CreateDailyRequestDTO req = new CreateDailyRequestDTO(LocalDate.now().plusDays(7), "18:00");
 
         assertThatThrownBy(() -> dailyService.createDaily(999L, req, "admin@example.com"))
                 .isInstanceOf(AppException.class)
@@ -177,9 +171,7 @@ class DailyServiceTest {
         when(userAuthHelper.getAuthenticatedUser("member@example.com")).thenReturn(member);
         when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
 
-        CreateDailyRequestDTO req = new CreateDailyRequestDTO();
-        req.setDailyDate(LocalDate.now().plusDays(7));
-        req.setDailyTime("18:00");
+        CreateDailyRequestDTO req = new CreateDailyRequestDTO(LocalDate.now().plusDays(7), "18:00");
 
         assertThatThrownBy(() -> dailyService.createDaily(10L, req, "member@example.com"))
                 .isInstanceOf(AppException.class)
@@ -241,8 +233,8 @@ class DailyServiceTest {
 
         List<DailyListItemDTO> result = dailyService.getDailiesForPelada(10L, "member@example.com");
 
-        assertThat(result.get(0).getDailyDate()).isEqualTo(LocalDate.of(2024, 3, 1));
-        assertThat(result.get(1).getDailyDate()).isEqualTo(LocalDate.of(2024, 1, 1));
+        assertThat(result.get(0).dailyDate()).isEqualTo(LocalDate.of(2024, 3, 1));
+        assertThat(result.get(1).dailyDate()).isEqualTo(LocalDate.of(2024, 1, 1));
     }
 
     // --- getDailyDetail ---
@@ -260,7 +252,7 @@ class DailyServiceTest {
         DailyDetailDTO result = dailyService.getDailyDetail(100L, "member@example.com");
 
         assertThat(result).isNotNull();
-        assertThat(result.getStatus()).isEqualTo(DailyStatus.SCHEDULED);
+        assertThat(result.status()).isEqualTo(DailyStatus.SCHEDULED);
     }
 
     @Test

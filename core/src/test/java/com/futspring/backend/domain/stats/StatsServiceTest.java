@@ -92,11 +92,11 @@ class StatsServiceTest {
 
         StatsDTO result = statsService.getStats(1L, "caller@example.com");
 
-        assertThat(result.getGoals()).isEqualTo(10);
-        assertThat(result.getAssists()).isEqualTo(5);
-        assertThat(result.getWiltballWins()).isEqualTo(2);
-        assertThat(result.getArtilheiroWins()).isEqualTo(3);
-        assertThat(result.getGarcomWins()).isEqualTo(1);
+        assertThat(result.goals()).isEqualTo(10);
+        assertThat(result.assists()).isEqualTo(5);
+        assertThat(result.wiltballWins()).isEqualTo(2);
+        assertThat(result.artilheiroWins()).isEqualTo(3);
+        assertThat(result.garcomWins()).isEqualTo(1);
     }
 
     @Test
@@ -108,7 +108,7 @@ class StatsServiceTest {
         StatsDTO result = statsService.getStats(1L, "caller@example.com");
 
         assertThat(result).isNotNull();
-        assertThat(result.getGoals()).isEqualTo(0);
+        assertThat(result.goals()).isEqualTo(0);
     }
 
     @Test
@@ -119,9 +119,9 @@ class StatsServiceTest {
 
         StatsDTO result = statsService.getStats(1L, "caller@example.com");
 
-        assertThat(result.getWiltballWins()).isEqualTo(4);
-        assertThat(result.getArtilheiroWins()).isEqualTo(7);
-        assertThat(result.getGarcomWins()).isEqualTo(2);
+        assertThat(result.wiltballWins()).isEqualTo(4);
+        assertThat(result.artilheiroWins()).isEqualTo(7);
+        assertThat(result.garcomWins()).isEqualTo(2);
     }
 
     @Test
@@ -161,9 +161,9 @@ class StatsServiceTest {
 
         UserStatsTimelineDTO result = statsService.getTimeline(1L, from, to, "caller@example.com");
 
-        assertThat(result.getPoints()).hasSize(1);
-        assertThat(result.getPoints().get(0).getGoals()).isEqualTo(3);
-        assertThat(result.getPoints().get(0).getDate()).isEqualTo(LocalDate.of(2024, 1, 15));
+        assertThat(result.points()).hasSize(1);
+        assertThat(result.points().get(0).goals()).isEqualTo(3);
+        assertThat(result.points().get(0).date()).isEqualTo(LocalDate.of(2024, 1, 15));
     }
 
     @Test
@@ -176,7 +176,7 @@ class StatsServiceTest {
 
         UserStatsTimelineDTO result = statsService.getTimeline(1L, from, to, "caller@example.com");
 
-        assertThat(result.getPoints()).isEmpty();
+        assertThat(result.points()).isEmpty();
     }
 
     @Test
@@ -205,11 +205,11 @@ class StatsServiceTest {
 
         UserStatsTimelineDTO result = statsService.getTimeline(1L, from, to, "caller@example.com");
 
-        UserStatsTimelineDTO.TimelinePoint point = result.getPoints().get(0);
-        assertThat(point.getGoals()).isEqualTo(5);
-        assertThat(point.getAssists()).isEqualTo(3);
-        assertThat(point.getWins()).isEqualTo(4);
-        assertThat(point.getMatchesPlayed()).isEqualTo(6);
+        UserStatsTimelineDTO.TimelinePoint point = result.points().get(0);
+        assertThat(point.goals()).isEqualTo(5);
+        assertThat(point.assists()).isEqualTo(3);
+        assertThat(point.wins()).isEqualTo(4);
+        assertThat(point.matchesPlayed()).isEqualTo(6);
     }
 
     @Test
@@ -248,8 +248,8 @@ class StatsServiceTest {
 
         UserMatchHistoryDTO result = statsService.getMatchHistory(1L, "caller@example.com");
 
-        assertThat(result.getRows()).hasSize(1);
-        assertThat(result.getRows().get(0).getResult()).isEqualTo("W");
+        assertThat(result.rows()).hasSize(1);
+        assertThat(result.rows().get(0).result()).isEqualTo("W");
     }
 
     @Test
@@ -276,7 +276,7 @@ class StatsServiceTest {
 
         UserMatchHistoryDTO result = statsService.getMatchHistory(1L, "caller@example.com");
 
-        assertThat(result.getRows().get(0).getResult()).isEqualTo("L");
+        assertThat(result.rows().get(0).result()).isEqualTo("L");
     }
 
     @Test
@@ -303,7 +303,7 @@ class StatsServiceTest {
 
         UserMatchHistoryDTO result = statsService.getMatchHistory(1L, "caller@example.com");
 
-        assertThat(result.getRows().get(0).getResult()).isEqualTo("—");
+        assertThat(result.rows().get(0).result()).isEqualTo("—");
     }
 
     @Test
@@ -330,12 +330,12 @@ class StatsServiceTest {
 
         UserMatchHistoryDTO result = statsService.getMatchHistory(1L, "caller@example.com");
 
-        UserMatchHistoryDTO.MatchRow row = result.getRows().get(0);
-        assertThat(row.getDailyId()).isEqualTo(5L);
-        assertThat(row.getPeladaId()).isEqualTo(10L);
-        assertThat(row.getPeladaName()).isEqualTo("Pelada");
-        assertThat(row.getGoals()).isEqualTo(4);
-        assertThat(row.getAssists()).isEqualTo(3);
+        UserMatchHistoryDTO.MatchRow row = result.rows().get(0);
+        assertThat(row.dailyId()).isEqualTo(5L);
+        assertThat(row.peladaId()).isEqualTo(10L);
+        assertThat(row.peladaName()).isEqualTo("Pelada");
+        assertThat(row.goals()).isEqualTo(4);
+        assertThat(row.assists()).isEqualTo(3);
     }
 
     @Test

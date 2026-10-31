@@ -3,153 +3,125 @@ package com.futspring.backend.domain.daily.dto;
 import com.futspring.backend.domain.daily.entity.DailyStatus;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
 @Builder
-public class DailyDetailDTO {
+public record DailyDetailDTO(
+        Long id,
+        LocalDate dailyDate,
+        String dailyTime,
+        DailyStatus status,
+        @JsonProperty("isFinished")
+        boolean isFinished,
+        String championImage,
+        List<PlayerDTO> confirmedPlayers,
+        List<TeamDTO> teams,
+        List<MatchDTO> matches,
+        List<UserDailyStatsDTO> playerStats,
+        List<LeagueTableEntryDTO> leagueTable,
+        AwardDTO award,
+        Long peladaId,
+        String peladaName,
+        int numberOfTeams,
+        int playersPerTeam,
+        @JsonProperty("isAdmin")
+        boolean isAdmin,
+        List<PlayerDTO> peladaMembers,
+        // numberOfTeams × playersPerTeam
+        int capacity,
+        // the pelada's IANA zone (the frontend shows the instants in it)
+        String timeZone,
+        Instant startsAt,
+        // from when the caller may confirm themselves; null for mensalistas
+        Instant confirmOpensAt,
+        // the caller's bump in this session not dismissed yet, or null
+        AttendanceBumpDTO myBump,
+        // every bump of the session, newest first
+        List<AttendanceBumpDTO> bumps) {
 
-    private Long id;
-    private LocalDate dailyDate;
-    private String dailyTime;
-    private DailyStatus status;
-    @JsonProperty("isFinished")
-    private boolean isFinished;
-    private String championImage;
-    private List<PlayerDTO> confirmedPlayers;
-    private List<TeamDTO> teams;
-    private List<MatchDTO> matches;
-    private List<UserDailyStatsDTO> playerStats;
-    private List<LeagueTableEntryDTO> leagueTable;
-    private AwardDTO award;
-    private Long peladaId;
-    private String peladaName;
-    private int numberOfTeams;
-    private int playersPerTeam;
-    @JsonProperty("isAdmin")
-    private boolean isAdmin;
-    private List<PlayerDTO> peladaMembers;
-    // numberOfTeams × playersPerTeam
-    private int capacity;
-    // the pelada's IANA zone (the frontend shows the instants in it)
-    private String timeZone;
-    private Instant startsAt;
-    // from when the caller may confirm themselves; null for mensalistas
-    private Instant confirmOpensAt;
-    // the caller's bump in this session not dismissed yet, or null
-    private AttendanceBumpDTO myBump;
-    // every bump of the session, newest first
-    private List<AttendanceBumpDTO> bumps;
-
-    @Data
-    @NoArgsConstructor
-    @AllArgsConstructor
     @Builder
-    public static class PlayerDTO {
-        private Long id;
-        private String username;
-        private String image;
-        private int stars;
-        private String position;
-        // only on confirmedPlayers and peladaMembers
-        @JsonInclude(JsonInclude.Include.NON_NULL)
-        @JsonProperty("isMensalista")
-        private Boolean isMensalista;
-        // only on confirmedPlayers
-        @JsonInclude(JsonInclude.Include.NON_NULL)
-        private Instant confirmedAt;
+    public record PlayerDTO(
+            Long id,
+            String username,
+            String image,
+            int stars,
+            String position,
+            // only on confirmedPlayers and peladaMembers
+            @JsonInclude(JsonInclude.Include.NON_NULL)
+            @JsonProperty("isMensalista")
+            Boolean isMensalista,
+            // only on confirmedPlayers
+            @JsonInclude(JsonInclude.Include.NON_NULL)
+            Instant confirmedAt) {
     }
 
-    @Data
-    @NoArgsConstructor
-    @AllArgsConstructor
     @Builder
-    public static class TeamDTO {
-        private Long id;
-        private String name;
-        private int totalStars;
-        private double averageStars;
-        private String color;
-        private List<PlayerDTO> players;
+    public record TeamDTO(
+            Long id,
+            String name,
+            int totalStars,
+            double averageStars,
+            String color,
+            List<PlayerDTO> players) {
     }
 
-    @Data
-    @NoArgsConstructor
-    @AllArgsConstructor
     @Builder
-    public static class PlayerStatDTO {
-        private Long userId;
-        private int goals;
-        private int assists;
+    public record PlayerStatDTO(
+            Long userId,
+            int goals,
+            int assists) {
     }
 
-    @Data
-    @NoArgsConstructor
-    @AllArgsConstructor
     @Builder
-    public static class MatchDTO {
-        private Long id;
-        private Long team1Id;
-        private String team1Name;
-        private Long team2Id;
-        private String team2Name;
-        private Integer team1Score;
-        private Integer team2Score;
-        private Long winnerId;
-        private List<PlayerStatDTO> playerStats;
+    public record MatchDTO(
+            Long id,
+            Long team1Id,
+            String team1Name,
+            Long team2Id,
+            String team2Name,
+            Integer team1Score,
+            Integer team2Score,
+            Long winnerId,
+            List<PlayerStatDTO> playerStats) {
     }
 
-    @Data
-    @NoArgsConstructor
-    @AllArgsConstructor
     @Builder
-    public static class UserDailyStatsDTO {
-        private Long userId;
-        private String username;
-        private int goals;
-        private int assists;
-        private int matchesPlayed;
-        private int wins;
+    public record UserDailyStatsDTO(
+            Long userId,
+            String username,
+            int goals,
+            int assists,
+            int matchesPlayed,
+            int wins) {
     }
 
-    @Data
-    @NoArgsConstructor
-    @AllArgsConstructor
     @Builder
-    public static class LeagueTableEntryDTO {
-        private Long teamId;
-        private String teamName;
-        private int position;
-        private int wins;
-        private int draws;
-        private int losses;
-        private int goalsFor;
-        private int goalsAgainst;
-        private int goalDiff;
-        private int points;
+    public record LeagueTableEntryDTO(
+            Long teamId,
+            String teamName,
+            int position,
+            int wins,
+            int draws,
+            int losses,
+            int goalsFor,
+            int goalsAgainst,
+            int goalDiff,
+            int points) {
     }
 
-    @Data
-    @NoArgsConstructor
-    @AllArgsConstructor
     @Builder
-    public static class AwardDTO {
-        private List<Long> puskasWinnerIds;
-        private List<String> puskasWinnerNames;
-        private List<Long> wiltballWinnerIds;
-        private List<String> wiltballWinnerNames;
-        private List<Long> artilheiroWinnerIds;
-        private List<String> artilheiroWinnerNames;
-        private List<Long> garcomWinnerIds;
-        private List<String> garcomWinnerNames;
+    public record AwardDTO(
+            List<Long> puskasWinnerIds,
+            List<String> puskasWinnerNames,
+            List<Long> wiltballWinnerIds,
+            List<String> wiltballWinnerNames,
+            List<Long> artilheiroWinnerIds,
+            List<String> artilheiroWinnerNames,
+            List<Long> garcomWinnerIds,
+            List<String> garcomWinnerNames) {
     }
 }

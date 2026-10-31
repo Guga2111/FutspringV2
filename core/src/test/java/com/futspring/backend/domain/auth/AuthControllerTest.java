@@ -28,10 +28,7 @@ class AuthControllerTest extends BaseIntegrationTest {
 
     @Test
     void register_success() throws Exception {
-        RegisterRequestDTO req = new RegisterRequestDTO();
-        req.setUsername("newuser");
-        req.setEmail("newuser@example.com");
-        req.setPassword("password123");
+        RegisterRequestDTO req = new RegisterRequestDTO("newuser", "newuser@example.com", "password123");
 
         mockMvc.perform(post("/api/v1/auth/register")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -48,10 +45,7 @@ class AuthControllerTest extends BaseIntegrationTest {
                 .password(passwordEncoder.encode("password123"))
                 .build());
 
-        RegisterRequestDTO req = new RegisterRequestDTO();
-        req.setUsername("another");
-        req.setEmail("dup@example.com");
-        req.setPassword("password123");
+        RegisterRequestDTO req = new RegisterRequestDTO("another", "dup@example.com", "password123");
 
         mockMvc.perform(post("/api/v1/auth/register")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -75,9 +69,7 @@ class AuthControllerTest extends BaseIntegrationTest {
                 .password(passwordEncoder.encode("password123"))
                 .build());
 
-        LoginRequestDTO req = new LoginRequestDTO();
-        req.setEmail("login@example.com");
-        req.setPassword("password123");
+        LoginRequestDTO req = new LoginRequestDTO("login@example.com", "password123");
 
         mockMvc.perform(post("/api/v1/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -94,9 +86,7 @@ class AuthControllerTest extends BaseIntegrationTest {
                 .password(passwordEncoder.encode("password123"))
                 .build());
 
-        LoginRequestDTO req = new LoginRequestDTO();
-        req.setEmail("wrongpw@example.com");
-        req.setPassword("badpassword");
+        LoginRequestDTO req = new LoginRequestDTO("wrongpw@example.com", "badpassword");
 
         mockMvc.perform(post("/api/v1/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -106,9 +96,7 @@ class AuthControllerTest extends BaseIntegrationTest {
 
     @Test
     void login_unknownEmail() throws Exception {
-        LoginRequestDTO req = new LoginRequestDTO();
-        req.setEmail("nobody@example.com");
-        req.setPassword("password123");
+        LoginRequestDTO req = new LoginRequestDTO("nobody@example.com", "password123");
 
         mockMvc.perform(post("/api/v1/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -124,9 +112,7 @@ class AuthControllerTest extends BaseIntegrationTest {
                 .password(passwordEncoder.encode("password123"))
                 .build());
 
-        LoginRequestDTO req = new LoginRequestDTO();
-        req.setEmail("rate@example.com");
-        req.setPassword("password123");
+        LoginRequestDTO req = new LoginRequestDTO("rate@example.com", "password123");
         String body = objectMapper.writeValueAsString(req);
 
         // Exhaust up to 15 tokens — the bucket holds 10 per minute, so by

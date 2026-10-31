@@ -7,32 +7,25 @@ import com.futspring.backend.domain.notification.NotificationCategory;
 import com.futspring.backend.domain.notification.NotificationType;
 import com.futspring.backend.domain.pelada.Pelada;
 import com.futspring.backend.domain.user.dto.PublicUserDTO;
-import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 
 import java.time.Instant;
 import java.time.LocalDate;
 
 // The references a notification's text is rendered from (by the client); public fields only
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
 @Builder
-public class NotificationDTO {
-
-    private Long id;
-    private NotificationType type;
-    private NotificationCategory category;
-    private NotificationAward award;
-    private Instant createdAt;
-    private Instant readAt;
-    private PeladaRef pelada;
-    private DailyRef daily;
-    private PublicUserDTO actor;
-    // only on TEAMS_SORTED: the recipient's team in that session
-    private TeamRef team;
+public record NotificationDTO(
+        Long id,
+        NotificationType type,
+        NotificationCategory category,
+        NotificationAward award,
+        Instant createdAt,
+        Instant readAt,
+        PeladaRef pelada,
+        DailyRef daily,
+        PublicUserDTO actor,
+        // only on TEAMS_SORTED: the recipient's team in that session
+        TeamRef team) {
 
     public static NotificationDTO from(Notification n, TeamRef team) {
         Pelada pelada = n.getPelada();
@@ -51,29 +44,20 @@ public class NotificationDTO {
                 .build();
     }
 
-    @Data
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class PeladaRef {
-        private Long id;
-        private String name;
-        private String image;
+    public record PeladaRef(
+            Long id,
+            String name,
+            String image) {
     }
 
-    @Data
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class DailyRef {
-        private Long id;
-        private LocalDate date;
-        private String time;
+    public record DailyRef(
+            Long id,
+            LocalDate date,
+            String time) {
     }
 
-    @Data
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class TeamRef {
-        private String name;
-        private String color;
+    public record TeamRef(
+            String name,
+            String color) {
     }
 }

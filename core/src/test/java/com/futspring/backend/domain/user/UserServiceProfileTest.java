@@ -54,9 +54,9 @@ class UserServiceProfileTest {
 
         ProfileDTO result = userService.getProfile(1L, "alice@example.com");
 
-        assertThat(result.getId()).isEqualTo(1L);
-        assertThat(result.getEmail()).isEqualTo("alice@example.com");
-        assertThat(result.getUsername()).isEqualTo("alice");
+        assertThat(result.id()).isEqualTo(1L);
+        assertThat(result.email()).isEqualTo("alice@example.com");
+        assertThat(result.username()).isEqualTo("alice");
     }
 
     @Test
@@ -65,8 +65,8 @@ class UserServiceProfileTest {
 
         ProfileDTO result = userService.getProfile(1L, "bob@example.com");
 
-        assertThat(result.getUsername()).isEqualTo("alice");
-        assertThat(result.getEmail()).isNull();
+        assertThat(result.username()).isEqualTo("alice");
+        assertThat(result.email()).isNull();
     }
 
     @Test
@@ -86,21 +86,19 @@ class UserServiceProfileTest {
         when(userRepository.existsByUsernameIgnoreCaseAndIdNot("newname", 1L)).thenReturn(false);
         when(userRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        UpdateProfileRequest req = new UpdateProfileRequest();
-        req.setUsername("newname");
-        req.setPosition("GOALKEEPER");
+        UpdateProfileRequest req = new UpdateProfileRequest("newname", "GOALKEEPER");
 
         ProfileDTO result = userService.updateProfile(1L, req, "alice@example.com");
 
-        assertThat(result.getUsername()).isEqualTo("newname");
-        assertThat(result.getPosition()).isEqualTo("GOALKEEPER");
+        assertThat(result.username()).isEqualTo("newname");
+        assertThat(result.position()).isEqualTo("GOALKEEPER");
     }
 
     @Test
     void updateProfile_userNotFound_throwsNotFound() {
         when(userRepository.findById(99L)).thenReturn(Optional.empty());
 
-        UpdateProfileRequest req = new UpdateProfileRequest();
+        UpdateProfileRequest req = new UpdateProfileRequest(null, null);
         assertThatThrownBy(() -> userService.updateProfile(99L, req, "alice@example.com"))
                 .isInstanceOf(AppException.class)
                 .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.NOT_FOUND));
@@ -110,7 +108,7 @@ class UserServiceProfileTest {
     void updateProfile_callerIsNotOwner_throwsForbidden() {
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
 
-        UpdateProfileRequest req = new UpdateProfileRequest();
+        UpdateProfileRequest req = new UpdateProfileRequest(null, null);
         assertThatThrownBy(() -> userService.updateProfile(1L, req, "other@example.com"))
                 .isInstanceOf(AppException.class)
                 .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.FORBIDDEN));
@@ -121,8 +119,7 @@ class UserServiceProfileTest {
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
         when(userRepository.existsByUsernameIgnoreCaseAndIdNot("taken", 1L)).thenReturn(true);
 
-        UpdateProfileRequest req = new UpdateProfileRequest();
-        req.setUsername("taken");
+        UpdateProfileRequest req = new UpdateProfileRequest("taken", null);
 
         assertThatThrownBy(() -> userService.updateProfile(1L, req, "alice@example.com"))
                 .isInstanceOf(AppException.class)
@@ -134,11 +131,10 @@ class UserServiceProfileTest {
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
         when(userRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        UpdateProfileRequest req = new UpdateProfileRequest();
-        req.setUsername("alice");
+        UpdateProfileRequest req = new UpdateProfileRequest("alice", null);
 
         ProfileDTO result = userService.updateProfile(1L, req, "alice@example.com");
-        assertThat(result.getUsername()).isEqualTo("alice");
+        assertThat(result.username()).isEqualTo("alice");
     }
 
     @Test
@@ -146,11 +142,10 @@ class UserServiceProfileTest {
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
         when(userRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        UpdateProfileRequest req = new UpdateProfileRequest();
-        req.setUsername(null);
+        UpdateProfileRequest req = new UpdateProfileRequest(null, null);
 
         ProfileDTO result = userService.updateProfile(1L, req, "alice@example.com");
-        assertThat(result.getUsername()).isEqualTo("alice");
+        assertThat(result.username()).isEqualTo("alice");
     }
 
     @Test
@@ -158,18 +153,16 @@ class UserServiceProfileTest {
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
         when(userRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        UpdateProfileRequest req = new UpdateProfileRequest();
-        req.setPosition("FORWARD");
+        UpdateProfileRequest req = new UpdateProfileRequest(null, "FORWARD");
 
         ProfileDTO result = userService.updateProfile(1L, req, "alice@example.com");
-        assertThat(result.getPosition()).isEqualTo("FORWARD");
+        assertThat(result.position()).isEqualTo("FORWARD");
     }
 
     @Test
     void updateProfile_invalidPosition_rejectedByRequestValidation() {
         // The allowed positions are a constraint on UpdateProfileRequest (400 from @Valid in the controller)
-        UpdateProfileRequest req = new UpdateProfileRequest();
-        req.setPosition("INVALID_POS");
+        UpdateProfileRequest req = new UpdateProfileRequest(null, "INVALID_POS");
 
         try (jakarta.validation.ValidatorFactory factory = jakarta.validation.Validation.buildDefaultValidatorFactory()) {
             assertThat(factory.getValidator().validate(req))
@@ -184,11 +177,10 @@ class UserServiceProfileTest {
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
         when(userRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        UpdateProfileRequest req = new UpdateProfileRequest();
-        req.setPosition("");
+        UpdateProfileRequest req = new UpdateProfileRequest(null, "");
 
         ProfileDTO result = userService.updateProfile(1L, req, "alice@example.com");
-        assertThat(result.getPosition()).isNull();
+        assertThat(result.position()).isNull();
     }
 
     @Test
@@ -197,11 +189,10 @@ class UserServiceProfileTest {
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
         when(userRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        UpdateProfileRequest req = new UpdateProfileRequest();
-        req.setPosition(null);
+        UpdateProfileRequest req = new UpdateProfileRequest(null, null);
 
         ProfileDTO result = userService.updateProfile(1L, req, "alice@example.com");
-        assertThat(result.getPosition()).isEqualTo("MIDFIELDER");
+        assertThat(result.position()).isEqualTo("MIDFIELDER");
     }
 
     @Test
@@ -211,7 +202,7 @@ class UserServiceProfileTest {
 
         ProfileDTO result = userService.getProfile(1L, "bob@example.com");
 
-        assertThat(result.getStars()).isEqualTo(4);
+        assertThat(result.stars()).isEqualTo(4);
     }
 
     @Test
@@ -221,6 +212,6 @@ class UserServiceProfileTest {
 
         ProfileDTO result = userService.getProfile(1L, "bob@example.com");
 
-        assertThat(result.getStars()).isNull();
+        assertThat(result.stars()).isNull();
     }
 }

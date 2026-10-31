@@ -1,23 +1,16 @@
 package com.futspring.backend.domain.auth.dto;
 
 import com.futspring.backend.domain.user.User;
-import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
 @Builder
-public class UserResponseDTO {
-
-    private Long id;
-    private String email;
-    private String username;
-    private String image;
-    private String backgroundImage;
-    private String position;
+public record UserResponseDTO(
+        Long id,
+        String email,
+        String username,
+        String image,
+        String backgroundImage,
+        String position) {
 
     public static UserResponseDTO from(User user) {
         return UserResponseDTO.builder()

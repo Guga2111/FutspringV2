@@ -49,10 +49,7 @@ class AuthServiceTest {
 
     @Test
     void register_success_returnsTokenAndUserDTO() {
-        RegisterRequestDTO req = new RegisterRequestDTO();
-        req.setUsername("alice");
-        req.setEmail("alice@example.com");
-        req.setPassword("password123");
+        RegisterRequestDTO req = new RegisterRequestDTO("alice", "alice@example.com", "password123");
 
         when(userRepository.findByEmail("alice@example.com")).thenReturn(Optional.empty());
         when(userRepository.save(any(User.class))).thenAnswer(inv -> {
@@ -64,16 +61,13 @@ class AuthServiceTest {
         AuthResponseDTO result = authService.register(req);
 
         assertThat(result).isNotNull();
-        assertThat(result.getToken()).isNotBlank();
-        assertThat(result.getUser().getEmail()).isEqualTo("alice@example.com");
+        assertThat(result.token()).isNotBlank();
+        assertThat(result.user().email()).isEqualTo("alice@example.com");
     }
 
     @Test
     void register_emailAlreadyRegistered_throwsConflict() {
-        RegisterRequestDTO req = new RegisterRequestDTO();
-        req.setUsername("alice");
-        req.setEmail("alice@example.com");
-        req.setPassword("password123");
+        RegisterRequestDTO req = new RegisterRequestDTO("alice", "alice@example.com", "password123");
 
         when(userRepository.findByEmail("alice@example.com"))
                 .thenReturn(Optional.of(User.builder().email("alice@example.com").build()));
@@ -85,10 +79,7 @@ class AuthServiceTest {
 
     @Test
     void register_usernameTakenInAnotherCase_throwsConflict() {
-        RegisterRequestDTO req = new RegisterRequestDTO();
-        req.setUsername(" Alice ");
-        req.setEmail("new@example.com");
-        req.setPassword("password123");
+        RegisterRequestDTO req = new RegisterRequestDTO(" Alice ", "new@example.com", "password123");
 
         when(userRepository.findByEmail("new@example.com")).thenReturn(Optional.empty());
         when(userRepository.existsByUsernameIgnoreCase("Alice")).thenReturn(true);
@@ -101,10 +92,7 @@ class AuthServiceTest {
 
     @Test
     void register_passwordIsEncoded_beforePersisting() {
-        RegisterRequestDTO req = new RegisterRequestDTO();
-        req.setUsername("bob");
-        req.setEmail("bob@example.com");
-        req.setPassword("rawPassword");
+        RegisterRequestDTO req = new RegisterRequestDTO("bob", "bob@example.com", "rawPassword");
 
         when(userRepository.findByEmail(any())).thenReturn(Optional.empty());
         ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
@@ -123,10 +111,7 @@ class AuthServiceTest {
 
     @Test
     void register_savedUser_hasCorrectUsernameAndEmail() {
-        RegisterRequestDTO req = new RegisterRequestDTO();
-        req.setUsername("carol");
-        req.setEmail("carol@example.com");
-        req.setPassword("password123");
+        RegisterRequestDTO req = new RegisterRequestDTO("carol", "carol@example.com", "password123");
 
         when(userRepository.findByEmail(any())).thenReturn(Optional.empty());
         ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
@@ -144,10 +129,7 @@ class AuthServiceTest {
 
     @Test
     void register_generatesToken_withSavedUserIdAndEmail() {
-        RegisterRequestDTO req = new RegisterRequestDTO();
-        req.setUsername("dave");
-        req.setEmail("dave@example.com");
-        req.setPassword("password123");
+        RegisterRequestDTO req = new RegisterRequestDTO("dave", "dave@example.com", "password123");
 
         when(userRepository.findByEmail(any())).thenReturn(Optional.empty());
         when(userRepository.save(any(User.class))).thenAnswer(inv -> {
@@ -158,8 +140,8 @@ class AuthServiceTest {
 
         AuthResponseDTO result = authService.register(req);
 
-        assertThat(jwtService.extractAllClaims(result.getToken()).getSubject()).isEqualTo("dave@example.com");
-        assertThat(jwtService.extractAllClaims(result.getToken()).get("userId", Long.class)).isEqualTo(99L);
+        assertThat(jwtService.extractAllClaims(result.token()).getSubject()).isEqualTo("dave@example.com");
+        assertThat(jwtService.extractAllClaims(result.token()).get("userId", Long.class)).isEqualTo(99L);
     }
 
     // --- login ---
@@ -173,23 +155,19 @@ class AuthServiceTest {
                 .password(passwordEncoder.encode("password123"))
                 .build();
 
-        LoginRequestDTO req = new LoginRequestDTO();
-        req.setEmail("alice@example.com");
-        req.setPassword("password123");
+        LoginRequestDTO req = new LoginRequestDTO("alice@example.com", "password123");
 
         when(userRepository.findByEmail("alice@example.com")).thenReturn(Optional.of(user));
 
         AuthResponseDTO result = authService.login(req);
 
-        assertThat(result.getToken()).isNotBlank();
-        assertThat(result.getUser().getEmail()).isEqualTo("alice@example.com");
+        assertThat(result.token()).isNotBlank();
+        assertThat(result.user().email()).isEqualTo("alice@example.com");
     }
 
     @Test
     void login_emailNotFound_throwsUnauthorized() {
-        LoginRequestDTO req = new LoginRequestDTO();
-        req.setEmail("nobody@example.com");
-        req.setPassword("anypassword");
+        LoginRequestDTO req = new LoginRequestDTO("nobody@example.com", "anypassword");
 
         when(userRepository.findByEmail("nobody@example.com")).thenReturn(Optional.empty());
 
@@ -206,9 +184,7 @@ class AuthServiceTest {
                 .password(passwordEncoder.encode("correctPassword"))
                 .build();
 
-        LoginRequestDTO req = new LoginRequestDTO();
-        req.setEmail("alice@example.com");
-        req.setPassword("wrongPassword");
+        LoginRequestDTO req = new LoginRequestDTO("alice@example.com", "wrongPassword");
 
         when(userRepository.findByEmail("alice@example.com")).thenReturn(Optional.of(user));
 
@@ -226,15 +202,13 @@ class AuthServiceTest {
                 .password(passwordEncoder.encode("password123"))
                 .build();
 
-        LoginRequestDTO req = new LoginRequestDTO();
-        req.setEmail("alice@example.com");
-        req.setPassword("password123");
+        LoginRequestDTO req = new LoginRequestDTO("alice@example.com", "password123");
 
         when(userRepository.findByEmail("alice@example.com")).thenReturn(Optional.of(user));
 
         AuthResponseDTO result = authService.login(req);
 
-        assertThat(jwtService.extractAllClaims(result.getToken()).get("userId", Long.class)).isEqualTo(42L);
-        assertThat(jwtService.extractAllClaims(result.getToken()).getSubject()).isEqualTo("alice@example.com");
+        assertThat(jwtService.extractAllClaims(result.token()).get("userId", Long.class)).isEqualTo(42L);
+        assertThat(jwtService.extractAllClaims(result.token()).getSubject()).isEqualTo("alice@example.com");
     }
 }

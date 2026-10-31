@@ -119,8 +119,7 @@ class UserControllerTest extends BaseIntegrationTest {
 
     @Test
     void updateProfile_ownUser() throws Exception {
-        UpdateProfileRequest req = new UpdateProfileRequest();
-        req.setUsername("updatedName");
+        UpdateProfileRequest req = new UpdateProfileRequest("updatedName", null);
 
         mockMvc.perform(put("/api/v1/users/" + userA.getId())
                 .contentType(MediaType.APPLICATION_JSON)
@@ -132,8 +131,7 @@ class UserControllerTest extends BaseIntegrationTest {
 
     @Test
     void updateProfile_otherUser() throws Exception {
-        UpdateProfileRequest req = new UpdateProfileRequest();
-        req.setUsername("hacker");
+        UpdateProfileRequest req = new UpdateProfileRequest("hacker", null);
 
         mockMvc.perform(put("/api/v1/users/" + userA.getId())
                 .contentType(MediaType.APPLICATION_JSON)

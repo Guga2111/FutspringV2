@@ -2,37 +2,30 @@ package com.futspring.backend.domain.daily.dto;
 
 import com.futspring.backend.domain.daily.entity.DailyStatus;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 
 import java.time.Instant;
 import java.time.LocalDate;
 
 // Built by DailyListItemAssembler (counts come from grouped queries, isConfirmed is the caller's attendance)
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
 @Builder
-public class DailyListItemDTO {
-
-    private Long id;
-    private LocalDate dailyDate;
-    private String dailyTime;
-    private DailyStatus status;
-    private int confirmedPlayerCount;
-    @JsonProperty("isFinished")
-    private boolean isFinished;
-    private int teamCount;
-    private int matchCount;
-    private String championImage;
-    @JsonProperty("isConfirmed")
-    private boolean isConfirmed;
-    // numberOfTeams × playersPerTeam
-    private int capacity;
-    // session start, in the pelada's zone
-    private Instant startsAt;
-    // from when the caller may confirm themselves; null for mensalistas (no window). The server re-checks it
-    private Instant confirmOpensAt;
+public record DailyListItemDTO(
+        Long id,
+        LocalDate dailyDate,
+        String dailyTime,
+        DailyStatus status,
+        int confirmedPlayerCount,
+        @JsonProperty("isFinished")
+        boolean isFinished,
+        int teamCount,
+        int matchCount,
+        String championImage,
+        @JsonProperty("isConfirmed")
+        boolean isConfirmed,
+        // numberOfTeams × playersPerTeam
+        int capacity,
+        // session start, in the pelada's zone
+        Instant startsAt,
+        // from when the caller may confirm themselves; null for mensalistas (no window). The server re-checks it
+        Instant confirmOpensAt) {
 }

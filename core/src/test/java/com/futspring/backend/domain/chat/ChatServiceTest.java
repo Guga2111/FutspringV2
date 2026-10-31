@@ -77,8 +77,8 @@ class ChatServiceTest {
         MessageDTO result = chatService.saveAndBroadcast(10L, "member@example.com", "Hello!");
 
         assertThat(result).isNotNull();
-        assertThat(result.getContent()).isEqualTo("Hello!");
-        assertThat(result.getSender().getUsername()).isEqualTo("member");
+        assertThat(result.content()).isEqualTo("Hello!");
+        assertThat(result.sender().username()).isEqualTo("member");
     }
 
     @Test
@@ -155,7 +155,7 @@ class ChatServiceTest {
         String content500 = "x".repeat(500);
         MessageDTO result = chatService.saveAndBroadcast(10L, "member@example.com", content500);
 
-        assertThat(result.getContent()).hasSize(500);
+        assertThat(result.content()).hasSize(500);
     }
 
     // --- getHistory ---
@@ -181,8 +181,8 @@ class ChatServiceTest {
         List<MessageDTO> result = chatService.getHistory(10L, "member@example.com", 0, 50);
 
         assertThat(result).hasSize(2);
-        assertThat(result.get(0).getContent()).isEqualTo("First");
-        assertThat(result.get(1).getContent()).isEqualTo("Second");
+        assertThat(result.get(0).content()).isEqualTo("First");
+        assertThat(result.get(1).content()).isEqualTo("Second");
     }
 
     @Test

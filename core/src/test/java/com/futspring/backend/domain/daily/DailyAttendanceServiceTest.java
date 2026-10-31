@@ -382,7 +382,7 @@ class DailyAttendanceServiceTest {
         DailyListItemDTO result = attendanceService.adminConfirmAll(100L, "admin@example.com");
 
         assertThat(attendance.users(scheduledDaily)).containsExactly(member, admin);
-        assertThat(result.getConfirmedPlayerCount()).isEqualTo(2);
+        assertThat(result.confirmedPlayerCount()).isEqualTo(2);
     }
 
     @Test
@@ -493,7 +493,7 @@ class DailyAttendanceServiceTest {
         DailyListItemDTO result = attendanceService.confirmAttendance(100L, "member@example.com");
 
         assertThat(attendance.users(scheduledDaily)).containsExactly(d1, member);
-        assertThat(result.getConfirmedPlayerCount()).isEqualTo(2);
+        assertThat(result.confirmedPlayerCount()).isEqualTo(2);
         ArgumentCaptor<DailyAttendanceBump> bump = ArgumentCaptor.forClass(DailyAttendanceBump.class);
         verify(bumpRepository).save(bump.capture());
         assertThat(bump.getValue().getUser()).isEqualTo(d2);
@@ -536,7 +536,7 @@ class DailyAttendanceServiceTest {
 
         DailyListItemDTO result = attendanceService.confirmAttendance(100L, "member@example.com");
 
-        assertThat(result.getConfirmedPlayerCount()).isEqualTo(3);
+        assertThat(result.confirmedPlayerCount()).isEqualTo(3);
         verifyNoInteractions(bumpRepository, eventPublisher);
     }
 
@@ -551,7 +551,7 @@ class DailyAttendanceServiceTest {
 
         DailyListItemDTO result = attendanceService.adminConfirmAttendance(100L, 2L, "admin@example.com");
 
-        assertThat(result.getConfirmedPlayerCount()).isEqualTo(3);
+        assertThat(result.confirmedPlayerCount()).isEqualTo(3);
         verify(attendanceRepository, never()).findBumpVictim(any());
         verifyNoInteractions(bumpRepository);
         // the only event is the notification of the confirmed player, no bump
@@ -569,7 +569,7 @@ class DailyAttendanceServiceTest {
 
         DailyListItemDTO result = attendanceService.adminConfirmAll(100L, "admin@example.com");
 
-        assertThat(result.getConfirmedPlayerCount()).isEqualTo(4);
+        assertThat(result.confirmedPlayerCount()).isEqualTo(4);
         verifyNoInteractions(bumpRepository);
         verify(eventPublisher).publishEvent(argThat((Object e) -> e instanceof AttendanceChangedByAdminEvent a
                 && a.confirmed() && a.players().size() == 4));

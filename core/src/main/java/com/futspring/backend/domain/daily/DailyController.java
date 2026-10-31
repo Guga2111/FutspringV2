@@ -94,28 +94,28 @@ public class DailyController {
     public ResponseEntity<List<DailyDetailDTO.TeamDTO>> swapPlayers(@PathVariable Long id,
                                                                     @Valid @RequestBody SwapPlayersRequestDTO request,
                                                                     @AuthenticationPrincipal String email) {
-        return ResponseEntity.ok(dailyTeamManagementService.swapPlayers(id, request.getPlayer1Id(), request.getPlayer2Id(), email));
+        return ResponseEntity.ok(dailyTeamManagementService.swapPlayers(id, request.player1Id(), request.player2Id(), email));
     }
 
     @PatchMapping("/dailies/{dailyId}/teams/{teamId}/name")
     public ResponseEntity<DailyDetailDTO.TeamDTO> updateTeamName(@PathVariable Long dailyId, @PathVariable Long teamId,
                                                                  @Valid @RequestBody UpdateTeamNameRequestDTO request,
                                                                  @AuthenticationPrincipal String email) {
-        return ResponseEntity.ok(dailyTeamManagementService.updateTeamName(dailyId, teamId, request.getName(), email));
+        return ResponseEntity.ok(dailyTeamManagementService.updateTeamName(dailyId, teamId, request.name(), email));
     }
 
     @PatchMapping("/dailies/{dailyId}/teams/{teamId}/color")
     public ResponseEntity<DailyDetailDTO.TeamDTO> updateTeamColor(@PathVariable Long dailyId, @PathVariable Long teamId,
                                                                   @Valid @RequestBody UpdateTeamColorRequestDTO request,
                                                                   @AuthenticationPrincipal String email) {
-        return ResponseEntity.ok(dailyTeamManagementService.updateTeamColor(dailyId, teamId, request.getColor(), email));
+        return ResponseEntity.ok(dailyTeamManagementService.updateTeamColor(dailyId, teamId, request.color(), email));
     }
 
     @PutMapping("/dailies/{id}/status")
     public ResponseEntity<DailyListItemDTO> updateStatus(@PathVariable Long id,
                                                          @Valid @RequestBody UpdateDailyStatusRequestDTO request,
                                                          @AuthenticationPrincipal String email) {
-        return ResponseEntity.ok(dailyService.updateStatus(id, request.getStatus(), email));
+        return ResponseEntity.ok(dailyService.updateStatus(id, request.status(), email));
     }
 
     @PostMapping("/dailies/{id}/results")
@@ -131,7 +131,7 @@ public class DailyController {
     public ResponseEntity<DailyDetailDTO> finalizeDaily(@PathVariable Long id,
                                                         @Valid @RequestBody FinalizeDailyRequestDTO request,
                                                         @AuthenticationPrincipal String email) {
-        dailyResultsService.finalizeDaily(id, request.getPuskasWinnerIds(), request.getWiltballWinnerIds(), email);
+        dailyResultsService.finalizeDaily(id, request.puskasWinnerIds(), request.wiltballWinnerIds(), email);
         return ResponseEntity.ok(dailyService.getDailyDetail(id, email));
     }
 

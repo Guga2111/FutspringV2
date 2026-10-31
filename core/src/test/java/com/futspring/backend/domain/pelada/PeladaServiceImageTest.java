@@ -105,7 +105,7 @@ class PeladaServiceImageTest {
         PeladaResponseDTO result = peladaService.uploadPeladaImage(10L, file, "admin@example.com");
 
         assertThat(result).isNotNull();
-        assertThat(result.getImage()).isEqualTo("new-cover.jpg");
+        assertThat(result.image()).isEqualTo("new-cover.jpg");
         verify(fileUploadService).uploadImage(file);
     }
 
@@ -184,7 +184,7 @@ class PeladaServiceImageTest {
 
         PeladaResponseDTO result = peladaService.removePeladaImage(10L, "admin@example.com");
 
-        assertThat(result.getImage()).isNull();
+        assertThat(result.image()).isNull();
         assertThat(pelada.getImage()).isNull();
         verify(fileUploadService).deleteImageAfterCommit("old.png");
     }

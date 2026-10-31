@@ -30,8 +30,8 @@ public class UserService {
     public ProfileDTO updateProfile(Long id, UpdateProfileRequest request, String callerEmail) {
         User user = findOwnUser(id, callerEmail);
 
-        if (request.getUsername() != null) {
-            String username = request.getUsername().trim();
+        if (request.username() != null) {
+            String username = request.username().trim();
             // Keeping the current name is always allowed, even if a legacy duplicate exists
             if (!username.equals(user.getUsername())
                     && userRepository.existsByUsernameIgnoreCaseAndIdNot(username, id)) {
@@ -41,8 +41,8 @@ public class UserService {
         }
 
         // Allowed values are validated on UpdateProfileRequest; empty clears the position
-        if (request.getPosition() != null) {
-            user.setPosition(request.getPosition().isEmpty() ? null : request.getPosition());
+        if (request.position() != null) {
+            user.setPosition(request.position().isEmpty() ? null : request.position());
         }
 
         return toProfile(userRepository.save(user), true);

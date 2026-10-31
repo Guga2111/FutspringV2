@@ -2,38 +2,31 @@ package com.futspring.backend.domain.pelada.dto;
 
 import com.futspring.backend.domain.pelada.Pelada;
 import com.futspring.backend.domain.pelada.PeladaPlayerStars;
-import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
 @Builder
-public class PeladaDetailResponseDTO {
-
-    private Long id;
-    private Long creatorId;
-    private String name;
-    private String dayOfWeek;
-    private String timeOfDay;
-    private Float duration;
-    private String address;
-    private String reference;
-    private String image;
-    private boolean autoCreateDailyEnabled;
-    private int memberCount;
-    private int numberOfTeams;
-    private int playersPerTeam;
-    private String timeZone;
-    private int maxMensalistas;
-    private List<PeladaMemberDTO> members;
+public record PeladaDetailResponseDTO(
+        Long id,
+        Long creatorId,
+        String name,
+        String dayOfWeek,
+        String timeOfDay,
+        Float duration,
+        String address,
+        String reference,
+        String image,
+        boolean autoCreateDailyEnabled,
+        int memberCount,
+        int numberOfTeams,
+        int playersPerTeam,
+        String timeZone,
+        int maxMensalistas,
+        List<PeladaMemberDTO> members) {
 
     // starsByUserId: PeladaPlayerStarsRepository.findStarsByPelada; members missing from it have the default.
     // mensalistaIds: PeladaMensalistaRepository.findUserIdsByPelada

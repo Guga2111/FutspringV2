@@ -2,26 +2,19 @@ package com.futspring.backend.domain.pelada.dto;
 
 import com.futspring.backend.domain.user.User;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
 @Builder
-public class PeladaMemberDTO {
-
-    private Long id;
-    private String username;
-    private String image;
-    private int stars;
-    private String position;
-    @JsonProperty("isAdmin")
-    private boolean isAdmin;
-    @JsonProperty("isMensalista")
-    private boolean isMensalista;
+public record PeladaMemberDTO(
+        Long id,
+        String username,
+        String image,
+        int stars,
+        String position,
+        @JsonProperty("isAdmin")
+        boolean isAdmin,
+        @JsonProperty("isMensalista")
+        boolean isMensalista) {
 
     // stars: the member's stars in this pelada
     public static PeladaMemberDTO from(User user, boolean isAdmin, int stars, boolean isMensalista) {

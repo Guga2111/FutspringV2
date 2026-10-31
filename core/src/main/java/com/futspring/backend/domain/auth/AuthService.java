@@ -21,18 +21,18 @@ public class AuthService {
     private final JwtService jwtService;
 
     public AuthResponseDTO register(RegisterRequestDTO request) {
-        if (userRepository.findByEmail(request.getEmail()).isPresent()) {
+        if (userRepository.findByEmail(request.email()).isPresent()) {
             throw new AppException(HttpStatus.CONFLICT, "Este e-mail já está cadastrado");
         }
         // Usernames are unique (case-insensitive), as UserService.updateProfile already enforces
-        if (userRepository.existsByUsernameIgnoreCase(request.getUsername().trim())) {
+        if (userRepository.existsByUsernameIgnoreCase(request.username().trim())) {
             throw new AppException(HttpStatus.CONFLICT, "Este nome de usuário já está em uso");
         }
 
         User user = User.builder()
-                .username(request.getUsername().trim())
-                .email(request.getEmail())
-                .password(passwordEncoder.encode(request.getPassword()))
+                .username(request.username().trim())
+                .email(request.email())
+                .password(passwordEncoder.encode(request.password()))
                 .build();
 
         User saved = userRepository.save(user);
@@ -41,10 +41,10 @@ public class AuthService {
     }
 
     public AuthResponseDTO login(LoginRequestDTO request) {
-        User user = userRepository.findByEmail(request.getEmail())
+        User user = userRepository.findByEmail(request.email())
                 .orElseThrow(() -> new AppException(HttpStatus.UNAUTHORIZED, "E-mail ou senha inválidos"));
 
-        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+        if (!passwordEncoder.matches(request.password(), user.getPassword())) {
             throw new AppException(HttpStatus.UNAUTHORIZED, "E-mail ou senha inválidos");
         }
 
