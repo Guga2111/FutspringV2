@@ -11,6 +11,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Separator } from "@/components/ui/separator"
+import { authReturnTo } from "@/utils/authReturn"
 import { AuthLayout } from "@/components/auth/AuthLayout"
 
 type Tab = "login" | "register"
@@ -40,7 +41,7 @@ export default function AuthPage() {
   const location = useLocation()
   const { login } = useAuth()
 
-  const from = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname ?? "/home"
+  const from = authReturnTo(searchParams.get("returnTo"), location.state)
 
   const activeTab: Tab = searchParams.get("tab") === "register" ? "register" : "login"
 
@@ -57,7 +58,10 @@ export default function AuthPage() {
   const [termsAccepted, setTermsAccepted] = useState(false)
 
   function handleTabChange(value: string) {
-    setSearchParams({ tab: value })
+    const next = new URLSearchParams(searchParams)
+    next.set("tab", value)
+    next.set("returnTo", from)
+    setSearchParams(next, { state: location.state })
   }
 
   function validateRegister(): boolean {
@@ -128,6 +132,7 @@ export default function AuthPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
+            {searchParams.get("expired") === "1" && <p role="status" className="mb-4 text-sm text-muted-foreground">Sua sessão expirou. Entre novamente para continuar.</p>}
             <Tabs value={activeTab} onValueChange={handleTabChange}>
               <TabsList className="w-full mb-6">
                 <TabsTrigger value="login" className="flex-1">Login</TabsTrigger>

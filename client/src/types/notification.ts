@@ -11,6 +11,8 @@ export type NotificationType =
   | "DIARISTA_WINDOW_OPEN"
   | "TEAMS_SORTED"
   | "SESSION_FINISHED"
+  | "PELADA_INVITATION"
+  | "MEMBER_JOINED"
   | "ADDED_TO_PELADA"
   | "REMOVED_FROM_PELADA"
   | "ADMIN_GRANTED"
@@ -37,7 +39,7 @@ export const notificationCategoryLabel: Record<NotificationCategory, string> = {
 export const notificationPreferenceText: Record<NotificationCategory, { label: string; description: string }> = {
   ATTENDANCE: { label: "Presença e vaga", description: "Perdeu a vaga, sessão cancelada, lembrete de confirmação" },
   SESSION: { label: "Sessões", description: "Nova sessão, confirmações abertas, sessão finalizada" },
-  MEMBERSHIP: { label: "Membros", description: "Adicionado, removido, virou admin ou mensalista" },
+  MEMBERSHIP: { label: "Membros", description: "Convites, remoções, mudanças de admin e mensalista" },
   AWARDS: { label: "Prêmios", description: "Artilheiro, Garçom, Puskás, Bola Murcha" },
 }
 
@@ -60,6 +62,8 @@ export const notificationTypeCategory: Record<NotificationType, NotificationCate
   DIARISTA_WINDOW_OPEN: "SESSION",
   TEAMS_SORTED: "SESSION",
   SESSION_FINISHED: "SESSION",
+  PELADA_INVITATION: "MEMBERSHIP",
+  MEMBER_JOINED: "MEMBERSHIP",
   ADDED_TO_PELADA: "MEMBERSHIP",
   REMOVED_FROM_PELADA: "MEMBERSHIP",
   ADMIN_GRANTED: "MEMBERSHIP",
@@ -73,6 +77,7 @@ export const notificationTypeCategory: Record<NotificationType, NotificationCate
 // mirrors NotificationDTO: references only, the text is rendered by utils/notifications
 export interface NotificationResponse {
   id: number
+  invitationId: number | null
   type: NotificationType
   category: NotificationCategory
   award: NotificationAward | null

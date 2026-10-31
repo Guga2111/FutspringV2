@@ -46,6 +46,9 @@ public class Notification {
     @JoinColumn(name = "actor_id")
     private User actor;
 
+    @Column(name = "invitation_id")
+    private Long invitationId;
+
     // only on AWARD_WON
     @Enumerated(EnumType.STRING)
     @Column(name = "award", length = 20)

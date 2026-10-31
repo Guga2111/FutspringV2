@@ -10,7 +10,8 @@ import com.futspring.backend.domain.daily.entity.Daily;
 import com.futspring.backend.domain.daily.repository.DailyAttendanceBumpRepository;
 import com.futspring.backend.domain.daily.repository.DailyAttendanceRepository;
 import com.futspring.backend.domain.pelada.AdminsChangedEvent;
-import com.futspring.backend.domain.pelada.MembersAddedEvent;
+import com.futspring.backend.domain.pelada.InvitationCreatedEvent;
+import com.futspring.backend.domain.pelada.MemberJoinedEvent;
 import com.futspring.backend.domain.pelada.MembersRemovedEvent;
 import com.futspring.backend.domain.pelada.MensalistasChangedEvent;
 import com.futspring.backend.domain.pelada.Pelada;
@@ -103,8 +104,16 @@ public class NotificationService {
     }
 
     @EventListener
-    public void onMembersAdded(MembersAddedEvent event) {
-        create(ADDED_TO_PELADA, event.users(), event.actor(), event.pelada());
+    public void onInvitationCreated(InvitationCreatedEvent event) {
+        var i = event.invitation();
+        Notification n = build(PELADA_INVITATION, i.getRecipient(), i.getSender(), i.getPelada(), null, clock.instant());
+        n.setInvitationId(i.getId());
+        save(List.of(n));
+    }
+
+    @EventListener
+    public void onMemberJoined(MemberJoinedEvent event) {
+        create(MEMBER_JOINED, event.pelada().getAdmins(), event.user(), event.pelada());
     }
 
     @EventListener

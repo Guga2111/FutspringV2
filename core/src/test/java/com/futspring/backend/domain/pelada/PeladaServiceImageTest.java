@@ -74,7 +74,7 @@ class PeladaServiceImageTest {
     void setUp() {
         peladaService = new PeladaService(peladaRepository, playerStarsRepository, mensalistaRepository, userRepository, dailyRepository, attendanceRepository, bumpRepository, rankingRepository, messageRepository,
                 fileUploadService, userAuthHelper, new PeladaAccessHelper(peladaRepository), dailyService, aggregateRebuildService,
-                notificationRepository, eventPublisher);
+                notificationRepository, eventPublisher, mock(PeladaInvitationService.class));
 
         admin = User.builder().id(1L).email("admin@example.com").username("admin").password("hash").build();
         member = User.builder().id(2L).email("member@example.com").username("member").password("hash").build();

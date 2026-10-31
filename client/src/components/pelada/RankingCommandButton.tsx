@@ -26,7 +26,7 @@ interface RankingCommandButtonProps {
   creatorId: number | null;
   isAdmin?: boolean;
   onCreateSession?: () => void;
-  onAddPlayer?: () => void;
+  onInvitePlayer?: () => void;
   onRemovePlayer?: (member: PeladaMember) => void;
   onOpenHistory: () => void;
 }
@@ -37,7 +37,7 @@ export function RankingCommandButton({
   creatorId,
   isAdmin = false,
   onCreateSession,
-  onAddPlayer,
+  onInvitePlayer,
   onRemovePlayer,
   onOpenHistory,
 }: RankingCommandButtonProps) {
@@ -81,7 +81,7 @@ export function RankingCommandButton({
           run(() => setAttendanceOpen(true));
           break;
         case "a":
-          if (isAdmin && onAddPlayer) { e.preventDefault(); run(onAddPlayer); }
+          if (isAdmin && onInvitePlayer) { e.preventDefault(); run(onInvitePlayer); }
           break;
         case "r":
           if (isAdmin && onRemovePlayer) { e.preventDefault(); run(() => setRemoveOpen(true)); }
@@ -97,7 +97,7 @@ export function RankingCommandButton({
     };
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
-  }, [popoverOpen, isAdmin, onAddPlayer, onRemovePlayer, onCreateSession, onOpenHistory, navigate]);
+  }, [popoverOpen, isAdmin, onInvitePlayer, onRemovePlayer, onCreateSession, onOpenHistory, navigate]);
 
   return (
     <>
@@ -131,10 +131,10 @@ export function RankingCommandButton({
               Ranking de Presença
               <CommandShortcut>{mod}P</CommandShortcut>
             </CommandItem>
-            {isAdmin && onAddPlayer && (
-              <CommandItem onSelect={() => run(onAddPlayer)}>
+            {isAdmin && onInvitePlayer && (
+              <CommandItem onSelect={() => run(onInvitePlayer)}>
                 <UserPlus />
-                Adicionar Jogador
+                Convidar jogador
                 <CommandShortcut>{mod}A</CommandShortcut>
               </CommandItem>
             )}

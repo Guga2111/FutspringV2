@@ -75,7 +75,7 @@ public class SecurityConfig {
                     .requestMatchers("/api/v1/files/**").permitAll()
                     .requestMatchers("/ws/**").permitAll()
                     // liveness / readiness probes (management.endpoint.health.probes.add-additional-paths)
-                    .requestMatchers(HttpMethod.GET, "/livez", "/readyz").permitAll()
+                    .requestMatchers(HttpMethod.GET, "/livez", "/readyz", "/api/v1/invite-links/*").permitAll()
                     .requestMatchers(HttpMethod.POST, EMAIL_LINK_PATHS.toArray(String[]::new)).permitAll();
                 // OpenAPI docs and Swagger UI: public only where they are served (API_DOCS_ENABLED, dev)
                 if (apiDocsEnabled) {

@@ -11,7 +11,9 @@ import com.futspring.backend.domain.daily.entity.DailyAttendanceBump;
 import com.futspring.backend.domain.daily.repository.DailyAttendanceBumpRepository;
 import com.futspring.backend.domain.daily.repository.DailyAttendanceRepository;
 import com.futspring.backend.domain.pelada.AdminsChangedEvent;
-import com.futspring.backend.domain.pelada.MembersAddedEvent;
+import com.futspring.backend.domain.pelada.InvitationCreatedEvent;
+import com.futspring.backend.domain.pelada.PeladaInvitation;
+import com.futspring.backend.domain.pelada.MemberJoinedEvent;
 import com.futspring.backend.domain.pelada.MembersRemovedEvent;
 import com.futspring.backend.domain.pelada.MensalistasChangedEvent;
 import com.futspring.backend.domain.pelada.Pelada;
@@ -203,7 +205,7 @@ class NotificationServiceTest {
 
     @Test
     void membershipEvents_mapToTheirTypes() {
-        service.onMembersAdded(new MembersAddedEvent(pelada, admin, List.of(other)));
+        service.onInvitationCreated(new InvitationCreatedEvent(PeladaInvitation.builder().id(42L).pelada(pelada).sender(admin).recipient(other).build()));
         service.onMembersRemoved(new MembersRemovedEvent(pelada, admin, List.of(other)));
         service.onAdminsChanged(new AdminsChangedEvent(pelada, admin, List.of(member), true));
         service.onAdminsChanged(new AdminsChangedEvent(pelada, admin, List.of(member), false));
@@ -212,7 +214,7 @@ class NotificationServiceTest {
         service.onPeladaTransferred(new PeladaTransferredEvent(pelada, admin, member));
 
         assertThat(saved).extracting(Notification::getType).containsExactly(
-                NotificationType.ADDED_TO_PELADA, NotificationType.REMOVED_FROM_PELADA,
+                NotificationType.PELADA_INVITATION, NotificationType.REMOVED_FROM_PELADA,
                 NotificationType.ADMIN_GRANTED, NotificationType.ADMIN_REVOKED,
                 NotificationType.MENSALISTA_GRANTED, NotificationType.MENSALISTA_REVOKED,
                 NotificationType.PELADA_TRANSFERRED);
@@ -228,10 +230,21 @@ class NotificationServiceTest {
     }
 
     @Test
+    void joined_notifiesCurrentAdminsExceptTheEntrant() {
+        pelada.getAdmins().addAll(List.of(admin, member));
+        service.onMemberJoined(new MemberJoinedEvent(pelada, member));
+        assertThat(recipients()).containsExactly(admin);
+        assertThat(saved).allSatisfy(n -> {
+            assertThat(n.getType()).isEqualTo(NotificationType.MEMBER_JOINED);
+            assertThat(n.getActor()).isEqualTo(member);
+        });
+    }
+
+    @Test
     void delivery_runsOnlyAfterTheCommit() {
         TransactionSynchronizationManager.initSynchronization();
 
-        service.onMembersAdded(new MembersAddedEvent(pelada, admin, List.of(other)));
+        service.onInvitationCreated(new InvitationCreatedEvent(PeladaInvitation.builder().id(42L).pelada(pelada).sender(admin).recipient(other).build()));
 
         verifyNoInteractions(delivery);
         List<TransactionSynchronization> syncs = TransactionSynchronizationManager.getSynchronizations();
@@ -244,7 +257,7 @@ class NotificationServiceTest {
     void delivery_neverRunsWhenTheTransactionRollsBack() {
         TransactionSynchronizationManager.initSynchronization();
 
-        service.onMembersAdded(new MembersAddedEvent(pelada, admin, List.of(other)));
+        service.onInvitationCreated(new InvitationCreatedEvent(PeladaInvitation.builder().id(42L).pelada(pelada).sender(admin).recipient(other).build()));
 
         // a rollback only calls afterCompletion, never afterCommit
         TransactionSynchronizationManager.getSynchronizations()
@@ -278,7 +291,7 @@ class NotificationServiceTest {
 
     @Test
     void delivery_noTransaction_registersNothing() {
-        service.onMembersAdded(new MembersAddedEvent(pelada, admin, List.of(other)));
+        service.onInvitationCreated(new InvitationCreatedEvent(PeladaInvitation.builder().id(42L).pelada(pelada).sender(admin).recipient(other).build()));
 
         assertThat(saved).hasSize(1);
         verifyNoInteractions(delivery);

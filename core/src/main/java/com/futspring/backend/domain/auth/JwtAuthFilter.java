@@ -31,7 +31,8 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     // not turn them into a 401
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        return SecurityConfig.EMAIL_LINK_PATHS.contains(request.getRequestURI());
+        return SecurityConfig.EMAIL_LINK_PATHS.contains(request.getRequestURI())
+                || ("GET".equals(request.getMethod()) && request.getRequestURI().matches("/api/v1/invite-links/[^/]+"));
     }
 
     @Override
