@@ -143,6 +143,18 @@ class NotificationEmailDispatcherTest {
     }
 
     @Test
+    void invitationEmailRespectsMembershipPreferenceAndJoinStaysInApp() {
+        when(emailSender.enabled()).thenReturn(true);
+        Notification invitation = notification(1L, NotificationType.PELADA_INVITATION, ana);
+        invitation.setInvitationId(42L);
+        stubRows(invitation, notification(2L, NotificationType.MEMBER_JOINED, bia));
+        stubPreferences(new NotificationPreference(ana, NotificationCategory.MEMBERSHIP, false));
+        dispatcher.dispatch(List.of(1L, 2L));
+        runQueued();
+        assertThat(sentTo()).isEmpty();
+    }
+
+    @Test
     void nonEmailableTypes_neverSend_evenWithTheCategoryOn() {
         when(emailSender.enabled()).thenReturn(true);
         stubRows(notification(1L, NotificationType.ATTENDANCE_CONFIRMED_BY_ADMIN, ana),

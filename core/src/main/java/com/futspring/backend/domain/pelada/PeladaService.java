@@ -65,6 +65,7 @@ public class PeladaService {
     private final AggregateRebuildService aggregateRebuildService;
     private final NotificationRepository notificationRepository;
     private final ApplicationEventPublisher eventPublisher;
+    private final PeladaInvitationService invitationService;
 
     @Transactional
     public PeladaResponseDTO createPelada(CreatePeladaRequestDTO request, String currentUserEmail) {
@@ -165,22 +166,6 @@ public class PeladaService {
     }
 
     @Transactional
-    public void addPlayer(Long peladaId, Long targetUserId, String currentUserEmail) {
-        User caller = userAuthHelper.getAuthenticatedUser(currentUserEmail);
-        Pelada pelada = findPelada(peladaId);
-        accessHelper.requireAdmin(pelada, caller);
-
-        User target = findUser(targetUserId);
-        if (accessHelper.isMember(pelada, target)) {
-            throw new AppException(HttpStatus.CONFLICT, "O jogador já é membro desta pelada");
-        }
-
-        pelada.getMembers().add(target);
-        peladaRepository.save(pelada);
-        eventPublisher.publishEvent(new MembersAddedEvent(pelada, caller, List.of(target)));
-    }
-
-    @Transactional
     public void removePlayer(Long peladaId, Long targetUserId, String currentUserEmail) {
         removePlayers(peladaId, List.of(targetUserId), currentUserEmail);
     }
@@ -192,7 +177,8 @@ public class PeladaService {
     @Transactional
     public void removePlayers(Long peladaId, List<Long> targetUserIds, String currentUserEmail) {
         User caller = userAuthHelper.getAuthenticatedUser(currentUserEmail);
-        Pelada pelada = findPelada(peladaId);
+        Pelada pelada = peladaRepository.findByIdForUpdate(peladaId)
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Pelada não encontrada"));
         accessHelper.requireAdmin(pelada, caller);
 
         List<User> targets = findMembers(pelada, targetUserIds);
@@ -200,6 +186,7 @@ public class PeladaService {
             throw new AppException(HttpStatus.FORBIDDEN, "O criador da pelada não pode ser removido");
         }
 
+        invitationService.recordRemoval(pelada, targets);
         targets.forEach(pelada.getMembers()::remove);
         targets.forEach(pelada.getAdmins()::remove);
         // A player who comes back starts again with the default stars, as a diarista
@@ -288,7 +275,8 @@ public class PeladaService {
     @Transactional
     public List<PeladaMemberDTO> setAdmins(Long peladaId, List<Long> targetUserIds, boolean isAdmin, String currentUserEmail) {
         User caller = userAuthHelper.getAuthenticatedUser(currentUserEmail);
-        Pelada pelada = findPelada(peladaId);
+        Pelada pelada = peladaRepository.findByIdForUpdate(peladaId)
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Pelada não encontrada"));
         accessHelper.requireAdmin(pelada, caller);
 
         List<User> targets = findMembers(pelada, targetUserIds);
@@ -367,7 +355,8 @@ public class PeladaService {
     @Transactional
     public void deletePelada(Long peladaId, String currentUserEmail) {
         User caller = userAuthHelper.getAuthenticatedUser(currentUserEmail);
-        Pelada pelada = findPelada(peladaId);
+        Pelada pelada = peladaRepository.findByIdForUpdate(peladaId)
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Pelada não encontrada"));
         if (!accessHelper.isCreator(pelada, caller)) {
             throw new AppException(HttpStatus.FORBIDDEN, "Apenas o criador pode excluir a pelada");
         }
@@ -378,6 +367,7 @@ public class PeladaService {
         }
         messageRepository.deleteByPelada(pelada);
         notificationRepository.deleteByPelada(pelada);
+        invitationService.deletePeladaData(peladaId);
         rankingRepository.deleteByPelada(pelada);
         playerStarsRepository.deleteByPelada(pelada);
         mensalistaRepository.deleteByPelada(pelada);
@@ -422,7 +412,8 @@ public class PeladaService {
     @Transactional
     public PeladaResponseDTO transferCreator(Long peladaId, Long userId, String currentUserEmail) {
         User caller = userAuthHelper.getAuthenticatedUser(currentUserEmail);
-        Pelada pelada = findPelada(peladaId);
+        Pelada pelada = peladaRepository.findByIdForUpdate(peladaId)
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Pelada não encontrada"));
         if (!accessHelper.isCreator(pelada, caller)) {
             throw new AppException(HttpStatus.FORBIDDEN, "Apenas o criador pode transferir a pelada");
         }
@@ -458,11 +449,6 @@ public class PeladaService {
     private Pelada findPelada(Long id) {
         return peladaRepository.findById(id)
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Pelada não encontrada"));
-    }
-
-    private User findUser(Long id) {
-        return userRepository.findById(id)
-                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Usuário não encontrado"));
     }
 
     /**

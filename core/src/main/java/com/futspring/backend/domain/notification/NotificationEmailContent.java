@@ -71,6 +71,13 @@ public record NotificationEmailContent(String subject, String title, String body
                     "Sessão finalizada",
                     "A sessão de " + date + " da " + pelada + " foi finalizada. Veja a tabela, os jogos e os prêmios.",
                     "Ver o resultado", session);
+            case PELADA_INVITATION -> new NotificationEmailContent(
+                    "Convite para a " + pelada, "Você recebeu um convite",
+                    actor + " convidou você para participar da " + pelada + ". O convite vale por 7 dias.",
+                    "Ver convite", "/invitations/" + n.getInvitationId());
+            case MEMBER_JOINED -> new NotificationEmailContent(
+                    actor + " entrou na " + pelada, "Novo participante",
+                    actor + " aceitou participar da " + pelada + ".", SEE_PELADA, peladaPath);
             case ADDED_TO_PELADA -> new NotificationEmailContent(
                     "Você entrou na " + pelada,
                     "Bem-vindo à " + pelada,

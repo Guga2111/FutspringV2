@@ -33,7 +33,7 @@ interface MembersGridProps {
   removingMember: number | null
   // members a bulk request is changing
   bulkPending: ReadonlySet<number> | null
-  onAddPlayer: () => void
+  onInvitePlayer: () => void
   onToggleAdmin: (member: PeladaMember) => void
   onRemoveMember: (member: PeladaMember) => void
   onSetStars: (member: PeladaMember) => void
@@ -56,7 +56,7 @@ export function MembersGrid({
   settingStars,
   removingMember,
   bulkPending,
-  onAddPlayer,
+  onInvitePlayer,
   onToggleAdmin,
   onRemoveMember,
   onSetStars,
@@ -147,9 +147,9 @@ export function MembersGrid({
           </Button>
         )}
         {isCurrentUserAdmin && (
-          <Button variant="gradient" onClick={onAddPlayer} className="hidden h-9 gap-1.5 px-4 font-semibold md:inline-flex">
+          <Button variant="gradient" onClick={onInvitePlayer} className="hidden h-9 gap-1.5 px-4 font-semibold md:inline-flex">
             <Plus className="size-[15px]" strokeWidth={2.2} />
-            Adicionar jogador
+            Convidar jogador
           </Button>
         )}
       </div>
@@ -168,7 +168,7 @@ export function MembersGrid({
           </span>
         )}
         {isCurrentUserAdmin && (
-          <Button variant="gradient" size="icon" aria-label="Adicionar jogador" onClick={onAddPlayer} className="size-10 shrink-0 md:hidden">
+          <Button variant="gradient" size="icon" aria-label="Convidar jogador" onClick={onInvitePlayer} className="size-10 shrink-0 md:hidden">
             <Plus className="size-[18px]" strokeWidth={2.4} />
           </Button>
         )}

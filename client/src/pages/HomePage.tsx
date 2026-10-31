@@ -4,6 +4,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { BumpAlert } from "@/components/BumpAlert"
+import { PendingInvitations } from "@/components/invitations/PendingInvitations"
 import { HomeBanner } from "@/components/home/HomeBanner"
 import { UpcomingSessionCard } from "@/components/home/UpcomingSessionCard"
 import { CreatePeladaCard, MyPeladaCard } from "@/components/home/MyPeladaCard"
@@ -43,6 +44,8 @@ export default function HomePage() {
     <div className="page-enter flex flex-1 flex-col">
       <main className="mx-auto flex w-full max-w-[1120px] flex-col gap-9 px-4 py-5 md:p-8">
         <HomeBanner username={user?.username ?? ""} pendingCount={pendingCount} onCreatePelada={openCreatePelada} />
+
+        <PendingInvitations />
 
         {bumped.map((pelada) =>
           pelada.nextDaily.bump ? (

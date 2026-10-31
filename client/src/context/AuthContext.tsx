@@ -47,7 +47,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const isAuthRequest = error.config?.url?.startsWith("/api/v1/auth/")
         if (error.response?.status === 401 && !isAuthRequest) {
           logout()
-          window.location.href = "/auth"
+          const destination = window.location.pathname + window.location.search + window.location.hash
+          window.location.href = `/auth?expired=1&returnTo=${encodeURIComponent(destination)}`
         }
         return Promise.reject(error)
       }

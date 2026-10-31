@@ -13,7 +13,7 @@ import com.futspring.backend.domain.daily.repository.DailyAttendanceRepository;
 import com.futspring.backend.domain.daily.repository.DailyRepository;
 import com.futspring.backend.domain.daily.repository.TeamRepository;
 import com.futspring.backend.domain.daily.entity.Team;
-import com.futspring.backend.domain.pelada.dto.AddPlayerRequestDTO;
+import com.futspring.backend.domain.pelada.dto.InvitePlayerRequestDTO;
 import com.futspring.backend.domain.pelada.dto.CreatePeladaRequestDTO;
 import com.futspring.backend.domain.pelada.dto.SetAdminRequestDTO;
 import com.futspring.backend.domain.pelada.dto.UpdatePeladaRequestDTO;
@@ -175,20 +175,20 @@ class PeladaControllerTest extends BaseIntegrationTest {
     // --- POST /api/v1/peladas/{id}/players ---
 
     @Test
-    void addPlayer_asAdmin() throws Exception {
-        mockMvc.perform(post("/api/v1/peladas/" + pelada.getId() + "/players")
+    void invitePlayer_asAdmin() throws Exception {
+        mockMvc.perform(post("/api/v1/peladas/" + pelada.getId() + "/invitations")
                 .contentType(MediaType.APPLICATION_JSON)
                 .header("Authorization", bearerToken(admin.getId(), admin.getEmail()))
-                .content(objectMapper.writeValueAsString(new AddPlayerRequestDTO(outsider.getId()))))
+                .content(objectMapper.writeValueAsString(new InvitePlayerRequestDTO(outsider.getId()))))
                 .andExpect(status().isOk());
     }
 
     @Test
-    void addPlayer_asNonAdmin() throws Exception {
-        mockMvc.perform(post("/api/v1/peladas/" + pelada.getId() + "/players")
+    void invitePlayer_asNonAdmin() throws Exception {
+        mockMvc.perform(post("/api/v1/peladas/" + pelada.getId() + "/invitations")
                 .contentType(MediaType.APPLICATION_JSON)
                 .header("Authorization", bearerToken(member.getId(), member.getEmail()))
-                .content(objectMapper.writeValueAsString(new AddPlayerRequestDTO(outsider.getId()))))
+                .content(objectMapper.writeValueAsString(new InvitePlayerRequestDTO(outsider.getId()))))
                 .andExpect(status().isForbidden());
     }
 

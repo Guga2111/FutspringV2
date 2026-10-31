@@ -25,7 +25,11 @@ import com.futspring.backend.domain.notification.dto.NotificationPreferenceDTO;
 import com.futspring.backend.domain.notification.dto.NotificationPushDTO;
 import com.futspring.backend.domain.notification.dto.UnreadCountDTO;
 import com.futspring.backend.domain.notification.dto.UnsubscribeRequestDTO;
-import com.futspring.backend.domain.pelada.dto.AddPlayerRequestDTO;
+import com.futspring.backend.domain.pelada.dto.InvitePlayerRequestDTO;
+import com.futspring.backend.domain.pelada.dto.InvitationDTO;
+import com.futspring.backend.domain.pelada.dto.InviteLinkDTO;
+import com.futspring.backend.domain.pelada.dto.PeladaPreviewDTO;
+import com.futspring.backend.domain.pelada.dto.JoinPeladaDTO;
 import com.futspring.backend.domain.pelada.dto.BulkRemovePlayersRequestDTO;
 import com.futspring.backend.domain.pelada.dto.BulkSetAdminRequestDTO;
 import com.futspring.backend.domain.pelada.dto.BulkSetMensalistaRequestDTO;
@@ -87,6 +91,7 @@ class ContractSnapshotTest {
     static Stream<Class<?>> responses() {
         return Stream.of(
                 AuthResponseDTO.class, ProfileDTO.class, PublicUserDTO.class,
+                InvitationDTO.class, InviteLinkDTO.class, PeladaPreviewDTO.class, JoinPeladaDTO.class,
                 PeladaResponseDTO.class, PeladaDetailResponseDTO.class, PeladaMemberDTO.class,
                 DailyListItemDTO.class, DailyDetailDTO.class, DailyDetailDTO.TeamDTO.class, DailyDetailDTO.MatchDTO.class,
                 RankingDTO.class, StatsDTO.class, PeladaAwardsDTO.class, PeladaAttendanceDTO.class,
@@ -102,7 +107,7 @@ class ContractSnapshotTest {
         return Stream.of(
                 LoginRequestDTO.class, RegisterRequestDTO.class, ForgotPasswordRequestDTO.class,
                 ResetPasswordRequestDTO.class,
-                CreatePeladaRequestDTO.class, UpdatePeladaRequestDTO.class, AddPlayerRequestDTO.class,
+                CreatePeladaRequestDTO.class, UpdatePeladaRequestDTO.class, InvitePlayerRequestDTO.class,
                 SetAdminRequestDTO.class, SetMensalistaRequestDTO.class, UpdatePlayerStarsRequestDTO.class,
                 BulkSetAdminRequestDTO.class, BulkSetMensalistaRequestDTO.class, BulkSetStarsRequestDTO.class,
                 BulkRemovePlayersRequestDTO.class, TransferCreatorRequestDTO.class,

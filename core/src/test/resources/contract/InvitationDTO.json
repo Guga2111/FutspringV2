@@ -1,0 +1,29 @@
+{
+  "id" : 356,
+  "peladaId" : 995,
+  "pelada" : {
+    "id" : 356,
+    "name" : "name",
+    "image" : "image",
+    "dayOfWeek" : "dayOfWeek",
+    "timeOfDay" : "timeOfDay"
+  },
+  "recipient" : {
+    "id" : 356,
+    "username" : "username",
+    "image" : "image",
+    "position" : "position"
+  },
+  "sender" : {
+    "id" : 356,
+    "username" : "username",
+    "image" : "image",
+    "position" : "position"
+  },
+  "status" : "PENDING",
+  "createdAt" : "2026-10-31T23:00:00Z",
+  "expiresAt" : "2026-10-31T23:00:00Z",
+  "respondedAt" : "2026-10-31T23:00:00Z",
+  "canceledAt" : "2026-10-31T23:00:00Z",
+  "isMember" : true
+}

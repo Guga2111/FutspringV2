@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { toast } from "sonner"
-import { addPlayer } from "@/api/peladas"
+import { invitePlayer } from "@/api/invitations"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -18,16 +18,16 @@ import { getFileUrl, getInitials } from "@/lib/utils"
 import { getPositionLabel, type PublicUser } from "@/types/user"
 import { MIN_SEARCH_LENGTH, useUserSearch } from "@/components/pelada/hooks/useUserSearch"
 
-export function AddPlayerDialog({
+export function InvitePlayerDialog({
   peladaId,
   existingMemberIds,
   onClose,
-  onAdded,
+  onInvited,
 }: {
   peladaId: number
   existingMemberIds: Set<number>
   onClose: () => void
-  onAdded: () => void
+  onInvited: () => void
 }) {
   const [query, setQuery] = useState("")
   const [adding, setAdding] = useState<number | null>(null)
@@ -36,12 +36,12 @@ export function AddPlayerDialog({
   async function handleAdd(user: PublicUser) {
     setAdding(user.id)
     try {
-      await addPlayer(peladaId, user.id)
-      toast.success(`${user.username} foi adicionado à pelada`)
-      onAdded()
+      await invitePlayer(peladaId, { userId: user.id })
+      toast.success(`Convite enviado para ${user.username}`)
+      onInvited()
       onClose()
     } catch (error) {
-      toast.error(getErrorMessage(error, "Não foi possível adicionar o jogador"))
+      toast.error(getErrorMessage(error, "Não foi possível enviar o convite"))
     } finally {
       setAdding(null)
     }
@@ -51,7 +51,7 @@ export function AddPlayerDialog({
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Adicionar jogador</DialogTitle>
+          <DialogTitle>Convidar jogador</DialogTitle>
           <DialogDescription>Busque pelo nome de usuário ou pelo e-mail.</DialogDescription>
         </DialogHeader>
         <Input
@@ -84,7 +84,7 @@ export function AddPlayerDialog({
                   <Badge variant="secondary">Membro</Badge>
                 ) : (
                   <Button size="sm" disabled={adding !== null} onClick={() => handleAdd(user)}>
-                    {adding === user.id ? "Adicionando..." : "Adicionar"}
+                    {adding === user.id ? "Enviando..." : "Convidar"}
                   </Button>
                 )}
               </div>
