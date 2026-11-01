@@ -29,6 +29,10 @@ public final class FinanceRequests {
                              @NotNull @Size(min = 1, max = 20) List<@NotNull @Valid Component> components,
                              @Size(max = 200) String pixKey, @Size(max = 200) String pixRecipient,
                              @Positive Long qrId) {}
+    public record CreateCollection(@NotNull @Valid Collection collection,
+                                   @NotNull @Size(max = 100) List<@NotNull @Positive Long> userIds,
+                                   @NotNull @Size(max = 100) List<@NotBlank @Size(max = 200) String> guestNames,
+                                   @NotNull Boolean publish) {}
     public record Charge(@NotNull @Valid Command command, @Positive Long userId, @Positive Long personId,
                          @Size(max = 200) String guestName,
                          @NotNull @Size(min = 1, max = 20) List<@NotNull @Valid Component> components,

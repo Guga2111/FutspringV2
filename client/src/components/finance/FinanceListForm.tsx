@@ -1,9 +1,8 @@
 import { useFieldArray, useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { useState } from "react"
 import { toast } from "sonner"
 import * as api from "@/api/finance"
-import { financeListSchema, type FinanceListValues } from "@/schemas/finance"
+import { financeListFormSchema, type FinanceListValues } from "@/schemas/finance"
 import type { FinanceList, FinanceTemplate } from "@/types/finance"
 import { financeClassificationLabel } from "@/types/finance"
 import type { FinanceController } from "@/components/finance/hooks/useFinance"
@@ -16,8 +15,8 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectVa
 import type { DailyListItem } from "@/types/daily"
 import { applyServerErrors } from "@/lib/form-errors"
 
-export function FinanceListForm({ peladaId, finance, list, template, dailies, onClose }: {
-  peladaId: number; finance: FinanceController; list?: FinanceList; template?: FinanceTemplate; dailies: DailyListItem[]; onClose: () => void
+export function FinanceListForm({ peladaId, finance, list, template, asTemplate = Boolean(template), dailies, onClose }: {
+  peladaId: number; finance: FinanceController; list?: FinanceList; template?: FinanceTemplate; asTemplate?: boolean; dailies: DailyListItem[]; onClose: () => void
 }) {
   const source = list ?? template
   const defaults: FinanceListValues = {
@@ -26,9 +25,8 @@ export function FinanceListForm({ peladaId, finance, list, template, dailies, on
     components: source?.components ?? [{ name: "Campo", amount: "0.00" }], pixKey: source?.pixKey ?? finance.overview?.settings.pixKey ?? "",
     pixRecipient: source?.pixRecipient ?? finance.overview?.settings.pixRecipient ?? "", qrId: source?.qrId ?? finance.overview?.settings.qrId ?? null, reason: "",
   }
-  const form = useForm<FinanceListValues>({ resolver: zodResolver(financeListSchema), defaultValues: defaults })
+  const form = useForm<FinanceListValues>({ resolver: zodResolver(financeListFormSchema), defaultValues: defaults })
   const fields = useFieldArray({ control: form.control, name: "components" })
-  const [asTemplate, setAsTemplate] = useState(Boolean(template))
   const published = Boolean(list?.publishedAt)
   async function submit(values: FinanceListValues) {
     try {
@@ -42,10 +40,10 @@ export function FinanceListForm({ peladaId, finance, list, template, dailies, on
   const qrIdValue = useWatch({ control: form.control, name: "qrId" })
   const dailyIdValue = useWatch({ control: form.control, name: "dailyId" })
   return <Sheet open onOpenChange={open => { if (!open && !form.formState.isSubmitting) onClose() }}><SheetContent className="flex w-full flex-col gap-5 overflow-y-auto sm:max-w-xl">
-    <SheetHeader><SheetTitle>{template ? "Editar modelo" : list ? "Editar lista" : "Nova lista"}</SheetTitle><SheetDescription>Valores em reais, com duas casas decimais. Os totais são calculados ao salvar.</SheetDescription></SheetHeader>
+    <SheetHeader><SheetTitle>{asTemplate ? template ? "Editar modelo" : "Novo modelo" : "Editar cobrança"}</SheetTitle><SheetDescription>Os totais são calculados a partir dos valores por pessoa.</SheetDescription></SheetHeader>
     <form onSubmit={form.handleSubmit(submit)} noValidate className="flex flex-col gap-5">
       <FieldGroup>
-        {!source && <Field><FieldLabel htmlFor="finance-template">Começar por um modelo</FieldLabel><Select onValueChange={value => {
+        {!source && !asTemplate && <Field><FieldLabel htmlFor="finance-template">Começar por um modelo</FieldLabel><Select onValueChange={value => {
           const selected = finance.overview?.templates[Number(value)]
           if (selected) form.reset({ ...defaults, ...selected, description: selected.description ?? "", pixKey: selected.pixKey ?? "", pixRecipient: selected.pixRecipient ?? "" })
         }}><SelectTrigger id="finance-template"><SelectValue placeholder="Personalizado" /></SelectTrigger><SelectContent><SelectGroup>{finance.overview?.templates.map((t, i) => !t.archived && <SelectItem key={t.id ?? t.classification} value={String(i)}>{t.name}</SelectItem>)}</SelectGroup></SelectContent></Select></Field>}
@@ -67,8 +65,7 @@ export function FinanceListForm({ peladaId, finance, list, template, dailies, on
         {published && <FinanceInput control={form.control} name="reason" label="Motivo da alteração" multiline />}
       </FieldGroup>
       <FinanceFormError message={form.formState.errors.root?.message} />
-      {!source && <Button type="button" variant="ghost" onClick={() => setAsTemplate(v => !v)}>{asTemplate ? "Salvar como lista" : "Salvar como modelo reutilizável"}</Button>}
-      <Button type="submit" disabled={finance.pending}>{finance.pending ? "Salvando…" : asTemplate ? "Salvar modelo" : "Salvar lista"}</Button>
+      <Button type="submit" disabled={finance.pending}>{finance.pending ? "Salvando…" : asTemplate ? "Salvar modelo" : "Salvar cobrança"}</Button>
     </form>
   </SheetContent></Sheet>
 }

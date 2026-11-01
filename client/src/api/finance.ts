@@ -1,5 +1,5 @@
 import apiClient from "@/api/client"
-import type { FinanceCommand, FinanceListValues, FinanceTemplateValues, FinanceChargeValues, FinanceParticipantsValues, FinanceCashValues, FinanceReceiptValues, FinanceRefundValues } from "@/schemas/finance"
+import type { FinanceCreateValues, FinanceCommand, FinanceListValues, FinanceTemplateValues, FinanceChargeValues, FinanceParticipantsValues, FinanceCashValues, FinanceReceiptValues, FinanceRefundValues } from "@/schemas/finance"
 import type { FinanceOverview, FinanceDetail, FinanceResult, FinancePage, FinanceMovement, FinanceAudit, FinanceCandidate, FinanceSettings, FinancePaymentMethod } from "@/types/finance"
 
 const root = (id: number) => `/api/v1/peladas/${id}/finance`
@@ -63,4 +63,16 @@ export async function getFinanceImage(id: number, kind: "qr" | "receipt", imageI
 }
 export async function getFinanceNotices(id: number, listId: number, chargeId: number, page: number) {
   return (await apiClient.get<FinancePage<import("@/types/finance").FinanceNotice>>(`${root(id)}/lists/${listId}/charges/${chargeId}/notices`, { params: { page, size: 10 } })).data
+}
+
+export function createFinanceCollection(id: number, command: FinanceCommand, values: FinanceCreateValues, publish: boolean) {
+  return post(id, "/lists/create", {
+    collection: {
+      command, name: values.name, classification: values.classification, description: values.description,
+      dueDate: optional(values.dueDate), dailyId: values.dailyId,
+      components: values.detailedPrice ? values.components : [{ name: "Valor por pessoa", amount: values.amount }],
+      pixKey: values.pixKey, pixRecipient: values.pixRecipient, qrId: values.qrId,
+    },
+    userIds: values.userIds, guestNames: values.guestNames, publish,
+  })
 }

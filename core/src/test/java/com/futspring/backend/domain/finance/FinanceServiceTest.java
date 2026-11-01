@@ -80,6 +80,49 @@ class FinanceServiceTest extends BaseIntegrationTest {
     void receive(Long l, String value) { ledger.receive(id(), l, charge(l), new FinanceRequests.Receipt(command(), value, null, PaymentMethod.PIX), admin.getEmail()); }
     FinanceViews.Charge view(Long listId) { return reads.detail(id(), listId, admin.getEmail()).charges().getFirst(); }
     void fails(Runnable action, HttpStatus status) { assertThatThrownBy(action::run).isInstanceOfSatisfying(AppException.class, e -> assertThat(e.getStatus()).isEqualTo(status)); }
+    @Test void guidedCreationPublishesPeopleAndExactTotalsInOneRevisionAndReplaysSafely() {
+        var request = new FinanceRequests.CreateCollection(
+                new FinanceRequests.Collection(command(), "Diária de sábado", Classification.DAILY, "", null, null, price(), "pix", "Gestor", null),
+                List.of(member.getId(), other.getId()), List.of("Convidado", "Convidado"), true);
+        var result = collections.createCollection(id(), request, admin.getEmail());
+        assertThat(result.overview().revision()).isEqualTo(1);
+        assertThat(result.detail().collection().status()).isEqualTo(ListStatus.OPEN);
+        assertThat(result.detail().charges()).hasSize(4);
+        assertThat(result.detail().charges().stream().map(FinanceViews.Charge::personId)).doesNotHaveDuplicates();
+        assertThat(result.detail().collection().totals().due()).isEqualTo("180.00");
+        assertThat(result.overview().balance()).isEqualTo("0.00");
+        var replay = collections.createCollection(id(), request, admin.getEmail());
+        assertThat(replay.detail().collection().id()).isEqualTo(result.detail().collection().id());
+        assertThat(lists.findByPeladaId(id())).hasSize(1);
+        assertThat(audits.findByPeladaId(id())).hasSize(1);
+        assertThat(reads.detail(id(), result.detail().collection().id(), member.getEmail()).charges()).hasSize(1);
+    }
+    @Test void guidedCreationAllowsAnEmptyDraftButRequiresManagerPermission() {
+        var request = new FinanceRequests.CreateCollection(
+                new FinanceRequests.Collection(command(), "Rascunho", Classification.OTHER, "", null, null, price(), null, null, null),
+                List.of(), List.of(), false);
+        fails(() -> collections.createCollection(id(), request, member.getEmail()), HttpStatus.FORBIDDEN);
+        var result = collections.createCollection(id(), request, admin.getEmail());
+        assertThat(result.detail().collection().status()).isEqualTo(ListStatus.DRAFT);
+        assertThat(result.detail().charges()).isEmpty();
+    }
+    @Test void guidedCreationRestValidatesNestedAmountsAndParticipants() throws Exception {
+        var request = new FinanceRequests.CreateCollection(
+                new FinanceRequests.Collection(command(), "Diária", Classification.DAILY, "", null, null, price(), null, null, null),
+                List.of(member.getId()), List.of(), true);
+        String path = "/api/v1/peladas/" + id() + "/finance/lists/create";
+        String json = objectMapper.writeValueAsString(request);
+        mockMvc.perform(post(path).header("Authorization", bearerToken(admin.getId(), admin.getEmail()))
+                        .contentType(MediaType.APPLICATION_JSON).content(json.replace("40.00", "40.001")))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(post(path).header("Authorization", bearerToken(admin.getId(), admin.getEmail()))
+                        .contentType(MediaType.APPLICATION_JSON).content(json.replace("\"guestNames\":[]", "\"guestNames\":[\" \"]")))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(post(path).header("Authorization", bearerToken(admin.getId(), admin.getEmail()))
+                        .contentType(MediaType.APPLICATION_JSON).content(json))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.detail.collection.status").value("OPEN"))
+                .andExpect(jsonPath("$.detail.charges[0].amountDue").value("45.00"));
+    }
     @Test void offlinePartialDiscountRefundAndReversalReconcileDebtCashAndAudit() {
         Long l = open(); receive(l, "20.00");
         assertThat(view(l).paymentStatus()).isEqualTo(PaymentStatus.PARTIAL);

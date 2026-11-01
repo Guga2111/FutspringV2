@@ -43,6 +43,8 @@ public class FinanceController {
             @Valid @RequestBody FinanceRequests.Template body, @AuthenticationPrincipal String email) { return collections.template(peladaId, templateId, body, email); }
     @PostMapping("/lists") public FinanceViews.Result createList(@PathVariable Long peladaId, @Valid @RequestBody FinanceRequests.Collection body,
             @AuthenticationPrincipal String email) { return collections.collection(peladaId, null, body, email); }
+    @PostMapping("/lists/create") public FinanceViews.Result createCollection(@PathVariable Long peladaId,
+            @Valid @RequestBody FinanceRequests.CreateCollection body, @AuthenticationPrincipal String email) { return collections.createCollection(peladaId, body, email); }
     @PutMapping("/lists/{listId}") public FinanceViews.Result updateList(@PathVariable Long peladaId, @PathVariable Long listId,
             @Valid @RequestBody FinanceRequests.Collection body, @AuthenticationPrincipal String email) { return collections.collection(peladaId, listId, body, email); }
     @PostMapping("/lists/{listId}/duplicate") public FinanceViews.Result duplicate(@PathVariable Long peladaId, @PathVariable Long listId,

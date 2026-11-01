@@ -32,3 +32,26 @@ describe("finance contracts", () => {
     expect(financeImageSchema.safeParse(new File([new Uint8Array(5 * 1024 * 1024 + 1)], "a.png", { type: "image/png" })).success).toBe(false)
   })
 })
+
+describe("daily organizer forms", () => {
+  it("normalizes natural Brazilian input while keeping API schemas strict", async () => {
+    const { financeAmountInputSchema, financeSignedAmountInputSchema, financeReceiveFormSchema } = await import("@/schemas/finance")
+    expect(financeAmountInputSchema.parse("1.234,56")).toBe("1234.56")
+    expect(financeSignedAmountInputSchema.parse("-5,00")).toBe("-5.00")
+    expect(financeAmountInputSchema.safeParse("-5,00").success).toBe(false)
+    const payment = { action: "receive", amount: "25,50", effectiveDate: "", method: "PIX", reason: "", reduceObligation: false, file: null }
+    expect(financeReceiveFormSchema.parse(payment).amount).toBe("25.50")
+    expect(financeReceiveFormSchema.safeParse({ ...payment, amount: "0" }).success).toBe(false)
+    expect(financeMoneySchema.safeParse("25,50").success).toBe(false)
+  })
+  it("uses the detailed price only when the organizer chooses it", async () => {
+    const { financeCreateSchema } = await import("@/schemas/finance")
+    const values = { name: "Diária de sábado", classification: "DAILY", amount: "45", detailedPrice: false, description: "", dueDate: "", dailyId: null, components: [{ name: "Campo", amount: "40,00" }, { name: "Juiz", amount: "5,50" }], pixKey: "", pixRecipient: "", qrId: null, reason: "", userIds: [1], guestNames: ["Convidado", ""] }
+    expect(financeCreateSchema.parse(values).amount).toBe("45.00")
+    expect(financeCreateSchema.parse({ ...values, detailedPrice: true }).amount).toBe("45.50")
+    expect(financeCreateSchema.parse({ ...values, components: [{ name: "", amount: "inválido" }] }).components).toEqual([{ name: "Valor por pessoa", amount: "45.00" }])
+    expect(financeCreateSchema.safeParse({ ...values, detailedPrice: true, components: [{ name: "", amount: "inválido" }] }).success).toBe(false)
+    expect(financeCreateSchema.parse(values).guestNames).toEqual(["Convidado"])
+    expect(financeCreateSchema.safeParse({ ...values, amount: "0" }).success).toBe(false)
+  })
+})
