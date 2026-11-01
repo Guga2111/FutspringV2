@@ -85,7 +85,7 @@ class DailyServiceTest {
 
     @BeforeEach
     void setUp() {
-        dailyService = new DailyService(
+        dailyService = new DailyService(mock(com.futspring.backend.domain.finance.FinancePreservation.class),
                 userAuthHelper, new PeladaAccessHelper(peladaRepository), dailyAttendanceService, dailyTeamManagementService,
                 dailyResultsService, aggregateRebuildService, fileUploadService, dailyDTOMapper,
                 dailyRepository, attendanceRepository, bumpRepository, mensalistaRepository, peladaRepository, playerStarsRepository, teamRepository,
@@ -376,6 +376,7 @@ class DailyServiceTest {
 
     @Test
     void deleteDaily_success_orchestratesSubServicesAndDeletes() {
+        when(peladaRepository.findByIdForUpdate(pelada.getId())).thenReturn(Optional.of(pelada));
         when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
 

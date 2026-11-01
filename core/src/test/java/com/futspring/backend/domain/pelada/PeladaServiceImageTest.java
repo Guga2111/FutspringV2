@@ -72,7 +72,7 @@ class PeladaServiceImageTest {
 
     @BeforeEach
     void setUp() {
-        peladaService = new PeladaService(peladaRepository, playerStarsRepository, mensalistaRepository, userRepository, dailyRepository, attendanceRepository, bumpRepository, rankingRepository, messageRepository,
+        peladaService = new PeladaService(mock(com.futspring.backend.domain.finance.FinancePreservation.class), peladaRepository, playerStarsRepository, mensalistaRepository, userRepository, dailyRepository, attendanceRepository, bumpRepository, rankingRepository, messageRepository,
                 fileUploadService, userAuthHelper, new PeladaAccessHelper(peladaRepository), dailyService, aggregateRebuildService,
                 notificationRepository, eventPublisher, mock(PeladaInvitationService.class));
 
