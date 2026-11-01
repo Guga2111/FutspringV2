@@ -108,8 +108,8 @@ docker rm -f futspring-api 2>/dev/null || true
 docker network create observability >/dev/null 2>&1 || true
 
 # The image runs as uid 10001; idempotent
-mkdir -p /opt/futspring-uploads
-chown -R 10001:10001 /opt/futspring-uploads
+mkdir -p /opt/futspring-uploads /opt/futspring-finance-receipts /opt/futspring-finance-qr
+chown -R 10001:10001 /opt/futspring-uploads /opt/futspring-finance-receipts /opt/futspring-finance-qr
 
 echo "Starting containers..."
 docker compose -f docker-compose.prod.yml up -d --no-build --remove-orphans

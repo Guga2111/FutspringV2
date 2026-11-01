@@ -19,6 +19,8 @@ services:
       API_DOCS_ENABLED: "true"
     volumes:
       - ./uploads:/app/uploads
+      - ./finance-receipts:/app/finance-receipts
+      - ./finance-qr:/app/finance-qr
     depends_on:
       - futspring-postgres-dev
 

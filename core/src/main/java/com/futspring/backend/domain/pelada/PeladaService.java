@@ -1,6 +1,7 @@
 package com.futspring.backend.domain.pelada;
 
 import com.futspring.backend.domain.chat.MessageRepository;
+import com.futspring.backend.domain.finance.FinancePreservation;
 import com.futspring.backend.domain.daily.AttendanceWindow;
 import com.futspring.backend.domain.daily.DailyService;
 import com.futspring.backend.domain.daily.dto.AttendanceBumpDTO;
@@ -49,6 +50,7 @@ public class PeladaService {
     static final int MAX_SEARCH_RESULTS = 10;
     private static final Set<DailyStatus> UPCOMING_STATUSES = Set.of(DailyStatus.SCHEDULED, DailyStatus.CONFIRMED);
 
+    private final FinancePreservation financePreservation;
     private final PeladaRepository peladaRepository;
     private final PeladaPlayerStarsRepository playerStarsRepository;
     private final PeladaMensalistaRepository mensalistaRepository;
@@ -186,6 +188,7 @@ public class PeladaService {
             throw new AppException(HttpStatus.FORBIDDEN, "O criador da pelada não pode ser removido");
         }
 
+        financePreservation.removeMembers(pelada, targets, caller);
         invitationService.recordRemoval(pelada, targets);
         targets.forEach(pelada.getMembers()::remove);
         targets.forEach(pelada.getAdmins()::remove);
@@ -361,6 +364,7 @@ public class PeladaService {
             throw new AppException(HttpStatus.FORBIDDEN, "Apenas o criador pode excluir a pelada");
         }
 
+        financePreservation.deleteDraftOnlyPelada(peladaId);
         Set<User> affected = new LinkedHashSet<>();
         for (Daily daily : dailyRepository.findByPelada(pelada)) {
             affected.addAll(dailyService.deleteDailyData(daily));

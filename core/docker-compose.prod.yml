@@ -28,6 +28,9 @@ services:
     volumes:
       # owned by uid 10001 (the image's user); deploy.sh chowns it
       - /opt/futspring-uploads:/app/uploads
+      # Temporary receipts MUST remain excluded from durable host/file backups.
+      - /opt/futspring-finance-receipts:/app/finance-receipts
+      - /opt/futspring-finance-qr:/app/finance-qr
     # default: the project network; observability: Prometheus scrapes futspring_api:9091 (never published)
     networks:
       - default

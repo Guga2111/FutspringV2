@@ -32,6 +32,32 @@ class MigrationDataTest {
     }
 
     @Test
+    void v12_isAdditiveAndProtectsFinancialHistoryFromPreviousBinaries() throws SQLException {
+        flyway("11").migrate();
+        execute("INSERT INTO users(id,email,username,password) VALUES(1,'finance@migration.test','Gestor','hash')");
+        execute("INSERT INTO peladas(id,name,day_of_week,time_of_day,duration,auto_create_daily_enabled,number_of_teams,players_per_team,created_at,creator_id) VALUES(1,'Legada','SATURDAY','19:00',1,false,2,5,now(),1)");
+        execute("INSERT INTO pelada_members(pelada_id,user_id) VALUES(1,1)");
+        execute("INSERT INTO dailies(id,pelada_id,daily_date,daily_time,status,is_finished,created_at) VALUES(1,1,'2026-10-31','19:00','SCHEDULED',false,now())");
+        flyway(null).migrate();
+        try (Connection c = connect(); Statement statement = c.createStatement()) {
+            try (ResultSet rows = statement.executeQuery("SELECT (SELECT count(*) FROM finance_lists),(SELECT count(*) FROM finance_movements),(SELECT count(*) FROM pelada_members)")) {
+                rows.next(); assertThat(rows.getInt(1)).isZero(); assertThat(rows.getInt(2)).isZero(); assertThat(rows.getInt(3)).isEqualTo(1);
+            }
+        }
+        execute("INSERT INTO finance_lists(id,pelada_id,name,classification,status,published_at,created_at,daily_id,daily_label) VALUES(1,1,'Diária','DAILY','CANCELED',now(),now(),1,'2026-10-31 19:00')");
+        execute("INSERT INTO finance_managers(pelada_id,user_id) VALUES(1,1)");
+        execute("DELETE FROM dailies WHERE id=1");
+        try (Connection c = connect(); Statement statement = c.createStatement(); ResultSet rows = statement.executeQuery("SELECT daily_id,daily_label FROM finance_lists WHERE id=1")) {
+            rows.next(); assertThat(rows.getObject(1)).isNull(); assertThat(rows.getString(2)).contains("2026-10-31");
+        }
+        execute("DELETE FROM pelada_members WHERE pelada_id=1 AND user_id=1");
+        try (Connection c = connect(); Statement statement = c.createStatement(); ResultSet rows = statement.executeQuery("SELECT count(*) FROM finance_managers")) { rows.next(); assertThat(rows.getInt(1)).isZero(); }
+        assertThatThrownBy(() -> execute("DELETE FROM peladas WHERE id=1")).isInstanceOf(SQLException.class).hasMessageContaining("financial history");
+        // The old binary can still write unrelated sporting settings during the overlap window.
+        execute("UPDATE peladas SET address='Campo novo' WHERE id=1");
+    }
+
+    @Test
     void v5_normalizesPortugueseDaysOfWeek() throws SQLException {
         flyway("4").migrate();
         execute("INSERT INTO users (id, email, username, password, stars) VALUES (1, 'a@a.com', 'a', 'x', 3)");
