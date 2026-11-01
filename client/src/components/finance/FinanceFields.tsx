@@ -12,12 +12,12 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectVa
 import { Checkbox } from "@/components/ui/checkbox"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 
-interface Props<T extends FieldValues> { control: Control<T>; name: FieldPath<T>; label: string; type?: string; disabled?: boolean; multiline?: boolean }
-export function FinanceInput<T extends FieldValues>({ control, name, label, type = "text", disabled, multiline }: Props<T>) {
+interface Props<T extends FieldValues> { control: Control<T>; name: FieldPath<T>; label: string; type?: string; disabled?: boolean; multiline?: boolean; placeholder?: string }
+export function FinanceInput<T extends FieldValues>({ control, name, label, type = "text", disabled, multiline, placeholder }: Props<T>) {
   return <Controller control={control} name={name} render={({ field, fieldState }) => <Field data-invalid={fieldState.invalid}>
     <FieldLabel htmlFor={`finance-${name}`}>{label}</FieldLabel>
     {type === "date" ? <FinanceDate id={`finance-${name}`} value={typeof field.value === "string" ? field.value : ""} onChange={field.onChange} invalid={fieldState.invalid} disabled={disabled} /> : multiline ? <Textarea {...field} id={`finance-${name}`} disabled={disabled} aria-invalid={fieldState.invalid} />
-      : <Input {...field} type={type} inputMode={name.includes("amount") || name === "adjustment" ? "decimal" : undefined} id={`finance-${name}`} disabled={disabled} aria-invalid={fieldState.invalid} />}
+      : <Input {...field} value={typeof field.value === "string" && (name.includes("amount") || name === "adjustment") ? field.value.replace(/^(-?\d+)\.(\d{2})$/, "$1,$2") : field.value} placeholder={placeholder} type={type} inputMode={name.includes("amount") || name === "adjustment" ? "decimal" : undefined} id={`finance-${name}`} disabled={disabled} aria-invalid={fieldState.invalid} />}
     <FieldError errors={[fieldState.error]} />
   </Field>} />
 }

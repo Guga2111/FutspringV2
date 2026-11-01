@@ -75,7 +75,7 @@ export function AppSidebar() {
 
         <SidebarGroup className="min-h-0 flex-1 px-2.5 py-0">
           <div className="flex min-h-[42px] items-center justify-between pb-1.5 pt-4 group-data-[collapsible=icon]:justify-center">
-            <SidebarGroupLabel className="h-auto px-2.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-faint-foreground group-data-[collapsible=icon]:hidden">
+            <SidebarGroupLabel className="h-auto px-2.5 text-xs font-medium text-muted-foreground group-data-[collapsible=icon]:hidden">
               Minhas peladas
             </SidebarGroupLabel>
             <Button

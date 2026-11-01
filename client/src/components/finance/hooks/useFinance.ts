@@ -45,11 +45,11 @@ export function useFinance(peladaId: number) {
     return () => document.removeEventListener("visibilitychange", visible)
   }, [refresh])
   const select = (id: number | null) => { setSelected(id); setDetail(null); setDetailError(null) }
-  async function mutate(signature: string, reason: string, action: (command: FinanceCommand) => Promise<FinanceResult>) {
+  async function mutate(signature: string, reason: string, action: (command: FinanceCommand) => Promise<FinanceResult>, expectedRevision?: number) {
     if (!overview || busy.current) throw new Error("Aguarde a operação em andamento")
     busy.current = true
     setPending(true)
-    if (retryCommand.current?.signature !== signature) retryCommand.current = { signature, command: { revision: overview.revision, requestKey: crypto.randomUUID(), reason: reason || null } }
+    if (retryCommand.current?.signature !== signature) retryCommand.current = { signature, command: { revision: expectedRevision ?? overview.revision, requestKey: crypto.randomUUID(), reason: reason || null } }
     try {
       const result = await action(retryCommand.current.command)
       generation.current++

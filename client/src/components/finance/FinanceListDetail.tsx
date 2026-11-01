@@ -1,72 +1,64 @@
-import { FinanceNotices } from "@/components/finance/FinanceNotices"
+import { useMemo, useState } from "react"
+import { MoreHorizontal, Search, Plus } from "lucide-react"
 import * as api from "@/api/finance"
 import type { FinanceController } from "@/components/finance/hooks/useFinance"
 import type { FinanceCharge, FinanceNotice } from "@/types/finance"
-import { financeListStatusLabel, financePaymentLabel } from "@/types/finance"
+import { financeListStatusLabel } from "@/types/finance"
 import type { FinanceReasonAction } from "@/components/finance/FinanceReasonForm"
 import type { FinancePaymentValues } from "@/schemas/finance"
-import { formatFinanceMoney } from "@/utils/finance"
+import { filterFinanceCharges, financeQueueCounts, financeQueueLabels, pendingFinanceNotice, formatFinanceMoney, type FinanceQueueFilter } from "@/utils/finance"
 import { FinanceImage } from "@/components/finance/FinanceImage"
 import { FinanceQrForm } from "@/components/finance/FinanceSettings"
+import { PlayerAvatar } from "@/components/PlayerAvatar"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Field, FieldLabel } from "@/components/ui/field"
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 
-export function FinanceListDetail({ peladaId, userId, finance, onEdit, onParticipants, onCharge, onReplace, onPayment, onReason, onSimple }: {
+export function FinanceListDetail({ peladaId, userId, finance, onEdit, onParticipants, onDetails, onPayment, onReason, onSimple }: {
   peladaId: number; userId: number | null; finance: FinanceController; onEdit: () => void; onParticipants: () => void
-  onCharge: (charge: FinanceCharge) => void; onReplace: (charge: FinanceCharge) => void
+  onDetails: (charge: FinanceCharge) => void
   onPayment: (charge: FinanceCharge, action: FinancePaymentValues["action"], notice?: FinanceNotice) => void
   onReason: (action: FinanceReasonAction) => void; onSimple: (action: api.FinanceListAction) => void
 }) {
+  const [filter, setFilter] = useState<FinanceQueueFilter>("pending")
+  const [search, setSearch] = useState("")
   const detail = finance.detail
+  const charges = detail?.charges
+  const rows = useMemo(() => filterFinanceCharges(charges ?? [], filter, search), [charges, filter, search])
   if (!detail) return null
   const list = detail.collection
   const manage = Boolean(finance.overview?.permissions.manage)
-  const open = list.status === "OPEN"
   const editable = manage && list.status !== "CANCELED"
-  return <section className="flex min-w-0 flex-col gap-5">
-    <div className="flex flex-wrap items-center justify-between gap-3"><Button variant="ghost" onClick={() => finance.select(null)}>Voltar às listas</Button>
-      {manage && <DropdownMenu><DropdownMenuTrigger asChild><Button variant="outline" disabled={finance.pending}>Ações da lista</Button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuGroup>
-        {editable && <DropdownMenuItem onClick={onEdit}>Editar lista e Pix</DropdownMenuItem>}
-        {list.status === "DRAFT" && <DropdownMenuItem onClick={() => onSimple("publish")}>Publicar cobranças</DropdownMenuItem>}
-        {open && <DropdownMenuItem onClick={() => onSimple("close")}>Encerrar lista</DropdownMenuItem>}
-        {list.status === "CLOSED" && <DropdownMenuItem onClick={() => onReason({ title: "Reabrir lista", description: "A lista voltará a aceitar avisos e recebimentos.", signature: `reopen:${list.id}`, run: command => api.financeListAction(peladaId, list.id, "reopen", command) })}>Reabrir lista</DropdownMenuItem>}
+  const counts = financeQueueCounts(detail.charges)
+  return <section className="flex min-w-0 flex-col gap-3 md:gap-5" aria-label={list.name}>
+    <header className="flex flex-wrap items-start justify-between gap-3"><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><h2 className="break-words text-xl font-semibold">{list.name}</h2><Badge variant="secondary">{financeListStatusLabel[list.status]}</Badge></div><p className="mt-1 text-sm text-muted-foreground">{list.dueDate ? `Vence ${list.dueDate.split("-").reverse().join("/")}` : "Sem vencimento"}{list.dailyLabel ? ` · Sessão ${list.dailyLabel}` : ""}</p></div>      {manage && <DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" size="icon" aria-label="Opções da cobrança" disabled={finance.pending}><MoreHorizontal /></Button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuGroup>
+        {editable && <DropdownMenuItem onClick={onParticipants}>Adicionar pessoas</DropdownMenuItem>}
+        {editable && <DropdownMenuItem onClick={onEdit}>Editar cobrança e Pix</DropdownMenuItem>}
+        {list.status === "DRAFT" && <DropdownMenuItem onClick={() => onSimple("publish")}>Publicar cobrança</DropdownMenuItem>}
+        {list.status === "OPEN" && <DropdownMenuItem onClick={() => onSimple("close")}>Encerrar cobrança</DropdownMenuItem>}
+        {list.status === "CLOSED" && <DropdownMenuItem onClick={() => onReason({ title: "Reabrir cobrança", description: "A cobrança voltará a aceitar avisos e recebimentos.", signature: `reopen:${list.id}`, run: command => api.financeListAction(peladaId, list.id, "reopen", command) })}>Reabrir cobrança</DropdownMenuItem>}
         <DropdownMenuItem onClick={() => onSimple("duplicate")}>Duplicar como rascunho</DropdownMenuItem>
-        {editable && <DropdownMenuItem onClick={() => onReason({ title: "Cancelar lista", description: "Só é possível cancelar sem recebimentos válidos nem avisos pendentes. Despesas e outras movimentações permanecem no caixa.", signature: `cancel:${list.id}`, run: command => api.financeListAction(peladaId, list.id, "cancel", command) })}>Cancelar lista</DropdownMenuItem>}
+        {editable && <DropdownMenuItem onClick={() => onReason({ title: "Cancelar cobrança", description: "Só é possível cancelar sem recebimentos válidos nem avisos pendentes. As movimentações de caixa são preservadas.", signature: `cancel:${list.id}`, run: command => api.financeListAction(peladaId, list.id, "cancel", command) })}>Cancelar cobrança</DropdownMenuItem>}
       </DropdownMenuGroup></DropdownMenuContent></DropdownMenu>}
+{editable && <Button className="hidden md:inline-flex" variant="outline" size="sm" onClick={onParticipants} disabled={finance.pending}><Plus data-icon="inline-start" />Pessoas</Button>}</header>
+    <dl className="grid grid-cols-2 gap-4 rounded-lg bg-muted p-3 md:p-4"><div><dt className="text-sm text-muted-foreground">{manage || finance.overview?.permissions.viewCash ? "Recebido" : "Você já pagou"}</dt><dd className="mt-1 font-semibold tabular-nums">{formatFinanceMoney(list.totals.received)}</dd></div><div><dt className="text-sm text-muted-foreground">{manage || finance.overview?.permissions.viewCash ? "Falta receber" : "Falta pagar"}</dt><dd className="mt-1 font-semibold tabular-nums">{formatFinanceMoney(list.totals.outstanding)}</dd></div></dl>
+    {list.status === "DRAFT" && manage && <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3"><p className="text-sm">Rascunho: os jogadores ainda não veem esta cobrança.</p><Button size="sm" disabled={finance.pending || counts.all === 0} onClick={() => onSimple("publish")}>Publicar cobrança</Button></div>}
+    {list.status === "CLOSED" && <p className="text-sm text-muted-foreground">Cobrança encerrada. As pendências continuam registradas.</p>}
+    <div className="flex flex-wrap items-center justify-between gap-3"><ToggleGroup type="single" value={filter} onValueChange={value => { if (value) setFilter(value as FinanceQueueFilter) }} variant="chip" size="chip" className="flex-wrap justify-start" aria-label="Situação dos pagamentos">{(Object.keys(financeQueueLabels) as FinanceQueueFilter[]).map(value => <ToggleGroupItem className="px-2 max-md:min-h-11" value={value} key={value}>{financeQueueLabels[value]} <span className="tabular-nums">{counts[value]}</span></ToggleGroupItem>)}</ToggleGroup>
+      <Field className="w-full lg:w-56"><FieldLabel htmlFor="finance-payment-search" className="sr-only">Buscar participante</FieldLabel><div className="relative"><Search aria-hidden className="pointer-events-none absolute left-3 top-3 size-4 text-muted-foreground" /><Input id="finance-payment-search" placeholder="Buscar participante" className="pl-9" value={search} onChange={event => setSearch(event.target.value)} /></div></Field>
     </div>
-    <div className="flex flex-col gap-2"><div className="flex flex-wrap items-center gap-3"><h3 className="break-words text-xl font-semibold">{list.name}</h3><Badge variant="secondary">{financeListStatusLabel[list.status]}</Badge></div>
-      {list.description && <p className="whitespace-pre-wrap break-words text-sm text-muted-foreground">{list.description}</p>}
-      {list.dailyLabel && <p className="text-sm text-muted-foreground">Diária: {list.dailyLabel}</p>}
-      {list.dueDate && <p className="text-sm text-muted-foreground">Vencimento: {list.dueDate.split("-").reverse().join("/")}</p>}
-    </div>
-    <Card><CardHeader><CardTitle>Arrecadação</CardTitle><CardDescription>{manage || finance.overview?.permissions.viewCash ? "Valores registrados nesta lista" : "Suas cobranças nesta lista"}</CardDescription></CardHeader><CardContent>
-      <dl className="grid grid-cols-1 gap-4 md:grid-cols-3">{[["Devido", list.totals.due], ["Recebido", list.totals.received], ["A receber", list.totals.outstanding]].map(([label, amount]) => <div key={label} className="flex justify-between gap-3 md:flex-col"><dt className="text-sm text-muted-foreground">{label}</dt><dd className="text-lg font-semibold tabular-nums">{formatFinanceMoney(amount)}</dd></div>)}</dl>
-      {list.totals.pendingNotices > 0 && <p className="mt-4 text-sm">{list.totals.pendingNotices} aviso(s) aguardando conferência</p>}
-    </CardContent></Card>
-    {(list.pixKey || list.pixRecipient || list.qrId) && <Card><CardHeader><CardTitle>Instruções Pix</CardTitle><CardDescription>{list.pixRecipient || "Recebedor não informado"}</CardDescription></CardHeader><CardContent className="flex flex-col items-start gap-3"><p className="break-all text-sm">{list.pixKey || "Chave não informada"}</p>{list.qrId && <FinanceImage peladaId={peladaId} kind="qr" imageId={list.qrId} />}</CardContent></Card>}
-    <div className="flex flex-wrap items-center justify-between gap-3"><h3 className="text-lg font-semibold">Participantes</h3>{editable && <Button variant="outline" onClick={onParticipants} disabled={finance.pending}>Adicionar participantes</Button>}</div>
-    {detail.charges.length === 0 ? <p className="py-6 text-muted-foreground">Adicione membros ou convidados para preparar as cobranças.</p> : <ul className="flex flex-col gap-4">{detail.charges.map(charge => {
-      const pending = charge.notices.find(n => n.status === "PENDING")
-      return <li key={charge.id} className="flex min-w-0 flex-col gap-3 py-4">
-        <div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="break-words font-medium">{charge.name} {charge.userId === null && <span className="text-sm text-muted-foreground">· Convidado</span>}</p>
-          <div className="mt-1 flex flex-wrap gap-2"><Badge variant="secondary">{charge.canceled ? "Cancelada" : financePaymentLabel[charge.paymentStatus]}</Badge>{charge.overdue && <Badge variant="destructive">Vencida</Badge>}{pending && <Badge variant="outline">Conferência pendente</Badge>}</div>
-        </div><div className="shrink-0 text-right"><p className="font-semibold tabular-nums">{formatFinanceMoney(charge.amountDue)}</p><p className="text-sm text-muted-foreground">Falta {formatFinanceMoney(charge.outstanding)}</p></div></div>
-        <p className="break-words text-sm text-muted-foreground">{charge.components.map(c => `${c.name}: ${formatFinanceMoney(c.amount)}`).join(" · ")} · Ajuste: {formatFinanceMoney(charge.adjustment)} · Recebido: {formatFinanceMoney(charge.received)}{charge.dueDate ? ` · Vence ${charge.dueDate.split("-").reverse().join("/")}` : ""}</p>
-        <div className="flex flex-wrap gap-2">
-          {manage && open && !charge.canceled && !pending && charge.paymentStatus !== "PAID" && <><Button size="sm" disabled={finance.pending} onClick={() => onPayment(charge, "receive")}>Marcar como pago</Button><Button size="sm" variant="outline" disabled={finance.pending} onClick={() => onPayment(charge, "partial")}>Registrar parcial</Button></>}
-          {manage && pending && <><Button size="sm" disabled={finance.pending || !open} onClick={() => onPayment(charge, "confirm", pending)}>Confirmar {formatFinanceMoney(pending.amount)}</Button><Button variant="outline" size="sm" disabled={finance.pending} onClick={() => onReason({ title: "Rejeitar aviso", description: "Se o valor recebido for diferente, registre o recebimento correto separadamente após rejeitar.", signature: `reject:${pending.id}`, run: command => api.rejectFinanceNotice(peladaId, list.id, charge.id, pending.id, command) })}>Rejeitar aviso</Button></>}
-          {charge.userId === userId && open && !charge.canceled && !pending && charge.paymentStatus !== "PAID" && <Button size="sm" variant="outline" disabled={finance.pending} onClick={() => onPayment(charge, "report")}>Informar pagamento</Button>}
-          {manage && <DropdownMenu><DropdownMenuTrigger asChild><Button size="sm" variant="ghost" disabled={finance.pending}>Mais ações</Button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuGroup>
-            {editable && !charge.canceled && !pending && <><DropdownMenuItem onClick={() => onCharge(charge)}>Ajustar valor ou vencimento</DropdownMenuItem><DropdownMenuItem onClick={() => onReplace(charge)}>Trocar participante</DropdownMenuItem><DropdownMenuItem onClick={() => onReason({ title: "Cancelar cobrança", description: "A cobrança fica preservada no histórico. Resolva avisos e recebimentos antes de cancelar.", signature: `cancel-charge:${charge.id}`, run: command => api.cancelFinanceCharge(peladaId, list.id, charge.id, command) })}>Cancelar cobrança</DropdownMenuItem></>}
-            {charge.received !== "0.00" && !pending && <DropdownMenuItem onClick={() => onPayment(charge, "refund")}>Devolver pagamento</DropdownMenuItem>}
-          </DropdownMenuGroup></DropdownMenuContent></DropdownMenu>}
-        </div>
-        {charge.notices.length > 0 && <Collapsible defaultOpen={Boolean(pending)}><CollapsibleTrigger asChild><Button size="sm" variant="ghost">Avisos e decisões</Button></CollapsibleTrigger><CollapsibleContent><FinanceNotices key={finance.overview?.revision} peladaId={peladaId} listId={list.id} chargeId={charge.id} recent={charge.notices} /></CollapsibleContent></Collapsible>}
+    {rows.length === 0 ? <div className="flex flex-col items-start gap-3 rounded-lg border p-6"><h3 className="font-medium">{counts.all === 0 ? "Quem vai participar desta cobrança?" : filter === "pending" && !search ? "Nenhum pagamento pendente" : "Nenhum participante neste filtro"}</h3><p className="text-sm text-muted-foreground">{counts.all === 0 ? "Adicione membros da pelada ou convidados." : "Os registros continuam disponíveis nos outros filtros."}</p>{counts.all === 0 && editable ? <Button size="sm" onClick={onParticipants}>Adicionar pessoas</Button> : filter !== "all" && <Button size="sm" variant="outline" onClick={() => setFilter("all")}>Ver todos</Button>}</div> : <ul className="flex flex-col rounded-lg border">{rows.map(charge => {
+      const notice = pendingFinanceNotice(charge)
+      const canReceive = manage && list.status === "OPEN" && !charge.canceled && !notice && charge.paymentStatus !== "PAID"
+      const canReport = !manage && charge.userId === userId && list.status === "OPEN" && !charge.canceled && !notice && charge.paymentStatus !== "PAID"
+      return <li key={charge.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 border-b p-3 last:border-b-0 lg:grid-cols-[minmax(0,1fr)_140px_180px] md:p-4"><div className="flex min-w-0 items-center gap-3"><PlayerAvatar username={charge.name} image={null} className="size-9" /><div className="min-w-0"><p className="break-words text-sm font-medium">{charge.name}</p><p className="mt-0.5 text-xs text-muted-foreground">{charge.canceled ? "Cancelada" : charge.paymentStatus === "PAID" ? "Pago" : charge.paymentStatus === "PARTIAL" ? "Pagamento parcial" : "Aguardando pagamento"}{notice ? " · Pagamento para conferir" : ""}{charge.overdue ? " · Vencido" : ""}{charge.userId === null ? " · Convidado" : ""}</p></div></div><p className="text-right text-sm font-semibold tabular-nums">{formatFinanceMoney(charge.paymentStatus === "PAID" || charge.canceled ? charge.amountDue : charge.outstanding)}</p>
+        <div className="col-span-2 flex justify-end gap-2 lg:col-span-1"><Button className="max-md:min-h-11" variant="ghost" size="sm" onClick={() => onDetails(charge)}>Detalhes</Button>{notice && manage ? <Button className="max-md:min-h-11" size="sm" variant="outline" onClick={() => onDetails(charge)} disabled={finance.pending}>Conferir</Button> : canReceive ? <Button className="max-md:min-h-11" size="sm" onClick={() => onPayment(charge, "receive")} disabled={finance.pending}>Receber</Button> : canReport ? <Button className="max-md:min-h-11" size="sm" onClick={() => onPayment(charge, "report")} disabled={finance.pending}>Informar pagamento</Button> : null}</div>
       </li>
     })}</ul>}
-    {editable && <Collapsible><CollapsibleTrigger asChild><Button variant="ghost">Alterar QR Code da lista</Button></CollapsibleTrigger><CollapsibleContent className="pt-3"><FinanceQrForm peladaId={peladaId} finance={finance} listId={list.id} /></CollapsibleContent></Collapsible>}
+    <Collapsible><CollapsibleTrigger asChild><Button variant="ghost" size="sm">Informações da cobrança e Pix</Button></CollapsibleTrigger><CollapsibleContent className="pt-3"><div className="flex flex-col gap-4 rounded-lg bg-muted p-4">{list.description && <p className="whitespace-pre-wrap break-words text-sm">{list.description}</p>}<p className="text-sm">Valor total: {formatFinanceMoney(list.totals.due)}</p>{list.pixKey && <p className="break-all text-sm">Pix: {list.pixKey}{list.pixRecipient ? ` · ${list.pixRecipient}` : ""}</p>}{list.qrId && <FinanceImage peladaId={peladaId} kind="qr" imageId={list.qrId} />}{editable && <FinanceQrForm peladaId={peladaId} finance={finance} listId={list.id} />}</div></CollapsibleContent></Collapsible>
   </section>
 }

@@ -40,6 +40,8 @@ class FinanceConcurrencyTest {
     @Autowired FinanceMovementRepository movements;
     @Autowired FinanceNoticeRepository notices;
     @Autowired FinanceAccountRepository accounts;
+    @Autowired FinanceListRepository lists;
+    @Autowired FinancePersonRepository people;
     @MockitoSpyBean FinanceAuditRepository audits;
     @Autowired FinanceFiles files;
     @Autowired PeladaRepository peladas;
@@ -64,6 +66,47 @@ class FinanceConcurrencyTest {
             for (var action : List.of(a, b)) futures.add(pool.submit(() -> { start.await(); try { action.run(); return HttpStatus.OK; } catch (AppException e) { return e.getStatus(); } }));
             start.countDown(); List<HttpStatus> result = new ArrayList<>(); for (var f : futures) result.add(f.get(30, TimeUnit.SECONDS)); return result;
         }
+    }
+    FinanceRequests.CreateCollection creation(Fixture f, List<Long> players, boolean publish) {
+        return new FinanceRequests.CreateCollection(
+                new FinanceRequests.Collection(command(f.pelada(), f.admin()), "Nova diária", Classification.DAILY, "", null, null,
+                        List.of(new FinanceRequests.Component("Valor por pessoa", "45.00")), null, null, null),
+                players, List.of("Convidado"), publish);
+    }
+    @Test void concurrentGuidedCreationCommitsOneCompletePublishedList() throws Exception {
+        var f = fixture(); var request = creation(f, List.of(f.player().getId()), true);
+        long revision = reads.overview(f.pelada(), f.admin().getEmail(), 0, 50).revision();
+        Runnable action = () -> collections.createCollection(f.pelada(), request, f.admin().getEmail());
+        assertThat(race(action, action)).containsExactly(HttpStatus.OK, HttpStatus.OK);
+        var created = lists.findByPeladaId(f.pelada()).stream().filter(l -> !l.getId().equals(f.list())).toList();
+        assertThat(created).hasSize(1);
+        var detail = reads.detail(f.pelada(), created.getFirst().getId(), f.admin().getEmail());
+        assertThat(detail.collection().status()).isEqualTo(ListStatus.OPEN);
+        assertThat(detail.charges()).hasSize(2);
+        assertThat(reads.overview(f.pelada(), f.admin().getEmail(), 0, 50).revision()).isEqualTo(revision + 1);
+        assertThat(audits.findByPeladaId(f.pelada()).stream().filter(a -> a.getRequestKey().equals(request.collection().command().requestKey()))).hasSize(1);
+    }
+    @Test void guidedCreationRollsBackListPeopleAndRevisionOnInvalidParticipantOrAuditFailure() {
+        var f = fixture(); var foreign = fixture();
+        int beforeLists = lists.findByPeladaId(f.pelada()).size();
+        int beforePeople = people.findByPeladaId(f.pelada()).size();
+        int beforeAudits = audits.findByPeladaId(f.pelada()).size();
+        long revision = reads.overview(f.pelada(), f.admin().getEmail(), 0, 50).revision();
+        assertThatThrownBy(() -> collections.createCollection(f.pelada(), creation(f, List.of(foreign.player().getId()), true), f.admin().getEmail()))
+                .isInstanceOf(AppException.class);
+        var empty = new FinanceRequests.CreateCollection(creation(f, List.of(), true).collection(), List.of(), List.of(), true);
+        assertThatThrownBy(() -> collections.createCollection(f.pelada(), empty, f.admin().getEmail())).isInstanceOf(AppException.class);
+        var valid = creation(f, List.of(f.player().getId()), true);
+        doThrow(new IllegalStateException("forced audit failure")).when(audits).save(any(FinanceAudit.class));
+        try {
+            assertThatThrownBy(() -> collections.createCollection(f.pelada(), valid, f.admin().getEmail())).isInstanceOf(IllegalStateException.class);
+        } finally { reset(audits); }
+        assertThat(lists.findByPeladaId(f.pelada())).hasSize(beforeLists);
+        assertThat(people.findByPeladaId(f.pelada())).hasSize(beforePeople);
+        assertThat(audits.findByPeladaId(f.pelada())).hasSize(beforeAudits);
+        assertThat(reads.overview(f.pelada(), f.admin().getEmail(), 0, 50).revision()).isEqualTo(revision);
+        var retry = collections.createCollection(f.pelada(), valid, f.admin().getEmail());
+        assertThat(retry.detail().charges()).hasSize(2);
     }
     @Test void retryingTheSameReceiptCommitsOneMovementAndOneAudit() throws Exception {
         var f = fixture(); var request = new FinanceRequests.Receipt(command(f.pelada(), f.admin()), null, null, PaymentMethod.PIX);

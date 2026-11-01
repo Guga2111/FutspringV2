@@ -1,3 +1,4 @@
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { lazy, Suspense, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import type { PeladaMember } from "@/types/pelada";
@@ -153,12 +154,17 @@ export default function PeladaDetailPage() {
           </p>
         </div>
       ) : pelada ? (
-        <main className="flex flex-col gap-5 p-4 md:gap-6 md:p-6">
-          <PeladaBanner pelada={pelada} isCurrentUserAdmin={isCurrentUserAdmin} />
+        <main className={activeTab === "finance" ? "flex flex-col gap-3 p-4 md:gap-6 md:p-6" : "flex flex-col gap-5 p-4 md:gap-6 md:p-6"}>
+          {activeTab === "finance" ? (
+            <header className="flex items-center gap-3 py-1">
+              <h1 className="text-xl font-semibold">{pelada.name}</h1>
+            </header>
+          ) : <PeladaBanner pelada={pelada} isCurrentUserAdmin={isCurrentUserAdmin} />}
 
           <div className="min-w-0">
-              <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col gap-5">
-                <TabsList variant="pill" className="h-auto max-w-full self-start flex-wrap max-md:grid max-md:grid-cols-3 max-md:rounded-tile">
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col gap-3 md:gap-5">
+                {activeTab === "finance" && <Select value={activeTab} onValueChange={setActiveTab}><SelectTrigger aria-label="Área da pelada" className="md:hidden"><SelectValue /></SelectTrigger><SelectContent><SelectGroup><SelectItem value="members">Membros</SelectItem><SelectItem value="sessions">Sessões</SelectItem><SelectItem value="ranking">Ranking</SelectItem><SelectItem value="awards">Prêmios</SelectItem><SelectItem value="finance">Financeiro</SelectItem>{isCurrentUserAdmin && <SelectItem value="invitations">Convites</SelectItem>}</SelectGroup></SelectContent></Select>}
+                <TabsList variant="pill" className={activeTab === "finance" ? "hidden h-auto max-w-full self-start flex-wrap md:flex" : "h-auto max-w-full self-start flex-wrap max-md:grid max-md:grid-cols-3 max-md:rounded-tile"}>
                   <TabsTrigger variant="pill" value="members">Membros</TabsTrigger>
                   <TabsTrigger variant="pill" value="sessions">Sessões</TabsTrigger>
                   <TabsTrigger variant="pill" value="ranking">Ranking</TabsTrigger>
@@ -232,7 +238,7 @@ export default function PeladaDetailPage() {
                   />
                 </TabsContent>
 
-                <TabsContent value="finance" className="mt-0">{activeTab === "finance" && <Suspense fallback={<DetailSkeleton />}><FinanceTab peladaId={pelada.id} userId={currentUser?.id ?? null} members={pelada.members} dailies={dailies} /></Suspense>}</TabsContent>
+                <TabsContent value="finance" className="mt-0">{activeTab === "finance" && <Suspense fallback={<DetailSkeleton />}><FinanceTab key={pelada.id} peladaId={pelada.id} userId={currentUser?.id ?? null} members={pelada.members} dailies={dailies} /></Suspense>}</TabsContent>
 
                 {isCurrentUserAdmin && <TabsContent value="invitations" className="mt-0"><PeladaInvitations peladaId={pelada.id} version={invitationVersion} onInvite={() => setShowInvitePlayer(true)} /></TabsContent>}
 

@@ -35,3 +35,12 @@ describe("finance API", () => {
     expect(apiClient.post).toHaveBeenCalledWith("/api/v1/peladas/1/finance/lists", expect.objectContaining({ dueDate: null, components: [{ name: "Campo", amount: "45.00" }] }))
   })
 })
+
+it("creates the collection, allocations and publication in one command without UI-only fields", async () => {
+  const { createFinanceCollection } = await import("@/api/finance")
+  await createFinanceCollection(1, command, { name: "Diária", classification: "DAILY", amount: "45.00", detailedPrice: false, description: "", dueDate: "", dailyId: null, components: [{ name: "Campo", amount: "0.00" }], pixKey: "pix", pixRecipient: "Gestor", qrId: null, reason: "", userIds: [2, 3], guestNames: ["Convidado"] }, true)
+  expect(apiClient.post).toHaveBeenCalledWith("/api/v1/peladas/1/finance/lists/create", {
+    collection: { command, name: "Diária", classification: "DAILY", description: "", dueDate: null, dailyId: null, components: [{ name: "Valor por pessoa", amount: "45.00" }], pixKey: "pix", pixRecipient: "Gestor", qrId: null },
+    userIds: [2, 3], guestNames: ["Convidado"], publish: true,
+  })
+})

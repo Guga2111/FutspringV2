@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { normalizeFinanceAmount, sumFinanceAmounts } from "@/utils/finance"
 
 export const financeMoneySchema = z.string().regex(/^\d{1,12}\.\d{2}$/, "Use duas casas decimais, por exemplo 45.00")
 export const financeSignedMoneySchema = z.string().regex(/^-?\d{1,12}\.\d{2}$/, "Use duas casas decimais, por exemplo -5.00")
@@ -63,5 +64,44 @@ export const financePaymentFormSchema = z.object({
 export type FinancePaymentValues = z.infer<typeof financePaymentFormSchema>
 export const financeReplacementSchema = financeReasonSchema.extend({ userId: id.nullable(), guestName: z.string().max(200) })
   .refine(v => (v.userId === null) !== !v.guestName.trim(), { message: "Selecione um membro ou informe um convidado", path: ["guestName"] })
-export const financeParticipantsFormSchema = z.object({ userIds: z.array(id).max(100), guestName: z.string().trim().max(200), reason })
-  .refine(v => v.userIds.length > 0 || v.guestName.length > 0, { message: "Selecione membros ou informe um convidado", path: ["userIds"] })
+// UI inputs accept pt-BR amounts; API schemas above continue requiring exact decimal strings.
+export const financeAmountInputSchema = z.string().refine(value => {
+  const normalized = normalizeFinanceAmount(value)
+  return normalized !== null && !normalized.startsWith("-")
+}, "Informe um valor válido, como 45,00").transform(value => normalizeFinanceAmount(value) ?? value)
+export const financeSignedAmountInputSchema = z.string().refine(value => normalizeFinanceAmount(value) !== null, "Informe um valor válido, como -5,00").transform(value => normalizeFinanceAmount(value) ?? value)
+export const financeCreateSchema = financeListSchema.extend({
+  amount: z.string(),
+  detailedPrice: z.boolean(),
+  components: z.array(z.object({ name: z.string(), amount: z.string() })).min(1).max(20),
+  userIds: z.array(id).max(100, "Selecione até 100 jogadores"),
+  guestNames: z.array(z.string().trim().max(200, "O nome pode ter até 200 caracteres")).max(100, "Adicione até 100 convidados").transform(names => names.filter(Boolean)),
+}).superRefine((values, ctx) => {
+  if (values.detailedPrice) {
+    const parsed = z.array(z.object({ name: component.shape.name, amount: financeAmountInputSchema })).safeParse(values.components)
+    if (!parsed.success) for (const issue of parsed.error.issues) ctx.addIssue({ ...issue, path: ["components", ...issue.path] })
+  }
+  const amount = values.detailedPrice ? sumFinanceAmounts(values.components.map(c => c.amount)) : normalizeFinanceAmount(values.amount)
+  if (!amount || !financeMoneySchema.safeParse(amount).success || amount === "0.00")
+    ctx.addIssue({ code: "custom", path: [values.detailedPrice ? "components" : "amount"], message: "Informe um valor maior que zero" })
+}).transform(values => {
+  const amount = values.detailedPrice ? sumFinanceAmounts(values.components.map(c => c.amount)) : normalizeFinanceAmount(values.amount) ?? values.amount
+  return { ...values, amount, components: values.detailedPrice ? values.components.map(c => ({ name: c.name.trim(), amount: normalizeFinanceAmount(c.amount) ?? c.amount })) : [{ name: "Valor por pessoa", amount }] }
+})
+export type FinanceCreateInput = z.input<typeof financeCreateSchema>
+export type FinanceCreateValues = z.output<typeof financeCreateSchema>
+export const financeReceiveFormSchema = z.object({
+  action: z.enum(["receive", "partial", "confirm", "refund", "report"]),
+  amount: financeAmountInputSchema,
+  effectiveDate: date, method, reason, reduceObligation: z.boolean(), file: financeImageSchema.nullable(),
+}).superRefine((values, ctx) => {
+  if (values.action !== "report" && values.amount === "0.00") ctx.addIssue({ code: "custom", path: ["amount"], message: "Informe um valor maior que zero" })
+  if (values.action === "refund" && !values.reason.trim()) ctx.addIssue({ code: "custom", path: ["reason"], message: "Informe o motivo" })
+})
+
+export const financeListFormSchema = financeListSchema.extend({ components: z.array(z.object({ name: component.shape.name, amount: financeAmountInputSchema })).min(1).max(20) })
+export const financeChargeFormSchema = financeChargeSchema.extend({ components: financeListFormSchema.shape.components, adjustment: financeSignedAmountInputSchema })
+export const financeCashFormSchema = financeCashSchema.safeExtend({ amount: financeSignedAmountInputSchema })
+
+export const financePeopleFormSchema = z.object({ userIds: z.array(id).max(100), guestNames: z.array(z.string().trim().max(200)).max(100).transform(names => names.filter(Boolean)), reason })
+  .refine(values => values.userIds.length + values.guestNames.length > 0, { message: "Selecione ao menos uma pessoa", path: ["userIds"] })

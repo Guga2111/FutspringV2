@@ -2,7 +2,7 @@ import { useForm, useFieldArray } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "sonner"
 import { saveFinanceCharge } from "@/api/finance"
-import { financeChargeSchema, type FinanceChargeValues } from "@/schemas/finance"
+import { financeChargeFormSchema, type FinanceChargeValues } from "@/schemas/finance"
 import type { FinanceCharge, FinanceList } from "@/types/finance"
 import type { FinanceController } from "@/components/finance/hooks/useFinance"
 import { FinanceInput, FinanceFormError } from "@/components/finance/FinanceFields"
@@ -12,7 +12,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "
 import { applyServerErrors } from "@/lib/form-errors"
 
 export function FinanceChargeForm({ peladaId, finance, list, charge, onClose }: { peladaId: number; finance: FinanceController; list: FinanceList; charge: FinanceCharge; onClose: () => void }) {
-  const form = useForm<FinanceChargeValues>({ resolver: zodResolver(financeChargeSchema), defaultValues: { components: charge.components, adjustment: charge.adjustment, dueDate: charge.dueDate ?? "", reason: "" } })
+  const form = useForm<FinanceChargeValues>({ resolver: zodResolver(financeChargeFormSchema), defaultValues: { components: charge.components, adjustment: charge.adjustment, dueDate: charge.dueDate ?? "", reason: "" } })
   const fields = useFieldArray({ control: form.control, name: "components" })
   return <Sheet open onOpenChange={open => { if (!open && !finance.pending) onClose() }}><SheetContent className="flex w-full flex-col gap-5 overflow-y-auto sm:max-w-lg">
     <SheetHeader><SheetTitle>Ajustar cobrança</SheetTitle><SheetDescription>{charge.name}. Um abatimento reduz a obrigação, sem criar entrada no caixa.</SheetDescription></SheetHeader>

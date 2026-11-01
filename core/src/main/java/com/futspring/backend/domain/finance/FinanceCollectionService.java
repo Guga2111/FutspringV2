@@ -78,21 +78,41 @@ public class FinanceCollectionService {
                     require(componentsEqual(list.getComponents(), request.components()), "Altere os valores nas cobranças individuais");
                 }
             }
-            validateQr(id, request.qrId());
-            list.setPeladaId(id); list.setName(request.name().trim()); list.setClassification(request.classification());
-            list.setDescription(request.description()); list.setDueDate(request.dueDate());
-            if (request.dailyId() != null) {
-                var daily = reads.scopedDaily(id, request.dailyId());
-                list.setDailyId(daily.getId()); list.setDailyLabel(daily.getDailyDate() + " " + daily.getDailyTime());
-            } else list.setDailyId(null); // Historical label is retained when detached.
-            list.setPixKey(request.pixKey() == null && listId == null ? ctx.account().getPixKey() : request.pixKey());
-            list.setPixRecipient(request.pixRecipient() == null && listId == null ? ctx.account().getPixRecipient() : request.pixRecipient());
-            list.setQrId(request.qrId() == null && listId == null ? ctx.account().getQrId() : request.qrId());
-            list.getComponents().clear(); list.getComponents().addAll(components(request.components()));
-            if (listId == null) list.setCreatedAt(access.now());
-            lists.save(list);
+            saveCollection(ctx, list, listId, request);
             return new Change(before, reads.detail(ctx, list.getId()), list.getId());
         });
+    }
+    /** A complete organizer submission commits the collection, allocations and publication together. */
+    public FinanceViews.Result createCollection(Long id, FinanceRequests.CreateCollection request, String email) {
+        var collection = request.collection();
+        return tx.execute(id, email, collection.command(), "LIST_SAVE", "LIST_WITH_PARTICIPANTS:null", request, true, ctx -> {
+            var list = new FinanceList();
+            saveCollection(ctx, list, null, collection);
+            if (!request.userIds().isEmpty() || !request.guestNames().isEmpty()) {
+                addParticipants(ctx, list, new FinanceRequests.Participants(collection.command(), request.userIds(), request.guestNames()));
+            }
+            if (request.publish()) {
+                require(!request.userIds().isEmpty() || !request.guestNames().isEmpty(), "Selecione quem deve pagar antes de publicar");
+                list.setStatus(ListStatus.OPEN);
+                list.setPublishedAt(access.now());
+            }
+            return new Change(null, reads.detail(ctx, list.getId()), list.getId());
+        });
+    }
+    private void saveCollection(Context ctx, FinanceList list, Long listId, FinanceRequests.Collection request) {
+        validateQr(ctx.pelada().getId(), request.qrId());
+        list.setPeladaId(ctx.pelada().getId()); list.setName(request.name().trim()); list.setClassification(request.classification());
+        list.setDescription(request.description()); list.setDueDate(request.dueDate());
+        if (request.dailyId() != null) {
+            var daily = reads.scopedDaily(ctx.pelada().getId(), request.dailyId());
+            list.setDailyId(daily.getId()); list.setDailyLabel(daily.getDailyDate() + " " + daily.getDailyTime());
+        } else list.setDailyId(null); // Historical label is retained when detached.
+        list.setPixKey(request.pixKey() == null && listId == null ? ctx.account().getPixKey() : request.pixKey());
+        list.setPixRecipient(request.pixRecipient() == null && listId == null ? ctx.account().getPixRecipient() : request.pixRecipient());
+        list.setQrId(request.qrId() == null && listId == null ? ctx.account().getQrId() : request.qrId());
+        list.getComponents().clear(); list.getComponents().addAll(components(request.components()));
+        if (listId == null) list.setCreatedAt(access.now());
+        lists.save(list);
     }
     public FinanceViews.Result transition(Long id, Long listId, String operation, FinanceRequests.Command command, String email) {
         return tx.execute(id, email, command, operation, "LIST:" + listId, command, true, ctx -> {
@@ -154,24 +174,29 @@ public class FinanceCollectionService {
         return tx.execute(id, email, request.command(), "PARTICIPANTS", "LIST:" + listId, request, true, ctx -> {
             var list = reads.findList(id, listId); require(list.getStatus() != ListStatus.CANCELED, "A lista está cancelada");
             if (list.getPublishedAt() != null) reason(request.command());
-            require(!request.userIds().isEmpty() || !request.guestNames().isEmpty(), "Selecione participantes");
-            require(new HashSet<>(request.userIds()).size() == request.userIds().size(), "Não repita jogadores");
-            require(request.userIds().isEmpty() || peladas.findMemberIds(id, request.userIds()).size() == request.userIds().size(), "Selecione membros desta pelada");
             var before = reads.detail(ctx, listId);
-            var componentRequests = list.getComponents().stream().map(c -> new FinanceRequests.Component(c.getName(), text(c.getAmount()))).toList();
-            List<FinanceRequests.Charge> items = new ArrayList<>();
-            request.userIds().forEach(userId -> items.add(new FinanceRequests.Charge(request.command(), userId, null, null, componentRequests, "0.00", list.getDueDate())));
-            request.guestNames().forEach(name -> items.add(new FinanceRequests.Charge(request.command(), null, null, name, componentRequests, "0.00", list.getDueDate())));
-            for (var item : items) {
-                var person = person(ctx, item);
-                require(!charges.existsByListIdAndPersonIdAndCanceledFalse(listId, person.getId()), "Um participante já tem cobrança nesta lista");
-                var charge = new FinanceCharge(); charge.setPeladaId(id); charge.setListId(listId); charge.setPersonId(person.getId());
-                charge.setUserId(person.getUserId()); charge.setPersonName(person.getName()); charge.setDueDate(list.getDueDate());
-                charge.getComponents().addAll(copyComponents(list.getComponents()));
-                charge.setAmountDue(check(list.getComponents().stream().map(PriceComponent::getAmount).reduce(ZERO, BigDecimal::add))); charges.save(charge);
-            }
+            addParticipants(ctx, list, request);
             return new Change(before, reads.detail(ctx, listId), listId);
         });
+    }
+    private void addParticipants(Context ctx, FinanceList list, FinanceRequests.Participants request) {
+        Long id = ctx.pelada().getId();
+        Long listId = list.getId();
+        require(!request.userIds().isEmpty() || !request.guestNames().isEmpty(), "Selecione participantes");
+        require(new HashSet<>(request.userIds()).size() == request.userIds().size(), "Não repita jogadores");
+        require(request.userIds().isEmpty() || peladas.findMemberIds(id, request.userIds()).size() == request.userIds().size(), "Selecione membros desta pelada");
+        var componentRequests = list.getComponents().stream().map(c -> new FinanceRequests.Component(c.getName(), text(c.getAmount()))).toList();
+        List<FinanceRequests.Charge> items = new ArrayList<>();
+        request.userIds().forEach(userId -> items.add(new FinanceRequests.Charge(request.command(), userId, null, null, componentRequests, "0.00", list.getDueDate())));
+        request.guestNames().forEach(name -> items.add(new FinanceRequests.Charge(request.command(), null, null, name, componentRequests, "0.00", list.getDueDate())));
+        for (var item : items) {
+            var person = person(ctx, item);
+            require(!charges.existsByListIdAndPersonIdAndCanceledFalse(listId, person.getId()), "Um participante já tem cobrança nesta lista");
+            var charge = new FinanceCharge(); charge.setPeladaId(id); charge.setListId(listId); charge.setPersonId(person.getId());
+            charge.setUserId(person.getUserId()); charge.setPersonName(person.getName()); charge.setDueDate(list.getDueDate());
+            charge.getComponents().addAll(copyComponents(list.getComponents()));
+            charge.setAmountDue(check(list.getComponents().stream().map(PriceComponent::getAmount).reduce(ZERO, BigDecimal::add))); charges.save(charge);
+        }
     }
     public FinanceViews.Result charge(Long id, Long listId, Long chargeId, boolean replace, FinanceRequests.Charge request, String email) {
         return tx.execute(id, email, request.command(), replace ? "CHARGE_REPLACE" : "CHARGE_SAVE", "CHARGE:" + listId + ":" + chargeId, request, true, ctx -> {
