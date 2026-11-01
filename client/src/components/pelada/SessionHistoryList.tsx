@@ -61,7 +61,7 @@ export function SessionHistoryList({ dailies, isLoading, isAdmin, onOpenCreate }
   )
 }
 
-function SessionRow({ daily }: { daily: DailyListItem }) {
+export function SessionRow({ daily }: { daily: DailyListItem }) {
   const photo = getFileUrl(daily.championImage)
   return (
     <li className="border-b border-border/60 last:border-b-0">

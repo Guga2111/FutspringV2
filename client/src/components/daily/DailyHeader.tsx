@@ -1,6 +1,4 @@
-import { Link } from "react-router-dom"
 import {
-  ArrowLeft,
   CircleCheck,
   CircleX,
   ClipboardList,
@@ -16,6 +14,9 @@ import {
   Volleyball,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { PeladaBreadcrumb } from "@/components/pelada/PeladaBreadcrumb"
+import { areaPath } from "@/utils/peladaAreas"
+import { formatWeekdayDayMonth } from "@/utils/dates"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -59,13 +60,14 @@ export function DailyHeader({ daily, ...actions }: DailyHeaderProps) {
   return (
     <header className="flex flex-wrap items-end justify-between gap-4">
       <div className="flex min-w-0 flex-col gap-2">
-        <Link
-          to={`/pelada/${daily.peladaId}`}
-          className="flex items-center gap-1.5 text-[13px] text-muted-foreground transition-colors hover:text-foreground"
-        >
-          <ArrowLeft className="size-3.5" />
-          {daily.peladaName}
-        </Link>
+        <PeladaBreadcrumb
+          items={[
+            { label: "Início", to: "/home" },
+            { label: daily.peladaName, to: areaPath(daily.peladaId, "overview"), truncate: true },
+            { label: "Sessões", to: areaPath(daily.peladaId, "sessions") },
+            { label: formatWeekdayDayMonth(daily.dailyDate) },
+          ]}
+        />
         <div className="flex flex-wrap items-center gap-2.5">
           <h1 className="text-[22px] font-bold tracking-[-0.01em] md:text-[28px]">{formatLongDate(daily.dailyDate)}</h1>
           <DailyStatusBadge status={status} size="lg" />

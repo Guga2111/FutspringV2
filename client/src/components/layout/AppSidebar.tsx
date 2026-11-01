@@ -1,4 +1,5 @@
 import { Link, useLocation } from "react-router-dom"
+import { isPeladaPath } from "@/utils/peladaAreas"
 import { Home, PanelLeft, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -102,7 +103,7 @@ export function AppSidebar() {
                   <SidebarPeladaItem
                     key={pelada.id}
                     pelada={pelada}
-                    isActive={pathname === `/pelada/${pelada.id}`}
+                    isActive={isPeladaPath(pathname, pelada.id)}
                     onNavigate={closeOnMobile}
                   />
                 ))}

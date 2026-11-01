@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import { deleteDaily } from '@/api/dailies'
 import { getErrorMessage } from '@/lib/errors'
+import { areaPath } from '@/utils/peladaAreas'
 
 const CONFIRMATION_PHRASES = [
   'excluir esta sessão',
@@ -59,7 +60,7 @@ export default function DeleteDailyDialog({
       await deleteDaily(dailyId)
       onOpenChange(false)
       toast.success('Sessão excluída')
-      navigate(`/pelada/${peladaId}`)
+      navigate(areaPath(peladaId, "sessions"))
     } catch (error) {
       toast.error(getErrorMessage(error, 'Não foi possível excluir a sessão'))
     } finally {

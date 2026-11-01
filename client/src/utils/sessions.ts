@@ -21,6 +21,20 @@ export function pickNextSession(dailies: DailyListItem[], now = new Date()): Dai
   )
 }
 
+// The latest sessions up to today, newest first, leaving out the next session (shown on its own)
+export function pickRecentSessions(
+  dailies: DailyListItem[],
+  nextId: number | null,
+  limit: number,
+  now = new Date(),
+): DailyListItem[] {
+  const today = todayIso(now)
+  return dailies
+    .filter((d) => d.id !== nextId && d.dailyDate <= today)
+    .sort((a, b) => b.dailyDate.localeCompare(a.dailyDate) || b.id - a.id)
+    .slice(0, limit)
+}
+
 export interface SessionMonth {
   key: string
   // "Setembro 2026"
