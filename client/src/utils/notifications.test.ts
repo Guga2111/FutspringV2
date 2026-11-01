@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { Trophy, UserX } from "lucide-react"
+import { ChampionIcon, UserRemove01Icon } from "@hugeicons/core-free-icons"
 import type { NotificationResponse, NotificationType } from "@/types/notification"
 import { notificationTypeCategory } from "@/types/notification"
 import { mergeNotifications, notificationPlainText, notificationToast, notificationView, upsertNotification } from "./notifications"
@@ -63,14 +63,14 @@ describe("notificationView", () => {
   it("puts names in bold", () => {
     const { parts, icon } = notificationView(make("DIARISTA_BUMPED"))
     expect(parts.filter((p) => p.bold).map((p) => p.text)).toEqual(["Pelada do Fut", "Leal"])
-    expect(icon).toBe(UserX)
+    expect(icon).toBe(UserRemove01Icon)
   })
 
   it("names each award", () => {
     expect(notificationPlainText(make("AWARD_WON", { award: "WILTBALL" }))).toBe("Você levou a Bola Murcha de sáb, 31/10")
     expect(notificationPlainText(make("AWARD_WON", { award: "PUSKAS" }))).toBe("Você ganhou o Puskás de sáb, 31/10 🏆")
     expect(notificationPlainText(make("AWARD_WON", { award: "GARCOM" }))).toBe("Você foi o Garçom de sáb, 31/10 🏆")
-    expect(notificationView(make("AWARD_WON", { award: "GARCOM" })).icon).toBe(Trophy)
+    expect(notificationView(make("AWARD_WON", { award: "GARCOM" })).icon).toBe(ChampionIcon)
   })
 
   it("falls back when the actor is gone or the team is unknown", () => {

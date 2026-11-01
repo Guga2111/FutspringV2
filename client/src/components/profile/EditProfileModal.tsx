@@ -1,7 +1,8 @@
 import { useState } from "react"
 import { Controller, useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Camera } from "lucide-react"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { Camera01Icon } from "@hugeicons/core-free-icons"
 import { toast } from "sonner"
 import { updateUser, uploadBackgroundImage, uploadUserImage } from "@/api/users"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -98,7 +99,7 @@ export default function EditProfileModal({ profile, onClose, onProfileUpdated }:
             htmlFor="background-input"
             className="absolute bottom-2 right-2 flex cursor-pointer items-center gap-1 rounded-full bg-background/80 px-3 py-1 text-xs font-medium text-foreground backdrop-blur hover:bg-background"
           >
-            <Camera className="size-3.5" />
+            <HugeiconsIcon icon={Camera01Icon} className="size-3.5" />
             {uploading === "background" ? "Enviando..." : "Alterar fundo"}
           </label>
           <Input
@@ -121,7 +122,7 @@ export default function EditProfileModal({ profile, onClose, onProfileUpdated }:
               <AvatarFallback className="text-lg font-bold">{getInitials(current.username)}</AvatarFallback>
             </Avatar>
             <span className="absolute bottom-0 right-0 flex size-7 items-center justify-center rounded-full border bg-background">
-              <Camera className="size-3.5" />
+              <HugeiconsIcon icon={Camera01Icon} className="size-3.5" />
             </span>
           </label>
           <Input

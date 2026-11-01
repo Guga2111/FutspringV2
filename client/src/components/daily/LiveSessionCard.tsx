@@ -1,4 +1,5 @@
-import { Plus } from "lucide-react"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { PlusSignIcon } from "@hugeicons/core-free-icons"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import type { DailyDetail } from "@/types/daily"
@@ -39,7 +40,7 @@ export default function LiveSessionCard({ daily, onEnterResults, onFinalize }: L
             Finalizar sessão
           </Button>
           <Button variant="gradient" onClick={onEnterResults} className="h-10 gap-2 px-[18px] font-semibold">
-            <Plus className="size-[15px]" strokeWidth={2.2} />
+            <HugeiconsIcon icon={PlusSignIcon} className="size-[15px]" strokeWidth={2.2} />
             Lançar resultados
           </Button>
         </div>

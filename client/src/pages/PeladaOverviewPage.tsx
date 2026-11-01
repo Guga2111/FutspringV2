@@ -1,6 +1,7 @@
 import { useMemo } from "react"
 import { Link } from "react-router-dom"
-import { Award, CalendarDays, ChevronRight, ListOrdered, MailPlus, Plus, Settings, Users, Wallet, type LucideIcon } from "lucide-react"
+import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react"
+import { ArrowRight01Icon, Award01Icon, Calendar03Icon, LeftToRightListNumberIcon, MailAdd01Icon, PlusSignIcon, Settings01Icon, UserGroupIcon, Wallet01Icon } from "@hugeicons/core-free-icons"
 import { NextSessionCard } from "@/components/pelada/NextSessionCard"
 import { PeladaBanner } from "@/components/pelada/PeladaBanner"
 import { SessionRow } from "@/components/pelada/SessionHistoryList"
@@ -13,14 +14,14 @@ import { pickNextSession, pickRecentSessions } from "@/utils/sessions"
 
 const RECENT_LIMIT = 3
 
-const AREA_ICONS: Record<Exclude<PeladaArea, "overview">, LucideIcon> = {
-  members: Users,
-  sessions: CalendarDays,
-  ranking: ListOrdered,
-  awards: Award,
-  finance: Wallet,
-  invitations: MailPlus,
-  settings: Settings,
+const AREA_ICONS: Record<Exclude<PeladaArea, "overview">, IconSvgElement> = {
+  members: UserGroupIcon,
+  sessions: Calendar03Icon,
+  ranking: LeftToRightListNumberIcon,
+  awards: Award01Icon,
+  finance: Wallet01Icon,
+  invitations: MailAdd01Icon,
+  settings: Settings01Icon,
 }
 
 // What is happening now: the next session, the latest sessions, and a way into every area
@@ -67,7 +68,7 @@ export default function PeladaOverviewPage() {
               <span>Nenhuma sessão realizada ainda. Os resultados das sessões aparecem aqui.</span>
               {w.isAdmin && (
                 <Button variant="outline" onClick={w.openCreateSession} className="h-[34px] gap-1.5 px-3.5">
-                  <Plus className="size-3.5" strokeWidth={2.2} />
+                  <HugeiconsIcon icon={PlusSignIcon} className="size-3.5" strokeWidth={2.2} />
                   Nova sessão
                 </Button>
               )}
@@ -107,12 +108,12 @@ export default function PeladaOverviewPage() {
                   to={areaPath(w.pelada.id, area)}
                   className="flex min-h-[60px] items-center gap-3 rounded-xl border bg-card px-4 py-3 transition-colors hover:bg-row-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
-                  <Icon className="size-[18px] shrink-0 text-muted-foreground" />
+                  <HugeiconsIcon icon={Icon} className="size-[18px] shrink-0 text-muted-foreground" />
                   <span className="flex min-w-0 flex-1 flex-col">
                     <span className="text-sm font-medium">{PELADA_AREAS[area].label}</span>
                     <span className="truncate text-xs text-subtle-foreground">{PELADA_AREAS[area].description}</span>
                   </span>
-                  <ChevronRight className="size-4 shrink-0 text-faint-foreground" />
+                  <HugeiconsIcon icon={ArrowRight01Icon} className="size-4 shrink-0 text-faint-foreground" />
                 </Link>
               </li>
             )

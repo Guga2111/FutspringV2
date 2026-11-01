@@ -1,4 +1,5 @@
-import { Brush, HandHelping, Target, ThumbsDown, type LucideIcon } from "lucide-react"
+import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react"
+import { HandHelpingIcon, PaintBrush01Icon, Target02Icon, ThumbsDownIcon } from "@hugeicons/core-free-icons"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { PlayerAvatar } from "@/components/PlayerAvatar"
 import { cn } from "@/lib/utils"
@@ -7,7 +8,7 @@ import type { DailyDetail } from "@/types/daily"
 
 interface AwardCardData {
   title: string
-  icon: LucideIcon
+  icon: IconSvgElement
   // icon tile background + icon color
   tone: string
   detail: string | null
@@ -23,7 +24,7 @@ function AwardCard({ award, daily }: { award: AwardCardData; daily: DailyDetail 
     <article className="flex flex-col gap-3 rounded-xl border bg-card p-3.5">
       <div className="flex items-center gap-2">
         <span className={cn("flex size-7 shrink-0 items-center justify-center rounded-lg", award.tone)}>
-          <Icon className="size-3.5" strokeWidth={2.4} />
+          <HugeiconsIcon icon={Icon} className="size-3.5" strokeWidth={2.4} />
         </span>
         <h3 className="text-[13px] font-semibold">{award.title}</h3>
         {award.detail && <span className="ml-auto text-xs text-subtle-foreground">{award.detail}</span>}
@@ -52,7 +53,7 @@ export function DailyAwardsGrid({ daily }: { daily: DailyDetail }) {
   const cards: AwardCardData[] = [
     {
       title: "Artilheiro",
-      icon: Target,
+      icon: Target02Icon,
       tone: "bg-success-muted text-success-strong",
       detail: bestStatLabel(daily.playerStats, award.artilheiroWinnerIds, "goals"),
       winnerIds: award.artilheiroWinnerIds,
@@ -60,7 +61,7 @@ export function DailyAwardsGrid({ daily }: { daily: DailyDetail }) {
     },
     {
       title: "Garçom",
-      icon: HandHelping,
+      icon: HandHelpingIcon,
       tone: "bg-info-muted text-info",
       detail: bestStatLabel(daily.playerStats, award.garcomWinnerIds, "assists"),
       winnerIds: award.garcomWinnerIds,
@@ -68,7 +69,7 @@ export function DailyAwardsGrid({ daily }: { daily: DailyDetail }) {
     },
     {
       title: "Puskás",
-      icon: Brush,
+      icon: PaintBrush01Icon,
       tone: "bg-status-live text-gold",
       detail: "gol mais bonito",
       winnerIds: award.puskasWinnerIds,
@@ -76,7 +77,7 @@ export function DailyAwardsGrid({ daily }: { daily: DailyDetail }) {
     },
     {
       title: "Bola Murcha",
-      icon: ThumbsDown,
+      icon: ThumbsDownIcon,
       tone: "bg-destructive-muted text-destructive",
       detail: "votação",
       winnerIds: award.wiltballWinnerIds,

@@ -1,5 +1,6 @@
+import { HugeiconsIcon } from "@hugeicons/react"
 import { Link, useSearchParams } from "react-router-dom"
-import { MailCheck, MailX } from "lucide-react"
+import { MailRemove01Icon, MailValidation01Icon } from "@hugeicons/core-free-icons"
 import { AuthLayout } from "@/components/auth/AuthLayout"
 import { useEmailUnsubscribe } from "@/components/notification-settings/hooks/useEmailUnsubscribe"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -60,12 +61,12 @@ function UnsubscribeCard({ token }: { token: string }) {
   }
 
   const label = notificationCategoryLabel[preference.category]
-  const Icon = preference.emailEnabled ? MailCheck : MailX
+  const Icon = preference.emailEnabled ? MailValidation01Icon : MailRemove01Icon
 
   return (
     <Card className="w-full max-w-md border-0 shadow-none">
       <CardHeader className="items-center text-center">
-        <Icon aria-hidden className="mb-2 size-10 text-brand" />
+        <HugeiconsIcon icon={Icon} aria-hidden className="mb-2 size-10 text-brand" />
         <CardTitle aria-live="polite">
           E-mails de <span className="text-brand">{label}</span> {preference.emailEnabled ? "reativados" : "desativados"}
         </CardTitle>

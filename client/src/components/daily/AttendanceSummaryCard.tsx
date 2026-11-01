@@ -1,4 +1,5 @@
-import { CalendarCheck, Check } from "lucide-react"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { CalendarCheckIn01Icon, Tick02Icon } from "@hugeicons/core-free-icons"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { SelfConfirmButton } from "@/components/SelfConfirmButton"
@@ -35,7 +36,7 @@ export function AttendanceSummaryCard({ daily, isConfirmed, pending, onToggle }:
         {isConfirmed ? (
           <>
             <span className="flex items-center gap-1.5 text-sm font-semibold text-success">
-              <Check className="size-4" strokeWidth={2.4} />
+              <HugeiconsIcon icon={Tick02Icon} className="size-4" strokeWidth={2.4} />
               Presença confirmada
             </span>
             <Button variant="outline" disabled={pending} onClick={onToggle} className="h-9 bg-transparent px-4 hover:bg-accent">
@@ -54,7 +55,7 @@ export function AttendanceSummaryCard({ daily, isConfirmed, pending, onToggle }:
               onConfirm={onToggle}
               className="h-[42px] gap-2 px-5 text-[15px]"
             >
-              <CalendarCheck className="size-4" />
+              <HugeiconsIcon icon={CalendarCheckIn01Icon} className="size-4" />
               Confirmar presença
             </SelfConfirmButton>
           </>
