@@ -53,7 +53,7 @@ export function DailyAwardsGrid({ daily }: { daily: DailyDetail }) {
     {
       title: "Artilheiro",
       icon: Target,
-      tone: "bg-success-muted text-success-strong",
+      tone: "bg-highlight-muted text-highlight-text",
       detail: bestStatLabel(daily.playerStats, award.artilheiroWinnerIds, "goals"),
       winnerIds: award.artilheiroWinnerIds,
       winnerNames: award.artilheiroWinnerNames,
@@ -61,7 +61,7 @@ export function DailyAwardsGrid({ daily }: { daily: DailyDetail }) {
     {
       title: "Garçom",
       icon: HandHelping,
-      tone: "bg-info-muted text-info",
+      tone: "bg-brand-muted text-brand-text",
       detail: bestStatLabel(daily.playerStats, award.garcomWinnerIds, "assists"),
       winnerIds: award.garcomWinnerIds,
       winnerNames: award.garcomWinnerNames,

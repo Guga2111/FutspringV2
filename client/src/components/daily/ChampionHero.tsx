@@ -51,9 +51,9 @@ export function ChampionHero({ daily, uploadLoading, onChangePhoto }: ChampionHe
       </div>
 
       {champion && (
-        <div className="flex flex-col gap-[18px] rounded-tile border bg-card p-5">
+        <div className="flex flex-col gap-[18px] rounded-tile border border-highlight/40 bg-card p-5">
           <div className="flex flex-col gap-1.5">
-            <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-gold">Time campeão</span>
+            <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-highlight-text">Time campeão</span>
             <div className="flex items-center gap-2.5">
               <TeamColorDot color={champion.team.color} className="size-3.5" />
               <span className="font-display text-heading-lg font-bold">{champion.team.name}</span>
