@@ -1,6 +1,8 @@
 import type { Page } from "@playwright/test"
 import * as f from "./fixtures"
 
+const QR_IMAGE = new URL("./assets/qr.png", import.meta.url).pathname
+
 type Handler = (match: RegExpMatchArray) => unknown
 
 // GET routes the screens read. Anything else answers 404 and is recorded, so a new request
@@ -17,7 +19,8 @@ const routes: [RegExp, Handler][] = [
   [/^\/peladas\/\d+\/invite-link$/, () => null],
   [/^\/peladas\/\d+\/finance$/, () => f.financeOverview],
   [/^\/peladas\/\d+\/finance\/lists\/\d+$/, () => f.financeDetail],
-  [/^\/peladas\/\d+\/finance\/movements$/, () => ({ items: [], hasMore: false })],
+  [/^\/peladas\/\d+\/finance\/movements$/, () => f.financeMovements],
+  [/^\/peladas\/\d+\/finance\/audit$/, () => ({ items: [], hasMore: false, total: 0 })],
   [/^\/dailies\/(\d+)$/, (m) => ({ [f.SCHEDULED_ID]: f.scheduledDaily, [f.LIVE_ID]: f.liveDaily, [f.FINISHED_ID]: f.finishedDaily })[Number(m[1])]],
   [/^\/users\/\d+$/, () => f.profile],
   [/^\/users\/\d+\/peladas$/, () => f.myPeladas],
@@ -47,6 +50,8 @@ export async function mockApi(page: Page): Promise<string[]> {
     unmatched.push(`${request.method()} ${path}`)
     return route.fulfill({ status: 404, json: { status: 404, message: "Não encontrado", timestamp: f.NOW.toISOString() } })
   })
+  // protected images: the generated QR placeholder
+  await page.route(/\/finance\/qr\/\d+$/, (route) => route.fulfill({ status: 200, contentType: "image/png", path: QR_IMAGE }))
   // no realtime server: the client stays in its reconnecting state, which shows nothing on these screens
   await page.route(/\/ws\//, (route) => route.abort())
   return unmatched

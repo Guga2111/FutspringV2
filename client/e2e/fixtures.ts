@@ -7,7 +7,7 @@ import type { DailyDetail, DailyListItem, PlayerDTO, RankingDTO, TeamDTO } from 
 import type { StatsDTO, UserMatchHistoryDTO, UserStatsTimelineDTO } from "../src/types/stats"
 import type { NotificationPreference, NotificationResponse } from "../src/types/notification"
 import type { Invitation } from "../src/types/invitation"
-import type { FinanceDetail, FinanceOverview } from "../src/types/finance"
+import type { FinanceDetail, FinanceMovement, FinanceOverview, FinancePage, FinanceTemplate } from "../src/types/finance"
 
 // Wednesday 2026-11-04 15:00 in São Paulo
 export const NOW = new Date("2026-11-04T18:00:00.000Z")
@@ -389,6 +389,8 @@ export const notificationPreferences: NotificationPreference[] = [
   { category: "AWARDS", emailEnabled: false },
 ]
 
+export const QR_ID = 77
+
 const financeList: FinanceOverview["lists"][number] = {
   id: 50,
   name: "Mensalidade de novembro",
@@ -397,7 +399,7 @@ const financeList: FinanceOverview["lists"][number] = {
   components: [],
   pixKey: "pix@futspring.com",
   pixRecipient: "Leal",
-  qrId: null,
+  qrId: QR_ID,
   status: "OPEN",
   dueDate: "2026-11-10",
   dailyId: null,
@@ -409,11 +411,62 @@ const financeList: FinanceOverview["lists"][number] = {
 export const financeOverview: FinanceOverview = {
   revision: 3,
   permissions: { manage: true, appointManagers: true, viewCash: true },
-  settings: { visibility: "INDIVIDUAL", pixKey: "pix@futspring.com", pixRecipient: "Leal", qrId: null, managerIds: [] },
+  settings: { visibility: "INDIVIDUAL", pixKey: "pix@futspring.com", pixRecipient: "Leal", qrId: QR_ID, managerIds: [5] },
   balance: "1250.00",
-  templates: [],
+  templates: ([["Mensalidade", "MONTHLY", "100.00"], ["Diária", "DAILY", "20.00"], ["Evento", "OTHER", "0.00"]] as const).map(
+    ([name, classification, amount], i): FinanceTemplate => ({
+      id: i === 0 ? 10 : null,
+      name,
+      classification,
+      description: null,
+      components: [{ name: "Campo", amount }],
+      pixKey: "pix@futspring.com",
+      pixRecipient: "Leal",
+      qrId: QR_ID,
+      archived: false,
+    }),
+  ),
   lists: [financeList],
   hasMore: false,
+  total: 1,
+}
+
+// what a member receives in individual mode: only the lists with their charge, totals of their own charge
+export const financeMemberOverview: FinanceOverview = {
+  ...financeOverview,
+  permissions: { manage: false, appointManagers: false, viewCash: false },
+  settings: { ...financeOverview.settings, managerIds: [] },
+  balance: null,
+  templates: [],
+  lists: [{ ...financeList, totals: { due: "100.00", received: "50.00", outstanding: "50.00", pendingNotices: 0 } }],
+}
+
+export const financeMovements: FinancePage<FinanceMovement> = {
+  items: [
+    ["RECEIPT", "100.00", "Mensalidade de novembro · Leal"],
+    ["EXPENSE", "-350.00", "Aluguel do campo"],
+    ["RECEIPT", "50.00", "Mensalidade de novembro · Caio"],
+  ].map(([kind, amount, description], i): FinanceMovement => ({
+    id: 900 - i,
+    listId: 50,
+    dailyId: null,
+    dailyLabel: null,
+    chargeId: null,
+    noticeId: null,
+    originalId: null,
+    kind: kind as FinanceMovement["kind"],
+    amount,
+    obligationDelta: "0.00",
+    effectiveDate: "2026-11-02",
+    method: "PIX",
+    description,
+    category: kind === "EXPENSE" ? "Campo" : null,
+    createdBy: 1,
+    createdAt: "2026-11-02T12:00:00.000Z",
+    reversed: false,
+  })),
+  hasMore: true,
+  total: 23,
 }
 
 export const financeDetail: FinanceDetail = {
@@ -434,4 +487,9 @@ export const financeDetail: FinanceDetail = {
     dueDate: "2026-11-10",
     notices: [],
   })),
+}
+
+export const financeMemberDetail: FinanceDetail = {
+  collection: financeMemberOverview.lists[0],
+  charges: [{ ...financeDetail.charges[2], userId: me.id, name: me.username }],
 }

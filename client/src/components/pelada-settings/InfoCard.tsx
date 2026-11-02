@@ -16,7 +16,7 @@ import { IMAGE_ACCEPT, validateImageFile } from "@/schemas/upload"
 import type { PeladaDetail } from "@/types/pelada"
 import { detailFields } from "@/components/pelada-settings/hooks/usePeladaSettings"
 import { useSettingsSubmit } from "@/components/pelada-settings/hooks/useSettingsSubmit"
-import { SettingsCard, SettingsCardFooter, SettingsRootError } from "@/components/pelada-settings/SettingsCard"
+import { SettingsCard, SettingsCardFooter, SettingsRootError } from "@/components/SettingsCard"
 
 interface InfoCardProps {
   pelada: PeladaDetail

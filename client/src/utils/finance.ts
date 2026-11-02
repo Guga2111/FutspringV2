@@ -56,3 +56,13 @@ export function filterFinanceCharges(charges: FinanceCharge[], filter: FinanceQu
     filter === "review" ? Boolean(pendingFinanceNotice(c)) : filter === "paid" ? c.paymentStatus === "PAID" : c.paymentStatus !== "PAID"
   )))).sort((a, b) => priority(a) - priority(b) || a.name.localeCompare(b.name, "pt-BR"))
 }
+
+// Numbered pages: at least one page, so an empty list still reads "Página 1 de 1"
+export function financePageCount(total: number, size: number): number {
+  return Math.max(1, Math.ceil(total / size))
+}
+
+// After a change (a list closed, a movement reversed) the current page may no longer exist
+export function clampFinancePage(page: number, total: number, size: number): number {
+  return Math.min(page, financePageCount(total, size) - 1)
+}

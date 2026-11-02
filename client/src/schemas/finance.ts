@@ -41,6 +41,9 @@ export const financeCashSchema = z.object({ kind: z.enum(["OPENING", "INCOME", "
 // FinanceRequests.Settings / Managers.
 export const financeSettingsSchema = z.object({ visibility: z.enum(["INDIVIDUAL", "TRANSPARENT"]), pixKey: z.string().max(200), pixRecipient: z.string().max(200), qrId: id.nullable() })
 export const financeManagersSchema = z.object({ userIds: z.array(id).max(100) })
+// the settings page saves the Pix and the visibility in separate cards; each sends the other fields as saved
+export const financePixSchema = financeSettingsSchema.pick({ pixKey: true, pixRecipient: true })
+export const financeVisibilitySchema = financeSettingsSchema.pick({ visibility: true })
 export const financeImageSchema = z.file().max(5 * 1024 * 1024, "Máximo de 5 MB").mime(["image/jpeg", "image/png"], "Use JPEG ou PNG")
 export const financeReportSchema = z.object({ file: financeImageSchema.nullable() })
 export const financeQrSchema = z.object({ file: financeImageSchema, reason })

@@ -19,7 +19,7 @@ import { applyServerErrors } from "@/lib/form-errors"
 import { makeDeletePeladaSchema, type DeletePeladaValues } from "@/schemas/pelada"
 import type { PeladaDetail } from "@/types/pelada"
 import { ConfirmNameField } from "@/components/pelada-settings/ConfirmNameField"
-import { SettingsRootError } from "@/components/pelada-settings/SettingsCard"
+import { SettingsRootError } from "@/components/SettingsCard"
 
 interface DeletePeladaDialogProps {
   pelada: PeladaDetail

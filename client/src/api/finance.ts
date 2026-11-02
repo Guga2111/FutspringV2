@@ -1,13 +1,15 @@
 import apiClient from "@/api/client"
 import type { FinanceCreateValues, FinanceCommand, FinanceListValues, FinanceTemplateValues, FinanceChargeValues, FinanceParticipantsValues, FinanceCashValues, FinanceReceiptValues, FinanceRefundValues } from "@/schemas/finance"
-import type { FinanceOverview, FinanceDetail, FinanceResult, FinancePage, FinanceMovement, FinanceAudit, FinanceCandidate, FinanceSettings, FinancePaymentMethod } from "@/types/finance"
+import type { FinanceOverview, FinanceDetail, FinanceResult, FinancePage, FinanceMovement, FinanceAudit, FinanceCandidate, FinanceSettings, FinancePaymentMethod, FinanceListScope } from "@/types/finance"
 
 const root = (id: number) => `/api/v1/peladas/${id}/finance`
 const optional = (value: string) => value || null
-export async function getFinance(id: number, page = 0): Promise<FinanceOverview> { return (await apiClient.get<FinanceOverview>(root(id), { params: { page, size: 50 } })).data }
+export const FINANCE_LISTS_PAGE_SIZE = 10
+export const FINANCE_HISTORY_PAGE_SIZE = 20
+export async function getFinance(id: number, scope: FinanceListScope = "ACTIVE", page = 0): Promise<FinanceOverview> { return (await apiClient.get<FinanceOverview>(root(id), { params: { scope, page, size: FINANCE_LISTS_PAGE_SIZE } })).data }
 export async function getFinanceList(id: number, listId: number): Promise<FinanceDetail> { return (await apiClient.get<FinanceDetail>(`${root(id)}/lists/${listId}`)).data }
-export async function getFinanceMovements(id: number, page = 0): Promise<FinancePage<FinanceMovement>> { return (await apiClient.get<FinancePage<FinanceMovement>>(`${root(id)}/movements`, { params: { page, size: 20 } })).data }
-export async function getFinanceAudit(id: number, page = 0): Promise<FinancePage<FinanceAudit>> { return (await apiClient.get<FinancePage<FinanceAudit>>(`${root(id)}/audit`, { params: { page, size: 20 } })).data }
+export async function getFinanceMovements(id: number, page = 0): Promise<FinancePage<FinanceMovement>> { return (await apiClient.get<FinancePage<FinanceMovement>>(`${root(id)}/movements`, { params: { page, size: FINANCE_HISTORY_PAGE_SIZE } })).data }
+export async function getFinanceAudit(id: number, page = 0): Promise<FinancePage<FinanceAudit>> { return (await apiClient.get<FinancePage<FinanceAudit>>(`${root(id)}/audit`, { params: { page, size: FINANCE_HISTORY_PAGE_SIZE } })).data }
 export async function getFinanceCandidates(id: number, dailyId: number): Promise<FinanceCandidate[]> { return (await apiClient.get<FinanceCandidate[]>(`${root(id)}/daily-candidates/${dailyId}`)).data }
 async function post(id: number, path: string, body: unknown): Promise<FinanceResult> { return (await apiClient.post<FinanceResult>(`${root(id)}${path}`, body)).data }
 async function put(id: number, path: string, body: unknown): Promise<FinanceResult> { return (await apiClient.put<FinanceResult>(`${root(id)}${path}`, body)).data }

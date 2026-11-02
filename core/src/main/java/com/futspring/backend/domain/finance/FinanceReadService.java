@@ -35,12 +35,16 @@ public class FinanceReadService {
     private final PeladaMensalistaRepository mensalistas;
 
     public FinanceViews.Overview overview(Long id, String email, int page, int size) {
-        return overview(access.read(id, email), page, size);
+        return overview(id, email, ListScope.ACTIVE, page, size);
     }
-    FinanceViews.Overview overview(Context ctx, int page, int size) {
+    public FinanceViews.Overview overview(Long id, String email, ListScope scope, int page, int size) {
+        return overview(access.read(id, email), scope, page, size);
+    }
+    FinanceViews.Overview overview(Context ctx, int page, int size) { return overview(ctx, ListScope.ACTIVE, page, size); }
+    FinanceViews.Overview overview(Context ctx, ListScope scope, int page, int size) {
         int limit = limit(size);
-        // Filtering happens in SQL before pagination, so private drafts cannot affect a member's page.
-        var rows = lists.visible(ctx.pelada().getId(), ctx.manage(), ctx.viewCash(), ctx.caller().getId(),
+        // Filtering (scope and visibility) happens in SQL before pagination, so private drafts cannot affect a member's page.
+        var rows = lists.visible(ctx.pelada().getId(), scope.statuses(), ctx.manage(), ctx.viewCash(), ctx.caller().getId(),
                 PageRequest.of(page(page), limit));
         List<FinanceList> shown = rows.stream().limit(limit).toList();
         var allCharges = shown.isEmpty() ? List.<FinanceCharge>of() : charges.findByListIdIn(shown.stream().map(FinanceList::getId).toList());
@@ -53,7 +57,8 @@ public class FinanceReadService {
                 ctx.viewCash() ? text(movements.balance(ctx.pelada().getId())) : null,
                 ctx.manage() ? templateViews(ctx) : List.of(),
                 shown.stream().map(list -> collection(list, visibleCharges(ctx, allCharges.stream()
-                        .filter(c -> c.getListId().equals(list.getId())).toList()), data, false)).toList(), rows.hasNext());
+                        .filter(c -> c.getListId().equals(list.getId())).toList()), data, false)).toList(), rows.hasNext(),
+                rows.getTotalElements());
     }
     public FinanceViews.Detail detail(Long id, Long listId, String email) { return detail(access.read(id, email), listId); }
     FinanceViews.Detail detail(Context ctx, Long listId) {
@@ -138,7 +143,7 @@ public class FinanceReadService {
         if (!ctx.viewCash()) throw new AppException(HttpStatus.FORBIDDEN, "O extrato é restrito aos gestores neste modo");
         var rows = movements.findByPeladaIdOrderByIdDesc(id, PageRequest.of(page(page), limit(size)));
         Set<Long> reversed = rows.isEmpty() ? Set.of() : movements.reversedIds(rows.stream().map(FinanceMovement::getId).toList());
-        return new FinanceViews.Page<>(rows.stream().limit(limit(size)).map(m -> movementView(m, reversed.contains(m.getId()))).toList(), rows.hasNext());
+        return new FinanceViews.Page<>(rows.stream().limit(limit(size)).map(m -> movementView(m, reversed.contains(m.getId()))).toList(), rows.hasNext(), rows.getTotalElements());
     }
     FinanceViews.Movement movementView(FinanceMovement m, boolean reversed) {
         return new FinanceViews.Movement(m.getId(), m.getListId(), m.getDailyId(), m.getDailyLabel(), m.getChargeId(), m.getNoticeId(),
@@ -150,13 +155,13 @@ public class FinanceReadService {
         var charge = findCharge(id, listId, chargeId);
         if (!ctx.manage() && !Objects.equals(charge.getUserId(), ctx.caller().getId())) throw missing("Cobrança");
         var rows = notices.findByPeladaIdAndChargeIdOrderByIdDesc(id, chargeId, PageRequest.of(page(page), limit(size)));
-        return new FinanceViews.Page<>(rows.stream().map(this::noticeView).toList(), rows.hasNext());
+        return new FinanceViews.Page<>(rows.stream().map(this::noticeView).toList(), rows.hasNext(), rows.getTotalElements());
     }
     public FinanceViews.Page<FinanceViews.Audit> audit(Long id, String email, int page, int size) {
         var ctx = access.read(id, email); ctx.requireManager();
         var rows = audits.findByPeladaIdOrderByIdDesc(id, PageRequest.of(page(page), limit(size)));
         return new FinanceViews.Page<>(rows.stream().limit(limit(size)).map(a -> new FinanceViews.Audit(a.getId(), a.getActorId(),
-                a.getActorName(), a.getOperation(), a.getTarget(), a.getReason(), a.getCreatedAt(), a.getBeforeData(), a.getAfterData())).toList(), rows.hasNext());
+                a.getActorName(), a.getOperation(), a.getTarget(), a.getReason(), a.getCreatedAt(), a.getBeforeData(), a.getAfterData())).toList(), rows.hasNext(), rows.getTotalElements());
     }
     public List<FinanceViews.Candidate> importCandidates(Long id, Long dailyId, String email) {
         var ctx = access.read(id, email); ctx.requireManager();
