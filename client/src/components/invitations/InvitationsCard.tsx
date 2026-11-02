@@ -80,7 +80,7 @@ export function InvitationsCard({ peladaId, version, onInvite }: { peladaId: num
     }
   }
 
-  const count = pending.loading || pending.error ? null : `${pending.items.length}${pending.hasMore ? "+" : ""}`
+  const count = pending.loading || pending.error || pending.items.length === 0 ? null : `${pending.items.length}${pending.hasMore ? "+" : ""}`
 
   return (
     <Card className="overflow-hidden">
