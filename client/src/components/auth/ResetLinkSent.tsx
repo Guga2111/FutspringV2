@@ -1,4 +1,5 @@
-import { MailCheck } from "lucide-react"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { MailValidation01Icon } from "@hugeicons/core-free-icons"
 import { Link } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -13,7 +14,7 @@ export function ResetLinkSent({ email, onUseAnotherEmail }: ResetLinkSentProps) 
   return (
     <Card className="w-full max-w-md border-0 shadow-none">
       <CardHeader className="items-center text-center">
-        <MailCheck aria-hidden className="mb-2 size-10 text-brand" />
+        <HugeiconsIcon icon={MailValidation01Icon} aria-hidden className="mb-2 size-10 text-brand" />
         <CardTitle>Verifique seu e-mail</CardTitle>
         <CardDescription>
           Se existir uma conta com <span className="font-medium text-foreground">{email}</span>, enviamos um link

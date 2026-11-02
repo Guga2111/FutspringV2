@@ -1,5 +1,6 @@
 import { useState } from "react"
-import { Plus, Settings2, RefreshCw, ArrowLeft, ChevronRight } from "lucide-react"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { ArrowLeft02Icon, ArrowRight01Icon, PlusSignIcon, RefreshIcon, Settings02Icon } from "@hugeicons/core-free-icons"
 import { toast } from "sonner"
 import * as api from "@/api/finance"
 import type { PeladaMember } from "@/types/pelada"
@@ -50,7 +51,7 @@ export function FinanceTab({ peladaId, userId, members, dailies }: { peladaId: n
     try { await finance.mutate(`${action}:${detail.collection.id}`, "", command => api.financeListAction(peladaId, detail.collection.id, action, command)); toast.success("Cobrança atualizada") }
     catch (error) { toast.error(getErrorMessage(error, "Não foi possível atualizar a cobrança")) }
   }
-  const collectionRow = (list: FinanceList) => <li key={list.id}><Button variant="ghost" className="h-auto w-full justify-between gap-4 rounded-lg px-4 py-4 text-left" onClick={() => finance.select(list.id)}><span className="min-w-0 flex-1"><span className="flex flex-wrap items-center gap-2"><span className="whitespace-normal font-medium">{list.name}</span><Badge variant="secondary">{financeListStatusLabel[list.status]}</Badge></span><span className="mt-2 block whitespace-normal text-sm text-muted-foreground">{formatFinanceMoney(list.totals.received)} recebidos{list.totals.pendingNotices > 0 ? ` · ${list.totals.pendingNotices} para conferir` : ""}</span></span><span className="shrink-0 text-right"><span className="block font-semibold tabular-nums">{formatFinanceMoney(list.totals.outstanding)}</span><span className="mt-1 block text-xs text-muted-foreground">a receber</span></span><ChevronRight /></Button></li>
+  const collectionRow = (list: FinanceList) => <li key={list.id}><Button variant="ghost" className="h-auto w-full justify-between gap-4 rounded-lg px-4 py-4 text-left" onClick={() => finance.select(list.id)}><span className="min-w-0 flex-1"><span className="flex flex-wrap items-center gap-2"><span className="whitespace-normal font-medium">{list.name}</span><Badge variant="secondary">{financeListStatusLabel[list.status]}</Badge></span><span className="mt-2 block whitespace-normal text-sm text-muted-foreground">{formatFinanceMoney(list.totals.received)} recebidos{list.totals.pendingNotices > 0 ? ` · ${list.totals.pendingNotices} para conferir` : ""}</span></span><span className="shrink-0 text-right"><span className="block font-semibold tabular-nums">{formatFinanceMoney(list.totals.outstanding)}</span><span className="mt-1 block text-xs text-muted-foreground">a receber</span></span><HugeiconsIcon icon={ArrowRight01Icon} /></Button></li>
   return <div className="flex min-w-0 flex-col gap-5">
     {!overview ? finance.error ? <><FinanceFormError message={finance.error} /><Button variant="outline" onClick={finance.refresh}>Tentar de novo</Button></> : <><Skeleton className="h-10 w-64" /><Skeleton className="h-48 w-full" /></> : <>
       <Tabs value={tab} onValueChange={setTab} className="min-w-0">

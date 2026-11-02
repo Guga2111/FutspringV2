@@ -1,4 +1,5 @@
-import { UserX } from "lucide-react"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { UserRemove01Icon } from "@hugeicons/core-free-icons"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { formatInZone } from "@/utils/dates"
@@ -17,7 +18,7 @@ interface BumpAlertProps {
 export function BumpAlert({ bump, timeZone, peladaName, pending, onDismiss }: BumpAlertProps) {
   return (
     <Alert className="flex flex-col gap-3 border-destructive-muted md:flex-row md:items-center">
-      <UserX className="size-4 text-destructive-soft" />
+      <HugeiconsIcon icon={UserRemove01Icon} className="size-4 text-destructive-soft" />
       <div className="flex-1">
         <AlertTitle>Você perdeu a vaga{peladaName ? ` em ${peladaName}` : ""}</AlertTitle>
         <AlertDescription className="text-muted-foreground">

@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { Controller, useWatch, type Control, type UseFormSetValue } from "react-hook-form"
-import { ChevronRight, Trash2 } from "lucide-react"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { ArrowRight01Icon, Delete02Icon } from "@hugeicons/core-free-icons"
 import { Button } from "@/components/ui/button"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { Field, FieldError, FieldLabel } from "@/components/ui/field"
@@ -69,7 +70,7 @@ export function ResultsMatchCard({ daily, index, number, control, setValue, comp
             onClick={onRemove}
             className="size-[30px] text-subtle-foreground hover:bg-destructive-muted hover:text-destructive-soft [&_svg]:size-[15px]"
           >
-            <Trash2 />
+            <HugeiconsIcon icon={Delete02Icon} />
           </Button>
         )}
       </div>
@@ -144,7 +145,7 @@ export function ResultsMatchCard({ daily, index, number, control, setValue, comp
       <Collapsible open={statsOpen} onOpenChange={setStatsOpen} className="flex flex-col gap-3 border-t pt-3">
         <div className="flex flex-wrap items-center gap-2.5">
           <CollapsibleTrigger className="flex items-center gap-2 py-1 text-sm font-medium text-secondary-foreground">
-            <ChevronRight className={cn("size-[15px] transition-transform duration-150", statsOpen && "rotate-90")} />
+            <HugeiconsIcon icon={ArrowRight01Icon} className={cn("size-[15px] transition-transform duration-150", statsOpen && "rotate-90")} />
             Gols e assistências
           </CollapsibleTrigger>
           <span className={cn("ml-auto text-xs font-medium", checkColor[check.state])}>{check.label}</span>

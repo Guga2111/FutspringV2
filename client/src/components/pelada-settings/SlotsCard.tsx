@@ -1,6 +1,7 @@
 import { Controller, useForm, useWatch, type Control } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { TriangleAlert } from "lucide-react"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { Alert02Icon } from "@hugeicons/core-free-icons"
 import { updatePelada } from "@/api/peladas"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field"
@@ -127,7 +128,7 @@ function CapacitySummary({ control, savedCapacity, nextDaily }: CapacitySummaryP
       </p>
       {over > 0 && nextDaily && (
         <Alert>
-          <TriangleAlert />
+          <HugeiconsIcon icon={Alert02Icon} />
           <AlertTitle>A próxima sessão vai ficar acima do limite</AlertTitle>
           <AlertDescription>
             Ela tem {nextDaily.confirmedCount} confirmados; com {capacity} vagas, {over}{" "}

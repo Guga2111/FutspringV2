@@ -3,7 +3,8 @@ import { Controller, useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
-import { CalendarIcon } from "lucide-react"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { Calendar03Icon } from "@hugeicons/core-free-icons"
 import { toast } from "sonner"
 import { createDaily } from "@/api/dailies"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -76,7 +77,7 @@ export function CreateSessionDialog({
                         aria-invalid={fieldState.invalid}
                         className={cn("w-full justify-start rounded-md font-normal", !field.value && "text-muted-foreground")}
                       >
-                        <CalendarIcon className="mr-2 size-4" />
+                        <HugeiconsIcon icon={Calendar03Icon} className="mr-2 size-4" />
                         {field.value ? format(field.value, "PPP", { locale: ptBR }) : "Escolha uma data"}
                       </Button>
                     </PopoverTrigger>

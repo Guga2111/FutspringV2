@@ -9,7 +9,8 @@ import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useProfile } from '@/components/profile/hooks/useProfile'
 import { Separator } from '@/components/ui/separator'
-import { Target, Handshake, CalendarDays, Trophy, TrendingUp, Medal, Star, Swords, Award, Zap } from 'lucide-react'
+import { HugeiconsIcon } from "@hugeicons/react"
+import { Agreement02Icon, Award01Icon, Calendar03Icon, ChampionIcon, ChartIncreaseIcon, FlashIcon, Medal01Icon, StarIcon, Sword03Icon, Target02Icon } from "@hugeicons/core-free-icons"
 import KpiCard from '@/components/profile/KpiCard'
 import ProfilePieChart from '@/components/profile/ProfilePieChart'
 import StatsOverTimeChart from '@/components/profile/StatsOverTimeChart'
@@ -104,20 +105,20 @@ export default function ProfilePage() {
             return (
               <>
                 <div className="grid grid-cols-3 lg:grid-cols-6 gap-4 mb-4">
-                  <KpiCard label="Vitórias" value={wins} icon={<Swords className="w-5 h-5 text-red-400" />} />
-                  <KpiCard label="Partidas" value={matches} icon={<CalendarDays className="w-5 h-5 text-orange-400" />} />
-                  <KpiCard label="% Vitória" value={winPct} icon={<TrendingUp className="w-5 h-5 text-green-500" />} />
-                  <KpiCard label="Campeão" value={stats.wins} icon={<Trophy className="w-5 h-5 text-gold" />} />
-                  <KpiCard label="Sessões" value={sessions} icon={<Star className="w-5 h-5 text-purple-400" />} />
-                  <KpiCard label="Aproveitamento" value={champPct} icon={<TrendingUp className="w-5 h-5 text-green-400" />} />
+                  <KpiCard label="Vitórias" value={wins} icon={<HugeiconsIcon icon={Sword03Icon} className="w-5 h-5 text-red-400" />} />
+                  <KpiCard label="Partidas" value={matches} icon={<HugeiconsIcon icon={Calendar03Icon} className="w-5 h-5 text-orange-400" />} />
+                  <KpiCard label="% Vitória" value={winPct} icon={<HugeiconsIcon icon={ChartIncreaseIcon} className="w-5 h-5 text-green-500" />} />
+                  <KpiCard label="Campeão" value={stats.wins} icon={<HugeiconsIcon icon={ChampionIcon} className="w-5 h-5 text-gold" />} />
+                  <KpiCard label="Sessões" value={sessions} icon={<HugeiconsIcon icon={StarIcon} className="w-5 h-5 text-purple-400" />} />
+                  <KpiCard label="Aproveitamento" value={champPct} icon={<HugeiconsIcon icon={ChartIncreaseIcon} className="w-5 h-5 text-green-400" />} />
                 </div>
                 <div className="grid grid-cols-3 lg:grid-cols-6 gap-4">
-                  <KpiCard label="Gols" value={stats.goals} icon={<Target className="w-5 h-5 text-green-500" />} />
-                  <KpiCard label="Gols/Sessão" value={goalsPer} icon={<Target className="w-5 h-5 text-green-400" />} />
-                  <KpiCard label="Assistências" value={stats.assists} icon={<Handshake className="w-5 h-5 text-blue-400" />} />
-                  <KpiCard label="Assists/Sessão" value={assistsPer} icon={<Handshake className="w-5 h-5 text-blue-300" />} />
-                  <KpiCard label="Contribuições" value={contributions} icon={<Zap className="w-5 h-5 text-amber-400" />} />
-                  <KpiCard label="Contrib/Sessão" value={contribPer} icon={<Zap className="w-5 h-5 text-amber-300" />} />
+                  <KpiCard label="Gols" value={stats.goals} icon={<HugeiconsIcon icon={Target02Icon} className="w-5 h-5 text-green-500" />} />
+                  <KpiCard label="Gols/Sessão" value={goalsPer} icon={<HugeiconsIcon icon={Target02Icon} className="w-5 h-5 text-green-400" />} />
+                  <KpiCard label="Assistências" value={stats.assists} icon={<HugeiconsIcon icon={Agreement02Icon} className="w-5 h-5 text-blue-400" />} />
+                  <KpiCard label="Assists/Sessão" value={assistsPer} icon={<HugeiconsIcon icon={Agreement02Icon} className="w-5 h-5 text-blue-300" />} />
+                  <KpiCard label="Contribuições" value={contributions} icon={<HugeiconsIcon icon={FlashIcon} className="w-5 h-5 text-amber-400" />} />
+                  <KpiCard label="Contrib/Sessão" value={contribPer} icon={<HugeiconsIcon icon={FlashIcon} className="w-5 h-5 text-amber-300" />} />
                 </div>
               </>
             )
@@ -129,10 +130,10 @@ export default function ProfilePage() {
           <h2 className="text-xl font-semibold mb-4">Prêmios</h2>
           <Separator className="mb-6" />
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <KpiCard label="Bola Murcha" value={stats.wiltballWins ?? 0} icon={<Medal className="w-5 h-5 text-gold" />} />
-            <KpiCard label="Artilheiro" value={stats.artilheiroWins ?? 0} icon={<Target className="w-5 h-5 text-red-500" />} />
-            <KpiCard label="Garçom" value={stats.garcomWins ?? 0} icon={<Handshake className="w-5 h-5 text-blue-500" />} />
-            <KpiCard label="Puskás" value={stats.puskasDates?.length ?? 0} icon={<Award className="w-5 h-5 text-orange-500" />} />
+            <KpiCard label="Bola Murcha" value={stats.wiltballWins ?? 0} icon={<HugeiconsIcon icon={Medal01Icon} className="w-5 h-5 text-gold" />} />
+            <KpiCard label="Artilheiro" value={stats.artilheiroWins ?? 0} icon={<HugeiconsIcon icon={Target02Icon} className="w-5 h-5 text-red-500" />} />
+            <KpiCard label="Garçom" value={stats.garcomWins ?? 0} icon={<HugeiconsIcon icon={Agreement02Icon} className="w-5 h-5 text-blue-500" />} />
+            <KpiCard label="Puskás" value={stats.puskasDates?.length ?? 0} icon={<HugeiconsIcon icon={Award01Icon} className="w-5 h-5 text-orange-500" />} />
           </div>
         </section>
 

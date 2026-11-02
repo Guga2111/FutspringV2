@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom"
-import { Check, MapPin } from "lucide-react"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { Location01Icon, Tick02Icon } from "@hugeicons/core-free-icons"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { DailyStatusBadge } from "@/components/daily/DailyStatusBadge"
@@ -37,7 +38,7 @@ export function UpcomingSessionCard({ pelada, next, pending, onToggle }: Upcomin
         </div>
         {pelada.address && (
           <span className="flex min-w-0 items-center gap-1.5 text-xs text-subtle-foreground">
-            <MapPin className="size-3 shrink-0" />
+            <HugeiconsIcon icon={Location01Icon} className="size-3 shrink-0" />
             <span className="truncate">{pelada.address}</span>
           </span>
         )}
@@ -51,7 +52,7 @@ export function UpcomingSessionCard({ pelada, next, pending, onToggle }: Upcomin
       {next.isConfirmed ? (
         <div className="flex h-[38px] items-center justify-between gap-2 rounded-full bg-success-muted pl-3 pr-1.5">
           <span className="flex items-center gap-1.5 whitespace-nowrap text-[13px] font-semibold text-success">
-            <Check className="size-3.5" strokeWidth={2.6} />
+            <HugeiconsIcon icon={Tick02Icon} className="size-3.5" strokeWidth={2.6} />
             Você vai
           </span>
           <Button
