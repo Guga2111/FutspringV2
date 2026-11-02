@@ -230,6 +230,8 @@ Contraste dos tokens **atuais** (seleção):
 
 ### 7.1 Papéis
 
+> **2026-11-02:** os neutros passaram a ser neutros de verdade (matiz 240, saturação 4–14%) em vez do azulado anterior (matiz 220, ~22%), para o escuro ler como preto e não como azul-marinho. Os valores atuais estão em `client/src/index.css` (Midnight Black `#09090C`, Dark Surface `#151519`, Muted `#8F8F99`, Off-White `#F7F7F9`, Ink `#0D0D10`); as razões abaixo são as da proposta original e `client/src/lib/contrast.test.ts` valida os pares atuais.
+
 | Primitiva | Hex | Papel no sistema |
 |---|---|---|
 | Midnight Black | `#07070D` | Fundo de página no escuro; **texto sobre os preenchimentos de marca e de highlight (nos dois temas)** |

@@ -12,33 +12,33 @@
    */
   :root {
     /* primitives */
-    --p-midnight-950: 240 30% 3.9%; /* #07070D Midnight Black */
-    --p-midnight-900: 220 24% 7.3%; /* #0E1117 */
-    --p-surface-800: 220 23% 10.2%; /* #141820 Dark Surface */
-    --p-surface-750: 220 22% 12%; /* #191D26 */
-    --p-surface-700: 220 21% 13.9%; /* #1C212B */
-    --p-surface-600: 220 19% 18.4%; /* #262C38 */
-    --p-slate-450: 217 13% 53.9%; /* #7A8699 */
-    --p-slate-500: 216 14% 58.8%; /* #8793A5 Muted */
-    --p-slate-520: 219 12% 55.7%; /* #808A9C */
-    --p-slate-550: 218 13% 45.1%; /* #646F82 */
-    --p-slate-650: 216 12% 43.9%; /* #626D7E */
-    --p-slate-700: 216 13% 41%; /* #5B6676 */
-    --p-line-200: 218 19% 88.8%; /* #DDE1E8 */
-    --p-mist-100: 220 20% 94.1%; /* #EDEFF3 */
-    --p-mist-50: 220 20% 95.5%; /* #F1F2F5 */
-    --p-offwhite-50: 220 20% 97.1%; /* #F6F7F9 Off-White */
+    --p-midnight-950: 240 14% 4.1%; /* #09090C Midnight Black */
+    --p-midnight-900: 240 12% 6.7%; /* #0F0F13 */
+    --p-surface-800: 240 9% 9%; /* #151519 Dark Surface */
+    --p-surface-750: 240 9% 11.2%; /* #1A1A1F */
+    --p-surface-700: 240 9% 13%; /* #1E1E24 */
+    --p-surface-600: 240 8% 17.8%; /* #2A2A31 */
+    --p-slate-450: 240 4% 53.9%; /* #84848C */
+    --p-slate-500: 240 5% 58.8%; /* #8F8F99 Muted */
+    --p-slate-520: 240 4% 55.7%; /* #88888F */
+    --p-slate-550: 240 4% 45.1%; /* #6E6E77 */
+    --p-slate-650: 240 4% 43.9%; /* #6B6B74 */
+    --p-slate-700: 240 5% 41%; /* #63636D */
+    --p-line-200: 240 8% 88.8%; /* #E0E0E6 */
+    --p-mist-100: 240 9% 94.1%; /* #EEEEF2 */
+    --p-mist-50: 240 10% 95.5%; /* #F2F2F5 */
+    --p-offwhite-50: 240 10% 97.1%; /* #F7F7F9 Off-White */
     --p-white: 0 0% 100%;
-    --p-ink-950: 223 24% 5.7%; /* #0B0D12 */
+    --p-ink-950: 240 12% 5.7%; /* #0D0D10 */
     --p-blue-300: 198 79% 57.1%; /* #3BB4E8 */
     --p-blue-500: 197 94% 43.1%; /* #0799D5 Electric Blue */
     --p-blue-700: 198 88% 32%; /* #0A6E99 */
     --p-blue-50: 199 79% 94.5%; /* #E6F5FC */
-    --p-blue-950: 200 65% 12.2%; /* #0B2633 */
+    --p-blue-950: 200 50% 11%; /* #0E2229 */
     --p-orange-400: 10 100% 66.9%; /* #FF7356 Cantaloupe Orange */
     --p-orange-700: 11 61% 43.7%; /* #B4442B */
     --p-orange-50: 11 100% 96.7%; /* #FFF1EE */
-    --p-orange-950: 10 40% 11.8%; /* #2A1612 */
+    --p-orange-950: 10 30% 11%; /* #241714 */
     --p-indigo-600: 244 54% 52.9%; /* #4F46C8 */
     --p-indigo-300: 239 82% 80.6%; /* #A5A6F6 */
     --p-indigo-50: 240 70% 96.1%; /* #EEEEFC */
@@ -100,7 +100,7 @@
     --subtle-foreground: var(--p-slate-700);
     --faint-foreground: var(--p-slate-650);
     /* ring around team color dots, so white and black teams show on both themes */
-    --team-dot-border: 218 15% 78%;
+    --team-dot-border: 240 5% 78%;
 
     /* feedback */
     --success: 142 72% 29.2%;
@@ -185,10 +185,10 @@
     --card-elevated: var(--p-surface-700);
     --row-hover: var(--p-surface-750);
     --avatar-fallback: var(--p-surface-600);
-    --star-off: 220 15% 27%;
+    --star-off: 240 5% 27%;
     --subtle-foreground: var(--p-slate-500);
     --faint-foreground: var(--p-slate-520);
-    --team-dot-border: 220 12% 32%;
+    --team-dot-border: 240 5% 32%;
 
     --success: 142 69% 58%;
     --success-strong: 142 71% 45.3%;
@@ -259,6 +259,15 @@
   }
   .dark {
     color-scheme: dark;
+  }
+}
+
+/* Standard-density screens (devicePixelRatio < 1.5, e.g. a 1080p monitor): Hugeicons'
+   default 1.5 stroke renders as a faint ~1px line next to Inter, so draw it at 2 there.
+   Only icons on the default stroke match; an explicit strokeWidth prop is left alone. */
+@media (max-resolution: 1.49dppx) {
+  svg[viewBox="0 0 24 24"] [stroke-width="1.5"] {
+    stroke-width: 2;
   }
 }
 

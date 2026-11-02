@@ -69,3 +69,58 @@ export function resolveToken(tokens: Record<string, string>, name: string, seen:
 export function tokenContrast(tokens: Record<string, string>, foreground: string, background: string): number {
   return contrastRatio(hslTripletToRgb(resolveToken(tokens, foreground)), hslTripletToRgb(resolveToken(tokens, background)))
 }
+
+// [foreground, background, minimum]: 4.5 for text, 3 for non-text (borders, rings, icons)
+const TEXT = 4.5
+const UI = 3
+/** The text/background pairs index.css must keep in both themes. */
+export const CONTRAST_PAIRS: [string, string, number][] = [
+  ["foreground", "background", TEXT],
+  ["card-foreground", "card", TEXT],
+  ["popover-foreground", "popover", TEXT],
+  ["foreground", "card-elevated", TEXT],
+  ["foreground", "row-hover", TEXT],
+  ...["background", "card", "card-elevated", "muted", "row-hover"].flatMap((bg): [string, string, number][] => [
+    ["muted-foreground", bg, TEXT],
+    ["subtle-foreground", bg, TEXT],
+    ["faint-foreground", bg, TEXT],
+  ]),
+  ["primary-foreground", "primary", TEXT],
+  ["secondary-foreground", "secondary", TEXT],
+  ["accent-foreground", "accent", TEXT],
+  ["brand-foreground", "brand", TEXT],
+  ["brand-foreground", "brand-hover", TEXT],
+  ["brand-text", "background", TEXT],
+  ["brand-text", "card", TEXT],
+  ["brand-text", "card-elevated", TEXT],
+  ["brand-text", "brand-muted", TEXT],
+  ["highlight-foreground", "highlight", TEXT],
+  ["highlight-text", "background", TEXT],
+  ["highlight-text", "card", TEXT],
+  ["highlight-text", "highlight-muted", TEXT],
+  ["info", "info-muted", TEXT],
+  ["info", "card", TEXT],
+  ["success", "card", TEXT],
+  ["success-soft", "success-muted", TEXT],
+  ["warning", "card", TEXT],
+  ["destructive-soft", "card", TEXT],
+  ["destructive-soft", "destructive-muted", TEXT],
+  ["status-scheduled-foreground", "status-scheduled", TEXT],
+  ["status-live-foreground", "status-live", TEXT],
+  ["live-foreground", "live-from", TEXT],
+  ["live-foreground", "live-to", TEXT],
+  ["muted-foreground", "live-from", TEXT],
+  ["foreground", "highlight-muted", TEXT],
+  ["sidebar-foreground", "sidebar-background", TEXT],
+  ["sidebar-primary-foreground", "sidebar-primary", TEXT],
+  ["sidebar-accent-foreground", "sidebar-accent", TEXT],
+  // initials on colored avatars are white in both themes
+  ...[1, 2, 3, 4, 5, 6].map((n): [string, string, number] => ["p-white", `avatar-${n}`, TEXT]),
+  ["input", "background", UI],
+  ["input", "card", UI],
+  ["ring", "background", UI],
+  ["ring", "card", UI],
+  ["brand", "card", UI],
+  // stars and medals; the Cantaloupe fill only carries text, so icons use highlight-text
+  ["gold", "card", UI],
+]
