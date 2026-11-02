@@ -126,7 +126,7 @@ com.futspring.backend
 │   │   │                           DailyTeamManagementService (sort teams with LPT balanced by the stars in the pelada, swap, rename, color)
 │   │   │                           DailyResultsService (results, live league table, finalize, champion image, populate, clearResults)
 │   │   │                           DailySchedulerService (hourly cron that auto-creates the next daily, in the pelada's zone), DailyDTOMapper (Player/Team/MatchDTO),
-│   │                           DailyListItemAssembler (DailyListItemDTO with counts and the caller's attendance, grouped queries)
+│   │                           DailyListItemAssembler (DailyListItemDTO with counts, the caller's attendance and result, grouped queries)
 │   │   ├── entity/                 Daily, DailyStatus, DailyAttendance (+ DailyAttendanceId), DailyAttendanceBump, Team, Match, PlayerMatchStat, LeagueTableEntry
 │   │   ├── repository/             Daily, DailyAttendance, DailyAttendanceBump, Team, Match, PlayerMatchStat, LeagueTableEntry repositories
 │   │   └── dto/                    DailyDetailDTO, DailyListItemDTO, AttendanceBumpDTO, MatchResultDTO, Finalize/Populate/Swap/Update* request DTOs
@@ -542,7 +542,7 @@ Every invitation/link write and member removal locks the pelada row **before** r
 | Method | Path | Body | Auth | Response |
 |--------|------|------|------|----------|
 | POST | `/peladas/{peladaId}/dailies` | `CreateDailyRequestDTO` | admin | 201 `DailyListItemDTO` |
-| GET | `/peladas/{peladaId}/dailies` | — | member | `List<DailyListItemDTO>` (`confirmedPlayerCount`, `teamCount`, `matchCount`, `championImage`, `isConfirmed` = the caller's attendance, `capacity`, `startsAt`, `confirmOpensAt` (null for mensalistas); grouped queries, constant count) |
+| GET | `/peladas/{peladaId}/dailies` | — | member | `List<DailyListItemDTO>` (`confirmedPlayerCount`, `teamCount`, `matchCount`, `championImage`, `isConfirmed` = the caller's attendance, `capacity`, `startsAt`, `confirmOpensAt` (null for mensalistas), `wonSession` (the caller's `UserDailyStats.wonSession`: true won, false played without winning, null didn't play or not finalized); grouped queries, constant count) |
 | GET | `/dailies/{id}` | — | member | `DailyDetailDTO` (includes `isAdmin` for the caller; `peladaMembers`, every member's public fields with `isMensalista`, for the attendance list; `confirmedPlayers` with `isMensalista` and `confirmedAt`; `capacity`, `timeZone`, `startsAt`, `confirmOpensAt` (null for mensalistas); `myBump` (the caller's unseen bump or null) and `bumps` (`[{user, bumpedBy, bumpedAt}]`, public fields, newest first)) |
 | POST / DELETE | `/dailies/{id}/confirm` | — (a body is ignored) | member / confirmed | `DailyListItemDTO`; POST: 403 when a diarista's window isn't open, 409 "Sessão lotada" for a diarista in a full session; a mensalista in a full session bumps the diarista confirmed last |
 | POST | `/dailies/{id}/bumps/seen` | — | member | 204; marks the caller's bumps in that session as seen (other users' untouched) and reads the caller's `DIARISTA_BUMPED` notification of that session |

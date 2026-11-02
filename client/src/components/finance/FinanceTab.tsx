@@ -7,7 +7,7 @@ import type { PeladaMember } from "@/types/pelada"
 import type { DailyListItem } from "@/types/daily"
 import type { FinanceCharge, FinanceNotice, FinanceTemplate, FinanceList, FinanceMovementKind, FinanceListScope } from "@/types/finance"
 import { financeListScopeLabel, financeListStatusLabel } from "@/types/finance"
-import { FinancePagination } from "@/components/finance/FinancePagination"
+import { ListPagination } from "@/components/ListPagination"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { cn } from "@/lib/utils"
 import type { FinancePaymentValues } from "@/schemas/finance"
@@ -133,7 +133,7 @@ export function FinanceTab({ peladaId, userId, members, dailies }: { peladaId: n
                 {manage && finance.scope === "ACTIVE" && <Button variant="outline" onClick={() => open({ kind: "create" })}>Criar cobrança</Button>}
               </div>
             ) : <ul data-tour="collections" className="rounded-lg border">{overview.lists.map(collectionRow)}</ul>}
-            <FinancePagination page={finance.page} total={overview.total} size={api.FINANCE_LISTS_PAGE_SIZE} noun={["cobrança", "cobranças"]} disabled={finance.pending} onPage={finance.setPage} />
+            <ListPagination page={finance.page} total={overview.total} size={api.FINANCE_LISTS_PAGE_SIZE} noun={["cobrança", "cobranças"]} disabled={finance.pending} onPage={finance.setPage} />
           </> : finance.detailError ? <><FinanceFormError message={finance.detailError} /><Button variant="outline" onClick={finance.refresh}>Tentar de novo</Button><Button variant="ghost" onClick={() => finance.select(null)}>Voltar às cobranças</Button></> : !detail ? <Skeleton className="h-64 w-full" /> : <FinanceListDetail key={detail.collection.id} peladaId={peladaId} userId={userId} finance={finance} onEdit={() => open({ kind: "list", list: detail.collection })} onParticipants={() => open({ kind: "participants" })} onDetails={charge => open({ kind: "details", charge })} onPayment={payment} onReason={askReason} onSimple={action => { void simple(action) }} />}
         </TabsContent>
         {overview.permissions.viewCash && <TabsContent value="cash" className="mt-0 flex flex-col gap-6">

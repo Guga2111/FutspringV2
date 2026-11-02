@@ -20,5 +20,5 @@ export default function PeladaInvitationsPage() {
     )
   }
 
-  return <PeladaInvitations peladaId={w.pelada.id} version={w.invitationVersion} onInvite={w.openInvite} />
+  return <PeladaInvitations peladaId={w.pelada.id} peladaName={w.pelada.name} version={w.invitationVersion} onInvite={w.openInvite} />
 }

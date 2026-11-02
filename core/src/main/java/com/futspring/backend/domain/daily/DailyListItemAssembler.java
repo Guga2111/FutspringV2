@@ -6,6 +6,7 @@ import com.futspring.backend.domain.daily.repository.DailyAttendanceRepository;
 import com.futspring.backend.domain.daily.repository.MatchRepository;
 import com.futspring.backend.domain.daily.repository.TeamRepository;
 import com.futspring.backend.domain.pelada.PeladaMensalistaRepository;
+import com.futspring.backend.domain.stats.repository.UserDailyStatsRepository;
 import com.futspring.backend.domain.user.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -26,6 +27,7 @@ public class DailyListItemAssembler {
     private final TeamRepository teamRepository;
     private final MatchRepository matchRepository;
     private final PeladaMensalistaRepository mensalistaRepository;
+    private final UserDailyStatsRepository userDailyStatsRepository;
 
     /** One daily, after a mutation. */
     public DailyListItemDTO toListItem(Daily daily, User caller) {
@@ -34,15 +36,17 @@ public class DailyListItemAssembler {
                 (int) teamRepository.countByDaily(daily),
                 (int) matchRepository.countByDaily(daily),
                 attendanceRepository.existsByDailyAndUser(daily, caller),
-                mensalistaRepository.existsByPeladaAndUser(daily.getPelada(), caller));
+                mensalistaRepository.existsByPeladaAndUser(daily.getPelada(), caller),
+                toWonMap(userDailyStatsRepository.findWonSessionByUserAndDailyIds(caller.getId(), List.of(daily.getId())))
+                        .get(daily.getId()));
     }
 
     /** A freshly created daily: nothing hangs from it yet. */
     public DailyListItemDTO toNewListItem(Daily daily, User caller) {
-        return build(daily, 0, 0, 0, false, mensalistaRepository.existsByPeladaAndUser(daily.getPelada(), caller));
+        return build(daily, 0, 0, 0, false, mensalistaRepository.existsByPeladaAndUser(daily.getPelada(), caller), null);
     }
 
-    /** A list of dailies: five grouped queries, whatever the list size. */
+    /** A list of dailies: six grouped queries, whatever the list size. */
     public List<DailyListItemDTO> toListItems(List<Daily> dailies, User caller) {
         if (dailies.isEmpty()) {
             return List.of();
@@ -54,6 +58,7 @@ public class DailyListItemAssembler {
         Set<Long> confirmedByCaller = new HashSet<>(attendanceRepository.findConfirmedDailyIds(ids, caller.getId()));
         Set<Long> peladaIds = dailies.stream().map(d -> d.getPelada().getId()).collect(Collectors.toSet());
         Set<Long> mensalistaIn = new HashSet<>(mensalistaRepository.findPeladaIdsByUserAndPeladaIn(caller.getId(), peladaIds));
+        Map<Long, Boolean> won = toWonMap(userDailyStatsRepository.findWonSessionByUserAndDailyIds(caller.getId(), ids));
 
         return dailies.stream()
                 .map(d -> build(d,
@@ -61,12 +66,13 @@ public class DailyListItemAssembler {
                         teams.getOrDefault(d.getId(), 0),
                         matches.getOrDefault(d.getId(), 0),
                         confirmedByCaller.contains(d.getId()),
-                        mensalistaIn.contains(d.getPelada().getId())))
+                        mensalistaIn.contains(d.getPelada().getId()),
+                        won.get(d.getId())))
                 .toList();
     }
 
     private static DailyListItemDTO build(Daily daily, int confirmedCount, int teamCount, int matchCount,
-                                          boolean isConfirmed, boolean callerIsMensalista) {
+                                          boolean isConfirmed, boolean callerIsMensalista, Boolean wonSession) {
         return DailyListItemDTO.builder()
                 .id(daily.getId())
                 .dailyDate(daily.getDailyDate())
@@ -81,7 +87,12 @@ public class DailyListItemAssembler {
                 .capacity(daily.getPelada().capacity())
                 .startsAt(AttendanceWindow.startsAt(daily))
                 .confirmOpensAt(callerIsMensalista ? null : AttendanceWindow.diaristaOpensAt(daily))
+                .wonSession(wonSession)
                 .build();
+    }
+
+    private static Map<Long, Boolean> toWonMap(Collection<Object[]> rows) {
+        return rows.stream().collect(Collectors.toMap(row -> (Long) row[0], row -> (Boolean) row[1]));
     }
 
     private static Map<Long, Integer> toCountMap(Collection<Object[]> rows) {

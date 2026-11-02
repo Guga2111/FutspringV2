@@ -1,217 +1,125 @@
-import { useState } from 'react'
-import { useParams, Link } from 'react-router-dom'
-import { getInitials, getPeladaColor, getFileUrl } from '@/lib/utils'
-import { useAuth } from '@/hooks/useAuth'
-import { getPositionLabel } from '@/types/user'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Skeleton } from '@/components/ui/skeleton'
-import { useProfile } from '@/components/profile/hooks/useProfile'
-import { Separator } from '@/components/ui/separator'
-import { HugeiconsIcon } from "@hugeicons/react"
-import { Agreement02Icon, Award01Icon, Calendar03Icon, ChampionIcon, ChartIncreaseIcon, FlashIcon, Medal01Icon, StarIcon, Sword03Icon, Target02Icon } from "@hugeicons/core-free-icons"
-import KpiCard from '@/components/profile/KpiCard'
-import ProfilePieChart from '@/components/profile/ProfilePieChart'
-import StatsOverTimeChart from '@/components/profile/StatsOverTimeChart'
-import MatchHistoryTable from '@/components/profile/MatchHistoryTable'
-import EditProfileModal from '@/components/profile/EditProfileModal'
-import { Stars, ProfileSkeleton } from '@/components/profile'
+import { useState } from "react"
+import { Link, useParams, useSearchParams } from "react-router-dom"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Button } from "@/components/ui/button"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { AwardsCard } from "@/components/profile/AwardsCard"
+import EditProfileModal from "@/components/profile/EditProfileModal"
+import { EvolutionChart } from "@/components/profile/EvolutionChart"
+import { MatchHistoryTable } from "@/components/profile/MatchHistoryTable"
+import { PerformanceCard } from "@/components/profile/PerformanceCard"
+import { ProfileHeader } from "@/components/profile/ProfileHeader"
+import { ProfileKpiStrip } from "@/components/profile/ProfileKpiStrip"
+import { ProfilePeladasList } from "@/components/profile/ProfilePeladasList"
+import { ProfileSkeleton } from "@/components/profile/ProfileSkeleton"
+import { RecentForm } from "@/components/profile/RecentForm"
+import { useProfile } from "@/components/profile/hooks/useProfile"
+import { useAuth } from "@/hooks/useAuth"
+
+type ProfileTab = "visao" | "historico" | "peladas"
+
+const TAB_LABEL: Record<ProfileTab, string> = {
+  visao: "Visão geral",
+  historico: "Histórico",
+  peladas: "Peladas",
+}
+const TABS = Object.keys(TAB_LABEL) as ProfileTab[]
+
+const isProfileTab = (value: string | null): value is ProfileTab => TABS.includes(value as ProfileTab)
 
 export default function ProfilePage() {
   const { id } = useParams<{ id: string }>()
   const { user: currentUser } = useAuth()
-  const userId = Number(id)
+  const [searchParams, setSearchParams] = useSearchParams()
   const [editOpen, setEditOpen] = useState(false)
   const {
     status, profile, stats, setProfile,
-    peladas: profilePeladas, peladasLoading,
+    peladas, peladasLoading,
     timelinePoints, timelineLoading,
     matchHistory, matchHistoryLoading,
-  } = useProfile(userId)
+  } = useProfile(Number(id))
 
-  if (status === 'loading') {
-    return <ProfileSkeleton />
+  // the tab lives in the URL (?aba=historico), so reload, back/forward and shared links keep it
+  const requested = searchParams.get("aba")
+  const tab: ProfileTab = isProfileTab(requested) ? requested : "visao"
+  function changeTab(value: string) {
+    if (!isProfileTab(value)) return
+    setSearchParams(value === "visao" ? {} : { aba: value })
   }
 
+  if (status === "loading") return <ProfileSkeleton />
+
   if (!profile || !stats) {
-    const message = status === 'forbidden'
-      ? 'Você só pode ver o perfil de jogadores das suas peladas.'
-      : status === 'notFound'
-        ? 'Perfil não encontrado.'
-        : 'Não foi possível carregar o perfil.'
+    if (status === "error") {
+      return (
+        <div className="page-enter mx-auto w-full max-w-5xl px-4 py-6 md:px-6">
+          <Alert variant="destructive">
+            <AlertDescription>Não foi possível carregar o perfil.</AlertDescription>
+          </Alert>
+        </div>
+      )
+    }
     return (
-      <div className="flex items-center justify-center min-h-[60vh] px-4 text-center">
-        <p className="text-muted-foreground">{message}</p>
+      <div className="page-enter flex flex-col items-center justify-center gap-2 px-4 py-24 text-center">
+        <h1 className="text-xl font-semibold">{status === "forbidden" ? "Perfil restrito" : "Perfil não encontrado"}</h1>
+        <p className="text-muted-foreground">
+          {status === "forbidden"
+            ? "Você só pode ver o perfil de jogadores das suas peladas."
+            : "Este jogador não existe ou foi removido."}
+        </p>
+        <Button variant="outline" className="mt-4" asChild>
+          <Link to="/home">Voltar ao início</Link>
+        </Button>
       </div>
     )
   }
 
   const isOwnProfile = currentUser?.id === profile.id
-  const bgUrl = getFileUrl(profile.backgroundImage)
-  const positionLabel = getPositionLabel(profile.position)
 
   return (
-    <div className="page-enter">
-      {/* Background banner */}
-      {bgUrl && (
-        <div
-          className="w-full h-[200px] relative"
-          style={{ backgroundImage: `url(${bgUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
-        />
-      )}
+    <div className="page-enter mx-auto flex w-full max-w-5xl flex-col gap-5 px-4 py-4 md:px-6 md:py-6">
+      <ProfileHeader
+        profile={profile}
+        isOwnProfile={isOwnProfile}
+        peladaCount={peladasLoading ? null : peladas.length}
+        onEdit={() => setEditOpen(true)}
+      />
 
-      <div className="max-w-5xl mx-auto px-4 sm:px-6">
-        {/* Avatar + name row */}
-        <div className={`flex items-end gap-4 mb-6 ${bgUrl ? '-mt-12' : 'mt-6'}`}>
-          <Avatar className="size-24 border-4 border-background">
-            <AvatarImage src={getFileUrl(profile.image)} alt={profile.username} className="object-cover" />
-            <AvatarFallback className="text-xl font-bold">{getInitials(profile.username)}</AvatarFallback>
-          </Avatar>
-          <div className="flex-1 pb-2">
-            <div className="flex items-center gap-3 flex-wrap">
-              <h1 className="text-2xl font-bold">{profile.username}</h1>
-              {isOwnProfile && (
-                <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
-                  Editar perfil
-                </Button>
-              )}
-            </div>
-            <div className="flex items-center gap-3 mt-1 flex-wrap">
-              {positionLabel && <Badge variant="secondary">{positionLabel}</Badge>}
-              {profile.stars != null ? (
-                <span title="Média das estrelas nas peladas"><Stars count={profile.stars} /></span>
-              ) : (
-                <span className="text-sm text-muted-foreground">Sem avaliação</span>
-              )}
-            </div>
+      <ProfileKpiStrip stats={stats} />
+
+      <Tabs value={tab} onValueChange={changeTab} className="flex flex-col gap-3">
+        <TabsList variant="pill" aria-label="Seções do perfil" className="md:self-start">
+          {TABS.map((value) => (
+            <TabsTrigger key={value} value={value} variant="pill">
+              {TAB_LABEL[value]}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+
+        <TabsContent value="visao" className="mt-0 grid gap-4 lg:grid-cols-3">
+          <div className="lg:col-span-3">
+            <RecentForm matchHistory={matchHistory} loading={matchHistoryLoading} />
           </div>
-        </div>
-
-        {/* Performance KPI cards */}
-        <section className="mb-10">
-          <h2 className="text-xl font-semibold mb-4">Desempenho</h2>
-          <Separator className="mb-6" />
-          {(() => {
-            const sessions = stats.sessionsPlayed ?? 0
-            const wins = stats.matchWins ?? 0
-            const matches = stats.matchesPlayed ?? 0
-            const contributions = stats.goals + stats.assists
-            const winPct = matches > 0 ? `${Math.round((wins / matches) * 100)}%` : '0%'
-            const champPct = sessions > 0 ? `${Math.round((stats.wins / sessions) * 100)}%` : '0%'
-            const goalsPer = sessions > 0 ? (stats.goals / sessions).toFixed(1) : '0.0'
-            const assistsPer = sessions > 0 ? (stats.assists / sessions).toFixed(1) : '0.0'
-            const contribPer = sessions > 0 ? (contributions / sessions).toFixed(1) : '0.0'
-            return (
-              <>
-                <div className="grid grid-cols-3 lg:grid-cols-6 gap-4 mb-4">
-                  <KpiCard label="Vitórias" value={wins} icon={<HugeiconsIcon icon={Sword03Icon} className="w-5 h-5 text-success" />} />
-                  <KpiCard label="Partidas" value={matches} icon={<HugeiconsIcon icon={Calendar03Icon} className="w-5 h-5 text-muted-foreground" />} />
-                  <KpiCard label="% Vitória" value={winPct} icon={<HugeiconsIcon icon={ChartIncreaseIcon} className="w-5 h-5 text-success" />} />
-                  <KpiCard label="Campeão" value={stats.wins} icon={<HugeiconsIcon icon={ChampionIcon} className="w-5 h-5 text-gold" />} />
-                  <KpiCard label="Sessões" value={sessions} icon={<HugeiconsIcon icon={StarIcon} className="w-5 h-5 text-muted-foreground" />} />
-                  <KpiCard label="Aproveitamento" value={champPct} icon={<HugeiconsIcon icon={ChartIncreaseIcon} className="w-5 h-5 text-success" />} />
-                </div>
-                <div className="grid grid-cols-3 lg:grid-cols-6 gap-4">
-                  <KpiCard label="Gols" value={stats.goals} icon={<HugeiconsIcon icon={Target02Icon} className="w-5 h-5 text-highlight-text" />} />
-                  <KpiCard label="Gols/Sessão" value={goalsPer} icon={<HugeiconsIcon icon={Target02Icon} className="w-5 h-5 text-highlight-text" />} />
-                  <KpiCard label="Assistências" value={stats.assists} icon={<HugeiconsIcon icon={Agreement02Icon} className="w-5 h-5 text-brand-text" />} />
-                  <KpiCard label="Assists/Sessão" value={assistsPer} icon={<HugeiconsIcon icon={Agreement02Icon} className="w-5 h-5 text-brand-text" />} />
-                  <KpiCard label="Contribuições" value={contributions} icon={<HugeiconsIcon icon={FlashIcon} className="w-5 h-5 text-gold" />} />
-                  <KpiCard label="Contrib/Sessão" value={contribPer} icon={<HugeiconsIcon icon={FlashIcon} className="w-5 h-5 text-gold" />} />
-                </div>
-              </>
-            )
-          })()}
-        </section>
-
-        {/* Awards section */}
-        <section className="mb-10">
-          <h2 className="text-xl font-semibold mb-4">Prêmios</h2>
-          <Separator className="mb-6" />
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <KpiCard label="Bola Murcha" value={stats.wiltballWins ?? 0} icon={<HugeiconsIcon icon={Medal01Icon} className="w-5 h-5 text-gold" />} />
-            <KpiCard label="Artilheiro" value={stats.artilheiroWins ?? 0} icon={<HugeiconsIcon icon={Target02Icon} className="w-5 h-5 text-highlight-text" />} />
-            <KpiCard label="Garçom" value={stats.garcomWins ?? 0} icon={<HugeiconsIcon icon={Agreement02Icon} className="w-5 h-5 text-brand-text" />} />
-            <KpiCard label="Puskás" value={stats.puskasDates?.length ?? 0} icon={<HugeiconsIcon icon={Award01Icon} className="w-5 h-5 text-gold" />} />
+          <PerformanceCard stats={stats} />
+          <div className="min-w-0 lg:col-span-2">
+            <EvolutionChart timelinePoints={timelinePoints} loading={timelineLoading} />
           </div>
-        </section>
-
-        {/* Stats Over Time */}
-        <section className="mb-10">
-          <h2 className="text-xl font-semibold mb-4">Evolução de Stats</h2>
-          <Separator className="mb-6" />
-          <div className="flex flex-col md:flex-row gap-6 md:items-start">
-            {(stats.goals > 0 || stats.assists > 0) && (
-              <ProfilePieChart goals={stats.goals} assists={stats.assists} />
-            )}
-            <StatsOverTimeChart timelinePoints={timelinePoints} loading={timelineLoading} />
+          <div className="lg:col-span-3">
+            <AwardsCard stats={stats} />
           </div>
-        </section>
+        </TabsContent>
 
-        {/* Peladas section */}
-        <section className="mb-10">
-          <h2 className="text-xl font-semibold mb-4">{isOwnProfile ? 'Peladas' : 'Peladas em comum'}</h2>
-          <Separator className="mb-6" />
-          {peladasLoading ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              {[0, 1, 2].map((i) => (
-                <div key={i} className="rounded-xl border overflow-hidden">
-                  <Skeleton className="h-28 w-full rounded-none" />
-                  <div className="p-3">
-                    <Skeleton className="h-4 w-3/4" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : profilePeladas.length === 0 ? (
-            <p className="text-muted-foreground text-sm">
-              {isOwnProfile ? 'Você ainda não está em nenhuma pelada.' : 'Vocês não têm peladas em comum.'}
-            </p>
-          ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              {profilePeladas.map((pelada) => (
-                <Link
-                  key={pelada.id}
-                  to={`/pelada/${pelada.id}`}
-                  className="rounded-xl border overflow-hidden hover:shadow-md transition-shadow block"
-                >
-                  {pelada.image ? (
-                    <img
-                      src={getFileUrl(pelada.image)}
-                      alt={pelada.name}
-                      className="h-28 w-full object-cover"
-                    />
-                  ) : (
-                    <div className={`h-28 ${getPeladaColor(pelada.name)} flex items-center justify-center`}>
-                      <span className="text-2xl font-extrabold text-white tracking-wide select-none">
-                        {getInitials(pelada.name)}
-                      </span>
-                    </div>
-                  )}
-                  <div className="p-3">
-                    <p className="font-semibold text-sm leading-tight">{pelada.name}</p>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          )}
-        </section>
-
-        {/* Match History */}
-        <section className="mb-10">
-          <h2 className="text-xl font-semibold mb-4">Histórico</h2>
-          <Separator className="mb-6" />
+        <TabsContent value="historico" className="mt-0">
           <MatchHistoryTable matchHistory={matchHistory} loading={matchHistoryLoading} />
-        </section>
-      </div>
+        </TabsContent>
+
+        <TabsContent value="peladas" className="mt-0">
+          <ProfilePeladasList peladas={peladas} loading={peladasLoading} isOwnProfile={isOwnProfile} />
+        </TabsContent>
+      </Tabs>
 
       {editOpen && (
-        <EditProfileModal
-          profile={profile}
-          onClose={() => setEditOpen(false)}
-          onProfileUpdated={setProfile}
-        />
+        <EditProfileModal profile={profile} onClose={() => setEditOpen(false)} onProfileUpdated={setProfile} />
       )}
     </div>
   )

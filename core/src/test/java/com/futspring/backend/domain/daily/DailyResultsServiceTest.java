@@ -90,7 +90,7 @@ class DailyResultsServiceTest {
                 dailyTeamManagementService, new DailyDTOMapper(), dailyRepository, attendanceRepository, userRepository,
                 teamRepository, matchRepository, playerMatchStatRepository,
                 userDailyStatsRepository, leagueTableEntryRepository, dailyAwardRepository,
-                new DailyListItemAssembler(attendanceRepository, teamRepository, matchRepository, mensalistaRepository),
+                new DailyListItemAssembler(attendanceRepository, teamRepository, matchRepository, mensalistaRepository, userDailyStatsRepository),
                 eventPublisher);
 
         admin = User.builder().id(1L).email("admin@example.com").username("admin").password("hash").build();

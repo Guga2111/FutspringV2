@@ -7,6 +7,7 @@ import { API_BASE } from "@/lib/config"
 const FONT_SIZES = [
   "overline", "caption", "body-sm", "body", "body-lg", "title",
   "heading", "heading-lg", "display", "display-lg", "score", "score-lg", "hero",
+  "chapter", "poster", "wordmark",
 ]
 
 const twMerge = extendTailwindMerge({ extend: { theme: { text: FONT_SIZES } } })

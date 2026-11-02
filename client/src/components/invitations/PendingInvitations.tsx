@@ -1,25 +1,25 @@
-import { useEffect, useState } from "react"
-import { Link, useNavigate } from "react-router-dom"
+import { useEffect } from "react"
+import { Link } from "react-router-dom"
 import { toast } from "sonner"
-import { acceptInvitation, declineInvitation } from "@/api/invitations"
 import { InvitationPreview } from "@/components/invitations/InvitationPreview"
+import { useInvitationResponse } from "@/components/invitations/hooks/useInvitationResponse"
 import { useInvitations } from "@/components/invitations/hooks/useInvitations"
+import { PlayerAvatar } from "@/components/PlayerAvatar"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
-import { useMyPeladasContext } from "@/hooks/useMyPeladasContext"
+import { useNowUntil } from "@/hooks/useNowUntil"
 import { useRealtime } from "@/hooks/useRealtime"
-import { getErrorMessage } from "@/lib/errors"
 import type { NotificationPush } from "@/types/notification"
+import { relativeToNow } from "@/utils/invitations"
 
 export function PendingInvitations() {
   const { connectionId, subscribe } = useRealtime()
   const inbox = useInvitations(undefined, true, connectionId)
   const { reload } = inbox
-  const { reload: reloadPeladas } = useMyPeladasContext()
-  const [pending, setPending] = useState<number | null>(null)
-  const navigate = useNavigate()
+  const { pending, respond: send } = useInvitationResponse()
+  const now = useNowUntil(null)
 
   useEffect(() => subscribe("/user/queue/notifications", body => {
     try {
@@ -34,42 +34,60 @@ export function PendingInvitations() {
   }, [reload])
 
   async function respond(id: number, accept: boolean) {
-    setPending(id)
-    try {
-      if (accept) {
-        const joined = await acceptInvitation(id)
-        reloadPeladas()
-        toast.success("Você entrou na pelada")
-        navigate(`/pelada/${joined.peladaId}`)
-      } else {
-        await declineInvitation(id)
-        toast.success("Convite recusado")
-      }
-      reload()
-    } catch (error) {
-      toast.error(getErrorMessage(error, "Não foi possível responder ao convite"))
-      reload()
-    } finally { setPending(null) }
+    const error = await send(id, accept)
+    if (error) toast.error(error)
+    reload()
   }
 
-  if (inbox.loading) return <Skeleton className="h-28 rounded-tile" aria-label="Carregando convites" />
+  if (inbox.loading) return <Skeleton className="h-40 rounded-tile" aria-label="Carregando convites" />
   if (!inbox.error && inbox.items.length === 0) return null
   return (
-    <section className="flex flex-col gap-3" aria-labelledby="pending-invitations">
-      <h2 id="pending-invitations" className="text-lg font-semibold">Convites para você</h2>
-      {inbox.error && <Alert variant="destructive"><AlertDescription>Não foi possível carregar os convites. <Button variant="link" onClick={reload}>Tentar novamente</Button></AlertDescription></Alert>}
-      {inbox.items.map(invitation => (
-        <Card key={invitation.id}>
-          <CardHeader><CardTitle className="text-sm text-muted-foreground">Convite para participar</CardTitle></CardHeader>
-          <CardContent><InvitationPreview pelada={invitation.pelada} /></CardContent>
-          <CardFooter className="flex flex-wrap gap-2">
-            <Button disabled={pending !== null} onClick={() => respond(invitation.id, true)}>{pending === invitation.id ? "Aguarde…" : "Aceitar convite"}</Button>
-            <Button variant="outline" disabled={pending !== null} onClick={() => respond(invitation.id, false)}>Recusar</Button>
-            <Button asChild variant="link"><Link to={`/invitations/${invitation.id}`}>Ver convite</Link></Button>
-          </CardFooter>
-        </Card>
-      ))}
-      {inbox.hasMore && <Button variant="outline" disabled={inbox.loadingMore} onClick={inbox.loadMore}>{inbox.loadingMore ? "Carregando…" : "Carregar mais convites"}</Button>}
+    <section className="flex flex-col gap-3.5" aria-labelledby="pending-invitations">
+      <div className="flex items-baseline gap-2.5">
+        <h2 id="pending-invitations" className="text-title font-semibold">Convites para você</h2>
+        <span className="text-body-sm text-subtle-foreground">{inbox.items.length}{inbox.hasMore ? "+" : ""}</span>
+      </div>
+      {inbox.error && (
+        <Alert variant="destructive">
+          <AlertDescription>
+            Não foi possível carregar os convites.{" "}
+            <Button variant="link" className="h-auto p-0" onClick={reload}>Tentar novamente</Button>
+          </AlertDescription>
+        </Alert>
+      )}
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+        {inbox.items.map((invitation) => {
+          const busy = pending !== null
+          const accepting = pending?.id === invitation.id && pending.accept
+          return (
+            <Card key={invitation.id} className="flex flex-col gap-4 p-4">
+              <InvitationPreview pelada={invitation.pelada} />
+              <p className="flex min-w-0 items-center gap-2 text-body-sm text-muted-foreground">
+                <PlayerAvatar username={invitation.sender.username} image={invitation.sender.image} className="size-6 text-overline" />
+                <span className="truncate">
+                  <span className="font-medium text-foreground">{invitation.sender.username}</span> te convidou · expira {relativeToNow(invitation.expiresAt, now)}
+                </span>
+              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button variant="brand" className="flex-1 md:flex-none" disabled={busy} onClick={() => respond(invitation.id, true)}>
+                  {accepting ? "Entrando…" : "Aceitar convite"}
+                </Button>
+                <Button variant="outline" className="flex-1 md:flex-none" disabled={busy} onClick={() => respond(invitation.id, false)}>
+                  Recusar
+                </Button>
+                <Button asChild variant="ghost" className="w-full md:ml-auto md:w-auto">
+                  <Link to={`/invitations/${invitation.id}`}>Ver detalhes</Link>
+                </Button>
+              </div>
+            </Card>
+          )
+        })}
+      </div>
+      {inbox.hasMore && (
+        <Button variant="outline" className="self-center" disabled={inbox.loadingMore} onClick={inbox.loadMore}>
+          {inbox.loadingMore ? "Carregando…" : "Carregar mais convites"}
+        </Button>
+      )}
     </section>
   )
 }

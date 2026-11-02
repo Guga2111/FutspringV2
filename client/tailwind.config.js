@@ -31,7 +31,11 @@ export default {
   			'display-lg': ['44px', { lineHeight: '1.05', letterSpacing: '0.01em' }],
   			score: ['28px', { lineHeight: '1' }],
   			'score-lg': ['36px', { lineHeight: '1' }],
-  			hero: ['56px', { lineHeight: '1' }]
+  			hero: ['56px', { lineHeight: '1' }],
+  			// landing page only: fluid poster sizes (chapter headings, the hero, the closing wordmark)
+  			chapter: ['clamp(44px, 6vw, 96px)', { lineHeight: '0.92', letterSpacing: '-0.01em' }],
+  			poster: ['clamp(56px, 8vw, 128px)', { lineHeight: '0.88', letterSpacing: '-0.015em' }],
+  			wordmark: ['clamp(72px, 21vw, 340px)', { lineHeight: '0.8', letterSpacing: '-0.02em' }]
   		},
   		colors: {
   			border: 'hsl(var(--border))',
@@ -105,6 +109,12 @@ export default {
   				muted: 'hsl(var(--highlight-muted))'
   			},
   			overlay: 'hsl(var(--overlay))',
+  			night: {
+  				DEFAULT: 'hsl(var(--night))',
+  				foreground: 'hsl(var(--night-foreground))',
+  				muted: 'hsl(var(--night-muted))'
+  			},
+  			paper: 'hsl(var(--paper))',
   			success: {
   				DEFAULT: 'hsl(var(--success))',
   				strong: 'hsl(var(--success-strong))',

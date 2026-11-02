@@ -4,12 +4,13 @@
   "dailyTime" : "dailyTime",
   "status" : "SCHEDULED",
   "confirmedPlayerCount" : 560,
+  "isFinished" : true,
   "teamCount" : 467,
   "matchCount" : 187,
   "championImage" : "championImage",
+  "isConfirmed" : true,
   "capacity" : 547,
   "startsAt" : "2026-10-31T23:00:00Z",
   "confirmOpensAt" : "2026-10-31T23:00:00Z",
-  "isFinished" : true,
-  "isConfirmed" : true
+  "wonSession" : true
 }

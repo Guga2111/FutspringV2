@@ -25,6 +25,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import com.futspring.backend.domain.stats.repository.UserDailyStatsRepository;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
@@ -56,6 +57,7 @@ class DailyAttendanceServiceTest {
     @Mock UserRepository userRepository;
     @Mock TeamRepository teamRepository;
     @Mock MatchRepository matchRepository;
+    @Mock UserDailyStatsRepository userDailyStatsRepository;
     @Mock DailyAttendanceRepository attendanceRepository;
     @Mock DailyAttendanceBumpRepository bumpRepository;
     @Mock PeladaMensalistaRepository mensalistaRepository;
@@ -603,7 +605,7 @@ class DailyAttendanceServiceTest {
     private DailyAttendanceService serviceAt(Instant now) {
         return new DailyAttendanceService(userAuthHelper, new PeladaAccessHelper(peladaRepository), dailyRepository,
                 attendanceRepository, bumpRepository, mensalistaRepository, userRepository,
-                new DailyListItemAssembler(attendanceRepository, teamRepository, matchRepository, mensalistaRepository), eventPublisher,
+                new DailyListItemAssembler(attendanceRepository, teamRepository, matchRepository, mensalistaRepository, userDailyStatsRepository), eventPublisher,
                 Clock.fixed(now, ZoneOffset.UTC), notificationRepository);
     }
 

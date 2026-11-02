@@ -111,6 +111,8 @@ export const CONTRAST_PAIRS: [string, string, number][] = [
   ["live-foreground", "live-to", TEXT],
   ["muted-foreground", "live-from", TEXT],
   ["foreground", "highlight-muted", TEXT],
+  ["night-foreground", "night", TEXT],
+  ["night-muted", "night", TEXT],
   ["sidebar-foreground", "sidebar-background", TEXT],
   ["sidebar-primary-foreground", "sidebar-primary", TEXT],
   ["sidebar-accent-foreground", "sidebar-accent", TEXT],

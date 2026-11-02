@@ -1,9 +1,12 @@
 import { useMemo } from "react"
 import { Link } from "react-router-dom"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { ArrowRight01Icon, PlusSignIcon, UserGroupIcon } from "@hugeicons/core-free-icons"
+import { ArrowRight01Icon, GridViewIcon, LeftToRightListBulletIcon, PlusSignIcon, UserGroupIcon } from "@hugeicons/core-free-icons"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
+import { SessionGallery } from "@/components/pelada/SessionGallery"
+import { useSessionsView, type SessionsView } from "@/components/pelada/hooks/useSessionsView"
 import { DailyStatusBadge } from "@/components/daily/DailyStatusBadge"
 import { getFileUrl } from "@/lib/utils"
 import { parseLocalDate, weekdayShort } from "@/utils/dates"
@@ -17,8 +20,9 @@ interface SessionHistoryListProps {
   onOpenCreate: () => void
 }
 
-// Every session except the next one, grouped by month
+// Every session except the next one: grouped by month (list) or the finished ones as photos (gallery)
 export function SessionHistoryList({ dailies, isLoading, isAdmin, onOpenCreate }: SessionHistoryListProps) {
+  const [view, setView] = useSessionsView()
   const months = useMemo(() => groupDailiesByMonth(dailies), [dailies])
   const finishedCount = dailies.filter((d) => d.status === "FINISHED").length
   const countLabel =
@@ -28,19 +32,39 @@ export function SessionHistoryList({ dailies, isLoading, isAdmin, onOpenCreate }
 
   return (
     <section className="flex flex-col gap-5">
-      <div className="flex items-center justify-between gap-3">
-        <h2 className="text-[15px] font-semibold">
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+        <h2 className="whitespace-nowrap text-[15px] font-semibold">
           Histórico <span className="text-[13px] font-normal text-subtle-foreground">· {countLabel}</span>
         </h2>
-        {isAdmin && (
+        <div className="flex items-center gap-2">
+          <ToggleGroup
+            type="single"
+            variant="outline"
+            size="sm"
+            value={view}
+            onValueChange={(value) => value && setView(value as SessionsView)}
+            aria-label="Modo de visualização"
+            className="gap-0.5"
+          >
+            <ToggleGroupItem value="list" aria-label="Ver em lista" className="h-[34px] min-w-[34px] px-2">
+              <HugeiconsIcon icon={LeftToRightListBulletIcon} />
+            </ToggleGroupItem>
+            <ToggleGroupItem value="gallery" aria-label="Ver em galeria" className="h-[34px] min-w-[34px] px-2">
+              <HugeiconsIcon icon={GridViewIcon} />
+            </ToggleGroupItem>
+          </ToggleGroup>
+          {isAdmin && (
           <Button variant="outline" onClick={onOpenCreate} className="h-[34px] gap-1.5 bg-transparent px-3.5 hover:bg-accent">
             <HugeiconsIcon icon={PlusSignIcon} className="size-3.5" strokeWidth={2.2} />
             Nova sessão
           </Button>
-        )}
+          )}
+        </div>
       </div>
 
-      {isLoading ? (
+      {view === "gallery" ? (
+        <SessionGallery dailies={dailies} isLoading={isLoading} />
+      ) : isLoading ? (
         <Skeleton className="h-48 w-full rounded-xl" />
       ) : months.length === 0 ? (
         <div className="rounded-xl border border-dashed border-input p-10 text-center text-sm text-subtle-foreground">

@@ -6,7 +6,7 @@ import type { PeladaAwards, PeladaAttendanceDTO, PeladaDetail, PeladaMember, Pel
 import type { DailyDetail, DailyListItem, PlayerDTO, RankingDTO, TeamDTO } from "../src/types/daily"
 import type { StatsDTO, UserMatchHistoryDTO, UserStatsTimelineDTO } from "../src/types/stats"
 import type { NotificationPreference, NotificationResponse } from "../src/types/notification"
-import type { Invitation } from "../src/types/invitation"
+import type { Invitation, InvitationStatus, InviteLink } from "../src/types/invitation"
 import type { FinanceDetail, FinanceMovement, FinanceOverview, FinancePage, FinanceTemplate } from "../src/types/finance"
 
 // Wednesday 2026-11-04 15:00 in São Paulo
@@ -116,6 +116,7 @@ export const dailies: DailyListItem[] = [
     capacity: 10,
     startsAt: "2026-11-06T00:00:00.000Z",
     confirmOpensAt: null,
+    wonSession: null,
   },
   ...[FINISHED_ID, 200, 199, 198].map((id, i): DailyListItem => {
     const day = 29 - i * 7
@@ -134,6 +135,8 @@ export const dailies: DailyListItem[] = [
       capacity: 10,
       startsAt: `${date}T00:00:00.000Z`,
       confirmOpensAt: null,
+      // the caller won two, lost one and sat one out, so every gallery filter has sessions
+      wonSession: [true, false, null, true][i],
     }
   }),
 ]
@@ -315,7 +318,8 @@ export const stats: StatsDTO = {
   goals: 42,
   assists: 27,
   matchesPlayed: 96,
-  wins: 51,
+  // sessions won (titles); matchWins are the matches won
+  wins: 9,
   sessionsPlayed: 24,
   matchWins: 51,
   wiltballWins: 1,
@@ -365,6 +369,48 @@ export const invitations: Invitation[] = [
     isMember: false,
   },
 ]
+
+// the Convites page of the pelada: invited accounts that aren't members, sent by the admins
+const guest = (id: number, username: string): PublicUser => ({ id, username, image: null, position: "MEIO" })
+const peladaInvitation = (
+  id: number,
+  recipient: PublicUser,
+  status: InvitationStatus,
+  createdAt: string,
+  extra: Partial<Invitation> = {},
+): Invitation => ({
+  id,
+  peladaId: PELADA_ID,
+  pelada: { id: PELADA_ID, name: "Pelada do Fut", image: null, dayOfWeek: "THURSDAY", timeOfDay: "21:00" },
+  recipient,
+  sender: publicUser(members[0]),
+  status,
+  createdAt,
+  expiresAt: new Date(Date.parse(createdAt) + 7 * 86_400_000).toISOString(),
+  respondedAt: null,
+  canceledAt: null,
+  isMember: false,
+  ...extra,
+})
+
+export const peladaInvitationsPending: Invitation[] = [
+  peladaInvitation(910, guest(101, "Marquinhos"), "PENDING", "2026-11-03T22:00:00.000Z"),
+  peladaInvitation(911, guest(102, "Zé Roberto"), "PENDING", "2026-10-30T15:00:00.000Z", { sender: publicUser(members[4]) }),
+]
+
+export const peladaInvitationsHistory: Invitation[] = [
+  peladaInvitation(905, guest(103, "Tiago Lima"), "ACCEPTED", "2026-10-28T19:00:00.000Z", { respondedAt: "2026-10-29T12:00:00.000Z", isMember: true }),
+  peladaInvitation(904, guest(104, "Rafa Souza"), "DECLINED", "2026-10-26T19:00:00.000Z", { respondedAt: "2026-10-27T09:30:00.000Z" }),
+  peladaInvitation(903, guest(105, "Bruno Costa"), "CANCELED", "2026-10-22T19:00:00.000Z", { canceledAt: "2026-10-23T10:00:00.000Z" }),
+  peladaInvitation(902, guest(106, "Caio Mendes"), "EXPIRED", "2026-10-15T19:00:00.000Z"),
+]
+
+export const inviteLink: InviteLink = {
+  token: "Mw.8f3a9c2e7b1d4f60a5c8e2b7d9f1a3c5",
+  createdAt: "2026-11-02T20:00:00.000Z",
+  expiresAt: "2026-11-09T20:00:00.000Z",
+  creator: publicUser(members[0]),
+}
 
 export const notifications: NotificationResponse[] = [
   {
