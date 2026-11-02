@@ -46,7 +46,7 @@ client/
 ├── docs/                 this file
 ├── public/               static files (gerrard.png logo/favicon, pele.jpg, ronaldo.jpg)
 └── src/
-    ├── main.tsx          applies the saved theme, StrictMode > BrowserRouter > AuthProvider > App + <Toaster position="top-center"/> (bottom-right would cover the chat button)
+    ├── main.tsx          StrictMode > BrowserRouter > AuthProvider > App + <ThemedToaster/> (Sonner `position="top-center"`, bottom-right would cover the chat button; `theme` from `useTheme`)
     ├── App.tsx           routes, React.lazy pages, one <Suspense>, an <ErrorBoundary> per route
     ├── index.css         Tailwind layers, design tokens (:root / .dark), brand gradient classes, landing animations
     ├── api/              one module per backend domain; typed async functions returning response.data
@@ -73,7 +73,7 @@ client/
     │   │   └── hooks/    useNotificationPreferences, useEmailUnsubscribe
     │   ├── PeladaAvatar.tsx   pelada photo or gradient with initials (sidebar, cards, banner)
     │   ├── PlayerAvatar.tsx, StarRow.tsx   round player avatar (photo / initials, `colorId` for per-player colors) and ★ rating
-    │   ├── PrivateRoute.tsx, ErrorBoundary.tsx, ScrollToTop.tsx
+    │   ├── PrivateRoute.tsx, ErrorBoundary.tsx, ScrollToTop.tsx, ThemedToaster.tsx
     │   ├── pelada-settings/  settings page of a pelada (SettingsCard + SettingsCardFooter, SettingsNav, InfoCard, ScheduleCard, LocationCard, SlotsCard, AutomationCard, DangerZone + TransferPeladaDialog / DeletePeladaDialog, ConfirmNameField)
     │   │   └── hooks/    usePeladaSettings, useSettingsSubmit
     │   └── CreatePeladaModal.tsx   Sheet-based form
@@ -269,7 +269,9 @@ export const dailyStatusLabel: Record<DailyStatus, string> = {
 - **Brand green** is a single solid color, the `--brand` token (`#149440`, light + dark; Tailwind `brand`), used by the `.bg-gradient-primary`, `.text-gradient-primary`, `.checkbox-gradient` and `.bg-gradient-date` classes in `index.css` (the names are historical; they no longer draw gradients). Use those classes, `bg-brand`/`text-brand` or the Button `variant="gradient"`; never retype the hex. Only the landing hero (`.landing-hero-bg`) keeps an animated gradient.
 - **Chart colors:** `--chart-1` (green) and `--chart-2` (blue), light and dark, exposed as `chart-1`/`chart-2` in Tailwind. `--gold` (`text-gold`) is for stars, trophies and crowns. In a `ChartConfig` use `color: "hsl(var(--chart-1))"` and reference series as `var(--color-<key>)` (reference: `components/pelada/PlayerHistoryDialog.tsx`).
 - **New colors** (status badges, positions, more chart series): add tokens to both `:root` and `.dark` (e.g. `--chart-1…5`, `--success`) and use them; don't scatter `bg-green-100 text-green-800` maps without dark variants.
-- **Dark mode** is class-based (`.dark` on `<html>`); the choice is saved in `localStorage.theme`, applied in `main.tsx` and toggled from the user menu (`useTheme`). Every new UI must work in both themes.
+- **Dark mode** is class-based (`.dark` on `<html>`). An inline script in `index.html` applies it before the first paint: the saved choice in `localStorage.theme` (`"dark" | "light"`, written by `useTheme` when toggled from the user menu), otherwise the OS preference (`prefers-color-scheme`), followed live while nothing is saved. The same script keeps `<meta name="theme-color">` equal to the page background. `color-scheme` is set per theme in `index.css` (native controls and scrollbars), and toasts follow the theme (`ThemedToaster`). Every new UI must work in both themes.
+- **Reduced motion:** `index.css` has a global `prefers-reduced-motion: reduce` block (animations and transitions ≈0 ms, one iteration; no hover scaling). New animations need nothing extra, but must not rely on motion to convey information.
+- The document is `<html lang="pt-BR">`.
 - **Composition:** `cn()` from `@/lib/utils` for class names; `cva` variants for repeated styles (`components/ui/button-variants.ts` has `default`, `destructive`, `outline`, `secondary`, `ghost`, `link`, `gradient`).
 - **Overlays:** `Sheet` for create/edit forms (reference: `CreatePeladaModal`), `Dialog`/`AlertDialog` for confirmations and short forms, `Drawer` for mobile bottom panels (chat), `DropdownMenu` / `Command` for menus.
 - **Responsive:** mobile first; the redesign switches to the mobile layout below **768 px (`md:`)**, which is also the shadcn sidebar's `useIsMobile` breakpoint; use `md:` for new layouts. Older screens still use `sm:` and `lg:` for side panels (chat sidebar). Grids go `grid-cols-1 md:grid-cols-2 lg:grid-cols-3`. Check every screen at 375 px.

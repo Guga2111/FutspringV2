@@ -181,6 +181,28 @@
     @apply bg-background text-foreground;
     margin: 0;
   }
+  /* native controls, scrollbars and autofill follow the theme */
+  :root {
+    color-scheme: light;
+  }
+  .dark {
+    color-scheme: dark;
+  }
+}
+
+/* Reduced motion: no infinite or decorative animation, no hover scaling */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .bg-gradient-primary:hover {
+    transform: none;
+  }
 }
 
 @keyframes fadeIn {

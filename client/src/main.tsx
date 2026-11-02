@@ -1,26 +1,19 @@
-import { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
-import { BrowserRouter } from 'react-router-dom'
-import { Toaster } from 'sonner'
-import './index.css'
-import App from './App.tsx'
-import { AuthProvider } from './context/AuthContext.tsx'
+import { StrictMode } from "react"
+import { createRoot } from "react-dom/client"
+import { BrowserRouter } from "react-router-dom"
+import "./index.css"
+import App from "./App.tsx"
+import { AuthProvider } from "./context/AuthContext.tsx"
+import { ThemedToaster } from "./components/ThemedToaster.tsx"
 
-// Apply saved theme before first render to avoid flash
-const savedTheme = localStorage.getItem('theme')
-if (savedTheme === 'dark') {
-  document.documentElement.classList.add('dark')
-} else {
-  document.documentElement.classList.remove('dark')
-}
+// The theme class is applied by the inline script in index.html, before the first paint
 
-createRoot(document.getElementById('root')!).render(
+createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <BrowserRouter>
       <AuthProvider>
         <App />
-        {/* top-center: bottom-right would cover the chat button */}
-        <Toaster position="top-center" />
+        <ThemedToaster />
       </AuthProvider>
     </BrowserRouter>
   </StrictMode>,
