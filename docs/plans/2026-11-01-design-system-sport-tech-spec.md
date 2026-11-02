@@ -766,3 +766,18 @@ Pendências conscientes:
 - **Tamanhos arbitrários restantes** (`text-[13px]` etc.) não foram trocados em massa: os tokens da escala definem também a altura de linha, então a troca não é idêntica ao pixel. Código novo usa a escala; os antigos migram quando forem tocados.
 - **Sombras por tema** (`--shadow-color`) não implementadas (opcional, prioridade baixa).
 - **Landing Page** fora do escopo, como decidido (Q11).
+
+### Revisão do highlight (2026-11-01, pedido do responsável do produto: "o laranja está em poucos lugares")
+
+A regra da Q5 foi ampliada: o Cantaloupe marca **competição e conquista**, e o dourado fica só com estrelas e números de medalha.
+
+- **Ao vivo:** status "Em andamento", selo "Ao vivo" e card da sessão ao vivo (os tokens `status-live*` e `live-*` apontam para as primitivas laranja; antes eram amarelo e verde).
+- **Líderes:** 1ª linha do ranking e das tabelas ao vivo/final; linha do líder nos prêmios (antes dourada).
+- **Conquistas:** card do campeão, prêmio Artilheiro, número de Gols nos KPIs da Home e o selo "Campeão" no histórico do perfil.
+- O selo "Admin" (que usava `status-live`) passou para `brand-muted`; Puskás ficou com o dourado.
+
+Corrigido no caminho:
+
+- O `ResultBadge` do histórico comparava com `WIN`/`DRAW`, mas a API envia `W`, `L` ou `—` (`StatsService`): em produção aparecia "W"/"L" cru. Agora: "CAMPEÃO" (laranja), "NÃO VENCEU", "—".
+- O `cn()` (tailwind-merge) tratava os tamanhos nomeados (`text-score`, `text-display`…) como cor e os descartava ao lado de um `text-white`: as iniciais dos cards de pelada estavam pequenas desde o passo 5. O tailwind-merge agora conhece a escala.
+- A suíte visual usava uma proporção de pixels (0,2%) que deixava passar mudanças pequenas em páginas longas; agora o limite é absoluto (50 pixels), e os diálogos mantêm a proporção de 4%.

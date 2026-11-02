@@ -42,7 +42,8 @@ async function settle(page: Page) {
 
 // Centered dialogs sit on fractional pixels, so their text antialiasing varies a little between
 // runs; a token change still alters nearly every pixel
-const DIALOG_SHOT = { maxDiffPixelRatio: 0.04 }
+// (the config's absolute maxDiffPixels is lifted here, the ratio is the limit)
+const DIALOG_SHOT = { maxDiffPixelRatio: 0.04, maxDiffPixels: Number.MAX_SAFE_INTEGER }
 
 async function expectNoHorizontalScroll(page: Page) {
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)

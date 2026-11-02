@@ -346,7 +346,7 @@ export const matchHistory: UserMatchHistoryDTO = {
       assists: i % 2,
       matchesPlayed: 4,
       wins: 2,
-      result: i === 0 ? "CHAMPION" : "WIN",
+      result: i % 2 === 0 ? "W" : "L",
     })),
 }
 

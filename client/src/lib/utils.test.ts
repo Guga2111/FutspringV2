@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { getAvatarColor, getFileUrl, getInitials, getPeladaColor } from "./utils"
+import { cn, getAvatarColor, getFileUrl, getInitials, getPeladaColor } from "./utils"
 import { dayOfWeekLabel } from "./constants"
 
 describe("getInitials", () => {
@@ -42,5 +42,12 @@ describe("getPeladaColor", () => {
   it("picks one of the avatar tokens, stable by name", () => {
     expect(getPeladaColor("Pelada do Fut")).toMatch(/^bg-avatar-[1-6]$/)
     expect(getPeladaColor("Pelada do Fut")).toBe(getPeladaColor("Pelada do Fut"))
+  })
+})
+
+describe("cn", () => {
+  it("keeps a named font size next to a text color", () => {
+    expect(cn("font-display text-score", "text-highlight-text")).toBe("font-display text-score text-highlight-text")
+    expect(cn("text-xs text-white", "text-display text-white/60")).toBe("text-display text-white/60")
   })
 })

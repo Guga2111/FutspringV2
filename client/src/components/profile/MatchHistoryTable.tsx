@@ -40,14 +40,10 @@ function SortIcon({ sorted }: { sorted: false | 'asc' | 'desc' }) {
 }
 
 function ResultBadge({ result }: { result: string }) {
-  const upper = result.toUpperCase()
-  const classes =
-    upper === 'WIN'
-      ? 'bg-success-muted text-success-soft'
-      : upper === 'DRAW'
-        ? 'bg-status-live text-status-live-foreground'
-        : 'bg-muted text-muted-foreground'
-  const label = upper === 'WIN' ? 'VITÓRIA' : upper === 'DRAW' ? 'EMPATE' : upper
+  // the API sends "W" (won the session), "L" (didn't) or "—" (didn't play a match)
+  const won = result.toUpperCase() === 'W'
+  const classes = won ? 'bg-highlight-muted text-highlight-text' : 'bg-muted text-muted-foreground'
+  const label = won ? 'CAMPEÃO' : result.toUpperCase() === 'L' ? 'NÃO VENCEU' : '—'
   return (
     <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${classes}`}>
       {label}

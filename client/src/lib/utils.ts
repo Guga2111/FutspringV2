@@ -1,11 +1,19 @@
 import { type ClassValue, clsx } from "clsx"
-import { twMerge } from "tailwind-merge"
+import { extendTailwindMerge } from "tailwind-merge"
 import { API_BASE } from "@/lib/config"
+
+// The named font sizes of tailwind.config.js (keep both lists equal). Without them tailwind-merge
+// reads `text-score` as a color and drops it when a color class such as `text-white` follows.
+const FONT_SIZES = [
+  "overline", "caption", "body-sm", "body", "body-lg", "title",
+  "heading", "heading-lg", "display", "display-lg", "score", "score-lg", "hero",
+]
+
+const twMerge = extendTailwindMerge({ extend: { theme: { text: FONT_SIZES } } })
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
-
 
 export function getFileUrl(filename: string | null | undefined): string | undefined {
   if (!filename) return undefined

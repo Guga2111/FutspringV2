@@ -19,7 +19,8 @@ export default defineConfig({
   reporter: process.env.CI ? [["list"], ["html", { open: "never" }]] : "list",
   expect: {
     // threshold: per-pixel color tolerance (default 0.2 hides token changes such as #1f1f1f → #07070D)
-    toHaveScreenshot: { animations: "disabled", caret: "hide", threshold: 0.02, maxDiffPixelRatio: 0.002 },
+    // maxDiffPixels: an absolute budget, so a small change on a long page (a badge, a number) still fails
+    toHaveScreenshot: { animations: "disabled", caret: "hide", threshold: 0.02, maxDiffPixels: 50 },
   },
   use: {
     baseURL: `http://localhost:${PORT}`,

@@ -28,7 +28,7 @@ export function MyPeladaCard({ pelada }: { pelada: PeladaResponse }) {
             {pelada.memberCount} membros
           </Badge>
           {pelada.isAdmin && (
-            <Badge variant="status" className="bg-status-live px-2 py-0.5 text-xs font-semibold text-status-live-foreground">
+            <Badge variant="status" className="bg-brand-muted px-2 py-0.5 text-xs font-semibold text-brand-text">
               Admin
             </Badge>
           )}

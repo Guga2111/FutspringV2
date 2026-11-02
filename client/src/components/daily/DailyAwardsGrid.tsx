@@ -69,7 +69,7 @@ export function DailyAwardsGrid({ daily }: { daily: DailyDetail }) {
     {
       title: "Puskás",
       icon: Brush,
-      tone: "bg-status-live text-gold",
+      tone: "bg-gold-muted text-gold",
       detail: "gol mais bonito",
       winnerIds: award.puskasWinnerIds,
       winnerNames: award.puskasWinnerNames,

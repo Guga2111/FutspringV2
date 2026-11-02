@@ -72,8 +72,8 @@ export function DailyHeader({ daily, ...actions }: DailyHeaderProps) {
           <h1 className="font-display text-heading font-bold md:text-heading-lg">{formatLongDate(daily.dailyDate)}</h1>
           <DailyStatusBadge status={status} size="lg" />
           {status === "IN_COURSE" && (
-            <span className="flex items-center gap-1.5 text-[13px] font-semibold text-success">
-              <span className="size-2 rounded-full bg-success-strong shadow-[0_0_0_4px_hsl(var(--success-strong)/0.18)]" />
+            <span className="flex items-center gap-1.5 text-[13px] font-semibold text-live-foreground">
+              <span className="size-2 rounded-full bg-highlight shadow-[0_0_0_4px_hsl(var(--highlight)/0.22)]" />
               Ao vivo
             </span>
           )}

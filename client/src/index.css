@@ -114,19 +114,19 @@
     --info: var(--p-indigo-600);
     --info-muted: var(--p-indigo-50);
 
-    /* daily status badges (status-live is also the "Admin" pill) */
+    /* daily status badges (status-live: in progress) */
     --status-scheduled: var(--p-blue-50);
     --status-scheduled-foreground: var(--p-blue-700);
     --status-scheduled-dot: var(--p-blue-500);
-    --status-live: 48 96% 88.8%;
-    --status-live-foreground: 26 90% 33%;
-    --status-live-dot: 38 92% 50.2%;
+    --status-live: var(--p-orange-50);
+    --status-live-foreground: var(--p-orange-700);
+    --status-live-dot: var(--p-orange-400);
 
-    /* live session card */
-    --live-from: 138 76% 97%;
+    /* live session card (a session in progress is a highlight moment) */
+    --live-from: var(--p-orange-50);
     --live-to: var(--p-white);
-    --live-foreground: 143 64% 24.1%;
-    --live-border: 142 77% 73.1%;
+    --live-foreground: var(--p-orange-700);
+    --live-border: 11 90% 84%;
 
     /* member and pelada avatars without a photo, picked by id/name; white initials */
     --avatar-1: 158 100% 26%;
@@ -204,14 +204,14 @@
     --status-scheduled: var(--p-blue-950);
     --status-scheduled-foreground: var(--p-blue-300);
     --status-scheduled-dot: var(--p-blue-500);
-    --status-live: 45 67% 12%;
-    --status-live-foreground: 46 97% 64.5%;
-    --status-live-dot: 38 92% 50.2%;
+    --status-live: var(--p-orange-950);
+    --status-live-foreground: var(--p-orange-400);
+    --status-live-dot: var(--p-orange-400);
 
-    --live-from: 150 30% 9%;
+    --live-from: var(--p-orange-950);
     --live-to: var(--p-surface-800);
-    --live-foreground: 141 26% 71.4%;
-    --live-border: 139 23% 23.5%;
+    --live-foreground: var(--p-orange-400);
+    --live-border: 10 45% 26%;
 
     --sidebar-background: var(--p-midnight-900);
     --sidebar-foreground: var(--p-offwhite-50);
@@ -286,7 +286,7 @@
 
 /* Award leader row */
 .bg-gradient-leader {
-  background: linear-gradient(90deg, hsl(var(--gold) / 0.14), hsl(var(--gold) / 0.03));
+  background: linear-gradient(90deg, hsl(var(--highlight) / 0.16), hsl(var(--highlight) / 0.03));
 }
 
 /* Photo overlays: they sit on images, so they are the same in both themes */

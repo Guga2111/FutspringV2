@@ -42,8 +42,8 @@ export function LiveLeagueTable({ daily }: { daily: DailyDetail }) {
             {rows.map((row) => {
               const values = { played: row.wins + row.draws + row.losses, wins: row.wins, draws: row.draws, losses: row.losses }
               return (
-                <TableRow key={row.teamId} className="border-border/60 text-sm hover:bg-transparent">
-                  <TableCell className="px-3 py-[11px] font-bold text-subtle-foreground">{row.position}</TableCell>
+                <TableRow key={row.teamId} className={cn("border-border/60 text-sm hover:bg-transparent", row.position === 1 && "bg-highlight-muted")}>
+                  <TableCell className={cn("px-3 py-[11px] font-bold", row.position === 1 ? "text-highlight-text" : "text-subtle-foreground")}>{row.position}</TableCell>
                   <TableCell className="px-1 py-[11px]">
                     <span className="flex min-w-0 items-center gap-2 font-medium">
                       <TeamColorDot color={colorOf.get(row.teamId) ?? null} />

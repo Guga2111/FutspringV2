@@ -12,7 +12,10 @@ import { useUserStats } from "@/components/home/hooks/useUserStats"
 import { useUpcomingAttendance } from "@/components/home/hooks/useUpcomingAttendance"
 import { useAuth } from "@/hooks/useAuth"
 import { useMyPeladasContext } from "@/hooks/useMyPeladasContext"
-import { statsKpis, upcomingSessions } from "@/utils/home"
+import { cn } from "@/lib/utils"
+import { statsKpis, upcomingSessions, type Kpi } from "@/utils/home"
+
+const KPI_TONE: Record<NonNullable<Kpi["tone"]>, string> = { highlight: "text-highlight-text", brand: "text-brand-text" }
 
 // Mobile: horizontal snap carousel bleeding to the screen edge (~30% of the next card visible); md+: a grid
 const carousel =
@@ -117,7 +120,7 @@ export default function HomePage() {
                 : statsKpis(stats).map((kpi) => (
                     <div key={kpi.label} className="flex flex-col gap-1 rounded-xl border bg-card px-4 py-3.5">
                       <dt className="text-xs text-muted-foreground">{kpi.label}</dt>
-                      <dd className="font-display text-score font-bold tabular-nums">{kpi.value}</dd>
+                      <dd className={cn("font-display text-score font-bold tabular-nums", kpi.tone && KPI_TONE[kpi.tone])}>{kpi.value}</dd>
                       <dd className="text-xs text-faint-foreground">{kpi.sub}</dd>
                     </div>
                   ))}

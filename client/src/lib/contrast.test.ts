@@ -60,6 +60,8 @@ const pairs: [string, string, number][] = [
   ["status-live-foreground", "status-live", TEXT],
   ["live-foreground", "live-from", TEXT],
   ["live-foreground", "live-to", TEXT],
+  ["muted-foreground", "live-from", TEXT],
+  ["foreground", "highlight-muted", TEXT],
   ["sidebar-foreground", "sidebar-background", TEXT],
   ["sidebar-primary-foreground", "sidebar-primary", TEXT],
   ["sidebar-accent-foreground", "sidebar-accent", TEXT],

@@ -25,14 +25,14 @@ interface AwardsTabProps {
 
 function LeaderRow({ winner }: { winner: AwardWinner }) {
   return (
-    <div className="bg-gradient-leader -mx-1.5 mb-1 mt-0.5 flex items-center gap-3 rounded-[10px] border border-gold/20 p-2.5">
-      <Trophy className="size-[18px] shrink-0 text-gold" />
-      <PlayerAvatar username={winner.username} image={winner.userImage} className="size-[38px] text-xs ring-2 ring-gold" />
+    <div className="bg-gradient-leader -mx-1.5 mb-1 mt-0.5 flex items-center gap-3 rounded-[10px] border border-highlight/30 p-2.5">
+      <Trophy className="size-[18px] shrink-0 text-highlight-text" />
+      <PlayerAvatar username={winner.username} image={winner.userImage} className="size-[38px] text-xs ring-2 ring-highlight" />
       <div className="flex min-w-0 flex-1 flex-col">
         <span className="truncate text-base font-bold">{winner.username}</span>
-        <span className="text-[11px] font-semibold uppercase tracking-[0.05em] text-gold">Líder</span>
+        <span className="text-[11px] font-semibold uppercase tracking-[0.05em] text-highlight-text">Líder</span>
       </div>
-      <Badge variant="status" className="bg-gold px-2.5 py-[3px] text-sm font-bold tabular-nums text-gold-foreground">
+      <Badge variant="status" className="bg-highlight px-2.5 py-[3px] text-sm font-bold tabular-nums text-highlight-foreground">
         {winner.count}x
       </Badge>
     </div>
