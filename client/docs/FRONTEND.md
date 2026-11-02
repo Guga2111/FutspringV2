@@ -26,10 +26,14 @@ bun run dev          # Vite dev server on http://localhost:5173 (proxies /ws to 
 bun run build        # tsc -b && vite build
 bun run lint         # ESLint 9 (flat config)
 bun run test         # vitest run
+bun run test:visual:docker   # Playwright visual regression in the official image (needs Docker)
+bun run test:visual:update   # same, rewriting the snapshots (review the PNG diff before committing)
 bunx shadcn@latest add <component>   # add a shadcn component to src/components/ui
 ```
 
 CI (`.github/workflows/ci-frontend.yml`) runs `bun install --frozen-lockfile`, lint, build and test on pushes and PRs to `main`/`dev` that touch `client/`; the deploy on `main` waits for it (see CI/CD in `BACKEND.md`). Lint is blocking (0 errors; one `react-hooks/incompatible-library` warning from TanStack Table remains). Before finishing a change run `bun run lint && bun run build && bun run test`.
+
+A second CI job, `visual`, runs the Playwright visual regression in `mcr.microsoft.com/playwright:v<version>-noble` (keep the tag equal to `@playwright/test` in `package.json`); it is not blocking yet and uploads the report when it fails. See [Visual regression](#visual-regression).
 
 ## Environment
 
@@ -44,6 +48,7 @@ CI (`.github/workflows/ci-frontend.yml`) runs `bun install --frozen-lockfile`, l
 ```
 client/
 ├── docs/                 this file
+├── e2e/                  Playwright visual regression: visual.spec.ts, mockApi.ts (route table of mocked GETs), fixtures.ts (typed with src/types), __screenshots__/<project>/, docker.sh, own tsconfig.json
 ├── public/               static files (gerrard.png logo/favicon, pele.jpg, ronaldo.jpg)
 └── src/
     ├── main.tsx          StrictMode > BrowserRouter > AuthProvider > App + <ThemedToaster/> (Sonner `position="top-center"`, bottom-right would cover the chat button; `theme` from `useTheme`)
@@ -393,7 +398,15 @@ return (
 - All user-facing strings in Portuguese, including toasts and `aria-label`s.
 - Shared helpers instead of inline repeats: initials (`getInitials`), file URLs (`getFileUrl`, imported where needed — not passed as a prop), days of the week (`DAYS_OF_WEEK`), positions (`getPositionLabel`).
 - Stable `key`s from ids; index keys only for skeleton placeholders.
-- Tests: pure logic in `src/utils/`, `src/lib/`, `src/schemas/` and `src/api/` gets Vitest tests next to the file (`*.test.ts`).
+- Tests: pure logic in `src/utils/`, `src/lib/`, `src/schemas/` and `src/api/` gets Vitest tests next to the file (`*.test.ts`). Screens are covered by the visual regression below.
+
+### Visual regression
+
+- `e2e/visual.spec.ts` opens the production build (`vite preview` on port 4318, started by `playwright.config.ts`) with the API mocked and takes full-page screenshots of the main routes and three dialogs (compare players, attendance ranking, results), in four projects: `mobile` (375×812) / `desktop` (1280×800) × `light` / `dark`. The theme comes from the emulated OS preference, so the projects also cover the default-theme rule. Each page also asserts no horizontal scroll, and the document's `lang`.
+- `e2e/mockApi.ts` answers the GETs the screens read from `e2e/fixtures.ts`; any other request answers 404 and fails the test ("requests without a fixture"), so a screen that starts calling a new endpoint gets a fixture instead of a screenshot of its error state. `/ws` is aborted (no realtime). Login is the two localStorage keys set by an init script. Fixtures are typed with `src/types`, so a DTO change fails `tsc -b` (e2e has its own `tsconfig.json`, referenced by the root one).
+- Determinism: the clock is frozen at `NOW` (Wednesday 2026-11-04 15:00 in São Paulo; fixture dates are relative to it), `pt-BR` locale and `America/Sao_Paulo` zone, reduced motion, CSS animations disabled, `networkidle` + `document.fonts.ready` before each shot, `maxDiffPixelRatio` 0.01.
+- Font rendering differs per OS, so snapshots are made and checked only in the Playwright image (`e2e/docker.sh`; `PLATFORM=linux/amd64` emulates CI on Apple silicon — the arm64 and amd64 renders match). A change that alters a screen on purpose runs `bun run test:visual:update` and commits the new PNGs with the change; review them in the PR diff.
+- Vitest ignores `e2e/` (`vitest.config.ts`).
 
 ## Patterns
 
