@@ -133,3 +133,31 @@ test("finance member: my charges, Pix and report", async ({ page }) => {
   await expect(page.getByRole("dialog")).toHaveScreenshot("finance-member-report.png", DIALOG_SHOT)
   expect(unmatched, "requests without a fixture").toEqual([])
 })
+
+test("finance tour on the first visit", async ({ page }) => {
+  await page.clock.setFixedTime(NOW)
+  await mockApi(page)
+  // registered after mockApi, so it wins: nothing seen yet, and the "seen" POST is recorded
+  const marked: string[] = []
+  await page.route(/\/api\/v1\/tours(\/|$)/, (route) => {
+    const request = route.request()
+    if (request.method() === "GET") return route.fulfill({ json: { seen: [] } })
+    marked.push(`${request.method()} ${new URL(request.url()).pathname}`)
+    return route.fulfill({ status: 204 })
+  })
+  await login(page)
+  await page.goto(`${PELADA}/financeiro`)
+  await expect(page.getByText("Bem-vindo ao financeiro")).toBeVisible()
+  await settle(page)
+  await expect(page).toHaveScreenshot("finance-tour-welcome.png", DIALOG_SHOT)
+
+  await page.getByRole("button", { name: "Começar" }).click()
+  await expect(page.getByText("Crie uma cobrança")).toBeVisible()
+  await settle(page)
+  await expectNoHorizontalScroll(page)
+  await expect(page).toHaveScreenshot("finance-tour-step.png", DIALOG_SHOT)
+
+  await page.keyboard.press("Escape")
+  await expect(page.getByText("Crie uma cobrança")).toBeHidden()
+  await expect.poll(() => marked).toEqual(["POST /api/v1/tours/FINANCE_MANAGER/seen"])
+})

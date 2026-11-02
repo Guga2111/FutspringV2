@@ -21,6 +21,8 @@ const routes: [RegExp, Handler][] = [
   [/^\/peladas\/\d+\/finance\/lists\/\d+$/, () => f.financeDetail],
   [/^\/peladas\/\d+\/finance\/movements$/, () => f.financeMovements],
   [/^\/peladas\/\d+\/finance\/audit$/, () => ({ items: [], hasMore: false, total: 0 })],
+  // both finance tours already seen, so the screenshots show the page, not the tour
+  [/^\/tours$/, () => ({ seen: ["FINANCE_MANAGER", "FINANCE_MEMBER"] })],
   [/^\/dailies\/(\d+)$/, (m) => ({ [f.SCHEDULED_ID]: f.scheduledDaily, [f.LIVE_ID]: f.liveDaily, [f.FINISHED_ID]: f.finishedDaily })[Number(m[1])]],
   [/^\/users\/\d+$/, () => f.profile],
   [/^\/users\/\d+\/peladas$/, () => f.myPeladas],

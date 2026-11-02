@@ -25,6 +25,7 @@ import { FinanceHistory } from "@/components/finance/FinanceHistory"
 import { FinanceSettings } from "@/components/finance/FinanceSettings"
 import { FinanceReasonForm, type FinanceReasonAction } from "@/components/finance/FinanceReasonForm"
 import { FinanceFormError } from "@/components/finance/FinanceFields"
+import { FinanceTour, FinanceTourButton } from "@/components/finance/FinanceTour"
 import { formatFinanceMoney } from "@/utils/finance"
 import { getErrorMessage } from "@/lib/errors"
 import { Button } from "@/components/ui/button"
@@ -56,6 +57,8 @@ export function FinanceTab({ peladaId, userId, members, dailies }: { peladaId: n
     catch (error) { toast.error(getErrorMessage(error, "Não foi possível atualizar a cobrança")) }
   }
   const manage = Boolean(overview?.permissions.manage)
+  // the tour points at the collections list, so it brings it on screen first
+  const prepareTour = () => { setEditor(null); setReason(null); setTab("collections"); setSettingsView("settings"); finance.select(null) }
   const collectionRow = (list: FinanceList) => (
     <li key={list.id} className="border-b last:border-b-0">
       <Button variant="ghost" className="h-auto w-full justify-between gap-4 rounded-none px-4 py-4 text-left" onClick={() => finance.select(list.id)}>
@@ -93,17 +96,22 @@ export function FinanceTab({ peladaId, userId, members, dailies }: { peladaId: n
       }
   return <div className="flex min-w-0 flex-col gap-5">
     {!overview ? finance.error ? <><FinanceFormError message={finance.error} /><Button variant="outline" onClick={finance.refresh}>Tentar de novo</Button></> : <><Skeleton className="h-10 w-64" /><Skeleton className="h-48 w-full" /></> : <>
+      <FinanceTour manage={manage} viewCash={overview.permissions.viewCash} canAutoStart={tab === "collections" && finance.selected === null && !editor && !reason}>
       <Tabs value={tab} onValueChange={value => { setTab(value); setSettingsView("settings") }} className="min-w-0">
         <div className="mb-3 flex items-center justify-between gap-3">
-          <TabsList variant="underline">
+          {/* min-w-0 + horizontal scroll: at 375 px the tabs and the two icon buttons don't fit, the row scrolls instead of the page */}
+          <TabsList variant="underline" className="min-w-0 overflow-x-auto scrollbar-none">
             <TabsTrigger variant="underline" value="collections" onClick={() => finance.select(null)}>
               {finance.selected !== null && tab === "collections" && <HugeiconsIcon icon={ArrowLeft02Icon} className="mr-2 size-4" />}
               {manage ? "Cobranças" : "Minhas cobranças"}
             </TabsTrigger>
-            {overview.permissions.viewCash && <TabsTrigger variant="underline" value="cash">Caixa</TabsTrigger>}
-            {manage && <TabsTrigger variant="underline" value="settings">Configurações</TabsTrigger>}
+            {overview.permissions.viewCash && <TabsTrigger variant="underline" value="cash" data-tour="cash-tab">Caixa</TabsTrigger>}
+            {manage && <TabsTrigger variant="underline" value="settings" data-tour="settings-tab">Configurações</TabsTrigger>}
           </TabsList>
-          <Button variant="ghost" size="icon" disabled={finance.pending} onClick={finance.refresh} aria-label="Atualizar financeiro"><HugeiconsIcon icon={RefreshIcon} /></Button>
+          <div className="flex shrink-0 items-center">
+            <FinanceTourButton onPrepare={prepareTour} />
+            <Button variant="ghost" size="icon" disabled={finance.pending} onClick={finance.refresh} aria-label="Atualizar financeiro"><HugeiconsIcon icon={RefreshIcon} /></Button>
+          </div>
         </div>
         {finance.error && <FinanceFormError message={finance.error} />}
         <TabsContent value="collections" className="mt-0 flex flex-col gap-5">
@@ -113,18 +121,18 @@ export function FinanceTab({ peladaId, userId, members, dailies }: { peladaId: n
                 <h2 className="text-xl font-semibold">{manage ? "Cobranças da pelada" : "Minhas cobranças"}</h2>
                 <p className="mt-1 text-sm text-muted-foreground">{manage ? "Abra uma cobrança para receber ou conferir pagamentos." : "Veja o que falta pagar, pague com Pix e informe o pagamento."}</p>
               </div>
-              {manage && <Button variant="brand" onClick={() => open({ kind: "create" })} disabled={finance.pending}><HugeiconsIcon icon={PlusSignIcon} data-icon="inline-start" />Nova cobrança</Button>}
+              {manage && <Button variant="brand" data-tour="new-collection" onClick={() => open({ kind: "create" })} disabled={finance.pending}><HugeiconsIcon icon={PlusSignIcon} data-icon="inline-start" />Nova cobrança</Button>}
             </header>
-            <ToggleGroup type="single" variant="chip" size="chip" value={finance.scope} onValueChange={value => { if (value) finance.setScope(value as FinanceListScope) }} className="justify-start" aria-label="Situação das cobranças">
+            <ToggleGroup type="single" variant="chip" size="chip" data-tour="scope" value={finance.scope} onValueChange={value => { if (value) finance.setScope(value as FinanceListScope) }} className="justify-start" aria-label="Situação das cobranças">
               {(Object.keys(financeListScopeLabel) as FinanceListScope[]).map(scope => <ToggleGroupItem key={scope} value={scope}>{financeListScopeLabel[scope]}</ToggleGroupItem>)}
             </ToggleGroup>
             {overview.lists.length === 0 ? (
-              <div className="flex flex-col items-start gap-3 rounded-lg border p-6">
+              <div data-tour="collections" className="flex flex-col items-start gap-3 rounded-lg border p-6">
                 <h3 className="font-medium">{scopeEmpty[finance.scope].title}</h3>
                 <p className="text-sm text-muted-foreground">{scopeEmpty[finance.scope].text}</p>
                 {manage && finance.scope === "ACTIVE" && <Button variant="outline" onClick={() => open({ kind: "create" })}>Criar cobrança</Button>}
               </div>
-            ) : <ul className="rounded-lg border">{overview.lists.map(collectionRow)}</ul>}
+            ) : <ul data-tour="collections" className="rounded-lg border">{overview.lists.map(collectionRow)}</ul>}
             <FinancePagination page={finance.page} total={overview.total} size={api.FINANCE_LISTS_PAGE_SIZE} noun={["cobrança", "cobranças"]} disabled={finance.pending} onPage={finance.setPage} />
           </> : finance.detailError ? <><FinanceFormError message={finance.detailError} /><Button variant="outline" onClick={finance.refresh}>Tentar de novo</Button><Button variant="ghost" onClick={() => finance.select(null)}>Voltar às cobranças</Button></> : !detail ? <Skeleton className="h-64 w-full" /> : <FinanceListDetail key={detail.collection.id} peladaId={peladaId} userId={userId} finance={finance} onEdit={() => open({ kind: "list", list: detail.collection })} onParticipants={() => open({ kind: "participants" })} onDetails={charge => open({ kind: "details", charge })} onPayment={payment} onReason={askReason} onSimple={action => { void simple(action) }} />}
         </TabsContent>
@@ -146,6 +154,7 @@ export function FinanceTab({ peladaId, userId, members, dailies }: { peladaId: n
           </>}
         </TabsContent>}
       </Tabs>
+      </FinanceTour>
     </>}
     {editor?.kind === "create" && <FinanceCreateForm peladaId={peladaId} finance={formFinance} members={members} dailies={dailies} onClose={close} />}
     {editor?.kind === "list" && <FinanceListForm peladaId={peladaId} finance={formFinance} list={editor.list} template={editor.template} asTemplate={!editor.list} dailies={dailies} onClose={close} />}
