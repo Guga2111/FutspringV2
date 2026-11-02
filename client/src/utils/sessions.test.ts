@@ -16,6 +16,7 @@ const daily = (id: number, dailyDate: string, status: DailyStatus = "FINISHED"):
   capacity: 10,
   startsAt: `${dailyDate}T11:00:00Z`,
   confirmOpensAt: null,
+  wonSession: null,
 })
 
 const now = new Date(2026, 9, 4, 10, 0)

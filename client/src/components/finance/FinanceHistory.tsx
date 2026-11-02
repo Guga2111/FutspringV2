@@ -2,7 +2,7 @@ import type { FinanceController } from "@/components/finance/hooks/useFinance"
 import { useFinanceHistory } from "@/components/finance/hooks/useFinanceHistory"
 import { financeMovementLabel, financeMethodLabel, financeAuditLabel } from "@/types/finance"
 import { FINANCE_HISTORY_PAGE_SIZE, reverseFinanceMovement } from "@/api/finance"
-import { FinancePagination } from "@/components/finance/FinancePagination"
+import { ListPagination } from "@/components/ListPagination"
 import type { FinanceReasonAction } from "@/components/finance/FinanceReasonForm"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -26,6 +26,6 @@ export function FinanceHistory({ peladaId, kind, finance, onReason }: { peladaId
         <Collapsible><CollapsibleTrigger asChild><Button variant="ghost" size="sm">Ver dados anteriores e novos</Button></CollapsibleTrigger><CollapsibleContent><div className="flex min-w-0 flex-col gap-3 rounded-md bg-muted p-3 text-sm"><p className="break-all">Antes: {item.beforeData ?? "—"}</p><p className="break-all">Depois: {item.afterData ?? "—"}</p></div></CollapsibleContent></Collapsible>
       </>}
     </li>)}</ul>}
-    {history.data && <FinancePagination page={history.page} total={history.data.total} size={FINANCE_HISTORY_PAGE_SIZE} noun={kind === "cash" ? ["lançamento", "lançamentos"] : ["registro", "registros"]} onPage={history.setPage} />}
+    {history.data && <ListPagination page={history.page} total={history.data.total} size={FINANCE_HISTORY_PAGE_SIZE} noun={kind === "cash" ? ["lançamento", "lançamentos"] : ["registro", "registros"]} onPage={history.setPage} />}
   </section>
 }

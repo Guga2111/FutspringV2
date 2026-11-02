@@ -128,6 +128,13 @@
     --live-foreground: var(--p-orange-700);
     --live-border: 11 90% 84%;
 
+    /* landing page chapters: a dark field that stays dark in both themes, and the white
+       border of a photo print */
+    --night: var(--p-midnight-950);
+    --night-foreground: var(--p-offwhite-50);
+    --night-muted: var(--p-slate-500);
+    --paper: var(--p-white);
+
     /* member and pelada avatars without a photo, picked by id/name; white initials */
     --avatar-1: 158 100% 26%;
     --avatar-2: 20 64% 40%;
@@ -212,6 +219,9 @@
     --live-to: var(--p-surface-800);
     --live-foreground: var(--p-orange-400);
     --live-border: 10 45% 26%;
+
+    /* lifted off the Midnight page so the dark chapter still reads as its own field */
+    --night: var(--p-surface-700);
 
     --sidebar-background: var(--p-midnight-900);
     --sidebar-foreground: var(--p-offwhite-50);
@@ -323,107 +333,44 @@
   animation: fadeIn 150ms ease-in;
 }
 
-/* Landing page animations */
-@keyframes float {
-  0%, 100% { transform: translateY(0px) rotate(0deg); }
-  33%       { transform: translateY(-14px) rotate(1.5deg); }
-  66%       { transform: translateY(-6px) rotate(-1deg); }
+/* Landing page motion (components/landing). Content is visible without script: useReveal
+   arms a section only when the browser can animate it, then reveals its [data-reveal]
+   children once, staggered by --reveal-index. The reduced-motion block above zeroes the
+   durations, and useReveal doesn't arm anything under reduced motion. */
+.reveal-armed [data-reveal] {
+  opacity: 0;
+  transform: translateY(24px);
+  transition:
+    opacity 600ms cubic-bezier(0.2, 0.7, 0.2, 1),
+    transform 600ms cubic-bezier(0.2, 0.7, 0.2, 1);
+  transition-delay: calc(var(--reveal-index, 0) * 80ms);
+}
+.reveal-armed.reveal-in [data-reveal] {
+  opacity: 1;
+  transform: none;
 }
 
-@keyframes blob {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  33%       { transform: translate(30px, -20px) scale(1.08); }
-  66%       { transform: translate(-20px, 10px) scale(0.95); }
+/* The hero's one loud moment: the pitch's centre circle opens from the right edge */
+@keyframes shutter-open {
+  from { clip-path: inset(0 0 0 100%); }
+  to   { clip-path: inset(0 0 0 0); }
+}
+@keyframes shutter-settle {
+  from { transform: scale(1.12); }
+  to   { transform: scale(1); }
+}
+.landing-shutter {
+  animation: shutter-open 1100ms cubic-bezier(0.7, 0, 0.2, 1) both;
+}
+.landing-shutter > * {
+  animation: shutter-settle 1400ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
 }
 
-@keyframes gradient-shift {
-  0%   { background-position: 0% 50%; }
-  50%  { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
-
-@keyframes slide-up {
+/* The hero's lines rise in once on load (delays set per element) */
+@keyframes rise-in {
   from { opacity: 0; transform: translateY(24px); }
-  to   { opacity: 1; transform: translateY(0); }
+  to   { opacity: 1; transform: none; }
 }
-
-@keyframes shimmer {
-  0%   { background-position: -200% center; }
-  100% { background-position: 200% center; }
-}
-
-@keyframes pulse-ring {
-  0%   { transform: scale(1);    opacity: 0.6; }
-  70%  { transform: scale(1.5);  opacity: 0; }
-  100% { transform: scale(1.5);  opacity: 0; }
-}
-
-@keyframes spin-slow {
-  from { transform: rotate(0deg); }
-  to   { transform: rotate(360deg); }
-}
-
-@keyframes glow-pulse {
-  0%, 100% { box-shadow: 0 0 20px 4px rgba(74, 222, 128, 0.3); }
-  50%       { box-shadow: 0 0 40px 12px rgba(74, 222, 128, 0.15); }
-}
-
-.landing-hero-bg {
-  background: linear-gradient(135deg, #22c55e, #16a34a, #15803d, #16a34a, #22c55e);
-  background-size: 300% 300%;
-  animation: gradient-shift 8s ease infinite;
-}
-
-.landing-float {
-  animation: float 6s ease-in-out infinite;
-}
-
-.landing-blob {
-  animation: blob 10s ease-in-out infinite;
-}
-
-.landing-blob-2 {
-  animation: blob 13s ease-in-out infinite reverse;
-}
-
-.landing-slide-up {
-  animation: slide-up 0.6s ease-out both;
-}
-
-.landing-slide-up-1 { animation-delay: 0.05s; }
-.landing-slide-up-2 { animation-delay: 0.15s; }
-.landing-slide-up-3 { animation-delay: 0.25s; }
-
-.landing-shimmer-btn {
-  background: linear-gradient(90deg, #fff 30%, #d1fae5 50%, #fff 70%);
-  background-size: 200% auto;
-  transition: background-position 0.4s ease;
-}
-.landing-shimmer-btn:hover {
-  animation: shimmer 1.2s linear infinite;
-}
-
-.landing-pulse-ring::before {
-  content: '';
-  position: absolute;
-  inset: -4px;
-  border-radius: 9999px;
-  background: rgba(74, 222, 128, 0.5);
-  animation: pulse-ring 2s cubic-bezier(0.455, 0.03, 0.515, 0.955) infinite;
-}
-
-.landing-card {
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-.landing-card:hover {
-  transform: translateY(-6px);
-  box-shadow: 0 20px 40px -8px rgba(22, 163, 74, 0.2);
-}
-
-.landing-icon-wrap {
-  transition: transform 0.2s ease, background-color 0.2s ease;
-}
-.landing-card:hover .landing-icon-wrap {
-  transform: scale(1.15) rotate(-6deg);
-  background-color: rgb(187 247 208); /* green-200 */
+.landing-rise {
+  animation: rise-in 700ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
 }

@@ -28,16 +28,6 @@ export async function uploadUserImage(userId: number, file: File): Promise<Profi
   return response.data
 }
 
-export async function uploadBackgroundImage(userId: number, file: File): Promise<ProfileDTO> {
-  const formData = new FormData()
-  formData.append('file', file)
-  const response = await apiClient.post<ProfileDTO>(
-    `/api/v1/users/${userId}/background-image`,
-    formData,
-  )
-  return response.data
-}
-
 export async function getUserStatsTimeline(
   userId: number,
   from: string,
