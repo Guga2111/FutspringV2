@@ -5,6 +5,7 @@ export const tabsListVariants = cva("items-center text-muted-foreground", {
   variants: {
     variant: {
       default: "inline-flex h-10 justify-center rounded-md bg-muted p-1",
+      underline: "inline-flex h-11 justify-start gap-4 border-b border-border p-0",
       // redesign: pill bar; full width with equal tabs below md (no horizontal scroll)
       pill: "flex w-full gap-1 rounded-full bg-accent p-1 md:inline-flex md:w-auto",
     },
@@ -18,6 +19,7 @@ export const tabsTriggerVariants = cva(
     variants: {
       variant: {
         default: "rounded-sm px-3 py-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm",
+        underline: "-mb-px h-11 border-b-2 border-transparent px-1 py-2 hover:text-foreground data-[state=active]:border-brand",
         pill: "min-w-0 flex-1 basis-0 truncate rounded-full px-1.5 py-[7px] text-[13px] data-[state=active]:bg-background md:flex-none md:basis-auto md:px-3.5 md:py-1.5 md:text-sm",
       },
     },

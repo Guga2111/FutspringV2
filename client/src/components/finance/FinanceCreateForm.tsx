@@ -26,7 +26,7 @@ export function FinanceCreateForm({ peladaId, finance, members, dailies, onClose
   const busy = finance.pending || form.formState.isSubmitting
   return <Sheet open onOpenChange={open => { if (!open && !busy) onClose() }}><SheetContent className="flex w-full flex-col gap-6 overflow-hidden sm:max-w-xl">
     <SheetHeader><SheetTitle>Nova cobrança</SheetTitle><SheetDescription>{["Defina o que será cobrado.", "Escolha quem deve pagar.", "Confira antes de publicar."][step]}</SheetDescription></SheetHeader>
-    <ol aria-label="Etapas da cobrança" className="grid grid-cols-3 gap-3 text-sm">{["Cobrança", "Pessoas", "Revisão"].map((label, index) => <li key={label} aria-current={step === index ? "step" : undefined} className={cn("border-b-2 pb-2", step === index ? "border-primary font-medium text-foreground" : "border-border text-muted-foreground")}>{label}</li>)}</ol>
+    <ol aria-label="Etapas da cobrança" className="grid grid-cols-3 gap-3 text-sm">{["Cobrança", "Pessoas", "Revisão"].map((label, index) => <li key={label} aria-current={step === index ? "step" : undefined} className={cn("border-b-2 pb-2", step === index ? "border-brand font-medium text-foreground" : "border-border text-muted-foreground")}>{label}</li>)}</ol>
     <form noValidate className="flex min-h-0 flex-1 flex-col gap-4" onSubmit={event => { if (step < 2) { event.preventDefault(); void next() } else { void form.handleSubmit(values => save(values, true))(event) } }}>
       <div className="min-h-0 flex-1 overflow-y-auto pr-1">
       {step === 0 && <FieldGroup>
@@ -55,7 +55,7 @@ export function FinanceCreateForm({ peladaId, finance, members, dailies, onClose
       </div>
       <FinanceFormError message={form.formState.errors.root?.message} />
       <div className="flex shrink-0 flex-wrap justify-between gap-3 pt-3">{step > 0 ? <Button type="button" variant="ghost" disabled={busy} onClick={() => setStep(step - 1)}>Voltar</Button> : <Button type="button" variant="ghost" disabled={busy} onClick={onClose}>Cancelar</Button>}
-        {step < 2 ? <Button type="button" disabled={busy} onClick={() => { void next() }}>Continuar</Button> : <div className="flex flex-wrap gap-2"><Button type="button" variant="outline" disabled={busy} onClick={() => { void form.handleSubmit(values => save(values, false))() }}>Salvar rascunho</Button><Button type="submit" disabled={busy || count === 0}>{busy ? "Salvando…" : "Criar e publicar"}</Button></div>}
+        {step < 2 ? <Button variant="gradient" type="button" disabled={busy} onClick={() => { void next() }}>Continuar</Button> : <div className="flex flex-wrap gap-2"><Button type="button" variant="outline" disabled={busy} onClick={() => { void form.handleSubmit(values => save(values, false))() }}>Salvar rascunho</Button><Button variant="gradient" type="submit" disabled={busy || count === 0}>{busy ? "Salvando…" : "Criar e publicar"}</Button></div>}
       </div>
     </form>
   </SheetContent></Sheet>

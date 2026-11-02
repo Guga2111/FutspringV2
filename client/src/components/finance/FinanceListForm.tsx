@@ -65,7 +65,7 @@ export function FinanceListForm({ peladaId, finance, list, template, asTemplate 
         {published && <FinanceInput control={form.control} name="reason" label="Motivo da alteração" multiline />}
       </FieldGroup>
       <FinanceFormError message={form.formState.errors.root?.message} />
-      <Button type="submit" disabled={finance.pending}>{finance.pending ? "Salvando…" : asTemplate ? "Salvar modelo" : "Salvar cobrança"}</Button>
+      <Button variant="gradient" type="submit" disabled={finance.pending}>{finance.pending ? "Salvando…" : asTemplate ? "Salvar modelo" : "Salvar cobrança"}</Button>
     </form>
   </SheetContent></Sheet>
 }

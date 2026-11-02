@@ -19,7 +19,7 @@ export function FinanceReasonForm({ finance, action, onClose }: { finance: Finan
       try { await finance.mutate(`${action.signature}:${values.reason}`, values.reason, action.run); toast.success("Alteração registrada"); onClose() }
       catch (e) { applyServerErrors(form, e, "Não foi possível registrar a alteração") }
     })} className="flex flex-col gap-5"><FieldGroup><FinanceInput control={form.control} name="reason" label="Motivo" multiline /></FieldGroup>
-      <FinanceFormError message={form.formState.errors.root?.message} /><Button type="submit" disabled={finance.pending}>{action.title}</Button>
+      <FinanceFormError message={form.formState.errors.root?.message} /><Button variant="gradient" type="submit" disabled={finance.pending}>{action.title}</Button>
     </form>
   </DialogContent></Dialog>
 }
