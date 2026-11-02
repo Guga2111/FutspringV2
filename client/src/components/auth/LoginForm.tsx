@@ -20,6 +20,7 @@ export function LoginForm({ returnTo }: { returnTo: string }) {
           label="Senha"
           type="password"
           autoComplete="current-password"
+          placeholder="Sua senha"
           labelAction={
             <Link to="/forgot-password" className="text-body-sm text-brand-text underline-offset-4 hover:underline">
               Esqueceu a senha?

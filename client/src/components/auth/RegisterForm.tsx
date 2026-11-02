@@ -23,9 +23,10 @@ export function RegisterForm({ returnTo }: { returnTo: string }) {
           label="Senha"
           type="password"
           autoComplete="new-password"
+          placeholder="Crie uma senha"
           description={`Pelo menos ${PASSWORD_MIN_LENGTH} caracteres.`}
         />
-        <AuthTextField control={form.control} name="confirmPassword" id="register-confirm" label="Confirme a senha" type="password" autoComplete="new-password" />
+        <AuthTextField control={form.control} name="confirmPassword" id="register-confirm" label="Confirme a senha" type="password" autoComplete="new-password" placeholder="Repita a senha" />
         <Controller
           name="terms"
           control={form.control}

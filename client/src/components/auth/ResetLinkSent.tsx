@@ -1,8 +1,7 @@
-import { HugeiconsIcon } from "@hugeicons/react"
 import { MailValidation01Icon } from "@hugeicons/core-free-icons"
-import { Link } from "react-router-dom"
+import { AuthHeader } from "@/components/auth/AuthHeader"
+import { BackToLogin } from "@/components/auth/BackToLogin"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 
 interface ResetLinkSentProps {
   email: string
@@ -12,28 +11,20 @@ interface ResetLinkSentProps {
 // Same text whether or not the account exists: the API never tells (no user enumeration)
 export function ResetLinkSent({ email, onUseAnotherEmail }: ResetLinkSentProps) {
   return (
-    <Card className="w-full max-w-md border-0 shadow-none">
-      <CardHeader className="items-center text-center">
-        <HugeiconsIcon icon={MailValidation01Icon} aria-hidden className="mb-2 size-10 text-brand-text" />
-        <CardTitle>Verifique seu e-mail</CardTitle>
-        <CardDescription>
-          Se existir uma conta com <span className="font-medium text-foreground">{email}</span>, enviamos um link
-          para redefinir a senha. Ele expira em 30 minutos.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <p className="text-center text-sm text-muted-foreground">
+    <div className="flex w-full max-w-sm flex-col gap-8">
+      <AuthHeader icon={MailValidation01Icon} title="Verifique seu e-mail">
+        Se existir uma conta com <span className="font-medium text-foreground">{email}</span>, enviamos um link para
+        redefinir a senha. Ele expira em 30 minutos.
+      </AuthHeader>
+      <div className="flex flex-col gap-3">
+        <p className="text-center text-body text-muted-foreground">
           Não chegou? Confira a caixa de spam ou tente de novo em um minuto.
         </p>
-      </CardContent>
-      <CardFooter className="flex flex-col gap-2">
-        <Button asChild variant="brand" className="w-full">
-          <Link to="/auth?tab=login">Voltar para o login</Link>
-        </Button>
-        <Button type="button" variant="ghost" className="w-full" onClick={onUseAnotherEmail}>
+        <Button type="button" variant="outline" size="lg" className="w-full" onClick={onUseAnotherEmail}>
           Usar outro e-mail
         </Button>
-      </CardFooter>
-    </Card>
+      </div>
+      <BackToLogin />
+    </div>
   )
 }
