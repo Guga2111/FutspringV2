@@ -62,7 +62,9 @@ export function financePageCount(total: number, size: number): number {
   return Math.max(1, Math.ceil(total / size))
 }
 
-// After a change (a list closed, a movement reversed) the current page may no longer exist
-export function clampFinancePage(page: number, total: number, size: number): number {
+// After a change (a list closed, a movement reversed) the current page may no longer exist.
+// Without a usable total (an API from before numbered pages) the page is kept, never NaN.
+export function clampFinancePage(page: number, total: number | undefined, size: number): number {
+  if (typeof total !== "number" || !Number.isFinite(total)) return page
   return Math.min(page, financePageCount(total, size) - 1)
 }

@@ -52,4 +52,8 @@ describe("finance pages", () => {
     expect(clampFinancePage(2, 20, 10)).toBe(1)
     expect(clampFinancePage(1, 0, 10)).toBe(0)
   })
+  it("keeps the page when the API sends no total", () => {
+    expect(clampFinancePage(0, undefined, 10)).toBe(0)
+    expect(clampFinancePage(2, Number.NaN, 10)).toBe(2)
+  })
 })

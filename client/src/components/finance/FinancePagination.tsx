@@ -15,7 +15,8 @@ interface FinancePaginationProps {
 
 // Numbered pages of the finance lists (cobranças, extrato, histórico), visible as soon as there is something to page
 export function FinancePagination({ page, total, size, noun, disabled, onPage }: FinancePaginationProps) {
-  if (total === 0) return null
+  // nothing to page (or an API without totals)
+  if (!total) return null
   const pages = financePageCount(total, size)
   return (
     <nav aria-label={`Páginas de ${noun[1]}`} className="flex flex-wrap items-center justify-between gap-3">
