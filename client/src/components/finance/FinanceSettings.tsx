@@ -1,7 +1,8 @@
-import { Controller, useForm } from "react-hook-form"
+import { useState } from "react"
+import { Controller, useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { ArrowRight01Icon, PlusSignIcon } from "@hugeicons/core-free-icons"
+import { ArrowDown01Icon, ArrowRight01Icon, PlusSignIcon } from "@hugeicons/core-free-icons"
 import { toast } from "sonner"
 import * as api from "@/api/finance"
 import { financeManagersSchema, financePixSchema, financeVisibilitySchema } from "@/schemas/finance"
@@ -16,9 +17,11 @@ import { PlayerAvatar } from "@/components/PlayerAvatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { applyServerErrors } from "@/lib/form-errors"
+import { cn } from "@/lib/utils"
 import { getErrorMessage } from "@/lib/errors"
 import { formatFinanceMoney, sumFinanceAmounts } from "@/utils/finance"
 
@@ -226,6 +229,10 @@ function ManagersCard({ peladaId, finance, settings, members }: CardProps & { me
   // admins (the creator included) already manage the finance; only the other members can be appointed
   const admins = members.filter((member) => member.isAdmin)
   const candidates = members.filter((member) => !member.isAdmin)
+  // the member list is long: it opens on demand, with the current choice summarized above it
+  const [open, setOpen] = useState(false)
+  const userIds = useWatch({ control: form.control, name: "userIds" })
+  const chosen = candidates.filter((member) => userIds.includes(member.id)).map((member) => member.username)
   return (
     <SettingsCard
       id="finance-managers"
@@ -256,30 +263,52 @@ function ManagersCard({ peladaId, finance, settings, members }: CardProps & { me
       {candidates.length === 0 ? (
         <p className="text-sm text-muted-foreground">Todos os membros já são admins.</p>
       ) : (
-        <Controller
-          control={form.control}
-          name="userIds"
-          render={({ field, fieldState }) => (
-            <FieldGroup className="gap-0 rounded-lg border">
-              {candidates.map((member) => (
-                <Field key={member.id} orientation="horizontal" className="items-center gap-3 border-b p-3 last:border-b-0">
-                  <Checkbox
-                    id={`finance-manager-${member.id}`}
-                    checked={field.value.includes(member.id)}
-                    onCheckedChange={(checked) =>
-                      field.onChange(checked ? [...field.value, member.id] : field.value.filter((id) => id !== member.id))
-                    }
-                  />
-                  <PlayerAvatar username={member.username} image={member.image} className="size-8 text-xs" />
-                  <FieldLabel htmlFor={`finance-manager-${member.id}`} className="flex-1 cursor-pointer font-normal">
-                    {member.username}
-                  </FieldLabel>
-                </Field>
-              ))}
-              <FieldError errors={[fieldState.error]} />
-            </FieldGroup>
-          )}
-        />
+        <Collapsible open={open} onOpenChange={setOpen} className="flex flex-col gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-sm">
+              {chosen.length === 0 ? (
+                <span className="text-muted-foreground">Nenhum responsável além dos admins.</span>
+              ) : (
+                <>
+                  <span className="text-muted-foreground">{chosen.length === 1 ? "Responsável: " : `${chosen.length} responsáveis: `}</span>
+                  {chosen.join(", ")}
+                </>
+              )}
+            </p>
+            <CollapsibleTrigger asChild>
+              <Button type="button" variant="outline" size="sm">
+                {open ? "Recolher" : "Escolher responsáveis"}
+                <HugeiconsIcon icon={ArrowDown01Icon} className={cn("transition-transform", open && "rotate-180")} />
+              </Button>
+            </CollapsibleTrigger>
+          </div>
+          <CollapsibleContent>
+            <Controller
+              control={form.control}
+              name="userIds"
+              render={({ field, fieldState }) => (
+                <FieldGroup className="gap-0 rounded-lg border">
+                  {candidates.map((member) => (
+                    <Field key={member.id} orientation="horizontal" className="items-center gap-3 border-b p-3 last:border-b-0">
+                      <Checkbox
+                        id={`finance-manager-${member.id}`}
+                        checked={field.value.includes(member.id)}
+                        onCheckedChange={(checked) =>
+                          field.onChange(checked ? [...field.value, member.id] : field.value.filter((id) => id !== member.id))
+                        }
+                      />
+                      <PlayerAvatar username={member.username} image={member.image} className="size-8 text-xs" />
+                      <FieldLabel htmlFor={`finance-manager-${member.id}`} className="flex-1 cursor-pointer font-normal">
+                        {member.username}
+                      </FieldLabel>
+                    </Field>
+                  ))}
+                  <FieldError errors={[fieldState.error]} />
+                </FieldGroup>
+              )}
+            />
+          </CollapsibleContent>
+        </Collapsible>
       )}
       <SettingsRootError message={form.formState.errors.root?.message} />
     </SettingsCard>
