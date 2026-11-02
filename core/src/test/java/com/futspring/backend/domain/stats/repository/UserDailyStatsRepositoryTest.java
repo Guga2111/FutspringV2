@@ -67,6 +67,24 @@ class UserDailyStatsRepositoryTest {
                 .daily(daily3).user(player).goals(2).assists(1).matchesPlayed(2).wins(2).wonSession(true).build());
     }
 
+    // --- Caller's result per session (dailies list) ---
+
+    @Test
+    void findWonSessionByUserAndDailyIds_onlyTheUsersRowsOfTheListedSessions() {
+        User other = userRepository.save(User.builder()
+                .email("other@example.com").username("other").password("hash").build());
+        userDailyStatsRepository.save(UserDailyStats.builder()
+                .daily(daily2).user(other).matchesPlayed(3).wonSession(true).build());
+
+        List<Object[]> rows = userDailyStatsRepository.findWonSessionByUserAndDailyIds(
+                player.getId(), List.of(daily1.getId(), daily2.getId()));
+
+        assertThat(rows).extracting(row -> row[0], row -> row[1])
+                .containsExactlyInAnyOrder(tuple(daily1.getId(), true), tuple(daily2.getId(), false));
+        assertThat(userDailyStatsRepository.findWonSessionByUserAndDailyIds(other.getId(), List.of(daily1.getId())))
+                .isEmpty();
+    }
+
     // --- Date range query ---
 
     @Test

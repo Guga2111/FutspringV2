@@ -7,7 +7,7 @@ import lombok.Builder;
 import java.time.Instant;
 import java.time.LocalDate;
 
-// Built by DailyListItemAssembler (counts come from grouped queries, isConfirmed is the caller's attendance)
+// Built by DailyListItemAssembler (counts come from grouped queries, isConfirmed and wonSession are the caller's)
 @Builder
 public record DailyListItemDTO(
         Long id,
@@ -27,5 +27,7 @@ public record DailyListItemDTO(
         // session start, in the pelada's zone
         Instant startsAt,
         // from when the caller may confirm themselves; null for mensalistas (no window). The server re-checks it
-        Instant confirmOpensAt) {
+        Instant confirmOpensAt,
+        // the caller's result: true won, false played and didn't win, null didn't play or not finalized
+        Boolean wonSession) {
 }
