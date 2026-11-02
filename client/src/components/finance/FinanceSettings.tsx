@@ -27,7 +27,7 @@ export function FinanceSettings({ peladaId, finance, members }: { peladaId: numb
       })}><FieldGroup><FinanceSelect control={form.control} name="visibility" label="Visibilidade" options={[{ value: "INDIVIDUAL", label: "Individual: cada membro vê suas cobranças" }, { value: "TRANSPARENT", label: "Transparente: membros veem listas e caixa" }]} />
         <FinanceInput control={form.control} name="pixKey" label="Chave Pix padrão" /><FinanceInput control={form.control} name="pixRecipient" label="Recebedor padrão" />
         {qrId !== null && <div className="flex flex-wrap gap-2"><FinanceImage peladaId={peladaId} kind="qr" imageId={qrId} /><Button variant="ghost" type="button" onClick={() => form.setValue("qrId", null, { shouldDirty: true })}>Remover QR Code padrão</Button></div>}
-      </FieldGroup><FinanceFormError message={form.formState.errors.root?.message} /><Button variant="gradient" type="submit" disabled={finance.pending || !form.formState.isDirty}>Salvar configuração</Button></form>
+      </FieldGroup><FinanceFormError message={form.formState.errors.root?.message} /><Button variant="brand" type="submit" disabled={finance.pending || !form.formState.isDirty}>Salvar configuração</Button></form>
     </CardContent></Card>
     <FinanceQrForm peladaId={peladaId} finance={finance} listId={null} />
     {finance.overview?.permissions.appointManagers && <Card className="md:col-span-2"><CardHeader><CardTitle>Responsáveis financeiros</CardTitle><CardDescription>Administradores e criador já têm acesso. Os responsáveis ganham apenas os poderes do financeiro.</CardDescription></CardHeader><CardContent>
@@ -35,7 +35,7 @@ export function FinanceSettings({ peladaId, finance, members }: { peladaId: numb
         try { await finance.mutate(JSON.stringify({ type: "managers", values }), "", command => api.saveFinanceManagers(peladaId, command, values.userIds)); managerForm.reset(values); toast.success("Responsáveis atualizados") }
         catch (e) { applyServerErrors(managerForm, e, "Não foi possível salvar os responsáveis") }
       })}><Controller control={managerForm.control} name="userIds" render={({ field, fieldState }) => <FieldGroup>{members.map(member => <Field key={member.id} orientation="horizontal"><Checkbox id={`manager-${member.id}`} checked={field.value.includes(member.id)} onCheckedChange={checked => field.onChange(checked ? [...field.value, member.id] : field.value.filter(id => id !== member.id))} /><FieldLabel htmlFor={`manager-${member.id}`}>{member.username}</FieldLabel></Field>)}<FieldError errors={[fieldState.error]} /></FieldGroup>} />
-        <FinanceFormError message={managerForm.formState.errors.root?.message} /><Button variant="gradient" type="submit" disabled={finance.pending || !managerForm.formState.isDirty}>Salvar responsáveis</Button>
+        <FinanceFormError message={managerForm.formState.errors.root?.message} /><Button variant="brand" type="submit" disabled={finance.pending || !managerForm.formState.isDirty}>Salvar responsáveis</Button>
       </form>
     </CardContent></Card>}
   </div>

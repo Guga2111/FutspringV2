@@ -17,7 +17,7 @@ export function MyPeladaCard({ pelada }: { pelada: PeladaResponse }) {
         name={pelada.name}
         image={pelada.image}
         objectPosition="center 22%"
-        className="h-[110px] w-full rounded-none text-[28px] font-extrabold text-white/60"
+        className="h-[110px] w-full rounded-none font-display text-display font-extrabold text-white/60"
       />
       <div className="flex flex-col gap-1.5 p-3.5">
         <span className="text-[15px] font-semibold">{pelada.name}</span>
@@ -29,7 +29,7 @@ export function MyPeladaCard({ pelada }: { pelada: PeladaResponse }) {
             {pelada.memberCount} membros
           </Badge>
           {pelada.isAdmin && (
-            <Badge variant="status" className="bg-status-live px-2 py-0.5 text-xs font-semibold text-status-live-foreground">
+            <Badge variant="status" className="bg-brand-muted px-2 py-0.5 text-xs font-semibold text-brand-text">
               Admin
             </Badge>
           )}

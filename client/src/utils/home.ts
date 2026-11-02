@@ -38,6 +38,8 @@ export interface Kpi {
   label: string
   value: number
   sub: string
+  // goals are a highlight moment, assists the brand (the same colors as the profile and the awards)
+  tone?: "highlight" | "brand"
 }
 
 // "Seus números": totals over every pelada; wins are match wins (matchWins), not sessions won
@@ -45,8 +47,8 @@ export function statsKpis(stats: StatsDTO): Kpi[] {
   const perMatch = (n: number) => (stats.matchesPlayed > 0 ? decimal.format(n / stats.matchesPlayed) : decimal.format(0))
   const winRate = stats.matchesPlayed > 0 ? Math.round((stats.matchWins / stats.matchesPlayed) * 100) : 0
   return [
-    { label: "Gols", value: stats.goals, sub: `${perMatch(stats.goals)} por partida` },
-    { label: "Assistências", value: stats.assists, sub: `${perMatch(stats.assists)} por partida` },
+    { label: "Gols", value: stats.goals, sub: `${perMatch(stats.goals)} por partida`, tone: "highlight" },
+    { label: "Assistências", value: stats.assists, sub: `${perMatch(stats.assists)} por partida`, tone: "brand" },
     { label: "Partidas", value: stats.matchesPlayed, sub: `em ${stats.sessionsPlayed} ${stats.sessionsPlayed === 1 ? "sessão" : "sessões"}` },
     { label: "Vitórias", value: stats.matchWins, sub: `${winRate}% de aproveitamento` },
   ]

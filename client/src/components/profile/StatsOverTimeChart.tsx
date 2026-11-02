@@ -19,9 +19,9 @@ interface StatsOverTimeChartProps {
 }
 
 const chartConfig = {
-  goals:         { label: 'Gols',   color: '#32CD32' },
-  assists:       { label: 'Assistências', color: '#99CB0E' },
-  matchesPlayed: { label: 'Partidas', color: '#f97316' },
+  goals:         { label: 'Gols',   color: 'hsl(var(--chart-1))' },
+  assists:       { label: 'Assistências', color: 'hsl(var(--chart-2))' },
+  matchesPlayed: { label: 'Partidas', color: 'hsl(var(--chart-3))' },
 } satisfies ChartConfig
 
 export default function StatsOverTimeChart({ timelinePoints = [], loading }: StatsOverTimeChartProps) {
@@ -89,16 +89,16 @@ export default function StatsOverTimeChart({ timelinePoints = [], loading }: Sta
           <AreaChart data={filteredData}>
             <defs>
               <linearGradient id="fillGoals" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#32CD32" stopOpacity={0.8} />
-                <stop offset="95%" stopColor="#32CD32" stopOpacity={0.1} />
+                <stop offset="5%" stopColor="var(--color-goals)" stopOpacity={0.8} />
+                <stop offset="95%" stopColor="var(--color-goals)" stopOpacity={0.1} />
               </linearGradient>
               <linearGradient id="fillAssists" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#99CB0E" stopOpacity={0.8} />
-                <stop offset="95%" stopColor="#99CB0E" stopOpacity={0.1} />
+                <stop offset="5%" stopColor="var(--color-assists)" stopOpacity={0.8} />
+                <stop offset="95%" stopColor="var(--color-assists)" stopOpacity={0.1} />
               </linearGradient>
               <linearGradient id="fillMatchesPlayed" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#f97316" stopOpacity={0.8} />
-                <stop offset="95%" stopColor="#f97316" stopOpacity={0.1} />
+                <stop offset="5%" stopColor="var(--color-matchesPlayed)" stopOpacity={0.8} />
+                <stop offset="95%" stopColor="var(--color-matchesPlayed)" stopOpacity={0.1} />
               </linearGradient>
             </defs>
             <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="currentColor" strokeOpacity={0.1} />
@@ -110,14 +110,14 @@ export default function StatsOverTimeChart({ timelinePoints = [], loading }: Sta
               minTickGap={32}
               tickFormatter={(value: string) => {
                 const d = new Date(value)
-                return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                return d.toLocaleDateString('pt-BR', { month: 'short', day: 'numeric' })
               }}
             />
             <ChartTooltip
               content={
                 <ChartTooltipContent
                   labelFormatter={(value) =>
-                    new Date(String(value)).toLocaleDateString('en-US', {
+                    new Date(String(value)).toLocaleDateString('pt-BR', {
                       month: 'short',
                       day: 'numeric',
                       year: 'numeric',
@@ -130,21 +130,21 @@ export default function StatsOverTimeChart({ timelinePoints = [], loading }: Sta
               dataKey="goals"
               type="natural"
               fill="url(#fillGoals)"
-              stroke="#32CD32"
+              stroke="var(--color-goals)"
               legendType="circle"
             />
             <Area
               dataKey="assists"
               type="natural"
               fill="url(#fillAssists)"
-              stroke="#99CB0E"
+              stroke="var(--color-assists)"
               legendType="circle"
             />
             <Area
               dataKey="matchesPlayed"
               type="natural"
               fill="url(#fillMatchesPlayed)"
-              stroke="#f97316"
+              stroke="var(--color-matchesPlayed)"
               legendType="circle"
             />
             <ChartLegend content={(props) => {

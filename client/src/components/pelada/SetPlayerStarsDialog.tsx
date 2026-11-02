@@ -83,7 +83,7 @@ export function SetPlayerStarsDialog({
             <Button type="button" variant="ghost" onClick={onClose}>
               Cancelar
             </Button>
-            <Button type="submit" variant="gradient" disabled={requireChange && !form.formState.isDirty}>
+            <Button type="submit" variant="brand" disabled={requireChange && !form.formState.isDirty}>
               Salvar
             </Button>
           </DialogFooter>

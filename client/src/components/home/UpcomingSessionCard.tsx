@@ -33,7 +33,7 @@ export function UpcomingSessionCard({ pelada, next, pending, onToggle }: Upcomin
       </div>
       <div className="flex min-w-0 flex-col gap-1">
         <div className="flex flex-wrap items-baseline gap-2">
-          <span className="text-[22px] font-bold tracking-[-0.01em]">{formatCardDate(next.date)}</span>
+          <span className="font-display text-heading font-bold">{formatCardDate(next.date)}</span>
           <span className="text-[15px] font-medium text-muted-foreground">{next.time}</span>
         </div>
         {pelada.address && (
@@ -44,7 +44,7 @@ export function UpcomingSessionCard({ pelada, next, pending, onToggle }: Upcomin
         )}
       </div>
       <div className="flex flex-col gap-1.5">
-        <Progress value={percent} aria-label="Confirmados" className="h-1.5 bg-secondary" indicatorClassName="bg-gradient-primary" />
+        <Progress value={percent} aria-label="Confirmados" className="h-1.5 bg-secondary" indicatorClassName="bg-brand" />
         <span className="text-xs text-muted-foreground">
           <span className="font-semibold text-foreground">{next.confirmedCount}</span> de {next.capacity} confirmados
         </span>

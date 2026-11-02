@@ -4,7 +4,7 @@ interface StatusConfirmDialogProps {
   title: string
   description: string
   loading: boolean
-  variant?: "destructive" | "default" | "gradient"
+  variant?: "destructive" | "default" | "brand"
   onConfirm: () => void
   onClose: () => void
 }

@@ -26,6 +26,6 @@ export function FinanceChargeForm({ peladaId, finance, list, charge, onClose }: 
       <FinanceInput control={form.control} name="adjustment" label="Ajuste (R$; negativo para abatimento)" />
       <FinanceInput control={form.control} name="dueDate" label="Vencimento" type="date" />
       <FinanceInput control={form.control} name="reason" label={list.publishedAt ? "Motivo obrigatório" : "Motivo (opcional no rascunho)"} multiline />
-    </FieldGroup><FinanceFormError message={form.formState.errors.root?.message} /><Button variant="gradient" type="submit" disabled={finance.pending}>Salvar ajuste</Button></form>
+    </FieldGroup><FinanceFormError message={form.formState.errors.root?.message} /><Button variant="brand" type="submit" disabled={finance.pending}>Salvar ajuste</Button></form>
   </SheetContent></Sheet>
 }

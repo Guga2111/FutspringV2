@@ -11,6 +11,7 @@ React single-page app in `client/`. UI text is in Portuguese (pt-BR); code ident
 - Icons: **Hugeicons only** — `@hugeicons/react` (`HugeiconsIcon`) + the free set `@hugeicons/core-free-icons` (`<HugeiconsIcon icon={UserGroupIcon} className="size-4" />`; size with `className`, the default stroke is 1.5, `strokeWidth` where a heavier line is wanted). An icon stored as a value (maps such as `AREA_ICONS`, `notificationView().icon`) is typed `IconSvgElement` and rendered with `<HugeiconsIcon icon={Icon} />`. `bunx shadcn add` still generates lucide imports: swap them to Hugeicons before committing
 - React Router 7 (declarative `BrowserRouter` + `<Routes>`), Axios, Sonner (toasts)
 - Charts: recharts through shadcn `ui/chart.tsx`; tables: `@tanstack/react-table` v8 + shadcn `Table`
+- Fonts: `@fontsource-variable/inter`, `@fontsource/barlow-condensed` (see Typography)
 - `date-fns`, `react-day-picker` (shadcn `Calendar`), `cmdk` (shadcn `Command`), `vaul` (shadcn `Drawer`)
 - Realtime chat: `@stomp/stompjs` + `sockjs-client`
 - Forms (see [Forms](#forms-mandatory)): `react-hook-form` + `zod` 4 + `@hookform/resolvers` + shadcn `Field`
@@ -26,10 +27,14 @@ bun run dev          # Vite dev server on http://localhost:5173 (proxies /ws to 
 bun run build        # tsc -b && vite build
 bun run lint         # ESLint 9 (flat config)
 bun run test         # vitest run
+bun run test:visual:docker   # Playwright visual regression in the official image (needs Docker)
+bun run test:visual:update   # same, rewriting the snapshots (review the PNG diff before committing)
 bunx shadcn@latest add <component>   # add a shadcn component to src/components/ui
 ```
 
 CI (`.github/workflows/ci-frontend.yml`) runs `bun install --frozen-lockfile`, lint, build and test on pushes and PRs to `main`/`dev` that touch `client/`; the deploy on `main` waits for it (see CI/CD in `BACKEND.md`). Lint is blocking (0 errors; one `react-hooks/incompatible-library` warning from TanStack Table remains). Before finishing a change run `bun run lint && bun run build && bun run test`.
+
+A second CI job, `visual`, runs the Playwright visual regression in `mcr.microsoft.com/playwright:v<version>-noble` (keep the tag equal to `@playwright/test` in `package.json`); it is not blocking yet and uploads the report when it fails. See [Visual regression](#visual-regression).
 
 ## Environment
 
@@ -44,11 +49,12 @@ CI (`.github/workflows/ci-frontend.yml`) runs `bun install --frozen-lockfile`, l
 ```
 client/
 ├── docs/                 this file
+├── e2e/                  Playwright visual regression: visual.spec.ts, mockApi.ts (route table of mocked GETs), fixtures.ts (typed with src/types), __screenshots__/<project>/, docker.sh, own tsconfig.json
 ├── public/               static files (gerrard.png logo/favicon, pele.jpg, ronaldo.jpg)
 └── src/
-    ├── main.tsx          applies the saved theme, StrictMode > BrowserRouter > AuthProvider > App + <Toaster position="top-center"/> (bottom-right would cover the chat button)
+    ├── main.tsx          font imports, StrictMode > BrowserRouter > AuthProvider > App + <ThemedToaster/> (Sonner `position="top-center"`, bottom-right would cover the chat button; `theme` from `useTheme`)
     ├── App.tsx           routes, React.lazy pages, one <Suspense>, an <ErrorBoundary> per route
-    ├── index.css         Tailwind layers, design tokens (:root / .dark), brand gradient classes, landing animations
+    ├── index.css         Tailwind layers, design tokens (primitives + semantic, :root / .dark), composite classes, reduced-motion block, landing animations
     ├── api/              one module per backend domain; typed async functions returning response.data
     │   ├── client.ts     the axios instance (interceptors are added by AuthContext)
     │   ├── auth.ts, peladas.ts, invitations.ts, dailies.ts, users.ts, chat.ts, notifications.ts
@@ -71,9 +77,9 @@ client/
     │   ├── notifications/  NotificationBell (bell + count; Popover on desktop, Drawer on mobile), NotificationPanel (chips, list, states, "Carregar mais", gear to the e-mail preferences), NotificationItem
     │   ├── notification-settings/  NotificationPreferencesCard (the "E-mail" card: one Switch per category)
     │   │   └── hooks/    useNotificationPreferences, useEmailUnsubscribe
-    │   ├── PeladaAvatar.tsx   pelada photo or gradient with initials (sidebar, cards, banner)
+    │   ├── PeladaAvatar.tsx   pelada photo or a solid avatar color (`getPeladaColor`) with initials (sidebar, cards, banner)
     │   ├── PlayerAvatar.tsx, StarRow.tsx   round player avatar (photo / initials, `colorId` for per-player colors) and ★ rating
-    │   ├── PrivateRoute.tsx, ErrorBoundary.tsx, ScrollToTop.tsx
+    │   ├── PrivateRoute.tsx, ErrorBoundary.tsx, ScrollToTop.tsx, ThemedToaster.tsx
     │   ├── pelada-settings/  settings page of a pelada (SettingsCard + SettingsCardFooter, SettingsNav, InfoCard, ScheduleCard, LocationCard, SlotsCard, AutomationCard, DangerZone + TransferPeladaDialog / DeletePeladaDialog, ConfirmNameField)
     │   │   └── hooks/    usePeladaSettings, useSettingsSubmit
     │   └── CreatePeladaModal.tsx   Sheet-based form
@@ -81,7 +87,7 @@ client/
     ├── hooks/            useAuth, useMyPeladas (+ useMyPeladasContext), useNotifications (+ useNotificationsContext), useRealtime, useNowUntil, useSelfConfirm, useTheme (dark class + localStorage.theme), useIsMobile (< 768 px)
     ├── lib/
     │   ├── config.ts     API_BASE (the only reader of VITE_API_URL)
-    │   ├── utils.ts      cn(), getFileUrl(), getInitials(), getPeladaGradient()
+    │   ├── utils.ts      cn(), getFileUrl(), getInitials(), getAvatarColor() / getPeladaColor() (the six `--avatar-*` tokens, by id / by name)
     │   ├── errors.ts     getErrorMessage(), getErrorStatus(), getApiErrorBody()
     │   ├── form-errors.ts applyServerErrors() for react-hook-form
     │   └── constants.ts  DAYS_OF_WEEK (API value + pt-BR label), dayOfWeekLabel()
@@ -248,30 +254,34 @@ export const dailyStatusLabel: Record<DailyStatus, string> = {
 
 ## Styling & design system
 
-- **Tokens:** CSS variables in `src/index.css` as bare HSL triplets (`--primary: 222.2 47.4% 11.2%`) for `:root` (light, stock slate) and `.dark` (custom neutral grays; the redesign handoff in `docs/design/` uses slightly darker hex values, which were not adopted for the base tokens), exposed through `tailwind.config.js` as `hsl(var(--x))`. Use the semantic classes: `bg-background`, `bg-card`, `text-foreground`, `text-muted-foreground`, `border-border`, `bg-primary`, `text-destructive`, `bg-accent`…
+- **Tokens** (Sport-Tech identity, spec in `docs/plans/2026-11-01-design-system-sport-tech-spec.md`): two layers in `src/index.css`, all bare HSL triplets. **Primitives** (`--p-midnight-950`, `--p-surface-800`, `--p-blue-500`, `--p-orange-400`, `--p-slate-*`, `--p-indigo-*`…) are the palette, defined once in `:root` and **not** mapped in Tailwind. **Semantic tokens** (`--background`, `--card`, `--primary`, `--brand`…) are defined in `:root` (light: Off-White page, white cards, Ink text) and `.dark` (Midnight Black page, Dark Surface cards) and mostly point at primitives (`--card: var(--p-surface-800)`); they are exposed through `tailwind.config.js` as `hsl(var(--x))`. Use only the semantic classes: `bg-background`, `bg-card`, `text-foreground`, `text-muted-foreground`, `border-border`, `bg-primary`, `text-destructive`, `bg-accent`… `--primary` is the neutral inverted color (default Button, selected chips) and `--accent` the shadcn neutral hover surface: neither is the brand. `--input` (form-control borders) is darker than `--border` (dividers) on purpose: it keeps 3:1 against the surfaces (WCAG 1.4.11). `src/lib/contrast.test.ts` reads `index.css` and checks every text/background pair of both themes (4.5:1 text, 3:1 borders/rings/icons); add a pair there when you add a token that carries text.
 - **Redesign tokens** (light + dark, same names):
 
   | Class | Use |
   |-------|-----|
   | `bg-card-elevated` | table headers, cards inside cards |
   | `bg-row-hover` | list/table row hover |
-  | `bg-avatar-fallback`, `bg-avatar-1…6` | initials avatars (neutral / colored by id) |
+  | `bg-avatar-fallback`, `bg-avatar-1…6` | initials avatars (neutral / colored by id; white initials ≥4.5:1) |
   | `text-subtle-foreground`, `text-faint-foreground` | tertiary text and uppercase labels |
   | `border-team-dot-border` | ring around team color dots |
   | `success` (`DEFAULT`, `strong`, `soft`, `muted`, `border`), `warning`, `info` (`DEFAULT`, `muted`) | feedback, "Você vai", Garçom |
   | `destructive-soft`, `destructive-muted` | destructive hover text/background |
   | `gold`, `gold-muted`, `silver`, `bronze` | 1st/2nd/3rd, champion row |
-  | `status-scheduled*`, `status-live*` | status badges (`status-live` is also the "Admin" pill) |
+  | `status-scheduled*`, `status-live*` | status badges (`status-live`: in progress, orange) |
   | `live-foreground`, `live-border` + `.bg-gradient-live` | live session card |
 
-  Composite classes in `index.css`: `.bg-gradient-date`, `.bg-gradient-leader`, photo overlays (`.bg-banner-overlay`, `.bg-photo-overlay`, `.bg-hero-overlay`, the same in both themes because they sit on images) and `.scrollbar-none`. Radii `rounded-tile` (14px) and `rounded-hero` (18px); shadows `shadow-menu`, `shadow-panel`, `shadow-dialog`, `shadow-fab` (overlays only).
+  Composite classes in `index.css`: `.bg-gradient-leader`, photo overlays (`.bg-banner-overlay`, `.bg-photo-overlay`, `.bg-hero-overlay`, the same in both themes because they sit on images) and `.scrollbar-none`. Radii `rounded-tile` (14px) and `rounded-hero` (18px); shadows `shadow-menu`, `shadow-panel`, `shadow-dialog`, `shadow-fab` (overlays only).
 - **Status maps:** `dailyStatusLabel` and `dailyStatusStyle` (badge + dot classes) in `types/daily.ts`, rendered by `DailyStatusBadge` (`size` `sm` | `md` | `lg`, Badge `variant="status"`).
-- **Brand green** is a single solid color, the `--brand` token (`#149440`, light + dark; Tailwind `brand`), used by the `.bg-gradient-primary`, `.text-gradient-primary`, `.checkbox-gradient` and `.bg-gradient-date` classes in `index.css` (the names are historical; they no longer draw gradients). Use those classes, `bg-brand`/`text-brand` or the Button `variant="gradient"`; never retype the hex. Only the landing hero (`.landing-hero-bg`) keeps an animated gradient.
-- **Chart colors:** `--chart-1` (green) and `--chart-2` (blue), light and dark, exposed as `chart-1`/`chart-2` in Tailwind. `--gold` (`text-gold`) is for stars, trophies and crowns. In a `ChartConfig` use `color: "hsl(var(--chart-1))"` and reference series as `var(--color-<key>)` (reference: `components/pelada/PlayerHistoryDialog.tsx`).
+- **Brand (Electric Blue `#0799D5`)**: `--brand` is the fill (CTA, progress, checkbox, active underline tab, unread dot), the same in both themes; text and icons **on** a brand fill use `--brand-foreground` (Midnight; white on this blue is only 3.2:1), the hover fill is `--brand-hover`, the brand **as text/icon** on a surface is `--brand-text` (a darker blue in light), and soft brand pills use `--brand-muted`. Tailwind: `bg-brand`, `text-brand-foreground`, `hover:bg-brand-hover`, `text-brand-text`, `bg-brand-muted`. The pre-redesign helpers (`.bg-gradient-primary`, `.text-gradient-primary`, `.checkbox-gradient`, `.bg-gradient-date`, `.bg-brand-translucent`, `.text-on-brand-muted`) and the Button `variant="gradient"` were removed. Never retype the hex. Only the landing hero (`.landing-hero-bg`) keeps an animated gradient.
+- **Highlight (Cantaloupe `#FF7356`)**: `--highlight` (+ `-foreground` Midnight, `-text`, `-muted`) marks competition and achievement: a session in progress (the `IN_COURSE` status, the "Ao vivo" badge and `LiveSessionCard`, through the `status-live*` / `live-*` tokens that point at the orange primitives), leaders (1st row of the ranking, the live and final league tables; the award leader row with its "Líder" badge, `.bg-gradient-leader`), the champion card (`ChampionHero`) and the profile's "Campeão" result, and goals (Artilheiro, the goals KPI on Home and profile). Assists use the brand (`brand-muted` / `brand-text`), stars and medal numbers stay `gold`, success stays green, the "Admin" pill is `brand-muted`. Never for errors or destructive actions, and never the shadcn `accent`.
+- **Chart colors:** `--chart-1` (blue), `--chart-2` (orange) and `--chart-3` (slate), light and dark, exposed as `chart-1…3` in Tailwind. `--gold` (`text-gold`) is for stars, trophies, crowns and medal positions; it is held to 3:1 (graphical), so don't use it for body text. `--info` is indigo, kept apart from the blue brand (Mensalista badge). In a `ChartConfig` use `color: "hsl(var(--chart-1))"` and reference series as `var(--color-<key>)` (reference: `components/pelada/PlayerHistoryDialog.tsx`).
+- **Typography:** fonts are self-hosted with `@fontsource` (imported in `main.tsx`; only the Latin files are fetched, through `unicode-range`; the Latin Inter file is preloaded by the `preload-inter` plugin in `vite.config.ts`). **Inter** (`font-sans`, the default, with an `Inter Fallback` face of Arial resized to Inter's metrics in `index.css`) is the text of everything. **Barlow Condensed** (`font-display`, weights 700/800) is only for scores, big numbers (KPIs, date blocks, session days), page and banner titles — never below 16px, never for body text, labels, buttons or table bodies; it supports `tabular-nums`. Named sizes in `tailwind.config.js` (`text-overline` 11, `text-caption` 12, `text-body-sm` 13, `text-body` 14, `text-body-lg` 15, `text-title` 17, `text-heading` 22 / `text-heading-lg` 28, `text-display` 32 / `text-display-lg` 44, `text-score` 28 / `text-score-lg` 36, `text-hero` 56; the `-lg` steps are for `md:`): use them in new code instead of `text-[13px]`-style values.
 - **New colors** (status badges, positions, more chart series): add tokens to both `:root` and `.dark` (e.g. `--chart-1…5`, `--success`) and use them; don't scatter `bg-green-100 text-green-800` maps without dark variants.
-- **Dark mode** is class-based (`.dark` on `<html>`); the choice is saved in `localStorage.theme`, applied in `main.tsx` and toggled from the user menu (`useTheme`). Every new UI must work in both themes.
-- **Composition:** `cn()` from `@/lib/utils` for class names; `cva` variants for repeated styles (`components/ui/button-variants.ts` has `default`, `destructive`, `outline`, `secondary`, `ghost`, `link`, `gradient`).
-- **Overlays:** `Sheet` for create/edit forms (reference: `CreatePeladaModal`), `Dialog`/`AlertDialog` for confirmations and short forms, `Drawer` for mobile bottom panels (chat), `DropdownMenu` / `Command` for menus.
+- **Dark mode** is class-based (`.dark` on `<html>`). An inline script in `index.html` applies it before the first paint: the saved choice in `localStorage.theme` (`"dark" | "light"`, written by `useTheme` when toggled from the user menu), otherwise the OS preference (`prefers-color-scheme`), followed live while nothing is saved. The same script keeps `<meta name="theme-color">` equal to the page background. `color-scheme` is set per theme in `index.css` (native controls and scrollbars), and toasts follow the theme (`ThemedToaster`). Every new UI must work in both themes.
+- **Reduced motion:** `index.css` has a global `prefers-reduced-motion: reduce` block (animations and transitions ≈0 ms, one iteration; no hover scaling). New animations need nothing extra, but must not rely on motion to convey information.
+- The document is `<html lang="pt-BR">`.
+- **Composition:** `cn()` from `@/lib/utils` for class names (its tailwind-merge knows the named font sizes, `FONT_SIZES`; add a new size there too, or `text-<size>` is dropped next to a `text-<color>`); `cva` variants for repeated styles (`components/ui/button-variants.ts` has `default`, `destructive`, `outline`, `secondary`, `ghost`, `link`, `brand` — the main action, Electric Blue with Midnight text).
+- **Overlays:** `Sheet` for create/edit forms (reference: `CreatePeladaModal`), `Dialog`/`AlertDialog` for confirmations and short forms, `Drawer` for mobile bottom panels (chat), `DropdownMenu` / `Command` for menus. Their backdrops use the `overlay` token (Midnight, `bg-overlay/60–80`), not `bg-black`.
 - **Responsive:** mobile first; the redesign switches to the mobile layout below **768 px (`md:`)**, which is also the shadcn sidebar's `useIsMobile` breakpoint; use `md:` for new layouts. Older screens still use `sm:` and `lg:` for side panels (chat sidebar). Grids go `grid-cols-1 md:grid-cols-2 lg:grid-cols-3`. Check every screen at 375 px.
 - Buttons are pill-shaped (`rounded-full` in the base variant); don't override the radius per screen.
 
@@ -391,7 +401,15 @@ return (
 - All user-facing strings in Portuguese, including toasts and `aria-label`s.
 - Shared helpers instead of inline repeats: initials (`getInitials`), file URLs (`getFileUrl`, imported where needed — not passed as a prop), days of the week (`DAYS_OF_WEEK`), positions (`getPositionLabel`).
 - Stable `key`s from ids; index keys only for skeleton placeholders.
-- Tests: pure logic in `src/utils/`, `src/lib/`, `src/schemas/` and `src/api/` gets Vitest tests next to the file (`*.test.ts`).
+- Tests: pure logic in `src/utils/`, `src/lib/`, `src/schemas/` and `src/api/` gets Vitest tests next to the file (`*.test.ts`). Screens are covered by the visual regression below.
+
+### Visual regression
+
+- `e2e/visual.spec.ts` opens the production build (`vite preview` on port 4318, started by `playwright.config.ts`) with the API mocked and takes full-page screenshots of the main routes and three dialogs (compare players, attendance ranking, results), in four projects: `mobile` (375×812) / `desktop` (1280×800) × `light` / `dark`. The theme comes from the emulated OS preference, so the projects also cover the default-theme rule. Each page also asserts no horizontal scroll, and the document's `lang`.
+- `e2e/mockApi.ts` answers the GETs the screens read from `e2e/fixtures.ts`; any other request answers 404 and fails the test ("requests without a fixture"), so a screen that starts calling a new endpoint gets a fixture instead of a screenshot of its error state. `/ws` is aborted (no realtime). Login is the two localStorage keys set by an init script. Fixtures are typed with `src/types`, so a DTO change fails `tsc -b` (e2e has its own `tsconfig.json`, referenced by the root one).
+- Determinism: the clock is frozen at `NOW` (Wednesday 2026-11-04 15:00 in São Paulo; fixture dates are relative to it), `pt-BR` locale and `America/Sao_Paulo` zone, reduced motion, CSS animations disabled, and before each shot the page's ready element (a heading, or `form` on `/auth`), `networkidle`, no `.animate-pulse` Skeleton left, `document.fonts.ready` and the mouse moved away. Per-pixel `threshold` 0.02 (Playwright's default 0.2 lets token changes such as `#1f1f1f` → `#07070D` pass) and an absolute `maxDiffPixels` 50 (a ratio let a recolored badge or number pass on a long page); dialogs allow a 0.04 ratio instead (centered on fractional pixels, their text antialiasing varies slightly).
+- Font rendering differs per OS, so snapshots are made and checked only in the Playwright image (`e2e/docker.sh`; `PLATFORM=linux/amd64` emulates CI on Apple silicon — the arm64 and amd64 renders match). A change that alters a screen on purpose runs `bun run test:visual:update` and commits the new PNGs with the change; review them in the PR diff.
+- Vitest ignores `e2e/` (`vitest.config.ts`).
 
 ## Patterns
 
@@ -461,7 +479,7 @@ Reference: `utils/parseSessionMessage.ts`, `utils/matchStats.ts`.
 
 ### 8. Theme-aware styling
 
-Tokens and `dark:` only where an asset differs per theme. Reference: shadcn components in `components/ui`, `Button variant="gradient"`.
+Tokens and `dark:` only where an asset differs per theme. Reference: shadcn components in `components/ui`, `Button variant="brand"`.
 
 ## Antipatterns
 
@@ -471,8 +489,8 @@ Don't introduce these. Some exist already ("Found in", paths under `src/`); fix 
 |---|-------|-----------|----------|
 | 1 | Hand-rolled modals (`fixed inset-0 bg-black/50`): no focus trap, Esc or aria | `Dialog` / `AlertDialog` / `Sheet` | — |
 | 2 | Raw `<button>`, `<input>`, `<select>`, `<textarea>`, `<label>` | `Button`, `Input`, `Select`, `Textarea`, `Label`/`FieldLabel` | — |
-| 3 | Raw palette colors, hex values, `text-white`/`bg-black` on surfaces, screens hardcoded to one theme | Semantic tokens; new tokens in `index.css` for light and dark | `pelada/ComparePlayersDialog.tsx` (always dark), `profile/StatsOverTimeChart.tsx`, `ProfilePage.tsx` KPI icon colors, `MatchHistoryTable` highlight background, focus rings in the pelada modals, `LandingPage.tsx` (`neutral-*`) |
-| 4 | Retyping the brand gradient instead of the variant | `<Button variant="gradient">` | — |
+| 3 | Raw palette colors, hex values, `text-white`/`bg-black` on surfaces, screens hardcoded to one theme | Semantic tokens; new tokens in `index.css` for light and dark | `LandingPage.tsx` (`neutral-*`/green, out of the design-system migration: refactored in its own feature) |
+| 4 | Retyping the brand color, or `text-white` on a brand fill (3.2:1, fails AA) | `<Button variant="brand">`, `bg-brand text-brand-foreground`, `text-brand-text` for brand-colored text | — |
 | 5 | Forms with `useState` per field and hand-written validation | react-hook-form + zod + `Field` ([Forms](#forms-mandatory)) | `AuthPage`, `CreatePeladaModal`, `FinalizeModal`, `ImportFromMessageModal` |
 | 6 | Casting errors inline (`err as { response?: { data?: { message?: string } } }`) or copying an `extractErrorMessage` per file | One `getErrorMessage(error, fallback)` in `lib/errors.ts`; `applyServerErrors` for forms | — |
 | 7 | Copy-pasted helpers/constants | One helper in `lib/` or `utils/` | — |
@@ -495,4 +513,4 @@ Don't introduce these. Some exist already ("Found in", paths under `src/`); fix 
 | 24 | Mixing icon libraries | Hugeicons only (`HugeiconsIcon` + `@hugeicons/core-free-icons`) | — |
 | 25 | `npm install` / a second lockfile | `bun install`; delete `package-lock.json` | — |
 | 26 | Prop-drilling plain imports | Import the helper where it's used | — |
-| 27 | Chart configs that disagree with the data colors | One color source (tokens) for config and data | `profile/StatsOverTimeChart.tsx` (hex colors) |
+| 27 | Chart configs that disagree with the data colors | One color source (tokens) for config and data | — |

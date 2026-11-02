@@ -41,14 +41,10 @@ function SortIcon({ sorted }: { sorted: false | 'asc' | 'desc' }) {
 }
 
 function ResultBadge({ result }: { result: string }) {
-  const upper = result.toUpperCase()
-  const classes =
-    upper === 'WIN'
-      ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
-      : upper === 'DRAW'
-        ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-gold'
-        : 'bg-muted text-muted-foreground'
-  const label = upper === 'WIN' ? 'VITÓRIA' : upper === 'DRAW' ? 'EMPATE' : upper
+  // the API sends "W" (won the session), "L" (didn't) or "—" (didn't play a match)
+  const won = result.toUpperCase() === 'W'
+  const classes = won ? 'bg-highlight-muted text-highlight-text' : 'bg-muted text-muted-foreground'
+  const label = won ? 'CAMPEÃO' : result.toUpperCase() === 'L' ? 'NÃO VENCEU' : '—'
   return (
     <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${classes}`}>
       {label}
@@ -58,7 +54,7 @@ function ResultBadge({ result }: { result: string }) {
 
 function formatDate(dateStr: string) {
   const d = new Date(dateStr)
-  return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+  return d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })
 }
 
 const columns: ColumnDef<MatchHistoryRow>[] = [

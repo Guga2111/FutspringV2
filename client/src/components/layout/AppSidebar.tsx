@@ -36,7 +36,7 @@ export function AppSidebar() {
           className="flex min-w-0 flex-1 items-center gap-2.5 group-data-[collapsible=icon]:hidden"
         >
           <img src="/logo-64.png" alt="" width={30} height={30} className="size-[30px] shrink-0 rounded-full object-cover" />
-          <span className="text-gradient-primary text-[17px] font-bold">FutSpring</span>
+          <span className="text-brand-text text-[17px] font-bold">FutSpring</span>
         </Link>
         {/* on mobile the bell lives in the top bar */}
         {!isMobile && (

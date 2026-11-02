@@ -7,8 +7,8 @@ type StepperSize = "lg" | "md" | "sm"
 
 // lg: mobile score (40 px buttons, 28 px number), md: desktop score (36 / 24), sm: player goals/assists (24 / 14)
 const sizes: Record<StepperSize, { button: string; value: string; gap: string }> = {
-  lg: { button: "size-10 [&_svg]:size-[18px]", value: "min-w-7 text-[28px]", gap: "gap-2" },
-  md: { button: "size-9 [&_svg]:size-[18px]", value: "min-w-7 text-2xl", gap: "gap-2.5" },
+  lg: { button: "size-10 [&_svg]:size-[18px]", value: "min-w-7 font-display text-score", gap: "gap-2" },
+  md: { button: "size-9 [&_svg]:size-[18px]", value: "min-w-7 font-display text-2xl", gap: "gap-2.5" },
   sm: { button: "size-6 [&_svg]:size-3.5", value: "min-w-[18px] text-sm", gap: "gap-1.5" },
 }
 

@@ -89,7 +89,7 @@ export function RankingTable({ ranking, isLoading, sortConfig, onSort, onOpenHis
         </TableHeader>
         <TableBody>
           {ranking.map((row, idx) => (
-            <TableRow key={row.userId} className="border-border/60 text-sm hover:bg-row-hover">
+            <TableRow key={row.userId} className={cn("border-border/60 text-sm hover:bg-row-hover", idx === 0 && "bg-highlight-muted hover:bg-highlight-muted")}>
               <TableCell
                 className={cn(cell, "text-center tabular-nums", idx < 3 ? cn("font-bold", MEDALS[idx]) : "text-subtle-foreground")}
               >

@@ -102,7 +102,7 @@ export function ResultsDialog({ daily, mode, onClose, onSaved }: ResultsDialogPr
         </Button>
         <Button
           type="submit"
-          variant="gradient"
+          variant="brand"
           disabled={submitting}
           className={cn("h-[42px] whitespace-nowrap px-[18px] font-semibold", isMobile && "flex-1")}
         >

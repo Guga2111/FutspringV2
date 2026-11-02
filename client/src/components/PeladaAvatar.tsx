@@ -1,4 +1,4 @@
-import { cn, getFileUrl, getInitials, getPeladaGradient } from "@/lib/utils"
+import { cn, getFileUrl, getInitials, getPeladaColor } from "@/lib/utils"
 
 interface PeladaAvatarProps {
   name: string
@@ -27,7 +27,7 @@ export function PeladaAvatar({ name, image, className, objectPosition = "center 
       aria-hidden
       className={cn(
         "flex shrink-0 select-none items-center justify-center font-bold text-white",
-        getPeladaGradient(name),
+        getPeladaColor(name),
         className,
       )}
     >

@@ -37,7 +37,7 @@ export function SelfConfirmButton({
   }
   return (
     <div className="flex flex-col items-stretch gap-1">
-      <Button variant="gradient" disabled={pending} onClick={onConfirm} className={cn("font-semibold", className)}>
+      <Button variant="brand" disabled={pending} onClick={onConfirm} className={cn("font-semibold", className)}>
         {children}
       </Button>
       {hint && <span className="text-xs text-muted-foreground">{hint}</span>}

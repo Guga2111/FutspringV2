@@ -91,7 +91,7 @@ export default function TeamsSection({
           </div>
           {isAdminOpen && (
             <Button
-              variant={full ? "gradient" : "secondary"}
+              variant={full ? "brand" : "secondary"}
               disabled={!full || sortLoading}
               onClick={onSortTeams}
               className={cn("h-[38px] gap-2 px-[18px] font-semibold", !full && "bg-accent text-faint-foreground disabled:opacity-100")}

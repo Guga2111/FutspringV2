@@ -118,7 +118,7 @@ export function CreateSessionDialog({
             <Button type="button" variant="ghost" onClick={onClose} disabled={submitting}>
               Cancelar
             </Button>
-            <Button type="submit" variant="gradient" disabled={submitting}>
+            <Button type="submit" variant="brand" disabled={submitting}>
               {submitting ? "Criando..." : "Criar"}
             </Button>
           </DialogFooter>

@@ -8,9 +8,14 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:visual": "playwright test",
+    "test:visual:docker": "e2e/docker.sh",
+    "test:visual:update": "e2e/docker.sh --update-snapshots"
   },
   "dependencies": {
+    "@fontsource-variable/inter": "^5.3.0",
+    "@fontsource/barlow-condensed": "^5.3.0",
     "@hookform/resolvers": "^5.9.1",
     "@hugeicons/core-free-icons": "^4.4.0",
     "@hugeicons/react": "^1.1.10",
@@ -55,6 +60,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
+    "@playwright/test": "^1.64.1",
     "@types/node": "^24.12.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",

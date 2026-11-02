@@ -55,7 +55,7 @@ export function FinanceCreateForm({ peladaId, finance, members, dailies, onClose
       </div>
       <FinanceFormError message={form.formState.errors.root?.message} />
       <div className="flex shrink-0 flex-wrap justify-between gap-3 pt-3">{step > 0 ? <Button type="button" variant="ghost" disabled={busy} onClick={() => setStep(step - 1)}>Voltar</Button> : <Button type="button" variant="ghost" disabled={busy} onClick={onClose}>Cancelar</Button>}
-        {step < 2 ? <Button variant="gradient" type="button" disabled={busy} onClick={() => { void next() }}>Continuar</Button> : <div className="flex flex-wrap gap-2"><Button type="button" variant="outline" disabled={busy} onClick={() => { void form.handleSubmit(values => save(values, false))() }}>Salvar rascunho</Button><Button variant="gradient" type="submit" disabled={busy || count === 0}>{busy ? "Salvando…" : "Criar e publicar"}</Button></div>}
+        {step < 2 ? <Button variant="brand" type="button" disabled={busy} onClick={() => { void next() }}>Continuar</Button> : <div className="flex flex-wrap gap-2"><Button type="button" variant="outline" disabled={busy} onClick={() => { void form.handleSubmit(values => save(values, false))() }}>Salvar rascunho</Button><Button variant="brand" type="submit" disabled={busy || count === 0}>{busy ? "Salvando…" : "Criar e publicar"}</Button></div>}
       </div>
     </form>
   </SheetContent></Sheet>

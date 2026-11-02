@@ -22,7 +22,7 @@ function MissingTokenCard() {
         </CardDescription>
       </CardHeader>
       <CardFooter className="flex flex-col gap-2">
-        <Button asChild variant="gradient" className="w-full">
+        <Button asChild variant="brand" className="w-full">
           <Link to="/forgot-password">Pedir um novo link</Link>
         </Button>
         <Button asChild variant="ghost" className="w-full">
