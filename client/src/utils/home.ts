@@ -53,3 +53,12 @@ export function statsKpis(stats: StatsDTO): Kpi[] {
     { label: "Vitórias", value: stats.matchWins, sub: `${winRate}% de aproveitamento` },
   ]
 }
+
+// Spots left in a session card: "3 vagas", "1 vaga", "Lotada" or "2 acima do limite"
+export function spotsLabel(confirmed: number, capacity: number): string {
+  const left = capacity - confirmed
+  if (left > 1) return `${left} vagas`
+  if (left === 1) return "1 vaga"
+  if (left === 0) return "Lotada"
+  return `${-left} acima do limite`
+}

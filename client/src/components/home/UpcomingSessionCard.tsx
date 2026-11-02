@@ -1,13 +1,12 @@
 import { Link } from "react-router-dom"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { Location01Icon, Tick02Icon } from "@hugeicons/core-free-icons"
+import { ArrowRight01Icon, Location01Icon, Tick02Icon } from "@hugeicons/core-free-icons"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { DailyStatusBadge } from "@/components/daily/DailyStatusBadge"
 import { PeladaAvatar } from "@/components/PeladaAvatar"
 import { SelfConfirmButton } from "@/components/SelfConfirmButton"
-import { cn } from "@/lib/utils"
-import { formatCardDate } from "@/utils/home"
+import { formatCardDate, spotsLabel } from "@/utils/home"
 import type { NextDaily, PeladaResponse } from "@/types/pelada"
 
 interface UpcomingSessionCardProps {
@@ -20,64 +19,77 @@ interface UpcomingSessionCardProps {
 export function UpcomingSessionCard({ pelada, next, pending, onToggle }: UpcomingSessionCardProps) {
   const percent = next.capacity > 0 ? Math.min(100, (next.confirmedCount / next.capacity) * 100) : 0
   return (
-    <article
-      className={cn(
-        "flex min-w-0 snap-start flex-col gap-3.5 rounded-tile border bg-card p-3.5",
-        next.isConfirmed && "border-success-border",
-      )}
-    >
-      <div className="flex min-w-0 items-center gap-2">
-        <PeladaAvatar name={pelada.name} image={pelada.image} className="size-6 rounded-[7px] text-[9px]" />
-        <span className="min-w-0 flex-1 truncate text-sm font-semibold">{pelada.name}</span>
+    <article className="flex min-w-0 snap-start flex-col gap-4 rounded-tile border bg-card p-4">
+      <header className="flex min-w-0 items-center gap-2">
+        <PeladaAvatar name={pelada.name} image={pelada.image} className="size-7 shrink-0 rounded-lg text-[10px]" />
+        <span className="min-w-0 flex-1 truncate text-body font-semibold">{pelada.name}</span>
         <DailyStatusBadge status={next.status} size="sm" className="shrink-0" />
-      </div>
-      <div className="flex min-w-0 flex-col gap-1">
-        <div className="flex flex-wrap items-baseline gap-2">
-          <span className="font-display text-heading font-bold">{formatCardDate(next.date)}</span>
-          <span className="text-[15px] font-medium text-muted-foreground">{next.time}</span>
+      </header>
+
+      <div className="flex min-w-0 flex-col gap-1.5">
+        <div className="flex items-end justify-between gap-3">
+          <div className="flex min-w-0 flex-col gap-1">
+            <span className="font-display text-heading-lg font-bold leading-none">{formatCardDate(next.date)}</span>
+            <span className="text-body text-muted-foreground">às {next.time}</span>
+          </div>
+          <div className="flex shrink-0 flex-col items-end gap-1">
+            <span className="font-display text-heading-lg font-bold leading-none tabular-nums">
+              {next.confirmedCount}
+              <span className="text-title text-muted-foreground">/{next.capacity}</span>
+            </span>
+            <span className="text-caption text-muted-foreground">{spotsLabel(next.confirmedCount, next.capacity)}</span>
+          </div>
         </div>
         {pelada.address && (
-          <span className="flex min-w-0 items-center gap-1.5 text-xs text-subtle-foreground">
+          <span className="flex min-w-0 items-center gap-1.5 text-caption text-subtle-foreground">
             <HugeiconsIcon icon={Location01Icon} className="size-3 shrink-0" />
             <span className="truncate">{pelada.address}</span>
           </span>
         )}
       </div>
-      <div className="flex flex-col gap-1.5">
-        <Progress value={percent} aria-label="Confirmados" className="h-1.5 bg-secondary" indicatorClassName="bg-brand" />
-        <span className="text-xs text-muted-foreground">
-          <span className="font-semibold text-foreground">{next.confirmedCount}</span> de {next.capacity} confirmados
-        </span>
-      </div>
-      {next.isConfirmed ? (
-        <div className="flex h-[38px] items-center justify-between gap-2 rounded-full bg-success-muted pl-3 pr-1.5">
-          <span className="flex items-center gap-1.5 whitespace-nowrap text-[13px] font-semibold text-success">
-            <HugeiconsIcon icon={Tick02Icon} className="size-3.5" strokeWidth={2.6} />
-            Você vai
-          </span>
-          <Button
-            variant="ghost"
-            disabled={pending}
-            onClick={onToggle}
-            className="h-7 px-2.5 text-xs font-normal text-success-soft hover:bg-success-border/40 hover:text-success-soft"
-          >
-            Desistir
-          </Button>
+
+      <Progress
+        value={percent}
+        aria-label={`${next.confirmedCount} de ${next.capacity} confirmados`}
+        className="h-1.5 bg-secondary"
+        indicatorClassName="bg-brand"
+      />
+
+      <footer className="mt-auto flex items-start gap-2">
+        <div className="min-w-0 flex-1">
+          {next.isConfirmed ? (
+            <div className="flex h-10 items-center justify-between gap-2 rounded-full bg-success-muted pl-3.5 pr-1.5">
+              <span className="flex items-center gap-1.5 whitespace-nowrap text-body-sm font-semibold text-success">
+                <HugeiconsIcon icon={Tick02Icon} className="size-3.5" strokeWidth={2.6} />
+                Você vai
+              </span>
+              <Button
+                variant="ghost"
+                disabled={pending}
+                onClick={onToggle}
+                className="h-7 px-2.5 text-xs font-normal text-success-soft hover:bg-success-border/40 hover:text-success-soft"
+              >
+                Desistir
+              </Button>
+            </div>
+          ) : (
+            <SelfConfirmButton
+              confirmOpensAt={next.confirmOpensAt}
+              confirmedCount={next.confirmedCount}
+              capacity={next.capacity}
+              timeZone={pelada.timeZone}
+              pending={pending}
+              onConfirm={onToggle}
+              className="h-10 w-full"
+            />
+          )}
         </div>
-      ) : (
-        <SelfConfirmButton
-          confirmOpensAt={next.confirmOpensAt}
-          confirmedCount={next.confirmedCount}
-          capacity={next.capacity}
-          timeZone={pelada.timeZone}
-          pending={pending}
-          onConfirm={onToggle}
-          className="h-[38px] w-full"
-        />
-      )}
-      <Link to={`/daily/${next.id}`} className="-mt-1 self-center text-[13px] text-muted-foreground transition-colors hover:text-foreground">
-        Ver sessão →
-      </Link>
+        <Button variant="outline" size="icon" asChild className="shrink-0">
+          <Link to={`/daily/${next.id}`} aria-label="Ver sessão">
+            <HugeiconsIcon icon={ArrowRight01Icon} className="size-4" />
+          </Link>
+        </Button>
+      </footer>
     </article>
   )
 }

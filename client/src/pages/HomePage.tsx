@@ -19,7 +19,7 @@ const KPI_TONE: Record<NonNullable<Kpi["tone"]>, string> = { highlight: "text-hi
 
 // Mobile: horizontal snap carousel bleeding to the screen edge (~30% of the next card visible); md+: a grid
 const carousel =
-  "-mx-4 grid snap-x snap-mandatory scroll-px-4 auto-cols-[calc((100%-44px)/1.3)] grid-flow-col gap-3 overflow-x-auto px-4 pb-1 scrollbar-none md:mx-0 md:snap-none md:auto-cols-auto md:grid-flow-row md:overflow-visible md:px-0 md:pb-0"
+  "-mx-4 grid snap-x snap-mandatory scroll-px-4 auto-cols-[calc((100%-44px)/1.15)] grid-flow-col gap-3 overflow-x-auto px-4 pb-1 scrollbar-none md:mx-0 md:snap-none md:auto-cols-auto md:grid-flow-row md:overflow-visible md:px-0 md:pb-0"
 
 function SectionTitle({ title, extra, action }: { title: string; extra: ReactNode; action?: ReactNode }) {
   return (
@@ -77,7 +77,7 @@ export default function HomePage() {
           {loading ? (
             <div className={`${carousel} md:grid-cols-[repeat(auto-fill,minmax(300px,1fr))]`}>
               {[0, 1, 2].map((i) => (
-                <Skeleton key={i} className="h-[248px] rounded-tile" />
+                <Skeleton key={i} className="h-[230px] rounded-tile" />
               ))}
             </div>
           ) : upcoming.length === 0 ? (
