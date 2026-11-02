@@ -1,7 +1,8 @@
 import type { DrawPlayer } from "@/utils/landingTeamDraw"
 
-// Everything the landing page says, in one place. Names, dates and scores are sample data
-// for the product fragments; they never claim real users, reviews or numbers.
+// Everything the landing page says, in one place. Names, dates and scores of the product
+// fragments are sample data; they never claim real users, reviews or numbers. The champion
+// photos are the owner's own pelada, captioned only with what they show.
 
 // Photos the owner supplies: drop the file in public/landing/ and set `src` (e.g.
 // "/landing/hero.webp"). While `src` is null the slot shows a flat field, with no request.
@@ -18,13 +19,15 @@ export interface ChampionPhoto extends LandingPhoto {
   caption: string
 }
 
+// The owner's pelada, newest first; 900 × 1200 (3:4) WebP. The prints by the headline are
+// [4] and [0] (GallerySection)
 export const CHAMPION_PHOTOS: ChampionPhoto[] = [
-  { src: null, alt: "Time campeão da semana posando com a bola", stand: "Time Azul", date: "Qui, 30/10", caption: "Time Azul, 4 vitórias" },
-  { src: null, alt: "Comemoração de gol na pelada", stand: "3 × 2", date: "Qui, 23/10", caption: "Virada no último jogo" },
-  { src: null, alt: "Campeões com as mãos para cima no fim do jogo", stand: "Bicampeão", date: "Qui, 16/10", caption: "Time Laranja, bicampeão" },
-  { src: null, alt: "Goleiro defendendo um chute", stand: "Paredão", date: "Qui, 09/10", caption: "Goleiro sem sofrer gol" },
-  { src: null, alt: "Time reunido no meio do campo", stand: "Time Verde", date: "Qui, 02/10", caption: "Time Verde, 3 vitórias" },
-  { src: null, alt: "Abraço depois da vitória", stand: "Virada", date: "Qui, 25/09", caption: "Decisão nos pênaltis" },
+  { src: "/landing/champion-1.webp", alt: "Seis jogadores posando no campo à noite, dois agachados na frente, um deles com a bola", stand: "Qui, 01/10", date: "Qui, 01/10", caption: "Seis em campo e a bola na mão" },
+  { src: "/landing/champion-2.webp", alt: "Dois jogadores com a camisa do Brasil segurando a bola juntos", stand: "Qui, 01/10", date: "Qui, 01/10", caption: "A dupla de amarelo" },
+  { src: "/landing/champion-3.webp", alt: "Jogador de camisa vermelha fazendo sinal de silêncio para a câmera", stand: "Qui, 17/09", date: "Qui, 17/09", caption: "Silêncio no campo" },
+  { src: "/landing/champion-4.webp", alt: "Cinco jogadores lado a lado perto do gol, à noite", stand: "Qui, 03/09", date: "Qui, 03/09", caption: "Cinco na trave depois do jogo" },
+  { src: "/landing/champion-5.webp", alt: "Seis jogadores de preto posando no campo, com os refletores acesos e um prédio ao fundo", stand: "Qui, 09/07", date: "Qui, 09/07", caption: "O time de preto no fim da noite" },
+  { src: "/landing/champion-6.webp", alt: "Dois jogadores rindo enquanto andam pelo campo", stand: "Qui, 11/06", date: "Qui, 11/06", caption: "Resenha no meio do campo" },
 ]
 
 export const DRAW_PLAYERS: DrawPlayer[] = [

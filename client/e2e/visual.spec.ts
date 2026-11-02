@@ -42,12 +42,18 @@ async function open(page: Page, path: string, auth = true, ready = "h1, h2", set
   return unmatched
 }
 
-// data loaded (no request in flight, no Skeleton left), fonts ready and no hover state
+// data loaded (no request in flight, no Skeleton left), fonts and images ready and no hover
+// state. A full-page shot doesn't scroll, so lazy images below the fold are loaded first
 async function settle(page: Page) {
   await page.mouse.move(0, 0)
   await page.waitForLoadState("networkidle")
   await expect(page.locator(".animate-pulse")).toHaveCount(0)
-  await page.evaluate(() => document.fonts.ready)
+  await page.evaluate(async () => {
+    const images = Array.from(document.images)
+    for (const image of images) image.loading = "eager"
+    await Promise.all(images.map((image) => image.decode().catch(() => undefined)))
+    await document.fonts.ready
+  })
 }
 
 // Centered dialogs sit on fractional pixels, so their text antialiasing varies a little between
