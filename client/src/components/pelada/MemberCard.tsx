@@ -1,5 +1,6 @@
 import { Link, useNavigate } from "react-router-dom"
-import { CalendarCheck, CalendarX, Crown, MoreHorizontal, ShieldCheck, ShieldOff, Star, Trash2, User } from "lucide-react"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { CalendarCheckIn01Icon, CalendarRemove01Icon, CrownIcon, Delete02Icon, MoreHorizontalIcon, ShieldCheckIcon, ShieldOffIcon, StarIcon, UserIcon } from "@hugeicons/core-free-icons"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -96,17 +97,9 @@ export function MemberCard({
                 {member.username}
               </Link>
             )}
-            {member.isAdmin && <Crown aria-label="Admin" className="size-3.5 shrink-0 text-gold" />}
+            {member.isAdmin && <HugeiconsIcon icon={CrownIcon} aria-label="Admin" className="size-3.5 shrink-0 text-gold" />}
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <MembershipBadge isMensalista={member.isMensalista} />
-            {position && (
-              <Badge variant="status" className="bg-secondary px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.03em] text-secondary-foreground">
-                {position}
-              </Badge>
-            )}
-            <StarRow stars={member.stars} />
-          </div>
+          <StarRow stars={member.stars} />
         </div>
         {!selectable && (
           <DropdownMenu>
@@ -116,19 +109,19 @@ export function MemberCard({
                 size="icon"
                 aria-label={`Ações de ${member.username}`}
                 disabled={isToggling || isRemoving}
-                className="size-7 shrink-0 self-start text-subtle-foreground hover:bg-secondary hover:text-foreground"
+                className="size-7 shrink-0 text-subtle-foreground hover:bg-secondary hover:text-foreground"
               >
-                <MoreHorizontal className="size-4" />
+                <HugeiconsIcon icon={MoreHorizontalIcon} className="size-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-52 rounded-[10px] shadow-menu">
               <DropdownMenuItem onSelect={() => navigate(`/profile/${member.id}`)}>
-                <User className="mr-2 size-4 text-muted-foreground" />
+                <HugeiconsIcon icon={UserIcon} className="mr-2 size-4 text-muted-foreground" />
                 Ver perfil
               </DropdownMenuItem>
               {canSetStars && (
                 <DropdownMenuItem onSelect={onSetStars}>
-                  <Star className="mr-2 size-4 text-muted-foreground" />
+                  <HugeiconsIcon icon={StarIcon} className="mr-2 size-4 text-muted-foreground" />
                   Definir estrelas
                 </DropdownMenuItem>
               )}
@@ -138,9 +131,9 @@ export function MemberCard({
                   disabled={isToggling || (!member.isMensalista && mensalistaLimitHint !== null)}
                 >
                   {member.isMensalista ? (
-                    <CalendarX className="mr-2 size-4 text-muted-foreground" />
+                    <HugeiconsIcon icon={CalendarRemove01Icon} className="mr-2 size-4 text-muted-foreground" />
                   ) : (
-                    <CalendarCheck className="mr-2 size-4 text-muted-foreground" />
+                    <HugeiconsIcon icon={CalendarCheckIn01Icon} className="mr-2 size-4 text-muted-foreground" />
                   )}
                   <span className="flex flex-col">
                     {member.isMensalista ? "Tornar diarista" : "Tornar mensalista"}
@@ -154,15 +147,15 @@ export function MemberCard({
                 <>
                   <DropdownMenuItem onSelect={onToggleAdmin} disabled={isToggling}>
                     {member.isAdmin ? (
-                      <ShieldOff className="mr-2 size-4 text-muted-foreground" />
+                      <HugeiconsIcon icon={ShieldOffIcon} className="mr-2 size-4 text-muted-foreground" />
                     ) : (
-                      <ShieldCheck className="mr-2 size-4 text-muted-foreground" />
+                      <HugeiconsIcon icon={ShieldCheckIcon} className="mr-2 size-4 text-muted-foreground" />
                     )}
                     {member.isAdmin ? "Remover admin" : "Tornar admin"}
                   </DropdownMenuItem>
                   <DropdownMenuSeparator className="bg-border" />
                   <DropdownMenuItem onSelect={onRemove} className="text-destructive focus:bg-destructive-muted focus:text-destructive">
-                    <Trash2 className="mr-2 size-4" />
+                    <HugeiconsIcon icon={Delete02Icon} className="mr-2 size-4" />
                     Remover
                   </DropdownMenuItem>
                 </>
@@ -171,7 +164,16 @@ export function MemberCard({
           </DropdownMenu>
         )}
       </div>
-      <dl className="grid grid-cols-3 border-t pt-2.5">
+      {/* one line on every card (same height with or without a position), so the stats line up across a row */}
+      <div className="flex h-[22px] items-center gap-2 overflow-hidden">
+        <MembershipBadge isMensalista={member.isMensalista} />
+        {position && (
+          <Badge variant="status" className="bg-secondary px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.03em] text-secondary-foreground">
+            {position}
+          </Badge>
+        )}
+      </div>
+      <dl className="mt-auto grid grid-cols-3 border-t pt-2.5">
         {(
           [
             ["Jogos", stats.matchesPlayed],

@@ -26,6 +26,7 @@ public class FinanceLedgerService {
     private final FinanceCollectionService collections;
     private final FinanceNoticeRepository notices;
     private final FinanceMovementRepository movements;
+    private final FinanceChargeRepository chargeRows;
     private final FinanceFiles files;
 
     public FinanceViews.Result receive(Long id, Long listId, Long chargeId, FinanceRequests.Receipt request, String email) {
@@ -37,6 +38,32 @@ public class FinanceLedgerService {
             var before = reads.detail(ctx, listId);
             var movement = movement(ctx, MovementKind.RECEIPT, amount, date(ctx, request.effectiveDate()), request.method(), "Recebimento de " + charge.getPersonName());
             movement.setListId(listId); movement.setChargeId(chargeId); movements.save(movement);
+            return new Change(before, reads.detail(ctx, listId), listId);
+        });
+    }
+    // "Receber todos": every listed charge receives its remaining amount, in one revision and one audit entry.
+    // All or nothing: a charge from another list, canceled, settled meanwhile or waiting for a notice review fails the batch.
+    public FinanceViews.Result receiveAll(Long id, Long listId, FinanceRequests.ReceiveAll request, String email) {
+        return tx.execute(id, email, request.command(), "RECEIVE", "LIST:" + listId, request, true, ctx -> {
+            var list = reads.findList(id, listId); open(list);
+            var ids = new LinkedHashSet<>(request.chargeIds());
+            require(ids.size() == request.chargeIds().size(), "Cada cobrança só pode aparecer uma vez");
+            var rows = chargeRows.findByIdInAndPeladaIdAndListIdOrderById(ids, id, listId);
+            if (rows.size() != ids.size()) throw missing("Cobrança");
+            var pending = new HashSet<>(notices.chargeIdsWithStatus(ids, NoticeStatus.PENDING));
+            var paid = reads.paid(rows);
+            LocalDate effective = date(ctx, request.effectiveDate());
+            var before = reads.detail(ctx, listId);
+            List<FinanceMovement> created = new ArrayList<>();
+            for (var charge : rows) {
+                active(charge);
+                require(!pending.contains(charge.getId()), "Confira o pagamento informado por " + charge.getPersonName() + " antes de receber");
+                BigDecimal amount = charge.getAmountDue().subtract(paid.getOrDefault(charge.getId(), ZERO));
+                require(amount.signum() > 0, charge.getPersonName() + " já está quitado(a)");
+                var movement = movement(ctx, MovementKind.RECEIPT, amount, effective, request.method(), "Recebimento de " + charge.getPersonName());
+                movement.setListId(listId); movement.setChargeId(charge.getId()); created.add(movement);
+            }
+            movements.saveAll(created);
             return new Change(before, reads.detail(ctx, listId), listId);
         });
     }

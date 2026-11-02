@@ -11,6 +11,13 @@ const ForgotPasswordPage = lazy(() => import("@/pages/ForgotPasswordPage"))
 const ResetPasswordPage = lazy(() => import("@/pages/ResetPasswordPage"))
 const HomePage = lazy(() => import("@/pages/HomePage"))
 const PeladaDetailPage = lazy(() => import("@/pages/PeladaDetailPage"))
+const PeladaOverviewPage = lazy(() => import("@/pages/PeladaOverviewPage"))
+const PeladaMembersPage = lazy(() => import("@/pages/PeladaMembersPage"))
+const PeladaSessionsPage = lazy(() => import("@/pages/PeladaSessionsPage"))
+const PeladaRankingPage = lazy(() => import("@/pages/PeladaRankingPage"))
+const PeladaAwardsPage = lazy(() => import("@/pages/PeladaAwardsPage"))
+const PeladaFinancePage = lazy(() => import("@/pages/PeladaFinancePage"))
+const PeladaInvitationsPage = lazy(() => import("@/pages/PeladaInvitationsPage"))
 const PeladaSettingsPage = lazy(() => import("@/pages/PeladaSettingsPage"))
 const DailyDetailPage = lazy(() => import("@/pages/DailyDetailPage"))
 const ProfilePage = lazy(() => import("@/pages/ProfilePage"))
@@ -38,7 +45,16 @@ function App() {
           <Route element={<ErrorBoundary><PrivateRoute><AppLayout /></PrivateRoute></ErrorBoundary>}>
             <Route path="/invitations/:id" element={<ErrorBoundary><InvitationPage /></ErrorBoundary>} />
             <Route path="/home" element={<ErrorBoundary><HomePage /></ErrorBoundary>} />
-            <Route path="/pelada/:id" element={<ErrorBoundary><PeladaDetailPage /></ErrorBoundary>} />
+            {/* Layout of a pelada: header, shared dialogs and chat; one child route per area */}
+            <Route path="/pelada/:id" element={<ErrorBoundary><PeladaDetailPage /></ErrorBoundary>}>
+              <Route index element={<ErrorBoundary><PeladaOverviewPage /></ErrorBoundary>} />
+              <Route path="membros" element={<ErrorBoundary><PeladaMembersPage /></ErrorBoundary>} />
+              <Route path="sessoes" element={<ErrorBoundary><PeladaSessionsPage /></ErrorBoundary>} />
+              <Route path="ranking" element={<ErrorBoundary><PeladaRankingPage /></ErrorBoundary>} />
+              <Route path="premios" element={<ErrorBoundary><PeladaAwardsPage /></ErrorBoundary>} />
+              <Route path="financeiro" element={<ErrorBoundary><PeladaFinancePage /></ErrorBoundary>} />
+              <Route path="convites" element={<ErrorBoundary><PeladaInvitationsPage /></ErrorBoundary>} />
+            </Route>
             <Route path="/pelada/:id/settings" element={<ErrorBoundary><PeladaSettingsPage /></ErrorBoundary>} />
             <Route path="/daily/:id" element={<ErrorBoundary><DailyDetailPage /></ErrorBoundary>} />
             <Route path="/profile/:id" element={<ErrorBoundary><ProfilePage /></ErrorBoundary>} />

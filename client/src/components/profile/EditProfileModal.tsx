@@ -1,9 +1,10 @@
 import { useState } from "react"
 import { Controller, useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Camera } from "lucide-react"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { Camera01Icon } from "@hugeicons/core-free-icons"
 import { toast } from "sonner"
-import { updateUser, uploadBackgroundImage, uploadUserImage } from "@/api/users"
+import { updateUser, uploadUserImage } from "@/api/users"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
@@ -41,7 +42,7 @@ function toFormPosition(position: string | null): ProfileValues["position"] {
 }
 
 export default function EditProfileModal({ profile, onClose, onProfileUpdated }: EditProfileModalProps) {
-  const [uploading, setUploading] = useState<"avatar" | "background" | null>(null)
+  const [uploading, setUploading] = useState(false)
   const [current, setCurrent] = useState(profile)
   const form = useForm<ProfileValues>({
     resolver: zodResolver(profileSchema),
@@ -51,24 +52,22 @@ export default function EditProfileModal({ profile, onClose, onProfileUpdated }:
     },
   })
 
-  async function handleImage(kind: "avatar" | "background", file: File | undefined) {
+  async function handleAvatar(file: File | undefined) {
     if (!file) return
     const invalid = validateImageFile(file)
     if (invalid) {
       toast.error(invalid)
       return
     }
-    setUploading(kind)
+    setUploading(true)
     try {
-      const updated = kind === "avatar"
-        ? await uploadUserImage(profile.id, file)
-        : await uploadBackgroundImage(profile.id, file)
+      const updated = await uploadUserImage(profile.id, file)
       setCurrent(updated)
       onProfileUpdated(updated)
     } catch (error) {
       toast.error(getErrorMessage(error, "Não foi possível enviar a imagem"))
     } finally {
-      setUploading(null)
+      setUploading(false)
     }
   }
 
@@ -85,43 +84,18 @@ export default function EditProfileModal({ profile, onClose, onProfileUpdated }:
   }
 
   const submitting = form.formState.isSubmitting
-  const backgroundUrl = getFileUrl(current.backgroundImage)
 
   return (
     <Dialog open onOpenChange={(open) => !open && !submitting && onClose()}>
       <DialogContent className="max-w-md gap-0 overflow-hidden p-0">
-        <div className="relative h-[120px] bg-gradient-primary">
-          {backgroundUrl && (
-            <img src={backgroundUrl} alt="" className="absolute inset-0 size-full object-cover" />
-          )}
-          <label
-            htmlFor="background-input"
-            className="absolute bottom-2 right-2 flex cursor-pointer items-center gap-1 rounded-full bg-background/80 px-3 py-1 text-xs font-medium text-foreground backdrop-blur hover:bg-background"
-          >
-            <Camera className="size-3.5" />
-            {uploading === "background" ? "Enviando..." : "Alterar fundo"}
-          </label>
-          <Input
-            id="background-input"
-            type="file"
-            accept={IMAGE_ACCEPT}
-            className="sr-only"
-            disabled={uploading !== null}
-            onChange={(e) => {
-              void handleImage("background", e.target.files?.[0])
-              e.target.value = ""
-            }}
-          />
-        </div>
-
-        <div className="-mt-10 px-6">
+        <div className="px-6 pt-6">
           <label htmlFor="avatar-input" className="group relative block w-fit cursor-pointer" aria-label="Alterar foto">
-            <Avatar className="size-20 border-4 border-background">
+            <Avatar className="size-20">
               <AvatarImage src={getFileUrl(current.image)} alt={current.username} />
               <AvatarFallback className="text-lg font-bold">{getInitials(current.username)}</AvatarFallback>
             </Avatar>
             <span className="absolute bottom-0 right-0 flex size-7 items-center justify-center rounded-full border bg-background">
-              <Camera className="size-3.5" />
+              <HugeiconsIcon icon={Camera01Icon} className="size-3.5" />
             </span>
           </label>
           <Input
@@ -129,9 +103,9 @@ export default function EditProfileModal({ profile, onClose, onProfileUpdated }:
             type="file"
             accept={IMAGE_ACCEPT}
             className="sr-only"
-            disabled={uploading !== null}
+            disabled={uploading}
             onChange={(e) => {
-              void handleImage("avatar", e.target.files?.[0])
+              void handleAvatar(e.target.files?.[0])
               e.target.value = ""
             }}
           />
@@ -192,7 +166,7 @@ export default function EditProfileModal({ profile, onClose, onProfileUpdated }:
             <Button type="button" variant="outline" onClick={onClose} disabled={submitting}>
               Cancelar
             </Button>
-            <Button type="submit" variant="gradient" disabled={submitting || !form.formState.isDirty}>
+            <Button type="submit" variant="brand" disabled={submitting || !form.formState.isDirty}>
               {submitting ? "Salvando..." : "Salvar"}
             </Button>
           </DialogFooter>

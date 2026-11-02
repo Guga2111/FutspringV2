@@ -1,10 +1,10 @@
-import { ArrowLeft } from "lucide-react"
 import type { ReactNode } from "react"
 import { Link, useParams } from "react-router-dom"
 import { AutomationCard } from "@/components/pelada-settings/AutomationCard"
 import { DangerZone } from "@/components/pelada-settings/DangerZone"
 import { usePeladaSettings } from "@/components/pelada-settings/hooks/usePeladaSettings"
 import { InfoCard } from "@/components/pelada-settings/InfoCard"
+import { PeladaPageHeader } from "@/components/pelada/PeladaPageHeader"
 import { LocationCard } from "@/components/pelada-settings/LocationCard"
 import { ScheduleCard } from "@/components/pelada-settings/ScheduleCard"
 import { SettingsNav, type SettingsSection } from "@/components/pelada-settings/SettingsNav"
@@ -13,6 +13,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useAuth } from "@/hooks/useAuth"
+import { areaPath } from "@/utils/peladaAreas"
 
 const SECTIONS: SettingsSection[] = [
   { id: "informacoes", label: "Informações" },
@@ -44,7 +45,7 @@ export default function PeladaSettingsPage() {
         </p>
         {pelada && (
           <Button variant="outline" className="mt-4" asChild>
-            <Link to={`/pelada/${pelada.id}`}>Voltar para a pelada</Link>
+            <Link to={areaPath(pelada.id, "overview")}>Voltar para a pelada</Link>
           </Button>
         )}
       </div>
@@ -88,21 +89,16 @@ export default function PeladaSettingsPage() {
   return (
     <div className="page-enter flex flex-1 flex-col">
       <main className="mx-auto flex w-full max-w-[1120px] flex-col gap-6 px-4 py-5 md:px-8 md:py-7">
-        <header className="flex flex-col gap-2">
-          {id && (
-            <Button variant="link" className="h-auto self-start p-0 text-muted-foreground" asChild>
-              <Link to={`/pelada/${id}`}>
-                <ArrowLeft data-icon="inline-start" />
-                {pelada?.name ?? "Voltar para a pelada"}
-              </Link>
-            </Button>
-          )}
-          <h1 className="text-2xl font-bold md:text-3xl">Configurações</h1>
-          <p className="max-w-2xl text-sm text-muted-foreground md:text-base">
-            Gerencie as informações, o horário e as vagas da pelada. Preferências são salvas automaticamente; os demais
-            blocos têm botão próprio.
-          </p>
-        </header>
+        {id && (
+          <PeladaPageHeader
+            peladaId={id}
+            peladaName={pelada?.name ?? null}
+            area="settings"
+            isAdmin={isAdmin}
+            title="Configurações"
+            description="Gerencie as informações, o horário e as vagas da pelada. Preferências são salvas automaticamente; os demais blocos têm botão próprio."
+          />
+        )}
         {content}
       </main>
     </div>

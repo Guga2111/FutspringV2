@@ -80,6 +80,55 @@ class FinanceServiceTest extends BaseIntegrationTest {
     void receive(Long l, String value) { ledger.receive(id(), l, charge(l), new FinanceRequests.Receipt(command(), value, null, PaymentMethod.PIX), admin.getEmail()); }
     FinanceViews.Charge view(Long listId) { return reads.detail(id(), listId, admin.getEmail()).charges().getFirst(); }
     void fails(Runnable action, HttpStatus status) { assertThatThrownBy(action::run).isInstanceOfSatisfying(AppException.class, e -> assertThat(e.getStatus()).isEqualTo(status)); }
+    Long openWithTwo() { Long l = draft(Classification.DAILY); add(l, member); add(l, other); collections.transition(id(), l, "PUBLISH", command(), admin.getEmail()); return l; }
+    List<Long> chargeIds(Long l) { return reads.detail(id(), l, admin.getEmail()).charges().stream().map(FinanceViews.Charge::id).toList(); }
+    FinanceRequests.ReceiveAll receiveAll(List<Long> ids) { return new FinanceRequests.ReceiveAll(command(), ids, null, PaymentMethod.CASH); }
+    @Test void receiveAllSettlesEveryRemainingAmountInOneRevisionAndReplaysSafely() {
+        Long l = openWithTwo(); receive(l, "20.00");
+        long revision = accounts.findByPeladaId(id()).orElseThrow().getRevision();
+        int auditsBefore = audits.findByPeladaId(id()).size();
+        var request = receiveAll(chargeIds(l));
+        var result = ledger.receiveAll(id(), l, request, admin.getEmail());
+        assertThat(result.detail().charges()).allSatisfy(c -> {
+            assertThat(c.paymentStatus()).isEqualTo(PaymentStatus.PAID);
+            assertThat(c.outstanding()).isEqualTo("0.00");
+        });
+        assertThat(result.overview().revision()).isEqualTo(revision + 1);
+        assertThat(result.overview().balance()).isEqualTo("90.00");
+        assertThat(audits.findByPeladaId(id())).hasSize(auditsBefore + 1);
+        var replay = ledger.receiveAll(id(), l, request, admin.getEmail());
+        assertThat(replay.overview().balance()).isEqualTo("90.00");
+        assertThat(audits.findByPeladaId(id())).hasSize(auditsBefore + 1);
+    }
+    @Test void receiveAllIsAllOrNothing() {
+        Long l = openWithTwo(); var ids = chargeIds(l);
+        ledger.report(id(), l, ids.getLast(), command(), null, other.getEmail());
+        fails(() -> ledger.receiveAll(id(), l, receiveAll(ids), admin.getEmail()), HttpStatus.CONFLICT);
+        assertThat(reads.detail(id(), l, admin.getEmail()).collection().totals().received()).isEqualTo("0.00");
+        receive(l, "45.00");
+        fails(() -> ledger.receiveAll(id(), l, receiveAll(List.of(ids.getFirst())), admin.getEmail()), HttpStatus.CONFLICT);
+        fails(() -> ledger.receiveAll(id(), l, receiveAll(List.of(ids.getFirst(), ids.getFirst())), admin.getEmail()), HttpStatus.CONFLICT);
+    }
+    @Test void receiveAllChecksManagerAndScopesChargesToTheList() {
+        Long l = openWithTwo(); Long other = open();
+        fails(() -> ledger.receiveAll(id(), l, receiveAll(chargeIds(l)), member.getEmail()), HttpStatus.FORBIDDEN);
+        fails(() -> ledger.receiveAll(id(), l, receiveAll(List.of(chargeIds(l).getFirst(), charge(other))), admin.getEmail()), HttpStatus.NOT_FOUND);
+        collections.transition(id(), other, "CLOSE", command(), admin.getEmail());
+        fails(() -> ledger.receiveAll(id(), other, receiveAll(List.of(charge(other))), admin.getEmail()), HttpStatus.CONFLICT);
+    }
+    @Test void receiveAllRestValidatesTheBody() throws Exception {
+        Long l = openWithTwo();
+        String path = "/api/v1/peladas/" + id() + "/finance/lists/" + l + "/receive-all";
+        mockMvc.perform(post(path).header("Authorization", bearerToken(admin.getId(), admin.getEmail()))
+                        .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(receiveAll(List.of()))))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(post(path).header("Authorization", bearerToken(outsider.getId(), outsider.getEmail()))
+                        .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(receiveAll(chargeIds(l)))))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post(path).header("Authorization", bearerToken(admin.getId(), admin.getEmail()))
+                        .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(receiveAll(chargeIds(l)))))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.detail.collection.totals.outstanding").value("0.00"));
+    }
     @Test void guidedCreationPublishesPeopleAndExactTotalsInOneRevisionAndReplaysSafely() {
         var request = new FinanceRequests.CreateCollection(
                 new FinanceRequests.Collection(command(), "Diária de sábado", Classification.DAILY, "", null, null, price(), "pix", "Gestor", null),
@@ -198,6 +247,33 @@ class FinanceServiceTest extends BaseIntegrationTest {
         assertThat(result.detail().charges()).hasSize(2); assertThat(result.detail().charges().get(0).personId()).isNotEqualTo(result.detail().charges().get(1).personId());
         var foreign = peladas.save(Pelada.builder().name("Outra").dayOfWeek("SATURDAY").timeOfDay("19:00").duration(1f).creator(admin).members(new HashSet<>(Set.of(admin))).admins(new HashSet<>(Set.of(admin))).build());
         fails(() -> reads.detail(foreign.getId(), l, admin.getEmail()), HttpStatus.NOT_FOUND);
+    }
+    @Test void listsArePaginatedPerScopeWithTotalsAndMembersOnlyCountTheirOwnLists() {
+        Long first = open(); Long second = open(); Long third = open();
+        collections.transition(id(), third, "CLOSE", command(), admin.getEmail());
+        Long hidden = draft(Classification.OTHER);
+        var active = reads.overview(id(), admin.getEmail(), ListScope.ACTIVE, 0, 2);
+        assertThat(active.lists()).extracting(FinanceViews.Collection::id).containsExactly(hidden, second);
+        assertThat(active.total()).isEqualTo(3); assertThat(active.hasMore()).isTrue();
+        var next = reads.overview(id(), admin.getEmail(), ListScope.ACTIVE, 1, 2);
+        assertThat(next.lists()).extracting(FinanceViews.Collection::id).containsExactly(first);
+        assertThat(next.hasMore()).isFalse();
+        var archived = reads.overview(id(), admin.getEmail(), ListScope.ARCHIVED, 0, 2);
+        assertThat(archived.lists()).extracting(FinanceViews.Collection::id).containsExactly(third);
+        assertThat(archived.total()).isEqualTo(1);
+        // the member has a charge in the three published lists and never sees the draft, in the list or in the total
+        var mine = reads.overview(id(), member.getEmail(), ListScope.ACTIVE, 0, 50);
+        assertThat(mine.lists()).extracting(FinanceViews.Collection::id).containsExactly(second, first);
+        assertThat(mine.total()).isEqualTo(2);
+        assertThat(reads.overview(id(), other.getEmail(), ListScope.ACTIVE, 0, 50).total()).isZero();
+    }
+    @Test void ledgerAndAuditPagesReportTheirTotal() {
+        Long l = open(); receive(l, "10.00"); receive(l, "5.00"); receive(l, "1.00");
+        var page = reads.ledger(id(), admin.getEmail(), 0, 2);
+        assertThat(page.items()).hasSize(2); assertThat(page.hasMore()).isTrue(); assertThat(page.total()).isEqualTo(3);
+        assertThat(reads.ledger(id(), admin.getEmail(), 1, 2).items()).hasSize(1);
+        var audit = reads.audit(id(), admin.getEmail(), 0, 50);
+        assertThat(audit.total()).isEqualTo(audit.items().size());
     }
     @Test void closeReopenDuplicateAndReplacementPreserveAllocations() {
         Long l = open(); receive(l, "20.00"); collections.transition(id(), l, "CLOSE", command(), admin.getEmail());

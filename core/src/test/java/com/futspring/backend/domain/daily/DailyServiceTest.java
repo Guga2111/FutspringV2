@@ -91,7 +91,7 @@ class DailyServiceTest {
                 dailyRepository, attendanceRepository, bumpRepository, mensalistaRepository, peladaRepository, playerStarsRepository, teamRepository,
                 matchRepository, playerMatchStatRepository, userDailyStatsRepository,
                 leagueTableEntryRepository, dailyAwardRepository,
-                new DailyListItemAssembler(attendanceRepository, teamRepository, matchRepository, mensalistaRepository),
+                new DailyListItemAssembler(attendanceRepository, teamRepository, matchRepository, mensalistaRepository, userDailyStatsRepository),
                 notificationRepository, eventPublisher);
 
         admin = User.builder().id(1L).email("admin@example.com").username("admin").password("hash").build();
@@ -235,6 +235,26 @@ class DailyServiceTest {
 
         assertThat(result.get(0).dailyDate()).isEqualTo(LocalDate.of(2024, 3, 1));
         assertThat(result.get(1).dailyDate()).isEqualTo(LocalDate.of(2024, 1, 1));
+    }
+
+    @Test
+    void getDailiesForPelada_wonSessionIsTheCallersResult() {
+        Daily won = Daily.builder().id(1L).pelada(pelada).dailyDate(LocalDate.of(2024, 3, 1))
+                .dailyTime("18:00").status(DailyStatus.FINISHED).build();
+        Daily lost = Daily.builder().id(2L).pelada(pelada).dailyDate(LocalDate.of(2024, 2, 1))
+                .dailyTime("18:00").status(DailyStatus.FINISHED).build();
+        Daily absent = Daily.builder().id(3L).pelada(pelada).dailyDate(LocalDate.of(2024, 1, 1))
+                .dailyTime("18:00").status(DailyStatus.FINISHED).build();
+
+        when(userAuthHelper.getAuthenticatedUser("member@example.com")).thenReturn(member);
+        when(peladaRepository.findById(10L)).thenReturn(Optional.of(pelada));
+        when(dailyRepository.findByPeladaOrderByDailyDateDesc(pelada)).thenReturn(List.of(won, lost, absent));
+        when(userDailyStatsRepository.findWonSessionByUserAndDailyIds(member.getId(), List.of(1L, 2L, 3L)))
+                .thenReturn(List.of(new Object[]{1L, true}, new Object[]{2L, false}));
+
+        List<DailyListItemDTO> result = dailyService.getDailiesForPelada(10L, "member@example.com");
+
+        assertThat(result).extracting(DailyListItemDTO::wonSession).containsExactly(true, false, null);
     }
 
     // --- getDailyDetail ---

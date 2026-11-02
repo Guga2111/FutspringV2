@@ -1,4 +1,5 @@
-import { UserMinus } from "lucide-react"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { UserMinus01Icon } from "@hugeicons/core-free-icons"
 import {
   CommandDialog,
   CommandEmpty,
@@ -32,7 +33,7 @@ export function RemovePlayerDialog({ open, onOpenChange, members, onConfirm }: R
               onSelect={() => onConfirm(m)}
               className="text-destructive data-[selected=true]:text-destructive"
             >
-              <UserMinus />
+              <HugeiconsIcon icon={UserMinus01Icon} />
               {m.username}
             </CommandItem>
           ))}

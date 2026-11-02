@@ -44,6 +44,10 @@ public final class FinanceRequests {
     public record Receipt(@NotNull @Valid Command command,
                           @Pattern(regexp = "[0-9]{1,12}\\.[0-9]{2}") @JsonDeserialize(using = DecimalStringDeserializer.class) String amount,
                           LocalDate effectiveDate, @NotNull PaymentMethod method) {}
+    // Receive what each charge still owes, in one transaction; at most 200 charges of the route's list
+    public record ReceiveAll(@NotNull @Valid Command command,
+                             @NotEmpty(message = "Selecione ao menos uma cobrança") @Size(max = 200, message = "No máximo 200 cobranças por vez") List<@NotNull @Positive Long> chargeIds,
+                             LocalDate effectiveDate, @NotNull PaymentMethod method) {}
     public record Confirmation(@NotNull @Valid Command command, LocalDate effectiveDate,
                                @NotNull PaymentMethod method) {}
     public record Refund(@NotNull @Valid Command command,

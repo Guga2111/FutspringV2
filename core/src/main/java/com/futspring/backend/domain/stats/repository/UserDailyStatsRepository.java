@@ -109,4 +109,11 @@ public interface UserDailyStatsRepository extends JpaRepository<UserDailyStats, 
         """)
     List<Object[]> countAttendanceByUser(@Param("peladaId") Long peladaId, @Param("status") DailyStatus status,
                                          @Param("from") LocalDate from, @Param("to") LocalDate to);
+
+    // The caller's result in each listed session: [dailyId, wonSession]; sessions they didn't play have no row
+    @Query("""
+        SELECT uds.daily.id, uds.wonSession FROM UserDailyStats uds
+        WHERE uds.user.id = :userId AND uds.daily.id IN :dailyIds
+        """)
+    List<Object[]> findWonSessionByUserAndDailyIds(@Param("userId") Long userId, @Param("dailyIds") Collection<Long> dailyIds);
 }

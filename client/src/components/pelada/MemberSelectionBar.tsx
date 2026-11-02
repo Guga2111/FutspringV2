@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react"
-import type { LucideIcon } from "lucide-react"
-import { CalendarCheck, CalendarX, ChevronDown, ListChecks, ShieldCheck, ShieldOff, Star, Trash2, X } from "lucide-react"
+import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react"
+import { ArrowDown01Icon, CalendarCheckIn01Icon, CalendarRemove01Icon, Cancel01Icon, CheckListIcon, Delete02Icon, ShieldCheckIcon, ShieldOffIcon, StarIcon } from "@hugeicons/core-free-icons"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -36,13 +36,13 @@ interface MemberSelectionBarProps extends BulkPlanContext {
   onAction: (action: BulkMemberAction, targets: PeladaMember[], stars?: number) => void
 }
 
-const ACTION_ICON: Record<BulkMemberAction, LucideIcon> = {
-  makeAdmin: ShieldCheck,
-  removeAdmin: ShieldOff,
-  makeMensalista: CalendarCheck,
-  makeDiarista: CalendarX,
-  setStars: Star,
-  remove: Trash2,
+const ACTION_ICON: Record<BulkMemberAction, IconSvgElement> = {
+  makeAdmin: ShieldCheckIcon,
+  removeAdmin: ShieldOffIcon,
+  makeMensalista: CalendarCheckIn01Icon,
+  makeDiarista: CalendarRemove01Icon,
+  setStars: StarIcon,
+  remove: Delete02Icon,
 }
 
 // Bulk actions on the selected members, at the bottom of the members tab. The dialogs (stars, remove confirmation)
@@ -92,7 +92,7 @@ export function MemberSelectionBar({
   const visibleLabel = allVisibleSelected ? "Desmarcar visíveis" : "Selecionar visíveis"
   const exitButton = (
     <Button variant="ghost" size="icon" aria-label="Sair da seleção" onClick={onExit} className="size-9 shrink-0">
-      <X className="size-4" />
+      <HugeiconsIcon icon={Cancel01Icon} className="size-4" />
     </Button>
   )
 
@@ -107,7 +107,7 @@ export function MemberSelectionBar({
         onSelect={() => run(action)}
         className={destructive ? "text-destructive focus:bg-destructive-muted focus:text-destructive" : undefined}
       >
-        <Icon className={destructive ? "mr-2 size-4" : "mr-2 size-4 text-muted-foreground"} />
+        <HugeiconsIcon icon={Icon} className={destructive ? "mr-2 size-4" : "mr-2 size-4 text-muted-foreground"} />
         <span className="flex flex-col">
           {bulkActionLabel[action]} ({targets.length})
           {hint && <span className="text-xs text-muted-foreground">{hint}</span>}
@@ -122,7 +122,7 @@ export function MemberSelectionBar({
         <DropdownMenuTrigger asChild>
           <Button variant="outline" disabled={pending} className="h-9 gap-1 px-3.5">
             {label}
-            <ChevronDown className="size-4" />
+            <HugeiconsIcon icon={ArrowDown01Icon} className="size-4" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="center" side="top" className="w-60 rounded-[10px] shadow-menu">
@@ -145,13 +145,13 @@ export function MemberSelectionBar({
         {/* desktop: one control per group of actions */}
         <div className="ml-auto hidden items-center gap-2 md:flex">
           <Button variant="ghost" disabled={pending} onClick={onToggleVisible} className="h-9 gap-1.5 px-3.5">
-            <ListChecks className="size-4" />
+            <HugeiconsIcon icon={CheckListIcon} className="size-4" />
             {visibleLabel}
           </Button>
           {menu("Admin", ["makeAdmin", "removeAdmin"])}
           {menu("Tipo", ["makeMensalista", "makeDiarista"])}
           <Button variant="outline" disabled={pending} onClick={() => run("setStars")} className="h-9 gap-1.5 px-3.5">
-            <Star className="size-4" />
+            <HugeiconsIcon icon={StarIcon} className="size-4" />
             Estrelas
           </Button>
           <Button
@@ -160,7 +160,7 @@ export function MemberSelectionBar({
             onClick={() => run("remove")}
             className="h-9 gap-1.5 px-3.5"
           >
-            <Trash2 className="size-4" />
+            <HugeiconsIcon icon={Delete02Icon} className="size-4" />
             Remover ({removeTargets.length})
           </Button>
           {exitButton}
@@ -172,13 +172,13 @@ export function MemberSelectionBar({
             <DropdownMenuTrigger asChild>
               <Button variant="outline" disabled={pending} className="h-9 gap-1 px-3.5">
                 Ações
-                <ChevronDown className="size-4" />
+                <HugeiconsIcon icon={ArrowDown01Icon} className="size-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" side="top" className="w-64 rounded-[10px] shadow-menu">
               <DropdownMenuGroup>
                 <DropdownMenuItem disabled={pending} onSelect={onToggleVisible}>
-                  <ListChecks className="mr-2 size-4 text-muted-foreground" />
+                  <HugeiconsIcon icon={CheckListIcon} className="mr-2 size-4 text-muted-foreground" />
                   {visibleLabel}
                 </DropdownMenuItem>
               </DropdownMenuGroup>

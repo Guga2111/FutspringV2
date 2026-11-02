@@ -1,5 +1,6 @@
 import * as React from "react"
-import { ChevronLeft, ChevronRight } from "lucide-react"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { ArrowLeft01Icon, ArrowRight01Icon } from "@hugeicons/core-free-icons"
 import { DayPicker } from "react-day-picker"
 import { cn } from "@/lib/utils"
 import { buttonVariants } from "@/components/ui/button-variants"
@@ -43,7 +44,7 @@ function Calendar({
         range_start: "day-range-start",
         range_end: "day-range-end",
         selected:
-          "bg-gradient-primary text-white hover:opacity-90 focus:opacity-90 rounded-md",
+          "bg-brand text-brand-foreground hover:bg-brand-hover focus:bg-brand-hover rounded-md",
         today: "bg-accent text-accent-foreground",
         outside:
           "day-outside text-muted-foreground opacity-50 aria-selected:bg-accent/50 aria-selected:text-muted-foreground aria-selected:opacity-30",
@@ -56,9 +57,9 @@ function Calendar({
       components={{
         Chevron: ({ orientation }) =>
           orientation === "left" ? (
-            <ChevronLeft className="size-4" />
+            <HugeiconsIcon icon={ArrowLeft01Icon} className="size-4" />
           ) : (
-            <ChevronRight className="size-4" />
+            <HugeiconsIcon icon={ArrowRight01Icon} className="size-4" />
           ),
       }}
       {...props}

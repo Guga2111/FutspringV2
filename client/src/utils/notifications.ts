@@ -1,22 +1,5 @@
-import {
-  ArrowRightLeft,
-  BadgeCheck,
-  BadgeMinus,
-  BellRing,
-  CalendarClock,
-  CalendarPlus,
-  CalendarX,
-  Flag,
-  ShieldCheck,
-  ShieldOff,
-  Shuffle,
-  Trophy,
-  UserCheck,
-  UserMinus,
-  UserPlus,
-  UserX,
-  type LucideIcon,
-} from "lucide-react"
+import { type IconSvgElement } from "@hugeicons/react"
+import { ArrowDataTransferHorizontalIcon, CalendarAdd01Icon, CalendarRemove01Icon, ChampionIcon, CheckmarkBadge01Icon, Clock01Icon, Flag01Icon, NotificationSquareIcon, RemoveCircleIcon, ShieldCheckIcon, ShieldOffIcon, ShuffleIcon, UserAdd01Icon, UserCheck01Icon, UserMinus01Icon, UserRemove01Icon } from "@hugeicons/core-free-icons"
 import type { NotificationAward, NotificationResponse, NotificationType } from "@/types/notification"
 import { formatWeekdayDayMonth } from "@/utils/dates"
 
@@ -30,7 +13,7 @@ export interface NotificationView {
   parts: NotificationTextPart[]
   // where a click goes; null when there's nowhere to go (removed from the pelada)
   href: string | null
-  icon: LucideIcon
+  icon: IconSvgElement
 }
 
 export const notificationAwardLabel: Record<NotificationAward, string> = {
@@ -74,83 +57,83 @@ type ViewBuilder = (n: NotificationResponse) => Omit<NotificationView, "href"> &
 // One entry per type: a new backend type fails the build until it gets its text
 const views: Record<NotificationType, ViewBuilder> = {
   DIARISTA_BUMPED: (n) => ({
-    icon: UserX,
+    icon: UserRemove01Icon,
     parts: [t("Você perdeu a vaga em "), b(peladaName(n)), t(` (${sessionDate(n)}) para `), b(actorName(n))],
   }),
   SESSION_CANCELED: (n) => ({
-    icon: CalendarX,
+    icon: CalendarRemove01Icon,
     parts: [t(`A sessão de ${sessionDate(n)} da `), b(peladaName(n)), t(" foi cancelada")],
   }),
   ATTENDANCE_REMOVED_BY_ADMIN: (n) => ({
-    icon: UserMinus,
+    icon: UserMinus01Icon,
     parts: [b(actorName(n)), t(` removeu sua presença na sessão de ${sessionDate(n)}`)],
   }),
   ATTENDANCE_CONFIRMED_BY_ADMIN: (n) => ({
-    icon: UserCheck,
+    icon: UserCheck01Icon,
     parts: [b(actorName(n)), t(` confirmou sua presença na sessão de ${sessionDate(n)}`)],
   }),
   SESSION_REMINDER: (n) => ({
-    icon: BellRing,
+    icon: NotificationSquareIcon,
     parts: [t(`Sessão de ${sessionDateTime(n)} na `), b(peladaName(n)), t(" e você ainda não confirmou")],
   }),
   SESSION_CREATED: (n) => ({
-    icon: CalendarPlus,
+    icon: CalendarAdd01Icon,
     parts: [t("Nova sessão na "), b(peladaName(n)), t(`: ${sessionDateTime(n)}`)],
   }),
   DIARISTA_WINDOW_OPEN: (n) => ({
-    icon: CalendarClock,
+    icon: Clock01Icon,
     parts: [t("As confirmações abriram na "), b(peladaName(n)), t(`: ${sessionDateTime(n)}`)],
   }),
   TEAMS_SORTED: (n) => ({
-    icon: Shuffle,
+    icon: ShuffleIcon,
     parts: n.team
       ? [t(`Times sorteados para ${sessionDate(n)}: você está no `), b(n.team.name)]
       : [t(`Times sorteados para ${sessionDate(n)} na `), b(peladaName(n))],
   }),
   SESSION_FINISHED: (n) => ({
-    icon: Flag,
+    icon: Flag01Icon,
     parts: [t(`Sessão de ${sessionDate(n)} da `), b(peladaName(n)), t(" finalizada: veja o resultado")],
   }),
   PELADA_INVITATION: (n) => ({
-    icon: UserPlus,
+    icon: UserAdd01Icon,
     href: n.invitationId ? `/invitations/${n.invitationId}` : "/home",
     parts: [b(actorName(n)), t(" convidou você para a "), b(peladaName(n))],
   }),
   MEMBER_JOINED: (n) => ({
-    icon: UserCheck,
+    icon: UserCheck01Icon,
     parts: [b(actorName(n)), t(" entrou na "), b(peladaName(n))],
   }),
   ADDED_TO_PELADA: (n) => ({
-    icon: UserPlus,
+    icon: UserAdd01Icon,
     parts: n.actor ? [b(actorName(n)), t(" adicionou você à "), b(peladaName(n))] : [t("Você entrou na "), b(peladaName(n))],
   }),
   REMOVED_FROM_PELADA: (n) => ({
-    icon: UserMinus,
+    icon: UserMinus01Icon,
     href: null,
     parts: [t("Você foi removido da "), b(peladaName(n))],
   }),
   ADMIN_GRANTED: (n) => ({
-    icon: ShieldCheck,
+    icon: ShieldCheckIcon,
     parts: [t("Você agora é admin da "), b(peladaName(n))],
   }),
   ADMIN_REVOKED: (n) => ({
-    icon: ShieldOff,
+    icon: ShieldOffIcon,
     parts: [t("Você não é mais admin da "), b(peladaName(n))],
   }),
   MENSALISTA_GRANTED: (n) => ({
-    icon: BadgeCheck,
+    icon: CheckmarkBadge01Icon,
     parts: [t("Você agora é mensalista da "), b(peladaName(n)), t(": confirme a qualquer momento")],
   }),
   MENSALISTA_REVOKED: (n) => ({
-    icon: BadgeMinus,
+    icon: RemoveCircleIcon,
     parts: [t("Você agora é diarista da "), b(peladaName(n))],
   }),
   PELADA_TRANSFERRED: (n) => ({
-    icon: ArrowRightLeft,
+    icon: ArrowDataTransferHorizontalIcon,
     parts: [b(actorName(n)), t(" transferiu a "), b(peladaName(n)), t(" para você")],
   }),
   AWARD_WON: (n) => ({
-    icon: Trophy,
+    icon: ChampionIcon,
     parts: awardParts(n),
   }),
 }

@@ -1,4 +1,5 @@
-import { Trophy, Upload } from "lucide-react"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { ChampionIcon, Upload01Icon } from "@hugeicons/core-free-icons"
 import { Button } from "@/components/ui/button"
 import { PlayerAvatar } from "@/components/PlayerAvatar"
 import { TeamColorDot } from "@/components/daily/TeamColorDot"
@@ -34,7 +35,7 @@ export function ChampionHero({ daily, uploadLoading, onChangePhoto }: ChampionHe
         <span
           className={`absolute bottom-3.5 left-4 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.04em] ${photo ? "text-white" : "text-muted-foreground"}`}
         >
-          <Trophy className="size-3.5 text-gold" />
+          <HugeiconsIcon icon={ChampionIcon} className="size-3.5 text-gold" />
           Foto do campeão
         </span>
         {daily.isAdmin && (
@@ -44,19 +45,19 @@ export function ChampionHero({ daily, uploadLoading, onChangePhoto }: ChampionHe
             onClick={onChangePhoto}
             className="absolute right-3 top-3 h-8 gap-1.5 bg-black/50 px-3 text-[13px] font-medium text-white hover:bg-black/70 hover:text-white"
           >
-            <Upload className="size-3.5" />
+            <HugeiconsIcon icon={Upload01Icon} className="size-3.5" />
             {uploadLoading ? "Enviando…" : photo ? "Trocar foto" : "Enviar foto"}
           </Button>
         )}
       </div>
 
       {champion && (
-        <div className="flex flex-col gap-[18px] rounded-tile border bg-card p-5">
+        <div className="flex flex-col gap-[18px] rounded-tile border border-highlight/40 bg-card p-5">
           <div className="flex flex-col gap-1.5">
-            <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-gold">Time campeão</span>
+            <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-highlight-text">Time campeão</span>
             <div className="flex items-center gap-2.5">
               <TeamColorDot color={champion.team.color} className="size-3.5" />
-              <span className="text-2xl font-bold">{champion.team.name}</span>
+              <span className="font-display text-heading-lg font-bold">{champion.team.name}</span>
             </div>
           </div>
           <dl className="grid grid-cols-3 gap-2">
@@ -69,7 +70,7 @@ export function ChampionHero({ daily, uploadLoading, onChangePhoto }: ChampionHe
             ).map(([label, value]) => (
               <div key={label} className="flex flex-col-reverse gap-0.5 rounded-[10px] bg-accent px-3 py-2.5">
                 <dt className="text-[11px] text-muted-foreground">{label}</dt>
-                <dd className="text-xl font-bold tabular-nums">{value}</dd>
+                <dd className="font-display text-heading font-bold tabular-nums">{value}</dd>
               </div>
             ))}
           </dl>

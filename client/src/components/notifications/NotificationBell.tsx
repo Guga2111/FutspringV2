@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { Bell } from "lucide-react"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { Notification01Icon } from "@hugeicons/core-free-icons"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Drawer, DrawerContent, DrawerDescription, DrawerTitle } from "@/components/ui/drawer"
@@ -54,7 +55,7 @@ export function NotificationBell({ compact = false, className }: NotificationBel
       onClick={isMobile ? () => handleOpenChange(true) : undefined}
       className={cn("relative shrink-0 text-muted-foreground hover:text-foreground", className)}
     >
-      <Bell />
+      <HugeiconsIcon icon={Notification01Icon} />
       {!!unreadCount &&
         (compact ? (
           <span className="absolute right-1 top-1 size-2 rounded-full bg-destructive" aria-hidden />

@@ -98,7 +98,7 @@ export function ChatPanel({ peladaId, currentUserId, size = "panel" }: ChatPanel
                   <div
                     className={cn(
                       "break-words rounded-2xl px-3 py-1.5 text-sm",
-                      isOwn ? "rounded-br-sm bg-gradient-primary text-white" : "rounded-bl-sm bg-secondary text-foreground",
+                      isOwn ? "rounded-br-sm bg-brand text-brand-foreground" : "rounded-bl-sm bg-secondary text-foreground",
                     )}
                   >
                     {msg.content}
@@ -133,7 +133,7 @@ export function ChatPanel({ peladaId, currentUserId, size = "panel" }: ChatPanel
         />
         <Button
           type="submit"
-          variant="gradient"
+          variant="brand"
           disabled={!inputValue.trim()}
           className={cn("font-semibold", size === "drawer" ? "h-11 px-4" : "h-[38px] px-3.5")}
         >

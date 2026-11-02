@@ -2,12 +2,12 @@ package com.futspring.backend.domain.finance;
 import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Slice;
+import org.springframework.data.domain.Page;
 import java.util.*;
 import java.time.Instant;
 import java.math.BigDecimal;
 public interface FinanceMovementRepository extends JpaRepository<FinanceMovement, Long> {
-    Slice<FinanceMovement> findByPeladaIdOrderByIdDesc(Long peladaId, Pageable page);
+    Page<FinanceMovement> findByPeladaIdOrderByIdDesc(Long peladaId, Pageable page);
     List<FinanceMovement> findByChargeIdIn(Collection<Long> ids);
     Optional<FinanceMovement> findByIdAndPeladaId(Long id, Long peladaId);
     boolean existsByOriginalId(Long id);

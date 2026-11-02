@@ -28,7 +28,7 @@ export function SavedMatchesList({ daily }: { daily: DailyDetail }) {
                     <TeamColorDot color={colorOf.get(match.team1Id) ?? null} className="size-[9px]" />
                     <span className="truncate">{match.team1Name}</span>
                   </span>
-                  <span className="text-lg font-bold tabular-nums">
+                  <span className="font-display text-heading font-bold tabular-nums">
                     {s1} – {s2}
                   </span>
                   <span className={cn("flex min-w-0 items-center justify-end gap-2", s2 > s1 && "font-bold")}>

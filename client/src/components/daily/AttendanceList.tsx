@@ -1,5 +1,6 @@
 import { useMemo, useState, type ReactNode } from "react"
-import { ChevronRight, UserMinus, UserPlus } from "lucide-react"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { ArrowRight01Icon, UserAdd01Icon, UserMinus01Icon } from "@hugeicons/core-free-icons"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
@@ -46,7 +47,7 @@ export function AttendanceList({
   return (
     <Collapsible open={open} onOpenChange={onOpenChange} className="flex flex-col gap-3">
       <CollapsibleTrigger className="flex w-full items-center gap-2.5 text-left">
-        <ChevronRight className={cn("size-4 shrink-0 transition-transform duration-150", open && "rotate-90")} />
+        <HugeiconsIcon icon={ArrowRight01Icon} className={cn("size-4 shrink-0 transition-transform duration-150", open && "rotate-90")} />
         <span className="text-base font-semibold">Lista de presença</span>
         <span className="text-[13px] text-subtle-foreground">
           {confirmed.length} confirmados · {pending.length} pendentes
@@ -75,7 +76,7 @@ export function AttendanceList({
                       onClick={() => onUnconfirm(player.id)}
                       className="size-7 text-subtle-foreground hover:bg-destructive-muted hover:text-destructive-soft"
                     >
-                      <UserMinus className="size-[15px]" />
+                      <HugeiconsIcon icon={UserMinus01Icon} className="size-[15px]" />
                     </Button>
                   )}
                 </AttendanceRow>
@@ -115,7 +116,7 @@ export function AttendanceList({
                       onClick={() => onConfirm(player.id)}
                       className="size-7 text-subtle-foreground hover:bg-success-muted hover:text-success"
                     >
-                      <UserPlus className="size-[15px]" />
+                      <HugeiconsIcon icon={UserAdd01Icon} className="size-[15px]" />
                     </Button>
                   )}
                 </AttendanceRow>
@@ -126,7 +127,7 @@ export function AttendanceList({
         {daily.bumps.length > 0 && (
           <Collapsible open={bumpsOpen} onOpenChange={setBumpsOpen} className="overflow-hidden rounded-xl border min-[1100px]:col-span-2">
             <CollapsibleTrigger className="flex w-full items-center gap-2 bg-card px-3.5 py-3 text-left">
-              <ChevronRight className={cn("size-4 shrink-0 transition-transform duration-150", bumpsOpen && "rotate-90")} />
+              <HugeiconsIcon icon={ArrowRight01Icon} className={cn("size-4 shrink-0 transition-transform duration-150", bumpsOpen && "rotate-90")} />
               <span className="text-sm font-semibold">Perderam a vaga</span>
               <span className="text-[13px] text-subtle-foreground">{daily.bumps.length}</span>
             </CollapsibleTrigger>

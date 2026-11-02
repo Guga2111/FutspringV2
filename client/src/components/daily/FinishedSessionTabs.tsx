@@ -63,7 +63,7 @@ function FinalLeagueTable({ daily }: { daily: DailyDetail }) {
         </TableHeader>
         <TableBody>
           {daily.leagueTable.map((row, i) => (
-            <TableRow key={row.teamId} className={cn("border-border/60 text-sm hover:bg-transparent", i === 0 && "bg-gold-muted hover:bg-gold-muted")}>
+            <TableRow key={row.teamId} className={cn("border-border/60 text-sm hover:bg-transparent", i === 0 && "bg-highlight-muted hover:bg-highlight-muted")}>
               <TableCell className={cn(num, "pl-3 font-bold", MEDALS[i] ?? "text-faint-foreground")}>{row.position}º</TableCell>
               <TableCell className="py-3 pl-2 pr-1 md:pl-3">
                 <span className={cn("flex min-w-0 items-center gap-2", i === 0 ? "font-bold" : "font-medium")}>
@@ -107,7 +107,7 @@ function MatchCards({ daily }: { daily: DailyDetail }) {
                   <TeamColorDot color={colorOf.get(match.team1Id) ?? null} />
                   <span className="truncate">{match.team1Name}</span>
                 </span>
-                <span className="text-[22px] font-bold tabular-nums tracking-[0.02em]">
+                <span className="font-display text-score font-bold tabular-nums tracking-[0.02em]">
                   {s1} – {s2}
                 </span>
                 <span className={cn("flex min-w-0 items-center justify-end gap-2", s2 > s1 && "font-bold")}>

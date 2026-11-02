@@ -1,5 +1,6 @@
 import type { ReactNode } from "react"
-import { CheckCheck, Settings } from "lucide-react"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { Settings01Icon, TickDouble02Icon } from "@hugeicons/core-free-icons"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -49,7 +50,7 @@ export function NotificationPanel({ title, onSelect, onOpenPreferences, classNam
               disabled={!unreadCount}
               className="h-8 px-2.5 text-xs text-muted-foreground"
             >
-              <CheckCheck />
+              <HugeiconsIcon icon={TickDouble02Icon} />
               Marcar todas como lidas
             </Button>
             <Button
@@ -59,7 +60,7 @@ export function NotificationPanel({ title, onSelect, onOpenPreferences, classNam
               aria-label="Preferências de notificação"
               className="size-8 text-muted-foreground"
             >
-              <Settings />
+              <HugeiconsIcon icon={Settings01Icon} />
             </Button>
           </div>
         </div>

@@ -122,6 +122,15 @@ class FinanceConcurrencyTest {
                 .containsExactlyInAnyOrder(HttpStatus.OK, HttpStatus.CONFLICT);
         assertThat(reads.detail(f.pelada(), f.list(), f.admin().getEmail()).charges().getFirst().received()).isEqualTo("30.00");
     }
+    @Test void receiveAllRacingASingleReceiptNeverOverpays() throws Exception {
+        var f = fixture();
+        var all = new FinanceRequests.ReceiveAll(command(f.pelada(), f.admin()), List.of(f.charge()), null, PaymentMethod.CASH);
+        var one = new FinanceRequests.Receipt(command(f.pelada(), f.admin()), null, null, PaymentMethod.PIX);
+        assertThat(race(() -> ledger.receiveAll(f.pelada(), f.list(), all, f.admin().getEmail()), () -> ledger.receive(f.pelada(), f.list(), f.charge(), one, f.admin().getEmail())))
+                .containsExactlyInAnyOrder(HttpStatus.OK, HttpStatus.CONFLICT);
+        assertThat(movements.findByChargeIdIn(List.of(f.charge()))).hasSize(1);
+        assertThat(reads.detail(f.pelada(), f.list(), f.admin().getEmail()).charges().getFirst().outstanding()).isEqualTo("0.00");
+    }
     @Test void duplicateConcurrentConfirmationHasOneReceiptEvenWithDifferentRequestKeys() throws Exception {
         var f = fixture(); ledger.report(f.pelada(), f.list(), f.charge(), command(f.pelada(), f.admin()), null, f.player().getEmail());
         Long notice = reads.detail(f.pelada(), f.list(), f.admin().getEmail()).charges().getFirst().notices().getFirst().id();

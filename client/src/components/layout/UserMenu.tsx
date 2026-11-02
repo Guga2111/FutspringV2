@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom"
-import { Bell, ChevronsUpDown, LogOut, Moon, Sun, User } from "lucide-react"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { Logout01Icon, Moon02Icon, Notification01Icon, Sun03Icon, UnfoldMoreIcon, UserIcon } from "@hugeicons/core-free-icons"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   DropdownMenu,
@@ -67,7 +68,7 @@ export function UserMenu() {
                 <span className="truncate text-sm font-semibold">{user.username}</span>
                 <span className="truncate text-xs text-muted-foreground">{user.email}</span>
               </span>
-              <ChevronsUpDown className="ml-auto text-muted-foreground group-data-[collapsible=icon]:hidden" />
+              <HugeiconsIcon icon={UnfoldMoreIcon} className="ml-auto text-muted-foreground group-data-[collapsible=icon]:hidden" />
             </SidebarMenuButton>
           </DropdownMenuTrigger>
           <DropdownMenuContent
@@ -85,15 +86,15 @@ export function UserMenu() {
             </DropdownMenuLabel>
             <DropdownMenuSeparator className="-mx-1 bg-border" />
             <DropdownMenuItem className={itemClass} onSelect={goToProfile}>
-              <User />
+              <HugeiconsIcon icon={UserIcon} />
               Perfil
             </DropdownMenuItem>
             <DropdownMenuItem className={itemClass} onSelect={goToNotificationSettings}>
-              <Bell />
+              <HugeiconsIcon icon={Notification01Icon} />
               Notificações
             </DropdownMenuItem>
             <DropdownMenuItem className={itemClass} onSelect={toggleTheme}>
-              {isDark ? <Sun /> : <Moon />}
+              {isDark ? <HugeiconsIcon icon={Sun03Icon} /> : <HugeiconsIcon icon={Moon02Icon} />}
               {isDark ? "Tema claro" : "Tema escuro"}
             </DropdownMenuItem>
             <DropdownMenuSeparator className="-mx-1 bg-border" />
@@ -101,7 +102,7 @@ export function UserMenu() {
               className={`${itemClass} text-destructive focus:bg-destructive-muted focus:text-destructive [&>svg]:text-destructive`}
               onSelect={handleLogout}
             >
-              <LogOut />
+              <HugeiconsIcon icon={Logout01Icon} />
               Sair
             </DropdownMenuItem>
           </DropdownMenuContent>

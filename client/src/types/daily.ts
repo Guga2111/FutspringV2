@@ -127,6 +127,8 @@ export interface DailyListItem {
   startsAt: string
   // ISO instant from when the caller may confirm themselves; null for mensalistas (the server re-checks it)
   confirmOpensAt: string | null
+  // the caller's result: true won, false played and didn't win, null didn't play or not finalized
+  wonSession: boolean | null
 }
 
 export interface DailyDetail {

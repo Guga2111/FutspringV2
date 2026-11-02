@@ -18,7 +18,7 @@ public final class FinanceViews {
                              String pixKey, String pixRecipient, Long qrId, List<Component> components,
                              Instant publishedAt, Totals totals) {}
     public record Overview(long revision, Permissions permissions, Settings settings, String balance,
-                           List<Template> templates, List<Collection> lists, boolean hasMore) {}
+                           List<Template> templates, List<Collection> lists, boolean hasMore, long total) {}
     public record Notice(Long id, Long userId, String amount, NoticeStatus status, Instant createdAt,
                          Instant resolvedAt, Long resolvedBy, String reason, Instant receiptExpiresAt,
                          boolean receiptAvailable) {}
@@ -34,6 +34,7 @@ public final class FinanceViews {
                            Long createdBy, Instant createdAt, boolean reversed) {}
     public record Audit(Long id, Long actorId, String actorName, AuditOperation operation, String target, String reason,
                         Instant createdAt, String beforeData, String afterData) {}
-    public record Page<T>(List<T> items, boolean hasMore) {}
+    /** total: every item of the query, for numbered pages. */
+    public record Page<T>(List<T> items, boolean hasMore, long total) {}
     public record Candidate(Long userId, String name, boolean mensalista) {}
 }

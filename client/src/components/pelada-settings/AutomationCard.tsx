@@ -6,7 +6,7 @@ import { Switch } from "@/components/ui/switch"
 import { getErrorMessage } from "@/lib/errors"
 import type { PeladaDetail } from "@/types/pelada"
 import { detailFields } from "@/components/pelada-settings/hooks/usePeladaSettings"
-import { SettingsCard } from "@/components/pelada-settings/SettingsCard"
+import { SettingsCard } from "@/components/SettingsCard"
 
 interface AutomationCardProps {
   pelada: PeladaDetail

@@ -3,6 +3,9 @@ export type FinanceListStatus = "DRAFT" | "OPEN" | "CLOSED" | "CANCELED"
 export type FinancePaymentMethod = "PIX" | "CASH" | "TRANSFER" | "OTHER"
 export type FinanceMovementKind = "OPENING" | "RECEIPT" | "INCOME" | "EXPENSE" | "REFUND" | "REVERSAL"
 export type FinanceVisibility = "INDIVIDUAL" | "TRANSPARENT"
+// the two list sections, paginated separately by the API (ACTIVE: DRAFT/OPEN, ARCHIVED: CLOSED/CANCELED)
+export type FinanceListScope = "ACTIVE" | "ARCHIVED"
+export const financeListScopeLabel: Record<FinanceListScope, string> = { ACTIVE: "Em aberto", ARCHIVED: "Encerradas" }
 export interface FinanceComponent { name: string; amount: string }
 export interface FinanceSettings { visibility: FinanceVisibility; pixKey: string | null; pixRecipient: string | null; qrId: number | null; managerIds: number[] }
 export interface FinanceTemplate {
@@ -16,6 +19,8 @@ export interface FinanceList extends Omit<FinanceTemplate, "archived" | "id"> {
 export interface FinanceOverview {
   revision: number; permissions: { manage: boolean; appointManagers: boolean; viewCash: boolean }
   settings: FinanceSettings; balance: string | null; templates: FinanceTemplate[]; lists: FinanceList[]; hasMore: boolean
+  // lists in the requested scope, for numbered pages
+  total: number
 }
 export interface FinanceNotice {
   id: number; userId: number; amount: string; status: "PENDING" | "CONFIRMED" | "REJECTED"; createdAt: string
@@ -34,7 +39,8 @@ export interface FinanceMovement {
   method: FinancePaymentMethod; description: string; category: string | null; createdBy: number; createdAt: string; reversed: boolean
 }
 export interface FinanceAudit { id: number; actorId: number; actorName: string; operation: FinanceAuditOperation; target: string; reason: string | null; createdAt: string; beforeData: string | null; afterData: string | null }
-export interface FinancePage<T> { items: T[]; hasMore: boolean }
+// total: every item of the query, for numbered pages
+export interface FinancePage<T> { items: T[]; hasMore: boolean; total: number }
 export interface FinanceCandidate { userId: number; name: string; mensalista: boolean }
 export const financeListStatusLabel: Record<FinanceListStatus, string> = { DRAFT: "Rascunho", OPEN: "Aberta", CLOSED: "Encerrada", CANCELED: "Cancelada" }
 export const financeClassificationLabel: Record<FinanceClassification, string> = { DAILY: "Diária", MONTHLY: "Mensalidade", OTHER: "Outra" }
