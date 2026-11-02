@@ -3,7 +3,7 @@ import * as f from "./fixtures"
 
 const QR_IMAGE = new URL("./assets/qr.png", import.meta.url).pathname
 
-type Handler = (match: RegExpMatchArray) => unknown
+type Handler = (match: RegExpMatchArray, url: URL) => unknown
 
 // GET routes the screens read. Anything else answers 404 and is recorded, so a new request
 // shows up as a test failure instead of an error state baked into a screenshot.
@@ -15,8 +15,9 @@ const routes: [RegExp, Handler][] = [
   [/^\/peladas\/\d+\/awards$/, () => f.awards],
   [/^\/peladas\/\d+\/attendance$/, () => f.attendance],
   [/^\/peladas\/\d+\/messages$/, () => []],
-  [/^\/peladas\/\d+\/invitations$/, () => []],
-  [/^\/peladas\/\d+\/invite-link$/, () => null],
+  [/^\/peladas\/\d+\/invitations$/, (_, url) =>
+    url.searchParams.get("pending") === "false" ? f.peladaInvitationsHistory : f.peladaInvitationsPending],
+  [/^\/peladas\/\d+\/invite-link$/, () => f.inviteLink],
   [/^\/peladas\/\d+\/finance$/, () => f.financeOverview],
   [/^\/peladas\/\d+\/finance\/lists\/\d+$/, () => f.financeDetail],
   [/^\/peladas\/\d+\/finance\/movements$/, () => f.financeMovements],
@@ -30,6 +31,8 @@ const routes: [RegExp, Handler][] = [
   [/^\/users\/\d+\/stats\/timeline$/, () => f.timeline],
   [/^\/users\/\d+\/stats\/matches$/, () => f.matchHistory],
   [/^\/invitations$/, () => f.invitations],
+  [/^\/invitations\/(\d+)$/, (m) => f.invitations.find((i) => i.id === Number(m[1]))],
+  [/^\/invite-links\/[^/]+$/, () => f.invitations[0].pelada],
   [/^\/notifications$/, () => f.notifications],
   [/^\/notifications\/unread-count$/, () => ({ count: 1 })],
   [/^\/notifications\/preferences$/, () => f.notificationPreferences],
@@ -39,12 +42,13 @@ export async function mockApi(page: Page): Promise<string[]> {
   const unmatched: string[] = []
   await page.route(/\/api\/v1\//, async (route) => {
     const request = route.request()
-    const path = new URL(request.url()).pathname.replace(/^.*\/api\/v1/, "")
+    const url = new URL(request.url())
+    const path = url.pathname.replace(/^.*\/api\/v1/, "")
     if (request.method() === "GET") {
       for (const [pattern, handler] of routes) {
         const match = path.match(pattern)
         if (!match) continue
-        const body = handler(match)
+        const body = handler(match, url)
         if (body === undefined) break
         return body === null ? route.fulfill({ status: 204 }) : route.fulfill({ status: 200, json: body })
       }

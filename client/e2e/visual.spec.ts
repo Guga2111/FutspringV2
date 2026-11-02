@@ -6,7 +6,11 @@ const PELADA = `/pelada/${PELADA_ID}`
 
 // ready: what shows that the lazy page chunk rendered (default: a heading)
 const pages: { name: string; path: string; auth?: boolean; ready?: string }[] = [
+  { name: "landing", path: "/", auth: false, ready: "h1" },
   { name: "auth", path: "/auth", auth: false, ready: "form" },
+  { name: "auth-register", path: "/auth?tab=register", auth: false, ready: "form" },
+  { name: "join-link", path: "/join/Mw.8f3a9c2e7b1d4f60a5c8e2b7d9f1a3c5", auth: false },
+  { name: "not-found", path: "/pagina-que-nao-existe", auth: false },
   { name: "home", path: "/home" },
   { name: "pelada-overview", path: PELADA },
   { name: "pelada-members", path: `${PELADA}/membros` },
@@ -15,16 +19,22 @@ const pages: { name: string; path: string; auth?: boolean; ready?: string }[] = 
   { name: "pelada-awards", path: `${PELADA}/premios` },
   { name: "pelada-finance", path: `${PELADA}/financeiro` },
   { name: "pelada-settings", path: `${PELADA}/settings` },
+  { name: "pelada-invitations", path: `${PELADA}/convites` },
   { name: "daily-scheduled", path: `/daily/${SCHEDULED_ID}` },
   { name: "daily-live", path: `/daily/${LIVE_ID}` },
   { name: "daily-finished", path: `/daily/${FINISHED_ID}` },
   { name: "profile", path: "/profile/1" },
+  { name: "profile-history", path: "/profile/1?aba=historico" },
+  { name: "profile-peladas", path: "/profile/1?aba=peladas" },
   { name: "notification-settings", path: "/settings/notifications" },
+  { name: "invitation", path: "/invitations/900" },
 ]
 
-async function open(page: Page, path: string, auth = true, ready = "h1, h2"): Promise<string[]> {
+// setup: extra routes registered after mockApi's, so they answer first
+async function open(page: Page, path: string, auth = true, ready = "h1, h2", setup?: (page: Page) => Promise<unknown>): Promise<string[]> {
   await page.clock.setFixedTime(NOW)
   const unmatched = await mockApi(page)
+  await setup?.(page)
   if (auth) await login(page)
   await page.goto(path)
   await expect(page.locator(ready).first()).toBeVisible()
@@ -85,6 +95,26 @@ test("dialog results", async ({ page }) => {
   await page.getByRole("button", { name: "Lançar resultados" }).first().click()
   await settle(page)
   await expect(page.getByRole("dialog")).toHaveScreenshot("dialog-results.png", DIALOG_SHOT)
+})
+
+test("sessions gallery", async ({ page }) => {
+  const unmatched = await open(page, `${PELADA}/sessoes`)
+  await page.getByRole("radio", { name: "Ver em galeria" }).click()
+  await settle(page)
+  await expectNoHorizontalScroll(page)
+  await expect(page).toHaveScreenshot("pelada-sessions-gallery.png", { fullPage: true })
+  expect(unmatched, "requests without a fixture").toEqual([])
+})
+
+test("invitations: history, no active link", async ({ page }) => {
+  // the pelada has no link
+  const unmatched = await open(page, `${PELADA}/convites`, true, "h1, h2", (p) =>
+    p.route(/\/peladas\/\d+\/invite-link$/, (route) => route.fulfill({ status: 204 })))
+  await page.getByRole("tab", { name: "Histórico" }).click()
+  await settle(page)
+  await expectNoHorizontalScroll(page)
+  await expect(page).toHaveScreenshot("pelada-invitations-history.png", { fullPage: true })
+  expect(unmatched, "requests without a fixture").toEqual([])
 })
 
 const FINANCE = `${PELADA}/financeiro`
