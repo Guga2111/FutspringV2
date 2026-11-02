@@ -9,11 +9,38 @@ interface PhotoSlotProps {
   width: number
   height: number
   eager?: boolean
+  // contain: the whole photo in the middle, its sides filled with a blurred, enlarged copy
+  // of itself (portrait phone photos in a landscape card, nothing cropped or invented)
+  fit?: "cover" | "contain"
 }
 
 // One of the owner's photos, or a flat field with a short caption until the file exists
 // (see LandingPhoto in content.ts)
-export function PhotoSlot({ photo, className, standClassName, width, height, eager = false }: PhotoSlotProps) {
+export function PhotoSlot({ photo, className, standClassName, width, height, eager = false, fit = "cover" }: PhotoSlotProps) {
+  const loading = eager ? "eager" : "lazy"
+  if (photo.src && fit === "contain") {
+    return (
+      <div className={cn("relative h-full w-full overflow-hidden bg-night", className)}>
+        <img
+          src={photo.src}
+          alt=""
+          aria-hidden
+          width={width}
+          height={height}
+          loading={loading}
+          className="absolute inset-0 h-full w-full scale-125 object-cover opacity-70 blur-2xl"
+        />
+        <img
+          src={photo.src}
+          alt={photo.alt}
+          width={width}
+          height={height}
+          loading={loading}
+          className="relative block h-full w-full object-contain"
+        />
+      </div>
+    )
+  }
   if (photo.src) {
     return (
       <img
@@ -21,7 +48,7 @@ export function PhotoSlot({ photo, className, standClassName, width, height, eag
         alt={photo.alt}
         width={width}
         height={height}
-        loading={eager ? "eager" : "lazy"}
+        loading={loading}
         className={cn("block h-full w-full object-cover", className)}
       />
     )

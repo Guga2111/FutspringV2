@@ -6,8 +6,8 @@ import { cn } from "@/lib/utils"
 
 // beside the headline, never on it: in a row under it on a phone, at the field's sides from md
 const PRINTS = [
-  { photo: CHAMPION_PHOTOS[0], className: "-rotate-[6deg] md:left-[3%] md:top-[12%]" },
-  { photo: CHAMPION_PHOTOS[1], className: "rotate-[5deg] md:bottom-[12%] md:right-[3%]" },
+  { photo: CHAMPION_PHOTOS[4], className: "-rotate-[6deg] md:left-[3%] md:top-[12%]" },
+  { photo: CHAMPION_PHOTOS[0], className: "rotate-[5deg] md:bottom-[12%] md:right-[3%]" },
 ]
 
 // The achievement chapter (Cantaloupe): prints dropped on the headline, then every
@@ -33,7 +33,7 @@ export function GallerySection() {
                 className,
               )}
             >
-              <PhotoSlot photo={photo} width={480} height={640} />
+              <PhotoSlot photo={photo} width={900} height={1200} />
             </figure>
           ))}
         </div>
@@ -55,7 +55,7 @@ export function GallerySection() {
             <CarouselItem key={photo.alt} className="basis-[78%] sm:basis-1/2 lg:basis-1/3">
               <figure>
                 <div className="aspect-[4/3] overflow-hidden rounded-hero">
-                  <PhotoSlot photo={photo} width={640} height={480} />
+                  <PhotoSlot photo={photo} fit="contain" width={900} height={1200} />
                 </div>
                 <figcaption className="mt-3 text-base">
                   <span className="font-semibold">{photo.date}</span> · {photo.caption}

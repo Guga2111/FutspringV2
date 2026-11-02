@@ -30,6 +30,10 @@ const pages: { name: string; path: string; auth?: boolean; ready?: string }[] = 
   { name: "invitation", path: "/invitations/900" },
 ]
 
+// Loading a lazy page chunk is not what a test asserts, and under parallel workers (or the emulated amd64
+// image) it can take longer than expect's 5 s default
+const READY_TIMEOUT = 20_000
+
 // setup: extra routes registered after mockApi's, so they answer first
 async function open(page: Page, path: string, auth = true, ready = "h1, h2", setup?: (page: Page) => Promise<unknown>): Promise<string[]> {
   await page.clock.setFixedTime(NOW)
@@ -37,17 +41,23 @@ async function open(page: Page, path: string, auth = true, ready = "h1, h2", set
   await setup?.(page)
   if (auth) await login(page)
   await page.goto(path)
-  await expect(page.locator(ready).first()).toBeVisible()
+  await expect(page.locator(ready).first()).toBeVisible({ timeout: READY_TIMEOUT })
   await settle(page)
   return unmatched
 }
 
-// data loaded (no request in flight, no Skeleton left), fonts ready and no hover state
+// data loaded (no request in flight, no Skeleton left), fonts and images ready and no hover
+// state. A full-page shot doesn't scroll, so lazy images below the fold are loaded first
 async function settle(page: Page) {
   await page.mouse.move(0, 0)
   await page.waitForLoadState("networkidle")
   await expect(page.locator(".animate-pulse")).toHaveCount(0)
-  await page.evaluate(() => document.fonts.ready)
+  await page.evaluate(async () => {
+    const images = Array.from(document.images)
+    for (const image of images) image.loading = "eager"
+    await Promise.all(images.map((image) => image.decode().catch(() => undefined)))
+    await document.fonts.ready
+  })
 }
 
 // Centered dialogs sit on fractional pixels, so their text antialiasing varies a little between
@@ -152,7 +162,7 @@ test("finance member: my charges, Pix and report", async ({ page }) => {
   await page.route(/\/finance\/lists\/\d+$/, (route) => route.fulfill({ json: financeMemberDetail }))
   await login(page)
   await page.goto(FINANCE)
-  await expect(page.locator("h1, h2").first()).toBeVisible()
+  await expect(page.locator("h1, h2").first()).toBeVisible({ timeout: READY_TIMEOUT })
   await settle(page)
   await expect(page).toHaveScreenshot("finance-member.png", { fullPage: true })
   await page.getByRole("button", { name: /Mensalidade de novembro/ }).click()
@@ -177,7 +187,7 @@ test("finance tour on the first visit", async ({ page }) => {
   })
   await login(page)
   await page.goto(`${PELADA}/financeiro`)
-  await expect(page.getByText("Bem-vindo ao financeiro")).toBeVisible()
+  await expect(page.getByText("Bem-vindo ao financeiro")).toBeVisible({ timeout: READY_TIMEOUT })
   await settle(page)
   await expect(page).toHaveScreenshot("finance-tour-welcome.png", DIALOG_SHOT)
 
