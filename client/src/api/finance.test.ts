@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 vi.mock("@/api/client", () => ({ default: { post: vi.fn(), get: vi.fn(), put: vi.fn() } }))
 import apiClient from "@/api/client"
-import { receiveFinance, reportFinancePayment, saveFinanceList, confirmFinanceNotice, getFinanceImage, refundFinance, getFinance, getFinanceMovements } from "@/api/finance"
+import { receiveAllFinance, receiveFinance, reportFinancePayment, saveFinanceList, confirmFinanceNotice, getFinanceImage, refundFinance, getFinance, getFinanceMovements } from "@/api/finance"
 const command = { revision: 12, requestKey: "ed51d453-c4b5-407e-9709-99348e9fca42", reason: null }
 beforeEach(() => { vi.resetAllMocks(); vi.mocked(apiClient.post).mockResolvedValue({ data: {} }); vi.mocked(apiClient.get).mockResolvedValue({ data: new Blob() }); vi.mocked(apiClient.put).mockResolvedValue({ data: {} }) })
 describe("finance API", () => {
@@ -10,6 +10,10 @@ describe("finance API", () => {
     expect(apiClient.get).toHaveBeenLastCalledWith("/api/v1/peladas/1/finance", { params: { scope: "ARCHIVED", page: 2, size: 10 } })
     await getFinanceMovements(1, 3)
     expect(apiClient.get).toHaveBeenLastCalledWith("/api/v1/peladas/1/finance/movements", { params: { page: 3, size: 20 } })
+  })
+  it("receives every listed charge in one command, letting the server take today", async () => {
+    await receiveAllFinance(1, 2, command, [5, 6], { effectiveDate: "", method: "CASH" })
+    expect(apiClient.post).toHaveBeenCalledWith("/api/v1/peladas/1/finance/lists/2/receive-all", { command, chargeIds: [5, 6], effectiveDate: null, method: "CASH" })
   })
   it("lets the server capture the remaining balance for mark-paid", async () => {
     await receiveFinance(1, 2, 3, command, { amount: "40.00", effectiveDate: "", method: "PIX", reason: "" }, true)

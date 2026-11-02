@@ -24,6 +24,7 @@ export function useCreateFinanceCollection(peladaId: number, finance: FinanceCon
   async function next() {
     const valid = await form.trigger(step === 0 ? ["name", "classification", "amount", "components", "description", "dueDate", "dailyId", "pixKey", "pixRecipient"] : ["userIds", "guestNames"])
     if (valid) setStep(s => s + 1)
+    return valid
   }
   async function save(values: FinanceCreateValues, publish: boolean) {
     if (publish && values.userIds.length + values.guestNames.length === 0) {

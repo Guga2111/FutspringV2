@@ -28,6 +28,8 @@ export const financeParticipantsSchema = z.object({ userIds: z.array(id).max(100
 export const financeReceiptSchema = z.object({ amount: financeMoneySchema.refine(v => Number(v) > 0, "Informe um valor maior que zero"), effectiveDate: date, method, reason })
 export const financeRefundSchema = financeReceiptSchema.extend({ reason: requiredReason, reduceObligation: z.boolean() })
 export const financeConfirmationSchema = financeReceiptSchema.omit({ amount: true })
+// FinanceRequests.ReceiveAll: the charge ids come from the screen, the form only picks the date and the method
+export const financeReceiveAllSchema = z.object({ effectiveDate: date, method })
 export const financeReasonSchema = z.object({ reason: requiredReason })
 // FinanceRequests.Cash. Positive ordinary entries; the opening balance may be negative.
 export const financeCashSchema = z.object({ kind: z.enum(["OPENING", "INCOME", "EXPENSE"]), amount: financeSignedMoneySchema,
@@ -54,6 +56,7 @@ export type FinanceChargeValues = z.infer<typeof financeChargeSchema>
 export type FinanceParticipantsValues = z.infer<typeof financeParticipantsSchema>
 export type FinanceReceiptValues = z.infer<typeof financeReceiptSchema>
 export type FinanceRefundValues = z.infer<typeof financeRefundSchema>
+export type FinanceReceiveAllValues = z.infer<typeof financeReceiveAllSchema>
 export type FinanceCashValues = z.infer<typeof financeCashSchema>
 // One payment sheet renders the explicit receipt/confirmation/refund/report commands.
 export const financePaymentFormSchema = z.object({

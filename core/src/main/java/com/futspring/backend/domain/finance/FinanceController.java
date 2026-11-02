@@ -70,6 +70,8 @@ public class FinanceController {
             @PathVariable Long chargeId, @Valid @RequestBody FinanceRequests.Command body, @AuthenticationPrincipal String email) { return collections.cancelCharge(peladaId, listId, chargeId, body, email); }
     @PostMapping("/lists/{listId}/charges/{chargeId}/receive") public FinanceViews.Result receive(@PathVariable Long peladaId, @PathVariable Long listId,
             @PathVariable Long chargeId, @Valid @RequestBody FinanceRequests.Receipt body, @AuthenticationPrincipal String email) { return ledger.receive(peladaId, listId, chargeId, body, email); }
+    @PostMapping("/lists/{listId}/receive-all") public FinanceViews.Result receiveAll(@PathVariable Long peladaId, @PathVariable Long listId,
+            @Valid @RequestBody FinanceRequests.ReceiveAll body, @AuthenticationPrincipal String email) { return ledger.receiveAll(peladaId, listId, body, email); }
     @PostMapping(value = "/lists/{listId}/charges/{chargeId}/report", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public FinanceViews.Result report(@PathVariable Long peladaId, @PathVariable Long listId, @PathVariable Long chargeId,
             @Valid @RequestPart("command") FinanceRequests.Command command, @RequestPart(value = "file", required = false) MultipartFile file,

@@ -11,4 +11,5 @@ public interface FinanceChargeRepository extends JpaRepository<FinanceCharge, Lo
     Optional<FinanceCharge> findByIdAndPeladaIdAndListId(Long id, Long peladaId, Long listId);
     boolean existsByListIdAndPersonIdAndCanceledFalse(Long listId, Long personId);
     List<FinanceCharge> findByListIdIn(Collection<Long> listIds);
+    List<FinanceCharge> findByIdInAndPeladaIdAndListIdOrderById(Collection<Long> ids, Long peladaId, Long listId);
 }

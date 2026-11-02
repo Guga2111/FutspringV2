@@ -1,5 +1,5 @@
 import apiClient from "@/api/client"
-import type { FinanceCreateValues, FinanceCommand, FinanceListValues, FinanceTemplateValues, FinanceChargeValues, FinanceParticipantsValues, FinanceCashValues, FinanceReceiptValues, FinanceRefundValues } from "@/schemas/finance"
+import type { FinanceCreateValues, FinanceCommand, FinanceListValues, FinanceTemplateValues, FinanceChargeValues, FinanceParticipantsValues, FinanceCashValues, FinanceReceiptValues, FinanceRefundValues, FinanceReceiveAllValues } from "@/schemas/finance"
 import type { FinanceOverview, FinanceDetail, FinanceResult, FinancePage, FinanceMovement, FinanceAudit, FinanceCandidate, FinanceSettings, FinancePaymentMethod, FinanceListScope } from "@/types/finance"
 
 const root = (id: number) => `/api/v1/peladas/${id}/finance`
@@ -38,6 +38,10 @@ export function replaceFinanceCharge(id: number, listId: number, chargeId: numbe
 export function cancelFinanceCharge(id: number, listId: number, chargeId: number, command: FinanceCommand) { return post(id, `/lists/${listId}/charges/${chargeId}/cancel`, command) }
 export function receiveFinance(id: number, listId: number, chargeId: number, command: FinanceCommand, values: FinanceReceiptValues, remaining = false) {
   return post(id, `/lists/${listId}/charges/${chargeId}/receive`, { command, amount: remaining ? null : values.amount, effectiveDate: optional(values.effectiveDate), method: values.method })
+}
+// "Receber todos": each charge receives what it still owes, all or nothing (one revision, one audit entry)
+export function receiveAllFinance(id: number, listId: number, command: FinanceCommand, chargeIds: number[], values: FinanceReceiveAllValues) {
+  return post(id, `/lists/${listId}/receive-all`, { command, chargeIds, effectiveDate: optional(values.effectiveDate), method: values.method })
 }
 export function confirmFinanceNotice(id: number, listId: number, chargeId: number, noticeId: number, command: FinanceCommand, values: { effectiveDate: string; method: FinancePaymentMethod }) {
   return post(id, `/lists/${listId}/charges/${chargeId}/notices/${noticeId}/confirm`, { command, effectiveDate: optional(values.effectiveDate), method: values.method })

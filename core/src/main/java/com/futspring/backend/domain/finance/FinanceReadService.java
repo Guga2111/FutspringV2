@@ -88,6 +88,8 @@ public class FinanceReadService {
         movements.findByChargeIdIn(ids).forEach(m -> paid.merge(m.getChargeId(), m.getAmount(), BigDecimal::add));
         return new Data(paid, notices.recentByChargeIds(ids).stream().collect(Collectors.groupingBy(FinanceNotice::getChargeId)));
     }
+    // Received so far per charge, in one query for the whole batch
+    Map<Long, BigDecimal> paid(List<FinanceCharge> rows) { return data(rows).paid(); }
     BigDecimal paid(FinanceCharge charge) { return data(List.of(charge)).paid().getOrDefault(charge.getId(), ZERO); }
     BigDecimal remaining(FinanceCharge charge) { return charge.getAmountDue().subtract(paid(charge)); }
     FinanceViews.Collection collection(FinanceList list, List<FinanceCharge> rows, Data data) { return collection(list, rows, data, true); }

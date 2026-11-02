@@ -19,5 +19,7 @@ public interface FinanceNoticeRepository extends JpaRepository<FinanceNotice, Lo
     List<FinanceNotice> expiredAfter(@Param("now") Instant now, @Param("after") Long after, Pageable page);
     Optional<FinanceNotice> findByIdAndPeladaId(Long id, Long peladaId);
     boolean existsByChargeIdAndStatus(Long chargeId, FinanceTypes.NoticeStatus status);
+    @Query("SELECT DISTINCT n.chargeId FROM FinanceNotice n WHERE n.chargeId IN :ids AND n.status = :status")
+    List<Long> chargeIdsWithStatus(@Param("ids") Collection<Long> ids, @Param("status") FinanceTypes.NoticeStatus status);
     List<FinanceNotice> findByReceiptExpiresAtLessThanEqualAndReceiptDeletedAtIsNull(Instant now, Pageable page);
 }
