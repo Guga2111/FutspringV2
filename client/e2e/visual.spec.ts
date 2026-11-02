@@ -30,6 +30,10 @@ const pages: { name: string; path: string; auth?: boolean; ready?: string }[] = 
   { name: "invitation", path: "/invitations/900" },
 ]
 
+// Loading a lazy page chunk is not what a test asserts, and under parallel workers (or the emulated amd64
+// image) it can take longer than expect's 5 s default
+const READY_TIMEOUT = 20_000
+
 // setup: extra routes registered after mockApi's, so they answer first
 async function open(page: Page, path: string, auth = true, ready = "h1, h2", setup?: (page: Page) => Promise<unknown>): Promise<string[]> {
   await page.clock.setFixedTime(NOW)
@@ -37,7 +41,7 @@ async function open(page: Page, path: string, auth = true, ready = "h1, h2", set
   await setup?.(page)
   if (auth) await login(page)
   await page.goto(path)
-  await expect(page.locator(ready).first()).toBeVisible()
+  await expect(page.locator(ready).first()).toBeVisible({ timeout: READY_TIMEOUT })
   await settle(page)
   return unmatched
 }
@@ -158,7 +162,7 @@ test("finance member: my charges, Pix and report", async ({ page }) => {
   await page.route(/\/finance\/lists\/\d+$/, (route) => route.fulfill({ json: financeMemberDetail }))
   await login(page)
   await page.goto(FINANCE)
-  await expect(page.locator("h1, h2").first()).toBeVisible()
+  await expect(page.locator("h1, h2").first()).toBeVisible({ timeout: READY_TIMEOUT })
   await settle(page)
   await expect(page).toHaveScreenshot("finance-member.png", { fullPage: true })
   await page.getByRole("button", { name: /Mensalidade de novembro/ }).click()
@@ -183,7 +187,7 @@ test("finance tour on the first visit", async ({ page }) => {
   })
   await login(page)
   await page.goto(`${PELADA}/financeiro`)
-  await expect(page.getByText("Bem-vindo ao financeiro")).toBeVisible()
+  await expect(page.getByText("Bem-vindo ao financeiro")).toBeVisible({ timeout: READY_TIMEOUT })
   await settle(page)
   await expect(page).toHaveScreenshot("finance-tour-welcome.png", DIALOG_SHOT)
 
