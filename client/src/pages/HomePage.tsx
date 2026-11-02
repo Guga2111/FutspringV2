@@ -117,7 +117,7 @@ export default function HomePage() {
                 : statsKpis(stats).map((kpi) => (
                     <div key={kpi.label} className="flex flex-col gap-1 rounded-xl border bg-card px-4 py-3.5">
                       <dt className="text-xs text-muted-foreground">{kpi.label}</dt>
-                      <dd className="text-[26px] font-bold tabular-nums">{kpi.value}</dd>
+                      <dd className="font-display text-score font-bold tabular-nums">{kpi.value}</dd>
                       <dd className="text-xs text-faint-foreground">{kpi.sub}</dd>
                     </div>
                   ))}

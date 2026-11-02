@@ -69,7 +69,7 @@ export function DailyHeader({ daily, ...actions }: DailyHeaderProps) {
           ]}
         />
         <div className="flex flex-wrap items-center gap-2.5">
-          <h1 className="text-[22px] font-bold tracking-[-0.01em] md:text-[28px]">{formatLongDate(daily.dailyDate)}</h1>
+          <h1 className="font-display text-heading font-bold md:text-heading-lg">{formatLongDate(daily.dailyDate)}</h1>
           <DailyStatusBadge status={status} size="lg" />
           {status === "IN_COURSE" && (
             <span className="flex items-center gap-1.5 text-[13px] font-semibold text-success">

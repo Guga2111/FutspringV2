@@ -107,7 +107,7 @@ function MatchCards({ daily }: { daily: DailyDetail }) {
                   <TeamColorDot color={colorOf.get(match.team1Id) ?? null} />
                   <span className="truncate">{match.team1Name}</span>
                 </span>
-                <span className="text-[22px] font-bold tabular-nums tracking-[0.02em]">
+                <span className="font-display text-score font-bold tabular-nums tracking-[0.02em]">
                   {s1} – {s2}
                 </span>
                 <span className={cn("flex min-w-0 items-center justify-end gap-2", s2 > s1 && "font-bold")}>

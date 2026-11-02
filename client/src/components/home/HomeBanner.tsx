@@ -26,7 +26,7 @@ export function HomeBanner({ username, pendingCount, onCreatePelada }: HomeBanne
           <span className="flex items-center gap-1.5 self-start rounded-full bg-brand px-2.5 py-1 text-xs font-semibold text-brand-foreground">
             {formatLongDate(format(now, "yyyy-MM-dd"))}
           </span>
-          <h1 className="text-[28px] font-extrabold leading-[1.1] tracking-[-0.015em] text-white md:text-[38px]">
+          <h1 className="font-display text-display font-extrabold text-white md:text-display-lg">
             {greeting(now)}, {username}
           </h1>
           <span className="text-[15px] text-white/85">{pendingLine(pendingCount)}</span>

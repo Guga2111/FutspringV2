@@ -244,6 +244,15 @@
     @apply bg-background text-foreground;
     margin: 0;
   }
+  /* Arial resized to Inter's metrics (values from next/font), so the swap to Inter barely moves the layout */
+  @font-face {
+    font-family: "Inter Fallback";
+    src: local("Arial");
+    ascent-override: 90.49%;
+    descent-override: 22.56%;
+    line-gap-override: 0%;
+    size-adjust: 107.06%;
+  }
   /* native controls, scrollbars and autofill follow the theme */
   :root {
     color-scheme: light;

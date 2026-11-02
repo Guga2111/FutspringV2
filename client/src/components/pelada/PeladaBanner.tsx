@@ -27,7 +27,7 @@ export function PeladaBanner({ pelada, isCurrentUserAdmin }: PeladaBannerProps) 
       ) : (
         <span
           aria-hidden
-          className="absolute inset-0 flex select-none items-center justify-center pb-10 text-[56px] font-extrabold tracking-[0.02em] text-white/55"
+          className="absolute inset-0 flex select-none items-center justify-center pb-10 font-display text-hero font-extrabold tracking-[0.02em] text-white/55"
         >
           {getInitials(pelada.name)}
         </span>
@@ -45,7 +45,7 @@ export function PeladaBanner({ pelada, isCurrentUserAdmin }: PeladaBannerProps) 
       )}
 
       <div className="relative flex flex-col gap-2 px-[22px] py-5 text-white">
-        <h1 className="text-2xl font-bold">{pelada.name}</h1>
+        <h1 className="font-display text-heading-lg font-bold">{pelada.name}</h1>
         <div className="flex flex-wrap gap-x-4 gap-y-1 text-[13px] text-white/90 [&_svg]:size-3.5 [&_svg]:shrink-0">
           <span className="flex items-center gap-1.5">
             <Calendar />

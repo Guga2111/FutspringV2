@@ -49,7 +49,7 @@ export function NextSessionCard({ daily, timeZone, isAdmin, attendancePending, o
     <section className="flex flex-wrap items-center gap-5 rounded-tile border bg-card p-[18px]">
       <div className="flex h-20 w-[72px] shrink-0 flex-col items-center justify-center rounded-xl bg-brand text-brand-foreground">
         <span className="text-[11px] font-bold tracking-[0.08em]">{weekdayShort(daily.dailyDate).toUpperCase()}</span>
-        <span className="text-[28px] font-extrabold leading-[1.1]">{String(date.getDate()).padStart(2, "0")}</span>
+        <span className="font-display text-score font-extrabold tabular-nums">{String(date.getDate()).padStart(2, "0")}</span>
         <span className="text-[11px] font-semibold">{MONTHS_SHORT[date.getMonth()]}</span>
       </div>
       <div className="flex min-w-[220px] flex-1 flex-col gap-2">

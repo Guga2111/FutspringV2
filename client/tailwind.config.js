@@ -11,6 +11,28 @@ export default {
   		}
   	},
   	extend: {
+  		// Inter for everything; Barlow Condensed (font-display) only for scores, big numbers and
+  		// page titles, never below 16px (spec: docs/plans/2026-11-01-design-system-sport-tech-spec.md)
+  		fontFamily: {
+  			sans: ['"Inter Variable"', 'Inter', '"Inter Fallback"', 'ui-sans-serif', 'system-ui', '-apple-system', '"Segoe UI"', 'Roboto', 'sans-serif'],
+  			display: ['"Barlow Condensed"', '"Arial Narrow"', '"Roboto Condensed"', 'ui-sans-serif', 'sans-serif']
+  		},
+  		// named steps of the sizes already in use; *-lg are the md: steps of the display sizes
+  		fontSize: {
+  			overline: ['11px', { lineHeight: '16px', letterSpacing: '0.06em', fontWeight: '600' }],
+  			caption: ['12px', { lineHeight: '16px' }],
+  			'body-sm': ['13px', { lineHeight: '18px' }],
+  			body: ['14px', { lineHeight: '20px' }],
+  			'body-lg': ['15px', { lineHeight: '22px' }],
+  			title: ['17px', { lineHeight: '24px', letterSpacing: '-0.005em', fontWeight: '600' }],
+  			heading: ['22px', { lineHeight: '1.15', letterSpacing: '0.01em' }],
+  			'heading-lg': ['28px', { lineHeight: '1.15', letterSpacing: '0.01em' }],
+  			display: ['32px', { lineHeight: '1.05', letterSpacing: '0.01em' }],
+  			'display-lg': ['44px', { lineHeight: '1.05', letterSpacing: '0.01em' }],
+  			score: ['28px', { lineHeight: '1' }],
+  			'score-lg': ['36px', { lineHeight: '1' }],
+  			hero: ['56px', { lineHeight: '1' }]
+  		},
   		colors: {
   			border: 'hsl(var(--border))',
   			input: 'hsl(var(--input))',
