@@ -21,6 +21,6 @@ export function FinanceReplacementForm({ peladaId, finance, charge, list, member
       catch (e) { applyServerErrors(form, e, "Não foi possível substituir o participante") }
     })}><FieldGroup><Field><FieldLabel htmlFor="finance-replacement">Novo membro</FieldLabel><Select value={String(userIdValue ?? "none")} onValueChange={v => form.setValue("userId", v === "none" ? null : Number(v))}><SelectTrigger id="finance-replacement"><SelectValue /></SelectTrigger><SelectContent><SelectGroup><SelectItem value="none">Selecionar ou usar convidado</SelectItem>{members.filter(m => m.id !== charge.userId).map(m => <SelectItem key={m.id} value={String(m.id)}>{m.username}</SelectItem>)}</SelectGroup></SelectContent></Select></Field>
       <FinanceInput control={form.control} name="guestName" label="Ou novo convidado por nome" /><FinanceInput control={form.control} name="reason" label="Motivo" multiline />
-    </FieldGroup><FinanceFormError message={form.formState.errors.root?.message} /><Button type="submit" disabled={finance.pending}>Confirmar troca</Button></form>
+    </FieldGroup><FinanceFormError message={form.formState.errors.root?.message} /><Button variant="gradient" type="submit" disabled={finance.pending}>Confirmar troca</Button></form>
   </DialogContent></Dialog>
 }

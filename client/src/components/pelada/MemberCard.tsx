@@ -98,15 +98,7 @@ export function MemberCard({
             )}
             {member.isAdmin && <Crown aria-label="Admin" className="size-3.5 shrink-0 text-gold" />}
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <MembershipBadge isMensalista={member.isMensalista} />
-            {position && (
-              <Badge variant="status" className="bg-secondary px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.03em] text-secondary-foreground">
-                {position}
-              </Badge>
-            )}
-            <StarRow stars={member.stars} />
-          </div>
+          <StarRow stars={member.stars} />
         </div>
         {!selectable && (
           <DropdownMenu>
@@ -116,7 +108,7 @@ export function MemberCard({
                 size="icon"
                 aria-label={`Ações de ${member.username}`}
                 disabled={isToggling || isRemoving}
-                className="size-7 shrink-0 self-start text-subtle-foreground hover:bg-secondary hover:text-foreground"
+                className="size-7 shrink-0 text-subtle-foreground hover:bg-secondary hover:text-foreground"
               >
                 <MoreHorizontal className="size-4" />
               </Button>
@@ -171,7 +163,16 @@ export function MemberCard({
           </DropdownMenu>
         )}
       </div>
-      <dl className="grid grid-cols-3 border-t pt-2.5">
+      {/* one line on every card (same height with or without a position), so the stats line up across a row */}
+      <div className="flex h-[22px] items-center gap-2 overflow-hidden">
+        <MembershipBadge isMensalista={member.isMensalista} />
+        {position && (
+          <Badge variant="status" className="bg-secondary px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.03em] text-secondary-foreground">
+            {position}
+          </Badge>
+        )}
+      </div>
+      <dl className="mt-auto grid grid-cols-3 border-t pt-2.5">
         {(
           [
             ["Jogos", stats.matchesPlayed],
