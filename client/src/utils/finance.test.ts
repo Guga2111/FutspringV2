@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import type { FinanceCharge } from "@/types/finance"
-import { filterFinanceCharges, financeQueueCounts, formatFinanceMoney, normalizeFinanceAmount, sumFinanceAmounts } from "@/utils/finance"
+import { clampFinancePage, filterFinanceCharges, financePageCount, financeQueueCounts, formatFinanceMoney, normalizeFinanceAmount, sumFinanceAmounts } from "@/utils/finance"
 
 it("formats cents without floating point rounding", () => {
   expect(formatFinanceMoney("999999999999.99")).toBe("R$ 999.999.999.999,99")
@@ -38,5 +38,18 @@ describe("administrator payment queue", () => {
   it("matches names without case or accents within the chosen filter", () => {
     expect(filterFinanceCharges(rows, "pending", "alvARO").map(c => c.id)).toEqual([1])
     expect(filterFinanceCharges(rows, "review", "alvaro")).toEqual([])
+  })
+})
+
+describe("finance pages", () => {
+  it("counts at least one page", () => {
+    expect(financePageCount(0, 10)).toBe(1)
+    expect(financePageCount(10, 10)).toBe(1)
+    expect(financePageCount(11, 10)).toBe(2)
+  })
+  it("moves back when the current page disappears", () => {
+    expect(clampFinancePage(2, 21, 10)).toBe(2)
+    expect(clampFinancePage(2, 20, 10)).toBe(1)
+    expect(clampFinancePage(1, 0, 10)).toBe(0)
   })
 })

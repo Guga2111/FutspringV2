@@ -14,7 +14,7 @@ public interface FinanceNoticeRepository extends JpaRepository<FinanceNotice, Lo
         """)
     List<FinanceNotice> recentByChargeIds(@Param("ids") Collection<Long> ids);
     List<FinanceNotice> findByChargeIdInOrderByIdDesc(Collection<Long> ids);
-    org.springframework.data.domain.Slice<FinanceNotice> findByPeladaIdAndChargeIdOrderByIdDesc(Long peladaId, Long chargeId, Pageable page);
+    org.springframework.data.domain.Page<FinanceNotice> findByPeladaIdAndChargeIdOrderByIdDesc(Long peladaId, Long chargeId, Pageable page);
     @Query("SELECT n FROM FinanceNotice n WHERE n.receiptExpiresAt <= :now AND n.receiptDeletedAt IS NULL AND n.id > :after ORDER BY n.id")
     List<FinanceNotice> expiredAfter(@Param("now") Instant now, @Param("after") Long after, Pageable page);
     Optional<FinanceNotice> findByIdAndPeladaId(Long id, Long peladaId);

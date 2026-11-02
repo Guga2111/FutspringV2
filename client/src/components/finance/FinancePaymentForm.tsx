@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { FinancePixCard } from "@/components/finance/FinancePixCard"
 import { Controller, useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "sonner"
@@ -42,6 +43,7 @@ export function FinancePaymentForm({ peladaId, finance, charge, list, action, no
   const busy = finance.pending || form.formState.isSubmitting
   return <Sheet open onOpenChange={open => { if (!open && !busy) onClose() }}><SheetContent className="flex w-full flex-col gap-6 overflow-y-auto sm:max-w-lg">
     <SheetHeader><SheetTitle>{titles[action]}</SheetTitle><SheetDescription>{charge.name} · {list.name}</SheetDescription></SheetHeader>
+    {action === "report" && <FinancePixCard peladaId={peladaId} pixKey={list.pixKey} pixRecipient={list.pixRecipient} qrId={list.qrId} />}
     <form onSubmit={form.handleSubmit(submit)} noValidate className="flex flex-1 flex-col gap-6"><FieldGroup>
       {action === "report" || action === "confirm" ? <div><p className="text-sm text-muted-foreground">{action === "confirm" ? "Valor informado pelo jogador" : "Valor que você está informando"}</p><p className="mt-1 text-2xl font-semibold tabular-nums">{formatFinanceMoney(action === "confirm" ? notice?.amount ?? "0.00" : charge.outstanding)}</p></div> : <><FinanceInput control={form.control} name="amount" label={action === "refund" ? "Quanto será devolvido? (R$)" : "Quanto você recebeu? (R$)"} /><p className="text-sm text-muted-foreground">{action === "refund" ? `Recebido até agora: ${formatFinanceMoney(charge.received)}` : `Falta receber ${formatFinanceMoney(charge.outstanding)}. Para um parcial, informe o valor recebido.`}</p></>}
       {action === "report" ? <Controller control={form.control} name="file" render={({ field, fieldState }) => <Field data-invalid={fieldState.invalid}>

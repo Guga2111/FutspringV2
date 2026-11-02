@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test"
 import { mockApi, login } from "./mockApi"
-import { FINISHED_ID, LIVE_ID, NOW, PELADA_ID, SCHEDULED_ID } from "./fixtures"
+import { FINISHED_ID, LIVE_ID, NOW, PELADA_ID, SCHEDULED_ID, financeMemberDetail, financeMemberOverview } from "./fixtures"
 
 const PELADA = `/pelada/${PELADA_ID}`
 
@@ -85,4 +85,51 @@ test("dialog results", async ({ page }) => {
   await page.getByRole("button", { name: "Lançar resultados" }).first().click()
   await settle(page)
   await expect(page.getByRole("dialog")).toHaveScreenshot("dialog-results.png", DIALOG_SHOT)
+})
+
+const FINANCE = `${PELADA}/financeiro`
+
+test("finance manager: collection with its Pix", async ({ page }) => {
+  const unmatched = await open(page, FINANCE)
+  await page.getByRole("button", { name: /Mensalidade de novembro/ }).click()
+  await page.getByRole("button", { name: "Informações da cobrança e Pix" }).click()
+  await settle(page)
+  await expect(page).toHaveScreenshot("finance-detail-manager.png", { fullPage: true })
+  expect(unmatched, "requests without a fixture").toEqual([])
+})
+
+test("finance manager: cash with numbered pages", async ({ page }) => {
+  const unmatched = await open(page, FINANCE)
+  await page.getByRole("tab", { name: "Caixa" }).click()
+  await settle(page)
+  await expect(page).toHaveScreenshot("finance-cash.png", { fullPage: true })
+  expect(unmatched, "requests without a fixture").toEqual([])
+})
+
+test("finance manager: settings", async ({ page }) => {
+  const unmatched = await open(page, FINANCE)
+  await page.getByRole("tab", { name: "Configurações" }).click()
+  await settle(page)
+  await expect(page).toHaveScreenshot("finance-settings.png", { fullPage: true })
+  expect(unmatched, "requests without a fixture").toEqual([])
+})
+
+test("finance member: my charges, Pix and report", async ({ page }) => {
+  await page.clock.setFixedTime(NOW)
+  const unmatched = await mockApi(page)
+  // registered later, so they answer before the manager fixtures
+  await page.route(/\/finance(\?|$)/, (route) => route.fulfill({ json: financeMemberOverview }))
+  await page.route(/\/finance\/lists\/\d+$/, (route) => route.fulfill({ json: financeMemberDetail }))
+  await login(page)
+  await page.goto(FINANCE)
+  await expect(page.locator("h1, h2").first()).toBeVisible()
+  await settle(page)
+  await expect(page).toHaveScreenshot("finance-member.png", { fullPage: true })
+  await page.getByRole("button", { name: /Mensalidade de novembro/ }).click()
+  await settle(page)
+  await expect(page).toHaveScreenshot("finance-member-detail.png", { fullPage: true })
+  await page.getByRole("button", { name: "Informar pagamento" }).click()
+  await settle(page)
+  await expect(page.getByRole("dialog")).toHaveScreenshot("finance-member-report.png", DIALOG_SHOT)
+  expect(unmatched, "requests without a fixture").toEqual([])
 })

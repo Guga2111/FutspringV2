@@ -20,7 +20,7 @@ import { makeTransferPeladaSchema, type TransferPeladaValues } from "@/schemas/p
 import type { PeladaDetail, PeladaMember } from "@/types/pelada"
 import { ConfirmNameField } from "@/components/pelada-settings/ConfirmNameField"
 import { detailFields } from "@/components/pelada-settings/hooks/usePeladaSettings"
-import { SettingsRootError } from "@/components/pelada-settings/SettingsCard"
+import { SettingsRootError } from "@/components/SettingsCard"
 
 interface TransferPeladaDialogProps {
   pelada: PeladaDetail

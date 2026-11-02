@@ -11,7 +11,7 @@ export function useFinanceHistory(peladaId: number, kind: "cash" | "audit", revi
     let cancelled = false
     const request = kind === "cash" ? getFinanceMovements(peladaId, page) : getFinanceAudit(peladaId, page)
     request.then(data => { if (!cancelled) setResult({ key, data, error: null }) }).catch(e => {
-      if (!cancelled) setResult({ key, data: { items: [], hasMore: false }, error: getErrorMessage(e, "Não foi possível carregar o histórico") })
+      if (!cancelled) setResult({ key, data: { items: [], hasMore: false, total: 0 }, error: getErrorMessage(e, "Não foi possível carregar o histórico") })
     })
     return () => { cancelled = true }
   }, [peladaId, kind, page, key])

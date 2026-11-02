@@ -199,6 +199,33 @@ class FinanceServiceTest extends BaseIntegrationTest {
         var foreign = peladas.save(Pelada.builder().name("Outra").dayOfWeek("SATURDAY").timeOfDay("19:00").duration(1f).creator(admin).members(new HashSet<>(Set.of(admin))).admins(new HashSet<>(Set.of(admin))).build());
         fails(() -> reads.detail(foreign.getId(), l, admin.getEmail()), HttpStatus.NOT_FOUND);
     }
+    @Test void listsArePaginatedPerScopeWithTotalsAndMembersOnlyCountTheirOwnLists() {
+        Long first = open(); Long second = open(); Long third = open();
+        collections.transition(id(), third, "CLOSE", command(), admin.getEmail());
+        Long hidden = draft(Classification.OTHER);
+        var active = reads.overview(id(), admin.getEmail(), ListScope.ACTIVE, 0, 2);
+        assertThat(active.lists()).extracting(FinanceViews.Collection::id).containsExactly(hidden, second);
+        assertThat(active.total()).isEqualTo(3); assertThat(active.hasMore()).isTrue();
+        var next = reads.overview(id(), admin.getEmail(), ListScope.ACTIVE, 1, 2);
+        assertThat(next.lists()).extracting(FinanceViews.Collection::id).containsExactly(first);
+        assertThat(next.hasMore()).isFalse();
+        var archived = reads.overview(id(), admin.getEmail(), ListScope.ARCHIVED, 0, 2);
+        assertThat(archived.lists()).extracting(FinanceViews.Collection::id).containsExactly(third);
+        assertThat(archived.total()).isEqualTo(1);
+        // the member has a charge in the three published lists and never sees the draft, in the list or in the total
+        var mine = reads.overview(id(), member.getEmail(), ListScope.ACTIVE, 0, 50);
+        assertThat(mine.lists()).extracting(FinanceViews.Collection::id).containsExactly(second, first);
+        assertThat(mine.total()).isEqualTo(2);
+        assertThat(reads.overview(id(), other.getEmail(), ListScope.ACTIVE, 0, 50).total()).isZero();
+    }
+    @Test void ledgerAndAuditPagesReportTheirTotal() {
+        Long l = open(); receive(l, "10.00"); receive(l, "5.00"); receive(l, "1.00");
+        var page = reads.ledger(id(), admin.getEmail(), 0, 2);
+        assertThat(page.items()).hasSize(2); assertThat(page.hasMore()).isTrue(); assertThat(page.total()).isEqualTo(3);
+        assertThat(reads.ledger(id(), admin.getEmail(), 1, 2).items()).hasSize(1);
+        var audit = reads.audit(id(), admin.getEmail(), 0, 50);
+        assertThat(audit.total()).isEqualTo(audit.items().size());
+    }
     @Test void closeReopenDuplicateAndReplacementPreserveAllocations() {
         Long l = open(); receive(l, "20.00"); collections.transition(id(), l, "CLOSE", command(), admin.getEmail());
         fails(() -> receive(l, "5.00"), HttpStatus.CONFLICT);

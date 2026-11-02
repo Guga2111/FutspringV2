@@ -19,7 +19,8 @@ public class FinanceController {
     private final FinanceAttachmentService attachments;
 
     @GetMapping public FinanceViews.Overview overview(@PathVariable Long peladaId, @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "50") int size, @AuthenticationPrincipal String email) { return reads.overview(peladaId, email, page, size); }
+            @RequestParam(defaultValue = "50") int size, @RequestParam(defaultValue = "ACTIVE") FinanceTypes.ListScope scope,
+            @AuthenticationPrincipal String email) { return reads.overview(peladaId, email, scope, page, size); }
     @GetMapping("/lists/{listId}") public FinanceViews.Detail detail(@PathVariable Long peladaId, @PathVariable Long listId,
             @AuthenticationPrincipal String email) { return reads.detail(peladaId, listId, email); }
     @GetMapping("/movements") public FinanceViews.Page<FinanceViews.Movement> movements(@PathVariable Long peladaId,
