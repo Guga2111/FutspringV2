@@ -69,7 +69,20 @@ export default {
   			},
   			silver: 'hsl(var(--silver))',
   			bronze: 'hsl(var(--bronze))',
-  			brand: 'hsl(var(--brand))',
+  			brand: {
+  				DEFAULT: 'hsl(var(--brand))',
+  				foreground: 'hsl(var(--brand-foreground))',
+  				hover: 'hsl(var(--brand-hover))',
+  				text: 'hsl(var(--brand-text))',
+  				muted: 'hsl(var(--brand-muted))'
+  			},
+  			highlight: {
+  				DEFAULT: 'hsl(var(--highlight))',
+  				foreground: 'hsl(var(--highlight-foreground))',
+  				text: 'hsl(var(--highlight-text))',
+  				muted: 'hsl(var(--highlight-muted))'
+  			},
+  			overlay: 'hsl(var(--overlay))',
   			success: {
   				DEFAULT: 'hsl(var(--success))',
   				strong: 'hsl(var(--success-strong))',
@@ -100,7 +113,8 @@ export default {
   			},
   			chart: {
   				'1': 'hsl(var(--chart-1))',
-  				'2': 'hsl(var(--chart-2))'
+  				'2': 'hsl(var(--chart-2))',
+  				'3': 'hsl(var(--chart-3))'
   			},
   			sidebar: {
   				DEFAULT: 'hsl(var(--sidebar-background))',

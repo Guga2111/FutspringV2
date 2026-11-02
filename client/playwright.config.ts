@@ -18,7 +18,8 @@ export default defineConfig({
   retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI ? [["list"], ["html", { open: "never" }]] : "list",
   expect: {
-    toHaveScreenshot: { animations: "disabled", caret: "hide", maxDiffPixelRatio: 0.01 },
+    // threshold: per-pixel color tolerance (default 0.2 hides token changes such as #1f1f1f → #07070D)
+    toHaveScreenshot: { animations: "disabled", caret: "hide", threshold: 0.02, maxDiffPixelRatio: 0.002 },
   },
   use: {
     baseURL: `http://localhost:${PORT}`,

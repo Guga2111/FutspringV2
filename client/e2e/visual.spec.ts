@@ -4,8 +4,9 @@ import { FINISHED_ID, LIVE_ID, NOW, PELADA_ID, SCHEDULED_ID } from "./fixtures"
 
 const PELADA = `/pelada/${PELADA_ID}`
 
-const pages: { name: string; path: string; auth?: boolean }[] = [
-  { name: "auth", path: "/auth", auth: false },
+// ready: what shows that the lazy page chunk rendered (default: a heading)
+const pages: { name: string; path: string; auth?: boolean; ready?: string }[] = [
+  { name: "auth", path: "/auth", auth: false, ready: "form" },
   { name: "home", path: "/home" },
   { name: "pelada-overview", path: PELADA },
   { name: "pelada-members", path: `${PELADA}/membros` },
@@ -21,15 +22,27 @@ const pages: { name: string; path: string; auth?: boolean }[] = [
   { name: "notification-settings", path: "/settings/notifications" },
 ]
 
-async function open(page: Page, path: string, auth = true): Promise<string[]> {
+async function open(page: Page, path: string, auth = true, ready = "h1, h2"): Promise<string[]> {
   await page.clock.setFixedTime(NOW)
   const unmatched = await mockApi(page)
   if (auth) await login(page)
   await page.goto(path)
-  await page.waitForLoadState("networkidle")
-  await page.evaluate(() => document.fonts.ready)
+  await expect(page.locator(ready).first()).toBeVisible()
+  await settle(page)
   return unmatched
 }
+
+// data loaded (no request in flight, no Skeleton left), fonts ready and no hover state
+async function settle(page: Page) {
+  await page.mouse.move(0, 0)
+  await page.waitForLoadState("networkidle")
+  await expect(page.locator(".animate-pulse")).toHaveCount(0)
+  await page.evaluate(() => document.fonts.ready)
+}
+
+// Centered dialogs sit on fractional pixels, so their text antialiasing varies a little between
+// runs; a token change still alters nearly every pixel
+const DIALOG_SHOT = { maxDiffPixelRatio: 0.04 }
 
 async function expectNoHorizontalScroll(page: Page) {
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)
@@ -37,13 +50,13 @@ async function expectNoHorizontalScroll(page: Page) {
 }
 
 test("document language is pt-BR", async ({ page }) => {
-  await open(page, "/auth", false)
+  await open(page, "/auth", false, "form")
   await expect(page.locator("html")).toHaveAttribute("lang", "pt-BR")
 })
 
-for (const { name, path, auth } of pages) {
+for (const { name, path, auth, ready } of pages) {
   test(`page ${name}`, async ({ page }) => {
-    const unmatched = await open(page, path, auth)
+    const unmatched = await open(page, path, auth, ready)
     await expectNoHorizontalScroll(page)
     await expect(page).toHaveScreenshot(`${name}.png`, { fullPage: true })
     expect(unmatched, "requests without a fixture").toEqual([])
@@ -54,19 +67,21 @@ test("dialog compare players", async ({ page }) => {
   await open(page, `${PELADA}/ranking`)
   await page.getByRole("button", { name: "Ações", exact: true }).click()
   await page.getByRole("option", { name: /Comparar Jogadores/ }).click()
-  await expect(page.getByRole("dialog")).toHaveScreenshot("dialog-compare-players.png")
+  await settle(page)
+  await expect(page.getByRole("dialog")).toHaveScreenshot("dialog-compare-players.png", DIALOG_SHOT)
 })
 
 test("dialog attendance ranking", async ({ page }) => {
   await open(page, `${PELADA}/ranking`)
   await page.getByRole("button", { name: "Ações", exact: true }).click()
   await page.getByRole("option", { name: /Ranking de Presença/ }).click()
-  await page.waitForLoadState("networkidle")
-  await expect(page.getByRole("dialog")).toHaveScreenshot("dialog-attendance-ranking.png")
+  await settle(page)
+  await expect(page.getByRole("dialog")).toHaveScreenshot("dialog-attendance-ranking.png", DIALOG_SHOT)
 })
 
 test("dialog results", async ({ page }) => {
   await open(page, `/daily/${LIVE_ID}`)
   await page.getByRole("button", { name: "Lançar resultados" }).first().click()
-  await expect(page.getByRole("dialog")).toHaveScreenshot("dialog-results.png")
+  await settle(page)
+  await expect(page.getByRole("dialog")).toHaveScreenshot("dialog-results.png", DIALOG_SHOT)
 })

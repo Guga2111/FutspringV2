@@ -12,6 +12,8 @@ export default defineConfig({
   test: {
     environment: 'node',
     globals: true,
+    // lets src/lib/contrast.test.ts read the design tokens with `@/index.css?raw`
+    css: { include: [/index\.css/] },
     // e2e/ holds the Playwright visual tests (bun run test:visual)
     exclude: [...configDefaults.exclude, 'e2e/**'],
   },

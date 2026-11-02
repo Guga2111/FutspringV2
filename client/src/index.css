@@ -3,47 +3,104 @@
 @tailwind utilities;
 
 @layer base {
+  /*
+   * Design tokens (docs/plans/2026-11-01-design-system-sport-tech-spec.md).
+   * Primitives (--p-*) are the palette, the same in both themes, and are NOT mapped in
+   * tailwind.config.js: components use the semantic tokens below, which point at them.
+   * Every token is a bare HSL triplet so Tailwind opacity modifiers work (bg-brand/20).
+   * src/lib/contrast.test.ts checks the text/background pairs of both themes.
+   */
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    /* primitives */
+    --p-midnight-950: 240 30% 3.9%; /* #07070D Midnight Black */
+    --p-midnight-900: 220 24% 7.3%; /* #0E1117 */
+    --p-surface-800: 220 23% 10.2%; /* #141820 Dark Surface */
+    --p-surface-750: 220 22% 12%; /* #191D26 */
+    --p-surface-700: 220 21% 13.9%; /* #1C212B */
+    --p-surface-600: 220 19% 18.4%; /* #262C38 */
+    --p-slate-450: 217 13% 53.9%; /* #7A8699 */
+    --p-slate-500: 216 14% 58.8%; /* #8793A5 Muted */
+    --p-slate-520: 219 12% 55.7%; /* #808A9C */
+    --p-slate-550: 218 13% 45.1%; /* #646F82 */
+    --p-slate-650: 216 12% 43.9%; /* #626D7E */
+    --p-slate-700: 216 13% 41%; /* #5B6676 */
+    --p-line-200: 218 19% 88.8%; /* #DDE1E8 */
+    --p-mist-100: 220 20% 94.1%; /* #EDEFF3 */
+    --p-mist-50: 220 20% 95.5%; /* #F1F2F5 */
+    --p-offwhite-50: 220 20% 97.1%; /* #F6F7F9 Off-White */
+    --p-white: 0 0% 100%;
+    --p-ink-950: 223 24% 5.7%; /* #0B0D12 */
+    --p-blue-300: 198 79% 57.1%; /* #3BB4E8 */
+    --p-blue-500: 197 94% 43.1%; /* #0799D5 Electric Blue */
+    --p-blue-700: 198 88% 32%; /* #0A6E99 */
+    --p-blue-50: 199 79% 94.5%; /* #E6F5FC */
+    --p-blue-950: 200 65% 12.2%; /* #0B2633 */
+    --p-orange-400: 10 100% 66.9%; /* #FF7356 Cantaloupe Orange */
+    --p-orange-700: 11 61% 43.7%; /* #B4442B */
+    --p-orange-50: 11 100% 96.7%; /* #FFF1EE */
+    --p-orange-950: 10 40% 11.8%; /* #2A1612 */
+    --p-indigo-600: 244 54% 52.9%; /* #4F46C8 */
+    --p-indigo-300: 239 82% 80.6%; /* #A5A6F6 */
+    --p-indigo-50: 240 70% 96.1%; /* #EEEEFC */
+    --p-indigo-950: 242 36% 17.6%; /* #1E1D3D */
+
+    /* surfaces and text (light) */
+    --background: var(--p-offwhite-50);
+    --foreground: var(--p-ink-950);
+    --card: var(--p-white);
+    --card-foreground: var(--p-ink-950);
+    --popover: var(--p-white);
+    --popover-foreground: var(--p-ink-950);
+    /* neutral, inverted: the default Button and selected chips (the brand is --brand) */
+    --primary: var(--p-ink-950);
+    --primary-foreground: var(--p-offwhite-50);
+    --secondary: var(--p-mist-100);
+    --secondary-foreground: var(--p-ink-950);
+    --muted: var(--p-mist-100);
+    --muted-foreground: var(--p-slate-700);
+    /* shadcn hover surface (ghost/outline buttons, menus), not the Cantaloupe highlight */
+    --accent: var(--p-mist-100);
+    --accent-foreground: var(--p-ink-950);
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    /* decorative dividers */
+    --border: var(--p-line-200);
+    /* form-control boundary: at least 3:1 against the surfaces (WCAG 1.4.11) */
+    --input: var(--p-slate-450);
+    --ring: var(--p-blue-700);
     --radius: 0.5rem;
-    /* brand green (#149440): buttons, progress, checkbox, logo text */
-    --brand: 142 76% 33%;
-    --chart-1: 142 72% 29%;
-    --chart-2: 217 91% 60%;
+    --overlay: var(--p-midnight-950);
+
+    /* brand (Electric Blue): fills carry --brand-foreground; brand as text is --brand-text */
+    --brand: var(--p-blue-500);
+    --brand-foreground: var(--p-midnight-950);
+    --brand-hover: var(--p-blue-300);
+    --brand-text: var(--p-blue-700);
+    --brand-muted: var(--p-blue-50);
+    /* highlight (Cantaloupe): achievements only, never errors or destructive actions */
+    --highlight: var(--p-orange-400);
+    --highlight-foreground: var(--p-midnight-950);
+    --highlight-text: var(--p-orange-700);
+    --highlight-muted: var(--p-orange-50);
+
+    --chart-1: var(--p-blue-700);
+    --chart-2: var(--p-orange-700);
+    --chart-3: var(--p-slate-700);
     /* stars, trophies, crowns */
-    --gold: 43 96% 46%;
+    --gold: 42 96% 38%;
     --gold-muted: 55 92% 95.3%;
     --gold-foreground: 0 0% 10.2%;
     --silver: 215 20% 65.1%;
     --bronze: 17 88% 40.4%;
 
-    /* surfaces */
-    --card-elevated: 210 40% 96.1%;
-    --row-hover: 210 40% 98%;
-    --avatar-fallback: 214 32% 91.4%;
-    --star-off: 214 32% 84%;
-    --subtle-foreground: 215 16% 46.9%;
-    --faint-foreground: 215 20% 65.1%;
+    --card-elevated: var(--p-mist-100);
+    --row-hover: var(--p-mist-50);
+    --avatar-fallback: var(--p-mist-100);
+    --star-off: var(--p-line-200);
+    --subtle-foreground: var(--p-slate-700);
+    --faint-foreground: var(--p-slate-650);
     /* ring around team color dots, so white and black teams show on both themes */
-    --team-dot-border: 213 27% 83.9%;
+    --team-dot-border: 218 15% 78%;
 
     /* feedback */
     --success: 142 72% 29.2%;
@@ -51,81 +108,87 @@
     --success-soft: 143 64% 24.1%;
     --success-muted: 141 84% 92.5%;
     --success-border: 142 77% 73.1%;
-    --warning: 32 95% 43.7%;
-    --destructive-soft: 0 72% 50.6%;
+    --warning: 32 95% 35%;
+    --destructive-soft: 0 72% 46%;
     --destructive-muted: 0 86% 97.3%;
-    --info: 200 98% 39.4%;
-    --info-muted: 204 94% 93.7%;
+    --info: var(--p-indigo-600);
+    --info-muted: var(--p-indigo-50);
 
     /* daily status badges (status-live is also the "Admin" pill) */
-    --status-scheduled: 214 95% 92.7%;
-    --status-scheduled-foreground: 224 76% 48%;
-    --status-scheduled-dot: 217 91% 59.8%;
+    --status-scheduled: var(--p-blue-50);
+    --status-scheduled-foreground: var(--p-blue-700);
+    --status-scheduled-dot: var(--p-blue-500);
     --status-live: 48 96% 88.8%;
-    --status-live-foreground: 26 90% 37.1%;
+    --status-live-foreground: 26 90% 33%;
     --status-live-dot: 38 92% 50.2%;
 
     /* live session card */
     --live-from: 138 76% 97%;
-    --live-to: 0 0% 100%;
+    --live-to: var(--p-white);
     --live-foreground: 143 64% 24.1%;
     --live-border: 142 77% 73.1%;
 
-    /* member avatars without a photo, picked by id */
-    --avatar-1: 158 100% 28.7%;
-    --avatar-2: 20 64% 44.8%;
-    --avatar-3: 263 42% 57.3%;
-    --avatar-4: 222 55% 56%;
-    --avatar-5: 353 46% 53.3%;
-    --avatar-6: 184 100% 30.3%;
+    /* member and pelada avatars without a photo, picked by id/name; white initials */
+    --avatar-1: 158 100% 26%;
+    --avatar-2: 20 64% 40%;
+    --avatar-3: 263 42% 50%;
+    --avatar-4: 222 55% 48%;
+    --avatar-5: 353 50% 46%;
+    --avatar-6: 184 100% 26%;
 
     /* app shell sidebar (shadcn sidebar) */
-    --sidebar-background: 210 40% 98%;
-    --sidebar-foreground: 222.2 84% 4.9%;
-    --sidebar-primary: 222.2 47.4% 11.2%;
-    --sidebar-primary-foreground: 210 40% 98%;
-    --sidebar-accent: 210 40% 94%;
-    --sidebar-accent-foreground: 222.2 84% 4.9%;
-    --sidebar-border: 214.3 31.8% 91.4%;
-    --sidebar-ring: 222.2 84% 4.9%;
+    --sidebar-background: var(--p-offwhite-50);
+    --sidebar-foreground: var(--p-ink-950);
+    --sidebar-primary: var(--p-blue-700);
+    --sidebar-primary-foreground: var(--p-white);
+    --sidebar-accent: var(--p-mist-100);
+    --sidebar-accent-foreground: var(--p-ink-950);
+    --sidebar-border: var(--p-line-200);
+    --sidebar-ring: var(--p-blue-700);
   }
 
   .dark {
-    --background: 0 0% 12%;
-    --foreground: 0 0% 96%;
-    --card: 0 0% 15%;
-    --card-foreground: 0 0% 96%;
-    --popover: 0 0% 15%;
-    --popover-foreground: 0 0% 96%;
-    --primary: 210 40% 98%;
-    --primary-foreground: 0 0% 11%;
-    --secondary: 0 0% 17%;
-    --secondary-foreground: 0 0% 96%;
-    --muted: 0 0% 17%;
-    --muted-foreground: 0 0% 58%;
-    --accent: 0 0% 17%;
-    --accent-foreground: 0 0% 96%;
-    --destructive: 0 72% 55%;
-    --destructive-foreground: 0 0% 96%;
-    --border: 0 0% 22%;
-    --input: 0 0% 22%;
-    --ring: 0 0% 68%;
-    --brand: 142 76% 33%;
-    --chart-1: 142 69% 45%;
-    --chart-2: 213 94% 68%;
+    --background: var(--p-midnight-950);
+    --foreground: var(--p-offwhite-50);
+    --card: var(--p-surface-800);
+    --card-foreground: var(--p-offwhite-50);
+    --popover: var(--p-surface-800);
+    --popover-foreground: var(--p-offwhite-50);
+    --primary: var(--p-offwhite-50);
+    --primary-foreground: var(--p-midnight-950);
+    --secondary: var(--p-surface-700);
+    --secondary-foreground: var(--p-offwhite-50);
+    --muted: var(--p-surface-700);
+    --muted-foreground: var(--p-slate-500);
+    --accent: var(--p-surface-700);
+    --accent-foreground: var(--p-offwhite-50);
+    --destructive: 0 72% 51%;
+    --destructive-foreground: var(--p-offwhite-50);
+    --border: var(--p-surface-600);
+    --input: var(--p-slate-550);
+    --ring: var(--p-blue-500);
+
+    --brand-text: var(--p-blue-500);
+    --brand-muted: var(--p-blue-950);
+    --highlight-text: var(--p-orange-400);
+    --highlight-muted: var(--p-orange-950);
+
+    --chart-1: var(--p-blue-500);
+    --chart-2: var(--p-orange-400);
+    --chart-3: var(--p-slate-500);
     --gold: 45 93% 58%;
     --gold-muted: 46 32% 10.4%;
     --gold-foreground: 0 0% 10.2%;
-    --silver: 0 0% 63.9%;
-    --bronze: 17 88% 40.4%;
+    --silver: var(--p-slate-500);
+    --bronze: 17 80% 52%;
 
-    --card-elevated: 0 0% 17%;
-    --row-hover: 0 0% 14%;
-    --avatar-fallback: 0 0% 22%;
-    --star-off: 0 0% 27%;
-    --subtle-foreground: 0 0% 54.1%;
-    --faint-foreground: 0 0% 45.1%;
-    --team-dot-border: 0 0% 29%;
+    --card-elevated: var(--p-surface-700);
+    --row-hover: var(--p-surface-750);
+    --avatar-fallback: var(--p-surface-600);
+    --star-off: 220 15% 27%;
+    --subtle-foreground: var(--p-slate-500);
+    --faint-foreground: var(--p-slate-520);
+    --team-dot-border: 220 12% 32%;
 
     --success: 142 69% 58%;
     --success-strong: 142 71% 45.3%;
@@ -134,30 +197,30 @@
     --success-border: 140 43% 21.2%;
     --warning: 43 96% 56.3%;
     --destructive-soft: 0 91% 70.8%;
-    --destructive-muted: 0 24% 13.3%;
-    --info: 198 93% 59.6%;
-    --info-muted: 200 58% 13.9%;
+    --destructive-muted: 0 30% 13%;
+    --info: var(--p-indigo-300);
+    --info-muted: var(--p-indigo-950);
 
-    --status-scheduled: 217 33% 17.5%;
-    --status-scheduled-foreground: 212 96% 78.4%;
-    --status-scheduled-dot: 217 91% 59.8%;
+    --status-scheduled: var(--p-blue-950);
+    --status-scheduled-foreground: var(--p-blue-300);
+    --status-scheduled-dot: var(--p-blue-500);
     --status-live: 45 67% 12%;
     --status-live-foreground: 46 97% 64.5%;
     --status-live-dot: 38 92% 50.2%;
 
-    --live-from: 140 26% 11.2%;
-    --live-to: 132 9% 11.2%;
+    --live-from: 150 30% 9%;
+    --live-to: var(--p-surface-800);
     --live-foreground: 141 26% 71.4%;
     --live-border: 139 23% 23.5%;
 
-    --sidebar-background: 0 0% 8.2%;
-    --sidebar-foreground: 0 0% 98%;
-    --sidebar-primary: 0 0% 98%;
-    --sidebar-primary-foreground: 0 0% 9%;
-    --sidebar-accent: 0 0% 14.9%;
-    --sidebar-accent-foreground: 0 0% 98%;
-    --sidebar-border: 0 0% 16.5%;
-    --sidebar-ring: 0 0% 63.9%;
+    --sidebar-background: var(--p-midnight-900);
+    --sidebar-foreground: var(--p-offwhite-50);
+    --sidebar-primary: var(--p-blue-500);
+    --sidebar-primary-foreground: var(--p-midnight-950);
+    --sidebar-accent: var(--p-surface-700);
+    --sidebar-accent-foreground: var(--p-offwhite-50);
+    --sidebar-border: var(--p-surface-600);
+    --sidebar-ring: var(--p-blue-500);
   }
 }
 
