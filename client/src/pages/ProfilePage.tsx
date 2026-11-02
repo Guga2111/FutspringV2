@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { getInitials, getPeladaGradient, getFileUrl } from '@/lib/utils'
+import { getInitials, getPeladaColor, getFileUrl } from '@/lib/utils'
 import { useAuth } from '@/hooks/useAuth'
 import { getPositionLabel } from '@/types/user'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -104,20 +104,20 @@ export default function ProfilePage() {
             return (
               <>
                 <div className="grid grid-cols-3 lg:grid-cols-6 gap-4 mb-4">
-                  <KpiCard label="Vitórias" value={wins} icon={<Swords className="w-5 h-5 text-red-400" />} />
-                  <KpiCard label="Partidas" value={matches} icon={<CalendarDays className="w-5 h-5 text-orange-400" />} />
-                  <KpiCard label="% Vitória" value={winPct} icon={<TrendingUp className="w-5 h-5 text-green-500" />} />
+                  <KpiCard label="Vitórias" value={wins} icon={<Swords className="w-5 h-5 text-success" />} />
+                  <KpiCard label="Partidas" value={matches} icon={<CalendarDays className="w-5 h-5 text-muted-foreground" />} />
+                  <KpiCard label="% Vitória" value={winPct} icon={<TrendingUp className="w-5 h-5 text-success" />} />
                   <KpiCard label="Campeão" value={stats.wins} icon={<Trophy className="w-5 h-5 text-gold" />} />
-                  <KpiCard label="Sessões" value={sessions} icon={<Star className="w-5 h-5 text-purple-400" />} />
-                  <KpiCard label="Aproveitamento" value={champPct} icon={<TrendingUp className="w-5 h-5 text-green-400" />} />
+                  <KpiCard label="Sessões" value={sessions} icon={<Star className="w-5 h-5 text-muted-foreground" />} />
+                  <KpiCard label="Aproveitamento" value={champPct} icon={<TrendingUp className="w-5 h-5 text-success" />} />
                 </div>
                 <div className="grid grid-cols-3 lg:grid-cols-6 gap-4">
-                  <KpiCard label="Gols" value={stats.goals} icon={<Target className="w-5 h-5 text-green-500" />} />
-                  <KpiCard label="Gols/Sessão" value={goalsPer} icon={<Target className="w-5 h-5 text-green-400" />} />
-                  <KpiCard label="Assistências" value={stats.assists} icon={<Handshake className="w-5 h-5 text-blue-400" />} />
-                  <KpiCard label="Assists/Sessão" value={assistsPer} icon={<Handshake className="w-5 h-5 text-blue-300" />} />
-                  <KpiCard label="Contribuições" value={contributions} icon={<Zap className="w-5 h-5 text-amber-400" />} />
-                  <KpiCard label="Contrib/Sessão" value={contribPer} icon={<Zap className="w-5 h-5 text-amber-300" />} />
+                  <KpiCard label="Gols" value={stats.goals} icon={<Target className="w-5 h-5 text-highlight-text" />} />
+                  <KpiCard label="Gols/Sessão" value={goalsPer} icon={<Target className="w-5 h-5 text-highlight-text" />} />
+                  <KpiCard label="Assistências" value={stats.assists} icon={<Handshake className="w-5 h-5 text-brand-text" />} />
+                  <KpiCard label="Assists/Sessão" value={assistsPer} icon={<Handshake className="w-5 h-5 text-brand-text" />} />
+                  <KpiCard label="Contribuições" value={contributions} icon={<Zap className="w-5 h-5 text-gold" />} />
+                  <KpiCard label="Contrib/Sessão" value={contribPer} icon={<Zap className="w-5 h-5 text-gold" />} />
                 </div>
               </>
             )
@@ -130,9 +130,9 @@ export default function ProfilePage() {
           <Separator className="mb-6" />
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <KpiCard label="Bola Murcha" value={stats.wiltballWins ?? 0} icon={<Medal className="w-5 h-5 text-gold" />} />
-            <KpiCard label="Artilheiro" value={stats.artilheiroWins ?? 0} icon={<Target className="w-5 h-5 text-red-500" />} />
-            <KpiCard label="Garçom" value={stats.garcomWins ?? 0} icon={<Handshake className="w-5 h-5 text-blue-500" />} />
-            <KpiCard label="Puskás" value={stats.puskasDates?.length ?? 0} icon={<Award className="w-5 h-5 text-orange-500" />} />
+            <KpiCard label="Artilheiro" value={stats.artilheiroWins ?? 0} icon={<Target className="w-5 h-5 text-highlight-text" />} />
+            <KpiCard label="Garçom" value={stats.garcomWins ?? 0} icon={<Handshake className="w-5 h-5 text-brand-text" />} />
+            <KpiCard label="Puskás" value={stats.puskasDates?.length ?? 0} icon={<Award className="w-5 h-5 text-gold" />} />
           </div>
         </section>
 
@@ -182,7 +182,7 @@ export default function ProfilePage() {
                       className="h-28 w-full object-cover"
                     />
                   ) : (
-                    <div className={`h-28 ${getPeladaGradient(pelada.name)} flex items-center justify-center`}>
+                    <div className={`h-28 ${getPeladaColor(pelada.name)} flex items-center justify-center`}>
                       <span className="text-2xl font-extrabold text-white tracking-wide select-none">
                         {getInitials(pelada.name)}
                       </span>

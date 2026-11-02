@@ -43,9 +43,9 @@ function ResultBadge({ result }: { result: string }) {
   const upper = result.toUpperCase()
   const classes =
     upper === 'WIN'
-      ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+      ? 'bg-success-muted text-success-soft'
       : upper === 'DRAW'
-        ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-gold'
+        ? 'bg-status-live text-status-live-foreground'
         : 'bg-muted text-muted-foreground'
   const label = upper === 'WIN' ? 'VITÓRIA' : upper === 'DRAW' ? 'EMPATE' : upper
   return (
@@ -57,7 +57,7 @@ function ResultBadge({ result }: { result: string }) {
 
 function formatDate(dateStr: string) {
   const d = new Date(dateStr)
-  return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+  return d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })
 }
 
 const columns: ColumnDef<MatchHistoryRow>[] = [

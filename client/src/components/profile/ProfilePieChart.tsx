@@ -43,7 +43,7 @@ export default function ProfilePieChart({ goals, assists }: ProfilePieChartProps
                       <tspan
                         x={viewBox.cx}
                         y={(viewBox.cy ?? 0) + 22}
-                        style={{ fontSize: '0.7rem', fill: '#888' }}
+                        style={{ fontSize: '0.7rem', fill: 'hsl(var(--muted-foreground))' }}
                       >
                         Contribuições
                       </tspan>
@@ -57,8 +57,8 @@ export default function ProfilePieChart({ goals, assists }: ProfilePieChartProps
         </PieChart>
       </ChartContainer>
       <div className="flex gap-4 text-xs text-muted-foreground">
-        <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-sm bg-[#32CD32]" />Gols</span>
-        <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-sm bg-[#99CB0E]" />Assist.</span>
+        <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-sm bg-chart-1" />Gols</span>
+        <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-sm bg-chart-2" />Assist.</span>
       </div>
       <div className="flex flex-col items-center gap-0.5 text-center">
         <span className="text-xs font-semibold">

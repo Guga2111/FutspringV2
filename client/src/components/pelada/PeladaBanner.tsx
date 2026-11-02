@@ -2,7 +2,7 @@ import { Bookmark, Calendar, Clock, MapPin, Settings } from "lucide-react"
 import { Link } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { dayOfWeekLabel } from "@/lib/constants"
-import { cn, getFileUrl, getInitials, getPeladaGradient } from "@/lib/utils"
+import { cn, getFileUrl, getInitials, getPeladaColor } from "@/lib/utils"
 import type { PeladaDetail } from "@/types/pelada"
 
 interface PeladaBannerProps {
@@ -19,7 +19,7 @@ export function PeladaBanner({ pelada, isCurrentUserAdmin }: PeladaBannerProps) 
     <section
       className={cn(
         "relative flex min-h-[190px] flex-col justify-end overflow-hidden rounded-tile md:min-h-[230px]",
-        !imageUrl && getPeladaGradient(pelada.name),
+        !imageUrl && getPeladaColor(pelada.name),
       )}
     >
       {imageUrl ? (

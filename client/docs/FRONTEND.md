@@ -77,7 +77,7 @@ client/
     │   ├── notifications/  NotificationBell (bell + count; Popover on desktop, Drawer on mobile), NotificationPanel (chips, list, states, "Carregar mais", gear to the e-mail preferences), NotificationItem
     │   ├── notification-settings/  NotificationPreferencesCard (the "E-mail" card: one Switch per category)
     │   │   └── hooks/    useNotificationPreferences, useEmailUnsubscribe
-    │   ├── PeladaAvatar.tsx   pelada photo or gradient with initials (sidebar, cards, banner)
+    │   ├── PeladaAvatar.tsx   pelada photo or a solid avatar color (`getPeladaColor`) with initials (sidebar, cards, banner)
     │   ├── PlayerAvatar.tsx, StarRow.tsx   round player avatar (photo / initials, `colorId` for per-player colors) and ★ rating
     │   ├── PrivateRoute.tsx, ErrorBoundary.tsx, ScrollToTop.tsx, ThemedToaster.tsx
     │   ├── pelada-settings/  settings page of a pelada (SettingsCard + SettingsCardFooter, SettingsNav, InfoCard, ScheduleCard, LocationCard, SlotsCard, AutomationCard, DangerZone + TransferPeladaDialog / DeletePeladaDialog, ConfirmNameField)
@@ -87,7 +87,7 @@ client/
     ├── hooks/            useAuth, useMyPeladas (+ useMyPeladasContext), useNotifications (+ useNotificationsContext), useRealtime, useNowUntil, useSelfConfirm, useTheme (dark class + localStorage.theme), useIsMobile (< 768 px)
     ├── lib/
     │   ├── config.ts     API_BASE (the only reader of VITE_API_URL)
-    │   ├── utils.ts      cn(), getFileUrl(), getInitials(), getPeladaGradient()
+    │   ├── utils.ts      cn(), getFileUrl(), getInitials(), getAvatarColor() / getPeladaColor() (the six `--avatar-*` tokens, by id / by name)
     │   ├── errors.ts     getErrorMessage(), getErrorStatus(), getApiErrorBody()
     │   ├── form-errors.ts applyServerErrors() for react-hook-form
     │   └── constants.ts  DAYS_OF_WEEK (API value + pt-BR label), dayOfWeekLabel()
@@ -489,7 +489,7 @@ Don't introduce these. Some exist already ("Found in", paths under `src/`); fix 
 |---|-------|-----------|----------|
 | 1 | Hand-rolled modals (`fixed inset-0 bg-black/50`): no focus trap, Esc or aria | `Dialog` / `AlertDialog` / `Sheet` | — |
 | 2 | Raw `<button>`, `<input>`, `<select>`, `<textarea>`, `<label>` | `Button`, `Input`, `Select`, `Textarea`, `Label`/`FieldLabel` | — |
-| 3 | Raw palette colors, hex values, `text-white`/`bg-black` on surfaces, screens hardcoded to one theme | Semantic tokens; new tokens in `index.css` for light and dark | `pelada/ComparePlayersDialog.tsx` (always dark), `profile/StatsOverTimeChart.tsx`, `ProfilePage.tsx` KPI icon colors, `MatchHistoryTable` highlight background, focus rings in the pelada modals, `LandingPage.tsx` (`neutral-*`) |
+| 3 | Raw palette colors, hex values, `text-white`/`bg-black` on surfaces, screens hardcoded to one theme | Semantic tokens; new tokens in `index.css` for light and dark | `LandingPage.tsx` (`neutral-*`/green, out of the design-system migration: refactored in its own feature) |
 | 4 | Retyping the brand color, or `text-white` on a brand fill (3.2:1, fails AA) | `<Button variant="brand">`, `bg-brand text-brand-foreground`, `text-brand-text` for brand-colored text | — |
 | 5 | Forms with `useState` per field and hand-written validation | react-hook-form + zod + `Field` ([Forms](#forms-mandatory)) | `AuthPage`, `CreatePeladaModal`, `FinalizeModal`, `ImportFromMessageModal` |
 | 6 | Casting errors inline (`err as { response?: { data?: { message?: string } } }`) or copying an `extractErrorMessage` per file | One `getErrorMessage(error, fallback)` in `lib/errors.ts`; `applyServerErrors` for forms | — |
@@ -513,4 +513,4 @@ Don't introduce these. Some exist already ("Found in", paths under `src/`); fix 
 | 24 | Mixing icon libraries | lucide-react only | — |
 | 25 | `npm install` / a second lockfile | `bun install`; delete `package-lock.json` | — |
 | 26 | Prop-drilling plain imports | Import the helper where it's used | — |
-| 27 | Chart configs that disagree with the data colors | One color source (tokens) for config and data | `profile/StatsOverTimeChart.tsx` (hex colors) |
+| 27 | Chart configs that disagree with the data colors | One color source (tokens) for config and data | — |

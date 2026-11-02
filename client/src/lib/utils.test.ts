@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { getAvatarColor, getFileUrl, getInitials } from "./utils"
+import { getAvatarColor, getFileUrl, getInitials, getPeladaColor } from "./utils"
 import { dayOfWeekLabel } from "./constants"
 
 describe("getInitials", () => {
@@ -35,5 +35,12 @@ describe("getAvatarColor", () => {
     expect(getAvatarColor(1)).toBe("bg-avatar-2")
     expect(getAvatarColor(6)).toBe("bg-avatar-1")
     expect(getAvatarColor(7)).toBe(getAvatarColor(1))
+  })
+})
+
+describe("getPeladaColor", () => {
+  it("picks one of the avatar tokens, stable by name", () => {
+    expect(getPeladaColor("Pelada do Fut")).toMatch(/^bg-avatar-[1-6]$/)
+    expect(getPeladaColor("Pelada do Fut")).toBe(getPeladaColor("Pelada do Fut"))
   })
 })

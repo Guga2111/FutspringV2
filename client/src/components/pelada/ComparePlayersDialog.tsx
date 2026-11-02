@@ -48,30 +48,29 @@ export function ComparePlayersDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-xl bg-zinc-950 border-zinc-800 text-white">
+      <DialogContent className="max-w-xl">
         <DialogHeader>
-          <DialogTitle className="text-white">Comparar Jogadores</DialogTitle>
+          <DialogTitle>Comparar Jogadores</DialogTitle>
         </DialogHeader>
 
         {/* Player selectors */}
         <div className="grid grid-cols-2 gap-3">
           <div className="flex flex-col gap-1.5">
-            <span className="text-xs text-zinc-400 font-medium uppercase tracking-wide">
+            <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
               Jogador A
             </span>
             <Select
               value={playerAId?.toString() ?? ""}
               onValueChange={(v) => setPlayerAId(Number(v))}
             >
-              <SelectTrigger className="bg-zinc-900 border-zinc-700 text-white">
+              <SelectTrigger>
                 <SelectValue placeholder="Selecionar..." />
               </SelectTrigger>
-              <SelectContent className="bg-zinc-900 border-zinc-700 text-white">
+              <SelectContent>
                 {membersForA.map((m) => (
                   <SelectItem
                     key={m.id}
                     value={m.id.toString()}
-                    className="text-white focus:bg-zinc-800 focus:text-white"
                   >
                     {m.username}
                   </SelectItem>
@@ -81,22 +80,21 @@ export function ComparePlayersDialog({
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <span className="text-xs text-zinc-400 font-medium uppercase tracking-wide">
+            <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
               Jogador B
             </span>
             <Select
               value={playerBId?.toString() ?? ""}
               onValueChange={(v) => setPlayerBId(Number(v))}
             >
-              <SelectTrigger className="bg-zinc-900 border-zinc-700 text-white">
+              <SelectTrigger>
                 <SelectValue placeholder="Selecionar..." />
               </SelectTrigger>
-              <SelectContent className="bg-zinc-900 border-zinc-700 text-white">
+              <SelectContent>
                 {membersForB.map((m) => (
                   <SelectItem
                     key={m.id}
                     value={m.id.toString()}
-                    className="text-white focus:bg-zinc-800 focus:text-white"
                   >
                     {m.username}
                   </SelectItem>
@@ -110,24 +108,24 @@ export function ComparePlayersDialog({
         {(playerAId !== null || playerBId !== null) && (
           <div className="mt-2">
             {loading ? (
-              <div className="rounded-xl bg-zinc-900 border border-zinc-800 p-4 space-y-4">
+              <div className="rounded-xl border bg-card-elevated p-4 space-y-4">
                 <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4">
                   <div className="flex flex-col items-center gap-2">
-                    <Skeleton className="h-16 w-16 rounded-full bg-zinc-800" />
-                    <Skeleton className="h-4 w-24 bg-zinc-800" />
-                    <Skeleton className="h-3 w-16 bg-zinc-800" />
+                    <Skeleton className="h-16 w-16 rounded-full" />
+                    <Skeleton className="h-4 w-24" />
+                    <Skeleton className="h-3 w-16" />
                   </div>
-                  <span className="font-mono text-xl font-black text-zinc-700">VS</span>
+                  <span className="font-display text-heading font-extrabold text-faint-foreground">VS</span>
                   <div className="flex flex-col items-center gap-2">
-                    <Skeleton className="h-16 w-16 rounded-full bg-zinc-800" />
-                    <Skeleton className="h-4 w-24 bg-zinc-800" />
-                    <Skeleton className="h-3 w-16 bg-zinc-800" />
+                    <Skeleton className="h-16 w-16 rounded-full" />
+                    <Skeleton className="h-4 w-24" />
+                    <Skeleton className="h-3 w-16" />
                   </div>
                 </div>
-                <div className="border-t border-zinc-800" />
+                <div className="border-t" />
                 <div className="space-y-2">
                   {Array.from({ length: 7 }).map((_, i) => (
-                    <Skeleton key={i} className="h-6 w-full bg-zinc-800" />
+                    <Skeleton key={i} className="h-6 w-full" />
                   ))}
                 </div>
               </div>
@@ -141,7 +139,7 @@ export function ComparePlayersDialog({
         )}
 
         {playerAId === null && playerBId === null && (
-          <p className="text-center text-sm text-zinc-500 py-4">
+          <p className="text-center text-sm text-muted-foreground py-4">
             Selecione dois jogadores para comparar.
           </p>
         )}
