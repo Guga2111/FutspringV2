@@ -1,6 +1,6 @@
 # Design System do Futspring — "Sport-Tech Minimalism" (Phase 1: Discovery + SPEC)
 
-- **Status:** **aprovada** em 2026-11-01, com as decisões registradas na [§17](#17-decisões-aprovadas). Nada foi implementado ainda.
+- **Status:** **aprovada** em 2026-11-01, com as decisões registradas na [§17](#17-decisões-aprovadas). **Implementada** na branch `refac/pelada-design` (passos 1–8, ver [§18](#18-registro-de-implementação)).
 - **Data:** 2026-11-01
 - **Escopo:** apenas `client/`. Nenhuma mudança de contrato de API, backend ou regra de negócio.
 - **Fora do escopo:** a Landing Page (`pages/LandingPage.tsx` e as classes `.landing-*`), que será refatorada em outra feature.
@@ -742,3 +742,27 @@ Nenhuma decisão pendente.
 ### Apêndice B — Working tree no momento do discovery
 
 Havia alterações não commitadas (não feitas por esta tarefa) em `client/docs/FRONTEND.md`, `components/finance/*`, `components/pelada/MemberCard.tsx` e `components/ui/tabs-variants.ts`. A Phase 2 deve começar depois que elas forem commitadas.
+
+---
+
+## 18. Registro de implementação
+
+Implementado em 2026-11-01, um commit por passo:
+
+| Passo | Commit | Observações |
+|---|---|---|
+| 1 — Base do tema | `0f45e0f` | Como especificado. |
+| 2 — Playwright | `c9f9e1f` | 68 capturas (14 páginas + 3 diálogos × 4 projetos) e 4 checagens de `lang`; fixtures tipadas com `src/types`; requisição sem fixture falha o teste. As renderizações arm64 e amd64 (emulada) do container batem. |
+| 3 — Tokens | `5929f32` | Teste de contraste em `src/lib/contrast.test.ts` (59 pares × 2 temas = 118 verificações, mais 3 testes dos helpers). **Desvio:** o `threshold` por pixel padrão do Playwright (0,2) deixava a troca de tokens passar; agora é 0,02, e os testes esperam o elemento de "pronto" da página, `networkidle`, nenhum Skeleton e o mouse fora antes da captura. `--warning` e `--gold` do tema claro escurecidos para passar no teste (gold é exigido a 3:1, gráfico). |
+| 4 — Marca | `bf74076` | **Desvio:** o alias `variant="gradient"` não foi mantido; os 33 arquivos foram migrados para `variant="brand"` de uma vez e as classes antigas removidas. |
+| 5 — Tipografia | `98f532c` | Barlow só nos pesos 700/800 (600 não foi usado). A Barlow suporta `tabular-nums` (medido no navegador). Fontes latinas: Inter 48 KB + Barlow 2 × 22 KB. |
+| 6 — Cores fixas | `fc2352b` | Também corrigidas datas em inglês no perfil (`en-US`/`en-GB` → `pt-BR`) e a borda verde do `KpiCard`. |
+| 7 — Highlight | `93cb14a` | Card do campeão e prêmio Artilheiro; Garçom passou para a marca, alinhado aos KPIs do perfil. |
+| 8 — Limpeza | este commit | Overlays com o token `overlay`. |
+
+Pendências conscientes:
+
+- **Job `visual` do CI continua não bloqueante** até rodar estável no GitHub Actions (ainda não executado lá); depois, remover o `continue-on-error`.
+- **Tamanhos arbitrários restantes** (`text-[13px]` etc.) não foram trocados em massa: os tokens da escala definem também a altura de linha, então a troca não é idêntica ao pixel. Código novo usa a escala; os antigos migram quando forem tocados.
+- **Sombras por tema** (`--shadow-color`) não implementadas (opcional, prioridade baixa).
+- **Landing Page** fora do escopo, como decidido (Q11).

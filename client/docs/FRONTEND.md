@@ -281,7 +281,7 @@ export const dailyStatusLabel: Record<DailyStatus, string> = {
 - **Reduced motion:** `index.css` has a global `prefers-reduced-motion: reduce` block (animations and transitions ≈0 ms, one iteration; no hover scaling). New animations need nothing extra, but must not rely on motion to convey information.
 - The document is `<html lang="pt-BR">`.
 - **Composition:** `cn()` from `@/lib/utils` for class names; `cva` variants for repeated styles (`components/ui/button-variants.ts` has `default`, `destructive`, `outline`, `secondary`, `ghost`, `link`, `brand` — the main action, Electric Blue with Midnight text).
-- **Overlays:** `Sheet` for create/edit forms (reference: `CreatePeladaModal`), `Dialog`/`AlertDialog` for confirmations and short forms, `Drawer` for mobile bottom panels (chat), `DropdownMenu` / `Command` for menus.
+- **Overlays:** `Sheet` for create/edit forms (reference: `CreatePeladaModal`), `Dialog`/`AlertDialog` for confirmations and short forms, `Drawer` for mobile bottom panels (chat), `DropdownMenu` / `Command` for menus. Their backdrops use the `overlay` token (Midnight, `bg-overlay/60–80`), not `bg-black`.
 - **Responsive:** mobile first; the redesign switches to the mobile layout below **768 px (`md:`)**, which is also the shadcn sidebar's `useIsMobile` breakpoint; use `md:` for new layouts. Older screens still use `sm:` and `lg:` for side panels (chat sidebar). Grids go `grid-cols-1 md:grid-cols-2 lg:grid-cols-3`. Check every screen at 375 px.
 - Buttons are pill-shaped (`rounded-full` in the base variant); don't override the radius per screen.
 
