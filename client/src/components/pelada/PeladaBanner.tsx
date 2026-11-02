@@ -1,4 +1,5 @@
-import { Bookmark, Calendar, Clock, MapPin, Settings } from "lucide-react"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { Bookmark01Icon, Calendar03Icon, Clock01Icon, Location01Icon, Settings01Icon } from "@hugeicons/core-free-icons"
 import { Link } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { dayOfWeekLabel } from "@/lib/constants"
@@ -38,7 +39,7 @@ export function PeladaBanner({ pelada, isCurrentUserAdmin }: PeladaBannerProps) 
         <div className="absolute right-3 top-3 z-10">
           <Button variant="ghost" size="icon" asChild className={overlayButton}>
             <Link to={`/pelada/${pelada.id}/settings`} aria-label="Configurações da pelada">
-              <Settings />
+              <HugeiconsIcon icon={Settings01Icon} />
             </Link>
           </Button>
         </div>
@@ -48,22 +49,22 @@ export function PeladaBanner({ pelada, isCurrentUserAdmin }: PeladaBannerProps) 
         <h1 className="text-2xl font-bold">{pelada.name}</h1>
         <div className="flex flex-wrap gap-x-4 gap-y-1 text-[13px] text-white/90 [&_svg]:size-3.5 [&_svg]:shrink-0">
           <span className="flex items-center gap-1.5">
-            <Calendar />
+            <HugeiconsIcon icon={Calendar03Icon} />
             {dayOfWeekLabel(pelada.dayOfWeek)}
           </span>
           <span className="flex items-center gap-1.5">
-            <Clock />
+            <HugeiconsIcon icon={Clock01Icon} />
             {pelada.timeOfDay} · {pelada.duration}h
           </span>
           {pelada.address && (
             <span className="flex items-center gap-1.5">
-              <MapPin />
+              <HugeiconsIcon icon={Location01Icon} />
               {pelada.address}
             </span>
           )}
           {pelada.reference && (
             <span className="flex items-center gap-1.5">
-              <Bookmark />
+              <HugeiconsIcon icon={Bookmark01Icon} />
               {pelada.reference}
             </span>
           )}

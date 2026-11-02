@@ -1,5 +1,7 @@
 import { Link, useLocation } from "react-router-dom"
-import { Home, PanelLeft, Plus } from "lucide-react"
+import { isPeladaPath } from "@/utils/peladaAreas"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { Home01Icon, PlusSignIcon, SidebarLeftIcon } from "@hugeicons/core-free-icons"
 import { Button } from "@/components/ui/button"
 import {
   Sidebar,
@@ -50,7 +52,7 @@ export function AppSidebar() {
           aria-label={isMobile ? "Fechar menu" : "Recolher menu"}
           className="size-7 shrink-0 rounded-lg text-muted-foreground hover:bg-sidebar-accent hover:text-foreground"
         >
-          <PanelLeft className="size-4" />
+          <HugeiconsIcon icon={SidebarLeftIcon} className="size-4" />
         </Button>
       </SidebarHeader>
 
@@ -65,7 +67,7 @@ export function AppSidebar() {
                 className="h-auto gap-2.5 rounded-lg px-2.5 py-2 font-medium text-muted-foreground hover:bg-sidebar-accent/70 hover:text-foreground data-[active=true]:text-foreground group-data-[collapsible=icon]:!size-auto group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:!px-2.5 group-data-[collapsible=icon]:!py-2"
               >
                 <Link to="/home" onClick={closeOnMobile}>
-                  <Home />
+                  <HugeiconsIcon icon={Home01Icon} />
                   <span>Início</span>
                 </Link>
               </SidebarMenuButton>
@@ -88,7 +90,7 @@ export function AppSidebar() {
               aria-label="Nova pelada"
               className="mr-1 size-[26px] shrink-0 bg-transparent text-muted-foreground hover:bg-sidebar-accent hover:text-foreground group-data-[collapsible=icon]:mr-0"
             >
-              <Plus className="size-3.5" />
+              <HugeiconsIcon icon={PlusSignIcon} className="size-3.5" />
             </Button>
           </div>
           <SidebarMenu className="min-h-0 flex-1 gap-0.5 overflow-y-auto">
@@ -102,7 +104,7 @@ export function AppSidebar() {
                   <SidebarPeladaItem
                     key={pelada.id}
                     pelada={pelada}
-                    isActive={pathname === `/pelada/${pelada.id}`}
+                    isActive={isPeladaPath(pathname, pelada.id)}
                     onNavigate={closeOnMobile}
                   />
                 ))}

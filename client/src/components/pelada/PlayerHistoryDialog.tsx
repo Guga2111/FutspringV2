@@ -3,7 +3,8 @@ import { Link, useNavigate } from "react-router-dom"
 import { format, parseISO } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts"
-import { ExternalLink, Trophy } from "lucide-react"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { ChampionIcon, LinkSquare02Icon } from "@hugeicons/core-free-icons"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -188,7 +189,7 @@ function PlayerHistoryContent({
         {player && (
           <Button variant="outline" size="sm" asChild>
             <Link to={`/profile/${player.id}`} onClick={onNavigate}>
-              <ExternalLink className="h-4 w-4" />
+              <HugeiconsIcon icon={LinkSquare02Icon} className="h-4 w-4" />
               Ver perfil
             </Link>
           </Button>
@@ -327,7 +328,7 @@ function PlayerHistoryContent({
                     <TableCell className="px-2 py-2 text-right">
                       {row.wonSession && (
                         <Badge variant="secondary" className="gap-1">
-                          <Trophy className="h-3 w-3" />
+                          <HugeiconsIcon icon={ChampionIcon} className="h-3 w-3" />
                           Campeão
                         </Badge>
                       )}

@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom"
-import { Menu } from "lucide-react"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { Menu01Icon } from "@hugeicons/core-free-icons"
 import { Button } from "@/components/ui/button"
 import { useSidebar } from "@/components/ui/sidebar-context"
 import { NotificationBell } from "@/components/notifications/NotificationBell"
@@ -21,7 +22,7 @@ export function MobileTopBar() {
         aria-label="Abrir menu"
         className="size-10 rounded-[10px] hover:bg-accent"
       >
-        <Menu className="size-5" />
+        <HugeiconsIcon icon={Menu01Icon} className="size-5" />
       </Button>
     </header>
   )

@@ -11,7 +11,8 @@ import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from "@/components/ui/sheet"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { MapPin } from "lucide-react"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { Location01Icon } from "@hugeicons/core-free-icons"
 
 
 interface CreatePeladaModalProps {
@@ -198,7 +199,7 @@ export default function CreatePeladaModal({ onClose, onCreated }: CreatePeladaMo
 
             {/* Address */}
             <div className="space-y-1.5">
-              <Label htmlFor="cp-address" className="flex items-center gap-1.5"><MapPin className="size-3.5" />Endereço</Label>
+              <Label htmlFor="cp-address" className="flex items-center gap-1.5"><HugeiconsIcon icon={Location01Icon} className="size-3.5" />Endereço</Label>
               <Input
                 id="cp-address"
                 name="address"

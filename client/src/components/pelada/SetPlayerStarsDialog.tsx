@@ -1,6 +1,7 @@
 import { Controller, useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Star } from "lucide-react"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { StarIcon } from "@hugeicons/core-free-icons"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -69,7 +70,7 @@ export function SetPlayerStarsDialog({
                         aria-label={`${i} estrela${i > 1 ? "s" : ""}`}
                         onClick={() => field.onChange(i)}
                       >
-                        <Star className={cn("size-6 text-gold", i <= field.value && "fill-current")} />
+                        <HugeiconsIcon icon={StarIcon} className={cn("size-6 text-gold", i <= field.value && "fill-current")} />
                       </Button>
                     ))}
                   </div>

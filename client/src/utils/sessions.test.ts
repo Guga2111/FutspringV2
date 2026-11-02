@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { formatLongDate, formatRelativeSessionDay, formatSessionMeta, groupDailiesByMonth, pickNextSession } from "./sessions"
+import { formatLongDate, formatRelativeSessionDay, formatSessionMeta, groupDailiesByMonth, pickNextSession, pickRecentSessions } from "./sessions"
 import type { DailyListItem, DailyStatus } from "@/types/daily"
 
 const daily = (id: number, dailyDate: string, status: DailyStatus = "FINISHED"): DailyListItem => ({
@@ -62,5 +62,24 @@ describe("formatRelativeSessionDay", () => {
     expect(formatRelativeSessionDay("2026-10-04", now)).toBe("Hoje, domingo")
     expect(formatRelativeSessionDay("2026-10-05", now)).toBe("Amanhã, segunda-feira")
     expect(formatRelativeSessionDay("2026-10-08", now)).toBe("Quinta-feira, 8 de outubro")
+  })
+})
+
+describe("pickRecentSessions", () => {
+  const now = new Date(2026, 9, 15, 12)
+
+  it("returns past sessions newest first, without the next one or future ones", () => {
+    const list = [
+      daily(1, "2026-10-01"),
+      daily(2, "2026-10-08"),
+      daily(3, "2026-10-15", "SCHEDULED"),
+      daily(4, "2026-10-22", "SCHEDULED"),
+      daily(5, "2026-09-24"),
+    ]
+    expect(pickRecentSessions(list, 3, 3, now).map((d) => d.id)).toEqual([2, 1, 5])
+  })
+
+  it("is empty when there is nothing before today", () => {
+    expect(pickRecentSessions([daily(4, "2026-10-22", "SCHEDULED")], null, 3, now)).toEqual([])
   })
 })

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { Users, CalendarPlus, CalendarCheck, UserPlus, UserMinus, Home, User, History } from "lucide-react";
+import { HugeiconsIcon } from "@hugeicons/react"
+import { CalendarAdd01Icon, CalendarCheckIn01Icon, Clock04Icon, Home01Icon, UserAdd01Icon, UserGroupIcon, UserIcon, UserMinus01Icon } from "@hugeicons/core-free-icons"
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -117,23 +118,23 @@ export function RankingCommandButton({
 
           <CommandGroup heading="Jogadores">
             <CommandItem onSelect={() => run(() => setCompareOpen(true))}>
-              <Users />
+              <HugeiconsIcon icon={UserGroupIcon} />
               Comparar Jogadores
               <CommandShortcut>{mod}J</CommandShortcut>
             </CommandItem>
             <CommandItem onSelect={() => run(onOpenHistory)}>
-              <History />
+              <HugeiconsIcon icon={Clock04Icon} />
               Histórico do Jogador
               <CommandShortcut>{mod}I</CommandShortcut>
             </CommandItem>
             <CommandItem onSelect={() => run(() => setAttendanceOpen(true))}>
-              <CalendarCheck />
+              <HugeiconsIcon icon={CalendarCheckIn01Icon} />
               Ranking de Presença
               <CommandShortcut>{mod}P</CommandShortcut>
             </CommandItem>
             {isAdmin && onInvitePlayer && (
               <CommandItem onSelect={() => run(onInvitePlayer)}>
-                <UserPlus />
+                <HugeiconsIcon icon={UserAdd01Icon} />
                 Convidar jogador
                 <CommandShortcut>{mod}A</CommandShortcut>
               </CommandItem>
@@ -143,7 +144,7 @@ export function RankingCommandButton({
                 onSelect={() => run(() => setRemoveOpen(true))}
                 className="text-destructive data-[selected=true]:text-destructive"
               >
-                <UserMinus />
+                <HugeiconsIcon icon={UserMinus01Icon} />
                 Remover Jogador
                 <CommandShortcut className="text-destructive">{mod}R</CommandShortcut>
               </CommandItem>
@@ -155,7 +156,7 @@ export function RankingCommandButton({
               <CommandSeparator />
               <CommandGroup heading="Sessões">
                 <CommandItem onSelect={() => run(onCreateSession)}>
-                  <CalendarPlus />
+                  <HugeiconsIcon icon={CalendarAdd01Icon} />
                   Nova Sessão
                   <CommandShortcut>{mod}E</CommandShortcut>
                 </CommandItem>
@@ -170,7 +171,7 @@ export function RankingCommandButton({
                 key={m.id}
                 onSelect={() => run(() => navigate(`/profile/${m.id}`))}
               >
-                <User />
+                <HugeiconsIcon icon={UserIcon} />
                 {m.username}
               </CommandItem>
             ))}
@@ -179,7 +180,7 @@ export function RankingCommandButton({
           <CommandSeparator />
           <CommandGroup heading="Navegação">
             <CommandItem onSelect={() => run(() => navigate("/home"))}>
-              <Home />
+              <HugeiconsIcon icon={Home01Icon} />
               Início
               <CommandShortcut>{mod}H</CommandShortcut>
             </CommandItem>

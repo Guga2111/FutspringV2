@@ -1,6 +1,7 @@
 import { useMemo } from "react"
 import { Link } from "react-router-dom"
-import { ChevronRight, Plus, Users } from "lucide-react"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { ArrowRight01Icon, PlusSignIcon, UserGroupIcon } from "@hugeicons/core-free-icons"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { DailyStatusBadge } from "@/components/daily/DailyStatusBadge"
@@ -33,7 +34,7 @@ export function SessionHistoryList({ dailies, isLoading, isAdmin, onOpenCreate }
         </h2>
         {isAdmin && (
           <Button variant="outline" onClick={onOpenCreate} className="h-[34px] gap-1.5 bg-transparent px-3.5 hover:bg-accent">
-            <Plus className="size-3.5" strokeWidth={2.2} />
+            <HugeiconsIcon icon={PlusSignIcon} className="size-3.5" strokeWidth={2.2} />
             Nova sessão
           </Button>
         )}
@@ -61,7 +62,7 @@ export function SessionHistoryList({ dailies, isLoading, isAdmin, onOpenCreate }
   )
 }
 
-function SessionRow({ daily }: { daily: DailyListItem }) {
+export function SessionRow({ daily }: { daily: DailyListItem }) {
   const photo = getFileUrl(daily.championImage)
   return (
     <li className="border-b border-border/60 last:border-b-0">
@@ -76,7 +77,7 @@ function SessionRow({ daily }: { daily: DailyListItem }) {
         </div>
         <DailyStatusBadge status={daily.status} />
         <span className="hidden w-11 items-center justify-end gap-[5px] text-[13px] text-muted-foreground md:flex">
-          <Users className="size-3.5" aria-label="Jogadores" />
+          <HugeiconsIcon icon={UserGroupIcon} className="size-3.5" aria-label="Jogadores" />
           {daily.confirmedPlayerCount}
         </span>
         {photo ? (
@@ -92,7 +93,7 @@ function SessionRow({ daily }: { daily: DailyListItem }) {
         ) : (
           <span title="Sem foto do campeão" className="hidden size-10 shrink-0 rounded-lg border border-dashed border-input md:block" />
         )}
-        <ChevronRight className="size-4 shrink-0 text-faint-foreground" />
+        <HugeiconsIcon icon={ArrowRight01Icon} className="size-4 shrink-0 text-faint-foreground" />
       </Link>
     </li>
   )

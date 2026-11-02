@@ -1,7 +1,8 @@
 import { useRef, useState } from "react"
 import { Controller, useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { ImageUp, Trash2 } from "lucide-react"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { Delete02Icon, ImageUpload01Icon } from "@hugeicons/core-free-icons"
 import { toast } from "sonner"
 import { removePeladaImage, updatePelada, uploadPeladaImage } from "@/api/peladas"
 import { ConfirmActionDialog } from "@/components/ConfirmActionDialog"
@@ -93,7 +94,7 @@ export function InfoCard({ pelada, onSaved }: InfoCardProps) {
               disabled={imagePending !== null}
               onClick={() => fileInput.current?.click()}
             >
-              <ImageUp data-icon="inline-start" />
+              <HugeiconsIcon icon={ImageUpload01Icon} data-icon="inline-start" />
               {imagePending === "upload" ? "Enviando..." : "Trocar imagem"}
             </Button>
             {pelada.image && (
@@ -105,7 +106,7 @@ export function InfoCard({ pelada, onSaved }: InfoCardProps) {
                 disabled={imagePending !== null}
                 onClick={() => setConfirmRemove(true)}
               >
-                <Trash2 data-icon="inline-start" />
+                <HugeiconsIcon icon={Delete02Icon} data-icon="inline-start" />
                 Remover
               </Button>
             )}
