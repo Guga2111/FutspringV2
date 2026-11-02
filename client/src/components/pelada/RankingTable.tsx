@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom"
-import { History } from "lucide-react"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { Clock04Icon } from "@hugeicons/core-free-icons"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -110,7 +111,7 @@ export function RankingTable({ ranking, isLoading, sortConfig, onSort, onOpenHis
                   onClick={() => onOpenHistory(row.userId)}
                   className="size-7 text-subtle-foreground hover:bg-secondary hover:text-foreground"
                 >
-                  <History className="size-[15px]" />
+                  <HugeiconsIcon icon={Clock04Icon} className="size-[15px]" />
                 </Button>
               </TableCell>
               {COLUMNS.map(({ col }) => (

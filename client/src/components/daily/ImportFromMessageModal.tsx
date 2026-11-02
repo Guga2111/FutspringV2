@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
-import { CheckCircle2, AlertTriangle, Pencil } from 'lucide-react'
+import { HugeiconsIcon } from "@hugeicons/react"
+import { Alert02Icon, CheckmarkCircle02Icon, PencilEdit02Icon } from "@hugeicons/core-free-icons"
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -156,7 +157,7 @@ export default function ImportFromMessageModal({ daily, onClose, onSuccess }: Pr
               />
               {parseError && (
                 <p role="alert" className="flex items-center gap-1.5 text-sm text-destructive">
-                  <AlertTriangle className="size-4 shrink-0" />
+                  <HugeiconsIcon icon={Alert02Icon} className="size-4 shrink-0" />
                   {parseError}
                 </p>
               )}
@@ -183,7 +184,7 @@ export default function ImportFromMessageModal({ daily, onClose, onSuccess }: Pr
                         </span>
                         {player.matchedUserId !== null ? (
                           <span className="flex items-center gap-1.5 text-xs">
-                            <CheckCircle2 className="size-3.5 shrink-0 text-chart-1" />
+                            <HugeiconsIcon icon={CheckmarkCircle02Icon} className="size-3.5 shrink-0 text-chart-1" />
                             {members.find(m => m.id === player.matchedUserId)?.username}
                             <Button
                               variant="ghost"
@@ -192,7 +193,7 @@ export default function ImportFromMessageModal({ daily, onClose, onSuccess }: Pr
                               aria-label="Trocar jogador"
                               onClick={() => handlePlayerChange(teamIdx, playerIdx, null, false)}
                             >
-                              <Pencil className="size-3" />
+                              <HugeiconsIcon icon={PencilEdit02Icon} className="size-3" />
                             </Button>
                           </span>
                         ) : player.skipped ? (
@@ -209,7 +210,7 @@ export default function ImportFromMessageModal({ daily, onClose, onSuccess }: Pr
                           </span>
                         ) : (
                           <span className="flex items-center gap-1.5">
-                            <AlertTriangle className="size-3.5 shrink-0 text-destructive" />
+                            <HugeiconsIcon icon={Alert02Icon} className="size-3.5 shrink-0 text-destructive" />
                             <Select
                               onValueChange={val => {
                                 if (val === '__skip__') {
@@ -253,7 +254,7 @@ export default function ImportFromMessageModal({ daily, onClose, onSuccess }: Pr
                   </div>
                 ) : (
                   <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <AlertTriangle className="size-3.5 shrink-0" />
+                    <HugeiconsIcon icon={Alert02Icon} className="size-3.5 shrink-0" />
                     Nenhum resultado encontrado na mensagem. Você pode lançar os resultados depois.
                   </p>
                 )}

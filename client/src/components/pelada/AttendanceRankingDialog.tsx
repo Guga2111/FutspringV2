@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react"
 import { Link } from "react-router-dom"
-import { ArrowDown, ArrowUp, Search } from "lucide-react"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { ArrowDown02Icon, ArrowUp02Icon, Search01Icon } from "@hugeicons/core-free-icons"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import {
@@ -101,7 +102,7 @@ function AttendanceRanking({ data, onNavigate }: { data: PeladaAttendanceDTO; on
     <>
       <div className="flex flex-col gap-3">
         <div className="relative">
-          <Search aria-hidden className="pointer-events-none absolute left-3 top-1/2 size-[15px] -translate-y-1/2 text-subtle-foreground" />
+          <HugeiconsIcon icon={Search01Icon} aria-hidden className="pointer-events-none absolute left-3 top-1/2 size-[15px] -translate-y-1/2 text-subtle-foreground" />
           <Input
             type="search"
             value={query}
@@ -156,7 +157,7 @@ function AttendanceRanking({ data, onNavigate }: { data: PeladaAttendanceDTO; on
                   className="-mr-2 h-auto gap-1 px-2 py-1 text-xs font-normal text-subtle-foreground"
                 >
                   %
-                  {order === "desc" ? <ArrowDown aria-hidden className="size-3.5" /> : <ArrowUp aria-hidden className="size-3.5" />}
+                  {order === "desc" ? <HugeiconsIcon icon={ArrowDown02Icon} aria-hidden className="size-3.5" /> : <HugeiconsIcon icon={ArrowUp02Icon} aria-hidden className="size-3.5" />}
                 </Button>
               </TableHead>
             </TableRow>

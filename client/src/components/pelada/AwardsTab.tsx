@@ -1,5 +1,6 @@
 import { useState } from "react"
-import { Brush, ChevronDown, HandHelping, Target, ThumbsDown, Trophy, type LucideIcon } from "lucide-react"
+import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react"
+import { ArrowDown01Icon, ChampionIcon, HandHelpingIcon, PaintBrush01Icon, Target02Icon, ThumbsDownIcon } from "@hugeicons/core-free-icons"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
@@ -8,11 +9,11 @@ import { PlayerAvatar } from "@/components/PlayerAvatar"
 import { cn } from "@/lib/utils"
 import type { AwardCategory, AwardWinner, PeladaAwards } from "@/types/pelada"
 
-const ICON_MAP: Record<string, LucideIcon> = {
-  ARTILHEIRO: Target,
-  GARCOM: HandHelping,
-  PUSKAS: Brush,
-  BOLA_MURCHA: ThumbsDown,
+const ICON_MAP: Record<string, IconSvgElement> = {
+  ARTILHEIRO: Target02Icon,
+  GARCOM: HandHelpingIcon,
+  PUSKAS: PaintBrush01Icon,
+  BOLA_MURCHA: ThumbsDownIcon,
 }
 
 // 2nd and 3rd place trophies; 4th on are dimmed
@@ -26,7 +27,7 @@ interface AwardsTabProps {
 function LeaderRow({ winner }: { winner: AwardWinner }) {
   return (
     <div className="bg-gradient-leader -mx-1.5 mb-1 mt-0.5 flex items-center gap-3 rounded-[10px] border border-highlight/30 p-2.5">
-      <Trophy className="size-[18px] shrink-0 text-highlight-text" />
+      <HugeiconsIcon icon={ChampionIcon} className="size-[18px] shrink-0 text-highlight-text" />
       <PlayerAvatar username={winner.username} image={winner.userImage} className="size-[38px] text-xs ring-2 ring-highlight" />
       <div className="flex min-w-0 flex-1 flex-col">
         <span className="truncate text-base font-bold">{winner.username}</span>
@@ -42,7 +43,7 @@ function LeaderRow({ winner }: { winner: AwardWinner }) {
 function WinnerRow({ winner, place }: { winner: AwardWinner; place: number }) {
   return (
     <div className="flex items-center gap-3 border-b border-accent px-1 py-[9px]">
-      <Trophy className={cn("size-4 shrink-0", PLACE_COLORS[place - 1] ?? "text-faint-foreground/70")} />
+      <HugeiconsIcon icon={ChampionIcon} className={cn("size-4 shrink-0", PLACE_COLORS[place - 1] ?? "text-faint-foreground/70")} />
       <PlayerAvatar username={winner.username} image={winner.userImage} />
       <span className="min-w-0 flex-1 truncate text-sm font-medium">{winner.username}</span>
       <Badge variant="status" className="bg-secondary px-2 py-0.5 text-xs font-semibold tabular-nums text-foreground">
@@ -54,16 +55,16 @@ function WinnerRow({ winner, place }: { winner: AwardWinner; place: number }) {
 
 function CategoryCard({ category }: { category: AwardCategory }) {
   const [open, setOpen] = useState(false)
-  const Icon = ICON_MAP[category.type] ?? Trophy
+  const Icon = ICON_MAP[category.type] ?? ChampionIcon
   const [leader, ...others] = category.topWinners
   const visible = others.slice(0, 2)
   const hidden = others.slice(2)
 
   return (
     <article className="relative flex flex-col gap-2.5 overflow-hidden rounded-xl border bg-card px-4 pb-2.5 pt-4">
-      <Trophy aria-hidden className="pointer-events-none absolute bottom-2.5 right-3.5 size-16 text-foreground opacity-[0.07]" />
+      <HugeiconsIcon icon={ChampionIcon} aria-hidden className="pointer-events-none absolute bottom-2.5 right-3.5 size-16 text-foreground opacity-[0.07]" />
       <div className="flex items-start gap-2.5">
-        <Icon className="mt-0.5 size-[18px] shrink-0 text-foreground/90" />
+        <HugeiconsIcon icon={Icon} className="mt-0.5 size-[18px] shrink-0 text-foreground/90" />
         <div className="flex flex-col gap-px">
           <h3 className="text-base font-semibold">{category.name}</h3>
           <p className="text-xs text-subtle-foreground">{category.description}</p>
@@ -88,7 +89,7 @@ function CategoryCard({ category }: { category: AwardCategory }) {
                 variant="ghost"
                 className="relative mt-2.5 h-7 gap-1.5 self-center px-3 text-xs font-normal text-muted-foreground hover:bg-accent hover:text-foreground"
               >
-                <ChevronDown className={cn("size-3 transition-transform duration-150", open && "rotate-180")} />
+                <HugeiconsIcon icon={ArrowDown01Icon} className={cn("size-3 transition-transform duration-150", open && "rotate-180")} />
                 {open ? "Mostrar menos" : `Ver todos (${category.topWinners.length})`}
               </Button>
             </CollapsibleTrigger>

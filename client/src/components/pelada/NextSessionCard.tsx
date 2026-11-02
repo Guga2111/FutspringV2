@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom"
-import { CalendarX2, Check } from "lucide-react"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { CalendarRemove01Icon, Tick02Icon } from "@hugeicons/core-free-icons"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { DailyStatusBadge } from "@/components/daily/DailyStatusBadge"
@@ -26,7 +27,7 @@ export function NextSessionCard({ daily, timeZone, isAdmin, attendancePending, o
     return (
       <section className="flex flex-wrap items-center gap-5 rounded-tile border border-dashed border-input p-[18px]">
         <div className="flex h-20 w-[72px] shrink-0 items-center justify-center rounded-xl border border-dashed border-input text-faint-foreground">
-          <CalendarX2 className="size-[26px]" strokeWidth={1.8} />
+          <HugeiconsIcon icon={CalendarRemove01Icon} className="size-[26px]" strokeWidth={1.8} />
         </div>
         <div className="flex min-w-[220px] flex-1 flex-col gap-1.5">
           <span className={label}>Próxima sessão</span>
@@ -79,7 +80,7 @@ export function NextSessionCard({ daily, timeZone, isAdmin, attendancePending, o
         {daily.isConfirmed ? (
           <div className="flex h-[38px] items-center gap-2 rounded-full bg-success-muted pl-3 pr-1.5">
             <span className="flex items-center gap-1.5 text-[13px] font-semibold text-success">
-              <Check className="size-3.5" strokeWidth={2.6} />
+              <HugeiconsIcon icon={Tick02Icon} className="size-3.5" strokeWidth={2.6} />
               Você vai
             </span>
             <Button

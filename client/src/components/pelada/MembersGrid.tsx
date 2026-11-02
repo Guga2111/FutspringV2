@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react"
-import { ListChecks, Plus, Search, X } from "lucide-react"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { Cancel01Icon, CheckListIcon, PlusSignIcon, Search01Icon } from "@hugeicons/core-free-icons"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
@@ -90,7 +91,7 @@ export function MembersGrid({
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative min-w-[200px] max-w-[320px] flex-1">
-          <Search aria-hidden className="pointer-events-none absolute left-3 top-1/2 size-[15px] -translate-y-1/2 text-subtle-foreground" />
+          <HugeiconsIcon icon={Search01Icon} aria-hidden className="pointer-events-none absolute left-3 top-1/2 size-[15px] -translate-y-1/2 text-subtle-foreground" />
           <Input
             type="search"
             value={query}
@@ -142,13 +143,13 @@ export function MembersGrid({
             aria-pressed={selecting}
             className="h-9 gap-1.5 px-4 md:ml-auto"
           >
-            {selecting ? <X className="size-[15px]" /> : <ListChecks className="size-[15px]" />}
+            {selecting ? <HugeiconsIcon icon={Cancel01Icon} className="size-[15px]" /> : <HugeiconsIcon icon={CheckListIcon} className="size-[15px]" />}
             {selecting ? "Cancelar" : "Selecionar"}
           </Button>
         )}
         {isCurrentUserAdmin && (
           <Button variant="brand" onClick={onInvitePlayer} className="hidden h-9 gap-1.5 px-4 font-semibold md:inline-flex">
-            <Plus className="size-[15px]" strokeWidth={2.2} />
+            <HugeiconsIcon icon={PlusSignIcon} className="size-[15px]" strokeWidth={2.2} />
             Convidar jogador
           </Button>
         )}
@@ -169,7 +170,7 @@ export function MembersGrid({
         )}
         {isCurrentUserAdmin && (
           <Button variant="brand" size="icon" aria-label="Convidar jogador" onClick={onInvitePlayer} className="size-10 shrink-0 md:hidden">
-            <Plus className="size-[18px]" strokeWidth={2.4} />
+            <HugeiconsIcon icon={PlusSignIcon} className="size-[18px]" strokeWidth={2.4} />
           </Button>
         )}
       </div>

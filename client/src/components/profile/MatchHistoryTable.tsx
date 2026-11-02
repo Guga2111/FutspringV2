@@ -9,7 +9,8 @@ import {
   getSortedRowModel,
   useReactTable,
 } from '@tanstack/react-table'
-import { ArrowUpDown, ArrowUp, ArrowDown, ChevronDown } from 'lucide-react'
+import { HugeiconsIcon } from "@hugeicons/react"
+import { ArrowDown01Icon, ArrowDown02Icon, ArrowUp02Icon, ArrowUpDownIcon } from "@hugeicons/core-free-icons"
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
@@ -34,9 +35,9 @@ interface MatchHistoryTableProps {
 }
 
 function SortIcon({ sorted }: { sorted: false | 'asc' | 'desc' }) {
-  if (sorted === 'asc') return <ArrowUp className="ml-2 h-4 w-4" />
-  if (sorted === 'desc') return <ArrowDown className="ml-2 h-4 w-4" />
-  return <ArrowUpDown className="ml-2 h-4 w-4" />
+  if (sorted === 'asc') return <HugeiconsIcon icon={ArrowUp02Icon} className="ml-2 h-4 w-4" />
+  if (sorted === 'desc') return <HugeiconsIcon icon={ArrowDown02Icon} className="ml-2 h-4 w-4" />
+  return <HugeiconsIcon icon={ArrowUpDownIcon} className="ml-2 h-4 w-4" />
 }
 
 function ResultBadge({ result }: { result: string }) {
@@ -209,7 +210,7 @@ export default function MatchHistoryTable({ matchHistory, loading }: MatchHistor
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="sm">
-              Personalizar Colunas <ChevronDown className="ml-2 h-4 w-4" />
+              Personalizar Colunas <HugeiconsIcon icon={ArrowDown01Icon} className="ml-2 h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">

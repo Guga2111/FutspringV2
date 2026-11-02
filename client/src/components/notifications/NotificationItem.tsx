@@ -1,3 +1,4 @@
+import { HugeiconsIcon } from "@hugeicons/react"
 import { formatDistanceToNow } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { Button } from "@/components/ui/button"
@@ -36,7 +37,7 @@ export function NotificationItem({ notification, onSelect }: NotificationItemPro
           <span className="flex size-9 items-center justify-center rounded-full bg-avatar-fallback" />
         )}
         <span className="absolute -bottom-0.5 -right-0.5 flex size-[18px] items-center justify-center rounded-full border border-border bg-card text-muted-foreground [&_svg]:size-2.5">
-          <Icon aria-hidden />
+          <HugeiconsIcon icon={Icon} aria-hidden />
         </span>
       </span>
       <span className="flex min-w-0 flex-1 flex-col gap-0.5">

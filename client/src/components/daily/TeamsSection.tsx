@@ -1,5 +1,6 @@
 import { useRef, useState } from "react"
-import { ArrowLeftRight, Shuffle } from "lucide-react"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { ArrowDataTransferHorizontalIcon, ShuffleIcon } from "@hugeicons/core-free-icons"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { PlayerAvatar } from "@/components/PlayerAvatar"
@@ -73,7 +74,7 @@ export default function TeamsSection({
             onClick={onSortTeams}
             className="h-[34px] gap-1.5 bg-transparent px-3.5 hover:bg-accent"
           >
-            <Shuffle className="size-3.5" />
+            <HugeiconsIcon icon={ShuffleIcon} className="size-3.5" />
             {sortLoading ? "Sorteando…" : "Sortear de novo"}
           </Button>
         )}
@@ -81,7 +82,7 @@ export default function TeamsSection({
 
       {!hasTeams ? (
         <div className="flex flex-col items-center gap-3 rounded-tile border border-dashed border-input px-5 py-7 text-center">
-          <Shuffle className="size-7 text-faint-foreground" strokeWidth={1.8} />
+          <HugeiconsIcon icon={ShuffleIcon} className="size-7 text-faint-foreground" strokeWidth={1.8} />
           <div className="flex flex-col gap-1">
             <span className="text-[15px] font-semibold">Sem times ainda</span>
             <span className="max-w-[380px] text-[13px] text-muted-foreground">
@@ -95,7 +96,7 @@ export default function TeamsSection({
               onClick={onSortTeams}
               className={cn("h-[38px] gap-2 px-[18px] font-semibold", !full && "bg-accent text-faint-foreground disabled:opacity-100")}
             >
-              <Shuffle className="size-[15px]" />
+              <HugeiconsIcon icon={ShuffleIcon} className="size-[15px]" />
               {sortLoading ? "Sorteando…" : "Sortear times"}
             </Button>
           )}
@@ -184,7 +185,7 @@ export default function TeamsSection({
                               isSelected && "border-primary bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground",
                             )}
                           >
-                            <ArrowLeftRight />
+                            <HugeiconsIcon icon={ArrowDataTransferHorizontalIcon} />
                           </Button>
                         )}
                       </TeamPlayerRow>

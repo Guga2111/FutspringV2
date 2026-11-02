@@ -8,7 +8,7 @@ React single-page app in `client/`. UI text is in Portuguese (pt-BR); code ident
 - **bun** as package manager — never use `npm`/`yarn`; `bun.lock` is the only lockfile
 - Tailwind CSS 3.4 (`tailwind.config.js` + `postcss.config.js`, `tailwindcss-animate`), class-based dark mode
 - shadcn/ui (style `default`, base color `slate`, CSS variables) on top of Radix primitives; components in `src/components/ui`
-- Icons: **lucide-react only**
+- Icons: **Hugeicons only** — `@hugeicons/react` (`HugeiconsIcon`) + the free set `@hugeicons/core-free-icons` (`<HugeiconsIcon icon={UserGroupIcon} className="size-4" />`; size with `className`, the default stroke is 1.5, `strokeWidth` where a heavier line is wanted). An icon stored as a value (maps such as `AREA_ICONS`, `notificationView().icon`) is typed `IconSvgElement` and rendered with `<HugeiconsIcon icon={Icon} />`. `bunx shadcn add` still generates lucide imports: swap them to Hugeicons before committing
 - React Router 7 (declarative `BrowserRouter` + `<Routes>`), Axios, Sonner (toasts)
 - Charts: recharts through shadcn `ui/chart.tsx`; tables: `@tanstack/react-table` v8 + shadcn `Table`
 - Fonts: `@fontsource-variable/inter`, `@fontsource/barlow-condensed` (see Typography)
@@ -510,7 +510,7 @@ Don't introduce these. Some exist already ("Found in", paths under `src/`); fix 
 | 21 | Index keys on real content | Stable ids | — |
 | 22 | Placeholder links / fake UI | Real routes, or disabled with "Em breve" | `LandingPage.tsx` GitHub/LinkedIn links |
 | 23 | Dead files and components | Delete them | — |
-| 24 | Mixing icon libraries | lucide-react only | — |
+| 24 | Mixing icon libraries | Hugeicons only (`HugeiconsIcon` + `@hugeicons/core-free-icons`) | — |
 | 25 | `npm install` / a second lockfile | `bun install`; delete `package-lock.json` | — |
 | 26 | Prop-drilling plain imports | Import the helper where it's used | — |
 | 27 | Chart configs that disagree with the data colors | One color source (tokens) for config and data | — |

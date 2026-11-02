@@ -1,4 +1,5 @@
-import { Plus, X } from "lucide-react"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { Cancel01Icon, PlusSignIcon } from "@hugeicons/core-free-icons"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog"
@@ -51,7 +52,7 @@ export function ResultsDialog({ daily, mode, onClose, onSaved }: ResultsDialogPr
           onClick={close}
           className="size-8 shrink-0 text-muted-foreground hover:bg-accent hover:text-foreground [&_svg]:size-[18px]"
         >
-          <X />
+          <HugeiconsIcon icon={Cancel01Icon} />
         </Button>
       </div>
 
@@ -75,7 +76,7 @@ export function ResultsDialog({ daily, mode, onClose, onSaved }: ResultsDialogPr
           onClick={addMatch}
           className="h-11 shrink-0 gap-2 rounded-xl border-dashed border-star-off bg-transparent text-secondary-foreground hover:bg-accent hover:text-foreground"
         >
-          <Plus className="size-[15px]" strokeWidth={2.2} />
+          <HugeiconsIcon icon={PlusSignIcon} className="size-[15px]" strokeWidth={2.2} />
           Adicionar partida
         </Button>
         {form.formState.errors.root && (

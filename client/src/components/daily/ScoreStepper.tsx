@@ -1,4 +1,5 @@
-import { Minus, Plus } from "lucide-react"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { MinusSignIcon, PlusSignIcon } from "@hugeicons/core-free-icons"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
@@ -32,7 +33,7 @@ export function ScoreStepper({ value, onChange, label, size = "md" }: ScoreStepp
         onClick={() => onChange(Math.max(0, value - 1))}
         className={cn("shrink-0 bg-transparent text-secondary-foreground hover:bg-secondary", s.button)}
       >
-        <Minus />
+        <HugeiconsIcon icon={MinusSignIcon} />
       </Button>
       <span className={cn("text-center font-bold tabular-nums", s.value)} aria-live="polite">
         {value}
@@ -45,7 +46,7 @@ export function ScoreStepper({ value, onChange, label, size = "md" }: ScoreStepp
         onClick={() => onChange(value + 1)}
         className={cn("shrink-0 bg-transparent text-secondary-foreground hover:bg-secondary", s.button)}
       >
-        <Plus />
+        <HugeiconsIcon icon={PlusSignIcon} />
       </Button>
     </div>
   )

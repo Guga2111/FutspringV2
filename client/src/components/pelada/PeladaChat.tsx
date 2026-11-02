@@ -1,5 +1,6 @@
 import { useState } from "react"
-import { MessageCircle, X } from "lucide-react"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { BubbleChatIcon, Cancel01Icon } from "@hugeicons/core-free-icons"
 import { Button } from "@/components/ui/button"
 import { Drawer, DrawerContent, DrawerDescription, DrawerTitle } from "@/components/ui/drawer"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -28,7 +29,7 @@ export function PeladaChat({ peladaId, peladaName, memberCount, currentUserId }:
       onClick={() => setOpen(false)}
       className="size-[34px] shrink-0 text-muted-foreground hover:bg-accent hover:text-foreground [&_svg]:size-[18px]"
     >
-      <X />
+      <HugeiconsIcon icon={Cancel01Icon} />
     </Button>
   )
 
@@ -37,7 +38,7 @@ export function PeladaChat({ peladaId, peladaName, memberCount, currentUserId }:
       <>
         {!open && (
           <Button variant="brand" size="icon" aria-label="Abrir chat" onClick={() => setOpen(true)} className={fabClass}>
-            <MessageCircle />
+            <HugeiconsIcon icon={BubbleChatIcon} />
           </Button>
         )}
         <Drawer open={open} onOpenChange={setOpen}>
@@ -60,7 +61,7 @@ export function PeladaChat({ peladaId, peladaName, memberCount, currentUserId }:
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button variant="brand" size="icon" aria-label={open ? "Fechar chat" : "Abrir chat"} className={fabClass}>
-          <MessageCircle />
+          <HugeiconsIcon icon={BubbleChatIcon} />
         </Button>
       </PopoverTrigger>
       <PopoverContent

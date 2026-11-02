@@ -1,4 +1,5 @@
-import { Trophy, Upload } from "lucide-react"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { ChampionIcon, Upload01Icon } from "@hugeicons/core-free-icons"
 import { Button } from "@/components/ui/button"
 import { PlayerAvatar } from "@/components/PlayerAvatar"
 import { TeamColorDot } from "@/components/daily/TeamColorDot"
@@ -34,7 +35,7 @@ export function ChampionHero({ daily, uploadLoading, onChangePhoto }: ChampionHe
         <span
           className={`absolute bottom-3.5 left-4 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.04em] ${photo ? "text-white" : "text-muted-foreground"}`}
         >
-          <Trophy className="size-3.5 text-gold" />
+          <HugeiconsIcon icon={ChampionIcon} className="size-3.5 text-gold" />
           Foto do campeão
         </span>
         {daily.isAdmin && (
@@ -44,7 +45,7 @@ export function ChampionHero({ daily, uploadLoading, onChangePhoto }: ChampionHe
             onClick={onChangePhoto}
             className="absolute right-3 top-3 h-8 gap-1.5 bg-black/50 px-3 text-[13px] font-medium text-white hover:bg-black/70 hover:text-white"
           >
-            <Upload className="size-3.5" />
+            <HugeiconsIcon icon={Upload01Icon} className="size-3.5" />
             {uploadLoading ? "Enviando…" : photo ? "Trocar foto" : "Enviar foto"}
           </Button>
         )}

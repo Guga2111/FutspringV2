@@ -1,4 +1,5 @@
-import { Plus } from "lucide-react"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { PlusSignIcon } from "@hugeicons/core-free-icons"
 import { Button } from "@/components/ui/button"
 import { greeting, pendingLine } from "@/utils/home"
 import { formatLongDate } from "@/utils/sessions"
@@ -32,7 +33,7 @@ export function HomeBanner({ username, pendingCount, onCreatePelada }: HomeBanne
           <span className="text-[15px] text-white/85">{pendingLine(pendingCount)}</span>
         </div>
         <Button variant="brand" onClick={onCreatePelada} className="h-[42px] gap-2 px-5 font-semibold">
-          <Plus className="size-[15px]" strokeWidth={2.2} />
+          <HugeiconsIcon icon={PlusSignIcon} className="size-[15px]" strokeWidth={2.2} />
           Nova pelada
         </Button>
       </div>

@@ -1,28 +1,29 @@
 import { Navigate, Link } from "react-router-dom";
-import { Calendar, Users, BarChart2, MessageSquare, Github, Linkedin, Mail } from "lucide-react";
+import { HugeiconsIcon } from "@hugeicons/react"
+import { Calendar03Icon, ChartColumnIcon, Github01Icon, Linkedin01Icon, Mail01Icon, Message01Icon, UserGroupIcon } from "@hugeicons/core-free-icons"
 import { useAuth } from "@/hooks/useAuth";
 
 const features = [
   {
-    icon: Calendar,
+    icon: Calendar03Icon,
     title: "Planeje Sessões",
     description:
       "Planeje suas peladas e faça todos saberem quando é o seu próximo jogo.",
   },
   {
-    icon: Users,
+    icon: UserGroupIcon,
     title: "Times Auto-Balanceados",
     description:
       "Sorteio automatico e justo de jogadores, baseado no seu nivel de habilidade.",
   },
   {
-    icon: BarChart2,
+    icon: ChartColumnIcon,
     title: "Acompanhe suas Métricas",
     description:
       "Mantenha o placa de gols, assistências e notas para saber quem está 'On Fire'.",
   },
   {
-    icon: MessageSquare,
+    icon: Message01Icon,
     title: "Chat do Grupo",
     description: "Esteja sincronizado em tempo real com seu grupo através do chat da pelada.",
   },
@@ -133,7 +134,7 @@ export default function LandingPage() {
                 style={{ animationDelay: `${i * 0.08}s` }}
               >
                 <div className="landing-icon-wrap w-10 h-10 rounded-lg bg-green-100 dark:bg-green-900/40 flex items-center justify-center">
-                  <Icon className="w-5 h-5 text-green-600 dark:text-green-400" />
+                  <HugeiconsIcon icon={Icon} className="w-5 h-5 text-green-600 dark:text-green-400" />
                 </div>
                 <h3 className="font-semibold text-lg">{title}</h3>
                 <p className="text-sm text-muted-foreground">{description}</p>
@@ -230,7 +231,7 @@ export default function LandingPage() {
                   className="w-9 h-9 rounded-full border border-neutral-300 dark:border-border flex items-center justify-center hover:border-neutral-600 dark:hover:border-foreground hover:text-neutral-900 dark:hover:text-foreground transition-colors duration-150"
                   aria-label="GitHub"
                 >
-                  <Github className="w-4 h-4" />
+                  <HugeiconsIcon icon={Github01Icon} className="w-4 h-4" />
                 </a>
                 <a
                   href="https://linkedin.com"
@@ -239,14 +240,14 @@ export default function LandingPage() {
                   className="w-9 h-9 rounded-full border border-neutral-300 dark:border-border flex items-center justify-center hover:border-neutral-600 dark:hover:border-foreground hover:text-neutral-900 dark:hover:text-foreground transition-colors duration-150"
                   aria-label="LinkedIn"
                 >
-                  <Linkedin className="w-4 h-4" />
+                  <HugeiconsIcon icon={Linkedin01Icon} className="w-4 h-4" />
                 </a>
                 <a
                   href="mailto:contact@futspring.com"
                   className="w-9 h-9 rounded-full border border-neutral-300 dark:border-border flex items-center justify-center hover:border-neutral-600 dark:hover:border-foreground hover:text-neutral-900 dark:hover:text-foreground transition-colors duration-150"
                   aria-label="Email"
                 >
-                  <Mail className="w-4 h-4" />
+                  <HugeiconsIcon icon={Mail01Icon} className="w-4 h-4" />
                 </a>
               </div>
             </div>
