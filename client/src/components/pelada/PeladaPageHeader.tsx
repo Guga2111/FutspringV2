@@ -38,7 +38,7 @@ export function PeladaPageHeader({
         />
         {showSelect && <PeladaAreaSelect peladaId={peladaId} current={area} isAdmin={isAdmin} className="sm:shrink-0" />}
       </div>
-      {title && <h1 className="text-2xl font-bold tracking-[-0.01em] md:text-3xl">{title}</h1>}
+      {title && <h1 className="font-display text-heading-lg font-bold md:text-display">{title}</h1>}
       {description && <p className="max-w-2xl text-sm text-muted-foreground md:text-base">{description}</p>}
     </header>
   )

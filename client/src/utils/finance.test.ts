@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import type { FinanceCharge } from "@/types/finance"
-import { filterFinanceCharges, financeQueueCounts, formatFinanceMoney, normalizeFinanceAmount, sumFinanceAmounts } from "@/utils/finance"
+import { clampFinancePage, filterFinanceCharges, financeOptionsSummary, planReceiveAll, financePageCount, financeQueueCounts, formatFinanceMoney, normalizeFinanceAmount, sumFinanceAmounts } from "@/utils/finance"
 
 it("formats cents without floating point rounding", () => {
   expect(formatFinanceMoney("999999999999.99")).toBe("R$ 999.999.999.999,99")
@@ -25,6 +25,13 @@ describe("administrator payment queue", () => {
   const paid = charge(4, "Carlos", { paymentStatus: "PAID", received: "45.00", outstanding: "0.00" })
   const canceled = charge(5, "Daniel", { canceled: true })
   const rows = [pending, paid, canceled, overdue, review]
+  it("receives everyone who owes, leaving out paid, canceled and payments to review", () => {
+    const partial = charge(6, "Eduardo", { paymentStatus: "PARTIAL", received: "20.00", outstanding: "25.00" })
+    const plan = planReceiveAll([...rows, partial])
+    expect(plan.charges.map(c => c.id)).toEqual([1, 2, 6])
+    expect(plan.total).toBe("115.00")
+    expect(plan.review).toBe(1)
+  })
   it("prioritizes review and overdue obligations without mutating the server rows", () => {
     expect(filterFinanceCharges(rows, "pending", "").map(c => c.id)).toEqual([3, 2, 1])
     expect(rows.map(c => c.id)).toEqual([1, 4, 5, 2, 3])
@@ -38,5 +45,40 @@ describe("administrator payment queue", () => {
   it("matches names without case or accents within the chosen filter", () => {
     expect(filterFinanceCharges(rows, "pending", "alvARO").map(c => c.id)).toEqual([1])
     expect(filterFinanceCharges(rows, "review", "alvaro")).toEqual([])
+  })
+})
+
+describe("finance pages", () => {
+  it("counts at least one page", () => {
+    expect(financePageCount(0, 10)).toBe(1)
+    expect(financePageCount(10, 10)).toBe(1)
+    expect(financePageCount(11, 10)).toBe(2)
+  })
+  it("moves back when the current page disappears", () => {
+    expect(clampFinancePage(2, 21, 10)).toBe(2)
+    expect(clampFinancePage(2, 20, 10)).toBe(1)
+    expect(clampFinancePage(1, 0, 10)).toBe(0)
+  })
+  it("keeps the page when the API sends no total", () => {
+    expect(clampFinancePage(0, undefined, 10)).toBe(0)
+    expect(clampFinancePage(2, Number.NaN, 10)).toBe(2)
+  })
+})
+
+describe("financeOptionsSummary", () => {
+  const defaults = { pixKey: "pix@futspring.com", pixRecipient: "Leal" }
+  const base = { componentCount: 1, pixKey: "pix@futspring.com", pixRecipient: "Leal" }
+
+  it("says nothing was changed", () => {
+    expect(financeOptionsSummary(base, defaults)).toBe("Sem vencimento · Pix padrão")
+  })
+
+  it("lists what is set", () => {
+    expect(financeOptionsSummary({ ...base, dueDate: "2026-11-15", detailedPrice: true, componentCount: 3, dailyId: 4, description: " Trazer colete ", pixKey: "outra@pix.com" }, defaults))
+      .toBe("Vence 15/11 · 3 itens · Vinculada a uma sessão · Com observações · Pix próprio")
+  })
+
+  it("has no Pix without a key", () => {
+    expect(financeOptionsSummary({ componentCount: 1, pixKey: "", pixRecipient: "" }, undefined)).toBe("Sem vencimento · Sem Pix")
   })
 })

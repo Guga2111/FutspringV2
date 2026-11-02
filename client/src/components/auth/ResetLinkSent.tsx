@@ -14,7 +14,7 @@ export function ResetLinkSent({ email, onUseAnotherEmail }: ResetLinkSentProps) 
   return (
     <Card className="w-full max-w-md border-0 shadow-none">
       <CardHeader className="items-center text-center">
-        <HugeiconsIcon icon={MailValidation01Icon} aria-hidden className="mb-2 size-10 text-brand" />
+        <HugeiconsIcon icon={MailValidation01Icon} aria-hidden className="mb-2 size-10 text-brand-text" />
         <CardTitle>Verifique seu e-mail</CardTitle>
         <CardDescription>
           Se existir uma conta com <span className="font-medium text-foreground">{email}</span>, enviamos um link
@@ -27,7 +27,7 @@ export function ResetLinkSent({ email, onUseAnotherEmail }: ResetLinkSentProps) 
         </p>
       </CardContent>
       <CardFooter className="flex flex-col gap-2">
-        <Button asChild variant="gradient" className="w-full">
+        <Button asChild variant="brand" className="w-full">
           <Link to="/auth?tab=login">Voltar para o login</Link>
         </Button>
         <Button type="button" variant="ghost" className="w-full" onClick={onUseAnotherEmail}>

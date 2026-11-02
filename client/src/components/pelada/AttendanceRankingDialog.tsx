@@ -196,7 +196,7 @@ function AttendanceRanking({ data, onNavigate }: { data: PeladaAttendanceDTO; on
                         <Progress
                           value={row.rate * 100}
                           className="hidden h-1.5 flex-1 md:block"
-                          indicatorClassName="bg-gradient-primary"
+                          indicatorClassName="bg-brand"
                           aria-label={`Presença de ${row.username}`}
                         />
                         <span className="w-10 text-right font-semibold tabular-nums">{formatAttendanceRate(row.rate)}</span>

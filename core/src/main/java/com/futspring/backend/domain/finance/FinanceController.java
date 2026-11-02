@@ -19,7 +19,8 @@ public class FinanceController {
     private final FinanceAttachmentService attachments;
 
     @GetMapping public FinanceViews.Overview overview(@PathVariable Long peladaId, @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "50") int size, @AuthenticationPrincipal String email) { return reads.overview(peladaId, email, page, size); }
+            @RequestParam(defaultValue = "50") int size, @RequestParam(defaultValue = "ACTIVE") FinanceTypes.ListScope scope,
+            @AuthenticationPrincipal String email) { return reads.overview(peladaId, email, scope, page, size); }
     @GetMapping("/lists/{listId}") public FinanceViews.Detail detail(@PathVariable Long peladaId, @PathVariable Long listId,
             @AuthenticationPrincipal String email) { return reads.detail(peladaId, listId, email); }
     @GetMapping("/movements") public FinanceViews.Page<FinanceViews.Movement> movements(@PathVariable Long peladaId,
@@ -69,6 +70,8 @@ public class FinanceController {
             @PathVariable Long chargeId, @Valid @RequestBody FinanceRequests.Command body, @AuthenticationPrincipal String email) { return collections.cancelCharge(peladaId, listId, chargeId, body, email); }
     @PostMapping("/lists/{listId}/charges/{chargeId}/receive") public FinanceViews.Result receive(@PathVariable Long peladaId, @PathVariable Long listId,
             @PathVariable Long chargeId, @Valid @RequestBody FinanceRequests.Receipt body, @AuthenticationPrincipal String email) { return ledger.receive(peladaId, listId, chargeId, body, email); }
+    @PostMapping("/lists/{listId}/receive-all") public FinanceViews.Result receiveAll(@PathVariable Long peladaId, @PathVariable Long listId,
+            @Valid @RequestBody FinanceRequests.ReceiveAll body, @AuthenticationPrincipal String email) { return ledger.receiveAll(peladaId, listId, body, email); }
     @PostMapping(value = "/lists/{listId}/charges/{chargeId}/report", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public FinanceViews.Result report(@PathVariable Long peladaId, @PathVariable Long listId, @PathVariable Long chargeId,
             @Valid @RequestPart("command") FinanceRequests.Command command, @RequestPart(value = "file", required = false) MultipartFile file,

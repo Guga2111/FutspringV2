@@ -68,7 +68,7 @@ export function SessionRow({ daily }: { daily: DailyListItem }) {
     <li className="border-b border-border/60 last:border-b-0">
       <Link to={`/daily/${daily.id}`} className="flex items-center gap-3.5 px-3.5 py-3 transition-colors hover:bg-row-hover">
         <div className="flex w-11 shrink-0 flex-col items-center">
-          <span className="text-xl font-bold leading-[1.1]">{String(parseLocalDate(daily.dailyDate).getDate()).padStart(2, "0")}</span>
+          <span className="font-display text-heading font-bold tabular-nums">{String(parseLocalDate(daily.dailyDate).getDate()).padStart(2, "0")}</span>
           <span className="text-[11px] font-semibold uppercase text-subtle-foreground">{weekdayShort(daily.dailyDate)}</span>
         </div>
         <div className="flex min-w-0 flex-1 flex-col gap-[3px]">

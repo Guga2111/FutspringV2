@@ -7,7 +7,7 @@ import { peladaLocationSchema, type PeladaLocationValues } from "@/schemas/pelad
 import type { PeladaDetail } from "@/types/pelada"
 import { detailFields } from "@/components/pelada-settings/hooks/usePeladaSettings"
 import { useSettingsSubmit } from "@/components/pelada-settings/hooks/useSettingsSubmit"
-import { SettingsCard, SettingsCardFooter, SettingsRootError } from "@/components/pelada-settings/SettingsCard"
+import { SettingsCard, SettingsCardFooter, SettingsRootError } from "@/components/SettingsCard"
 
 interface LocationCardProps {
   pelada: PeladaDetail

@@ -274,11 +274,11 @@ export default function ImportFromMessageModal({ daily, onClose, onSuccess }: Pr
           <div className="flex gap-2">
             <Button variant="outline" onClick={onClose} disabled={loading}>Cancelar</Button>
             {step === 1 ? (
-              <Button variant="gradient" onClick={handleAnalyze} disabled={!text.trim()}>
+              <Button variant="brand" onClick={handleAnalyze} disabled={!text.trim()}>
                 Analisar mensagem
               </Button>
             ) : (
-              <Button variant="gradient" onClick={handleImport} disabled={!allResolved || loading}>
+              <Button variant="brand" onClick={handleImport} disabled={!allResolved || loading}>
                 {loading ? 'Importando...' : 'Confirmar e importar'}
               </Button>
             )}

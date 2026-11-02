@@ -148,7 +148,7 @@ export function MembersGrid({
           </Button>
         )}
         {isCurrentUserAdmin && (
-          <Button variant="gradient" onClick={onInvitePlayer} className="hidden h-9 gap-1.5 px-4 font-semibold md:inline-flex">
+          <Button variant="brand" onClick={onInvitePlayer} className="hidden h-9 gap-1.5 px-4 font-semibold md:inline-flex">
             <HugeiconsIcon icon={PlusSignIcon} className="size-[15px]" strokeWidth={2.2} />
             Convidar jogador
           </Button>
@@ -169,7 +169,7 @@ export function MembersGrid({
           </span>
         )}
         {isCurrentUserAdmin && (
-          <Button variant="gradient" size="icon" aria-label="Convidar jogador" onClick={onInvitePlayer} className="size-10 shrink-0 md:hidden">
+          <Button variant="brand" size="icon" aria-label="Convidar jogador" onClick={onInvitePlayer} className="size-10 shrink-0 md:hidden">
             <HugeiconsIcon icon={PlusSignIcon} className="size-[18px]" strokeWidth={2.4} />
           </Button>
         )}

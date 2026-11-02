@@ -109,7 +109,7 @@ export default function FinalizeModal({ daily, onClose, onSuccess }: FinalizeMod
           <Button variant="outline" disabled={loading} onClick={onClose}>
             Cancelar
           </Button>
-          <Button variant="gradient" disabled={loading} onClick={handleSubmit}>
+          <Button variant="brand" disabled={loading} onClick={handleSubmit}>
             {loading ? "Finalizando..." : "Finalizar"}
           </Button>
         </DialogFooter>

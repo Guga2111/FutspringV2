@@ -4,7 +4,7 @@ import { ArrowDataTransferHorizontalIcon, Delete02Icon } from "@hugeicons/core-f
 import { Button } from "@/components/ui/button"
 import type { PeladaDetail } from "@/types/pelada"
 import { DeletePeladaDialog } from "@/components/pelada-settings/DeletePeladaDialog"
-import { SettingsCard } from "@/components/pelada-settings/SettingsCard"
+import { SettingsCard } from "@/components/SettingsCard"
 import { TransferPeladaDialog } from "@/components/pelada-settings/TransferPeladaDialog"
 
 interface DangerZoneProps {

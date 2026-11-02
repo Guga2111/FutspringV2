@@ -168,7 +168,7 @@ export default function AuthPage() {
                       onChange={(e) => setLoginData((prev) => ({ ...prev, password: e.target.value }))}
                     />
                   </div>
-                  <Button type="submit" className="w-full bg-gradient-primary text-white border-0" disabled={loginLoading}>
+                  <Button type="submit" variant="brand" className="w-full" disabled={loginLoading}>
                     {loginLoading ? "Entrando..." : "Entrar"}
                   </Button>
                   <div className="relative my-4">
@@ -270,7 +270,7 @@ export default function AuthPage() {
                       Eu li e concordo com os termos de uso
                     </Label>
                   </div>
-                  <Button type="submit" variant="gradient" className="w-full" disabled={registerLoading || !termsAccepted}>
+                  <Button type="submit" variant="brand" className="w-full" disabled={registerLoading || !termsAccepted}>
                     {registerLoading ? "Criando conta..." : "Criar conta"}
                   </Button>
                   <div className="relative my-4">

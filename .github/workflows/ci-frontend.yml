@@ -37,3 +37,38 @@ jobs:
 
       - name: Test
         run: bun run test
+
+  # Visual regression (client/e2e). Runs in the Playwright image the snapshots were made with;
+  # keep the tag equal to the @playwright/test version in client/package.json.
+  # Not blocking until the baseline has proven stable in CI (design system spec, step 8).
+  visual:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    container:
+      image: mcr.microsoft.com/playwright:v1.64.1-noble
+      options: --ipc=host
+    defaults:
+      run:
+        working-directory: client
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Visual tests
+        run: bunx playwright test
+
+      - name: Upload report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            client/playwright-report
+            client/test-results
+          retention-days: 7

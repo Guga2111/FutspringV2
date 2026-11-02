@@ -109,7 +109,6 @@ export default function CreatePeladaModal({ onClose, onCreated }: CreatePeladaMo
                 placeholder="Jogasse Onde?"
                 value={form.name}
                 onChange={handleChange}
-                className="focus-visible:ring-green-500"
               />
             </div>
 
@@ -121,7 +120,7 @@ export default function CreatePeladaModal({ onClose, onCreated }: CreatePeladaMo
                   value={form.dayOfWeek}
                   onValueChange={(v) => setForm((prev) => ({ ...prev, dayOfWeek: v }))}
                 >
-                  <SelectTrigger id="cp-dayOfWeek" className="focus-visible:ring-green-500 focus:ring-green-500">
+                  <SelectTrigger id="cp-dayOfWeek">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -143,7 +142,6 @@ export default function CreatePeladaModal({ onClose, onCreated }: CreatePeladaMo
                   required
                   value={form.timeOfDay}
                   onChange={handleChange}
-                  className="focus-visible:ring-green-500"
                 />
               </div>
             </div>
@@ -161,7 +159,6 @@ export default function CreatePeladaModal({ onClose, onCreated }: CreatePeladaMo
                 placeholder="1.5"
                 value={form.duration}
                 onChange={handleChange}
-                className="focus-visible:ring-green-500"
               />
             </div>
 
@@ -178,7 +175,6 @@ export default function CreatePeladaModal({ onClose, onCreated }: CreatePeladaMo
                   step="1"
                   value={form.numberOfTeams}
                   onChange={handleChange}
-                  className="focus-visible:ring-green-500"
                 />
               </div>
               <div className="space-y-1.5">
@@ -192,7 +188,6 @@ export default function CreatePeladaModal({ onClose, onCreated }: CreatePeladaMo
                   step="1"
                   value={form.playersPerTeam}
                   onChange={handleChange}
-                  className="focus-visible:ring-green-500"
                 />
               </div>
             </div>
@@ -207,7 +202,6 @@ export default function CreatePeladaModal({ onClose, onCreated }: CreatePeladaMo
                 placeholder="Rua da Estrela"
                 value={form.address}
                 onChange={handleChange}
-                className="focus-visible:ring-green-500"
               />
             </div>
 
@@ -221,7 +215,6 @@ export default function CreatePeladaModal({ onClose, onCreated }: CreatePeladaMo
                 placeholder="Ilha do Retiro"
                 value={form.reference}
                 onChange={handleChange}
-                className="focus-visible:ring-green-500"
               />
             </div>
 
@@ -233,7 +226,6 @@ export default function CreatePeladaModal({ onClose, onCreated }: CreatePeladaMo
                 onCheckedChange={(checked) =>
                   setForm((prev) => ({ ...prev, autoCreateDailyEnabled: !!checked }))
                 }
-                className="data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600"
               />
               <Label htmlFor="cp-autoCreate" className="cursor-pointer font-normal">
                 Permita auto criar sessões semanais.
@@ -249,14 +241,14 @@ export default function CreatePeladaModal({ onClose, onCreated }: CreatePeladaMo
                 type="file"
                 accept="image/jpeg,image/png,image/webp"
                 onChange={handleFileChange}
-                className="cursor-pointer focus-visible:ring-green-500"
+                className="cursor-pointer"
               />
               <p className="text-xs text-muted-foreground">JPEG, PNG, ou WebP · max 5MB</p>
             </div>
           </div>
 
           <SheetFooter className="px-6 py-4 border-t">
-            <Button type="submit" variant="gradient" className="w-full" disabled={loading}>
+            <Button type="submit" variant="brand" className="w-full" disabled={loading}>
               {loading ? "Criando..." : "Criar Pelada"}
             </Button>
           </SheetFooter>

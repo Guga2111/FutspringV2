@@ -37,7 +37,7 @@ export function PeladaChat({ peladaId, peladaName, memberCount, currentUserId }:
     return (
       <>
         {!open && (
-          <Button variant="gradient" size="icon" aria-label="Abrir chat" onClick={() => setOpen(true)} className={fabClass}>
+          <Button variant="brand" size="icon" aria-label="Abrir chat" onClick={() => setOpen(true)} className={fabClass}>
             <HugeiconsIcon icon={BubbleChatIcon} />
           </Button>
         )}
@@ -60,7 +60,7 @@ export function PeladaChat({ peladaId, peladaName, memberCount, currentUserId }:
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button variant="gradient" size="icon" aria-label={open ? "Fechar chat" : "Abrir chat"} className={fabClass}>
+        <Button variant="brand" size="icon" aria-label={open ? "Fechar chat" : "Abrir chat"} className={fabClass}>
           <HugeiconsIcon icon={BubbleChatIcon} />
         </Button>
       </PopoverTrigger>

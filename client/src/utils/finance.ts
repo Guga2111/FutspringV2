@@ -56,3 +56,48 @@ export function filterFinanceCharges(charges: FinanceCharge[], filter: FinanceQu
     filter === "review" ? Boolean(pendingFinanceNotice(c)) : filter === "paid" ? c.paymentStatus === "PAID" : c.paymentStatus !== "PAID"
   )))).sort((a, b) => priority(a) - priority(b) || a.name.localeCompare(b.name, "pt-BR"))
 }
+
+// Numbered pages: at least one page, so an empty list still reads "Página 1 de 1"
+export function financePageCount(total: number, size: number): number {
+  return Math.max(1, Math.ceil(total / size))
+}
+
+// After a change (a list closed, a movement reversed) the current page may no longer exist.
+// Without a usable total (an API from before numbered pages) the page is kept, never NaN.
+export function clampFinancePage(page: number, total: number | undefined, size: number): number {
+  if (typeof total !== "number" || !Number.isFinite(total)) return page
+  return Math.min(page, financePageCount(total, size) - 1)
+}
+
+export interface FinanceOptionsSummaryInput {
+  dueDate?: string | null
+  detailedPrice?: boolean
+  componentCount: number
+  dailyId?: number | null
+  description?: string | null
+  pixKey?: string | null
+  pixRecipient?: string | null
+}
+
+// The closed "Vencimento e outras opções" section says what is set inside it, e.g. "Vence 15/11 · 3 itens · Pix próprio"
+export function financeOptionsSummary(values: FinanceOptionsSummaryInput, defaults: { pixKey?: string | null; pixRecipient?: string | null } | undefined): string {
+  const dueDate = values.dueDate?.trim()
+  const pixKey = values.pixKey?.trim() ?? ""
+  const pixRecipient = values.pixRecipient?.trim() ?? ""
+  const ownPix = pixKey !== (defaults?.pixKey ?? "").trim() || pixRecipient !== (defaults?.pixRecipient ?? "").trim()
+  return [
+    dueDate ? `Vence ${dueDate.split("-").reverse().slice(0, 2).join("/")}` : "Sem vencimento",
+    values.detailedPrice ? `${values.componentCount} ${values.componentCount === 1 ? "item" : "itens"}` : null,
+    values.dailyId != null ? "Vinculada a uma sessão" : null,
+    values.description?.trim() ? "Com observações" : null,
+    !pixKey ? "Sem Pix" : ownPix ? "Pix próprio" : "Pix padrão",
+  ].filter(Boolean).join(" · ")
+}
+
+// "Receber todos" on the rows on screen: who still owes and has no payment waiting for review, the total, and how
+// many were left out because a reported payment must be reviewed first (the server refuses a receipt meanwhile)
+export function planReceiveAll(rows: FinanceCharge[]) {
+  const open = rows.filter(c => !c.canceled && c.paymentStatus !== "PAID" && c.outstanding !== "0.00")
+  const charges = open.filter(c => !pendingFinanceNotice(c))
+  return { charges, total: sumFinanceAmounts(charges.map(c => c.outstanding)), review: open.length - charges.length }
+}

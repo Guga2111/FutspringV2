@@ -16,7 +16,7 @@ interface ConfirmActionDialogProps {
   confirmLabel: string
   pendingLabel: string
   cancelLabel?: string
-  variant?: "destructive" | "default" | "gradient"
+  variant?: "destructive" | "default" | "brand"
   loading: boolean
   onConfirm: () => void
   onClose: () => void

@@ -28,7 +28,7 @@ export function AttendanceSummaryCard({ daily, isConfirmed, pending, onToggle }:
           value={capacity > 0 ? Math.min(100, (count / capacity) * 100) : 0}
           aria-label="Confirmados"
           className="h-2 max-w-[420px] bg-secondary"
-          indicatorClassName="bg-gradient-primary"
+          indicatorClassName="bg-brand"
         />
         <span className="text-[13px] text-muted-foreground">{attendanceHint(count, daily.numberOfTeams, daily.playersPerTeam)}</span>
       </div>

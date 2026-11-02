@@ -18,7 +18,7 @@ export default function NotificationUnsubscribePage() {
   return <AuthLayout>{token ? <UnsubscribeCard key={token} token={token} /> : <MissingTokenCard />}</AuthLayout>
 }
 
-function ManagePreferencesButton({ variant }: { variant: "gradient" | "ghost" }) {
+function ManagePreferencesButton({ variant }: { variant: "brand" | "ghost" }) {
   return (
     <Button asChild variant={variant} className="w-full">
       <Link to="/settings/notifications">Gerenciar preferências</Link>
@@ -54,7 +54,7 @@ function UnsubscribeCard({ token }: { token: string }) {
           </Alert>
         </CardContent>
         <CardFooter>
-          <ManagePreferencesButton variant="gradient" />
+          <ManagePreferencesButton variant="brand" />
         </CardFooter>
       </Card>
     )
@@ -66,9 +66,9 @@ function UnsubscribeCard({ token }: { token: string }) {
   return (
     <Card className="w-full max-w-md border-0 shadow-none">
       <CardHeader className="items-center text-center">
-        <HugeiconsIcon icon={Icon} aria-hidden className="mb-2 size-10 text-brand" />
+        <HugeiconsIcon icon={Icon} aria-hidden className="mb-2 size-10 text-brand-text" />
         <CardTitle aria-live="polite">
-          E-mails de <span className="text-brand">{label}</span> {preference.emailEnabled ? "reativados" : "desativados"}
+          E-mails de <span className="text-brand-text">{label}</span> {preference.emailEnabled ? "reativados" : "desativados"}
         </CardTitle>
         <CardDescription>
           {preference.emailEnabled
@@ -82,7 +82,7 @@ function UnsubscribeCard({ token }: { token: string }) {
             Desativar de novo
           </Button>
         ) : (
-          <Button variant="gradient" className="w-full" disabled={pending} onClick={resubscribe}>
+          <Button variant="brand" className="w-full" disabled={pending} onClick={resubscribe}>
             Reativar
           </Button>
         )}
@@ -102,7 +102,7 @@ function MissingTokenCard() {
         </CardDescription>
       </CardHeader>
       <CardFooter>
-        <ManagePreferencesButton variant="gradient" />
+        <ManagePreferencesButton variant="brand" />
       </CardFooter>
     </Card>
   )

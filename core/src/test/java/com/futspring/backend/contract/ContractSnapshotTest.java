@@ -24,6 +24,7 @@ import com.futspring.backend.domain.notification.dto.NotificationDTO;
 import com.futspring.backend.domain.notification.dto.NotificationPreferenceDTO;
 import com.futspring.backend.domain.notification.dto.NotificationPushDTO;
 import com.futspring.backend.domain.notification.dto.UnreadCountDTO;
+import com.futspring.backend.domain.tour.dto.TourStateDTO;
 import com.futspring.backend.domain.notification.dto.UnsubscribeRequestDTO;
 import com.futspring.backend.domain.pelada.dto.InvitePlayerRequestDTO;
 import com.futspring.backend.domain.pelada.dto.InvitationDTO;
@@ -98,6 +99,7 @@ class ContractSnapshotTest {
                 PlayerPeladaStatsDTO.class, PlayerPeladaHistoryDTO.class, UserMatchHistoryDTO.class,
                 UserStatsTimelineDTO.class,
                 MessageDTO.class,
+                TourStateDTO.class,
                 NotificationDTO.class, NotificationPushDTO.class, NotificationPreferenceDTO.class, UnreadCountDTO.class,
                 ErrorResponse.class);
     }

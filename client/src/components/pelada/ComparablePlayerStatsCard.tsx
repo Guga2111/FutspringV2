@@ -1,6 +1,6 @@
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { getPeladaGradient, getInitials, getFileUrl } from "@/lib/utils";
+import { getPeladaColor, getInitials, getFileUrl } from "@/lib/utils";
 import type { ProfileDTO } from "@/types/user";
 import type { PlayerPeladaStatsDTO } from "@/types/pelada";
 
@@ -19,7 +19,7 @@ function Stars({ count }: { count: number }) {
   return (
     <span className="text-gold text-xs tracking-tight">
       {"★".repeat(clamped)}
-      <span className="text-zinc-600">{"★".repeat(5 - clamped)}</span>
+      <span className="text-star-off">{"★".repeat(5 - clamped)}</span>
     </span>
   );
 }
@@ -39,31 +39,31 @@ function StatBar({ valueA, valueB, label }: StatRow) {
     <div className="grid grid-cols-[1fr_120px_1fr] gap-x-3 items-center py-1.5">
       {/* Player A value + bar */}
       <div className="flex items-center justify-end gap-2">
-        <span className={`text-sm font-semibold tabular-nums ${valueA >= valueB ? "text-green-400" : "text-zinc-400"}`}>
+        <span className={`text-sm font-semibold tabular-nums ${valueA >= valueB ? "text-brand-text" : "text-muted-foreground"}`}>
           {valueA}
         </span>
-        <div className="h-1.5 w-20 bg-zinc-800 rounded-full overflow-hidden flex justify-end">
+        <div className="h-1.5 w-20 bg-border rounded-full overflow-hidden flex justify-end">
           <div
-            className="h-full bg-green-500 rounded-full transition-all duration-500"
+            className="h-full bg-brand rounded-full transition-all duration-500"
             style={{ width: `${pctA}%` }}
           />
         </div>
       </div>
 
       {/* Center label */}
-      <span className="text-[10px] font-medium text-zinc-500 uppercase tracking-widest whitespace-nowrap text-center">
+      <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-widest whitespace-nowrap text-center">
         {label}
       </span>
 
       {/* Player B bar + value */}
       <div className="flex items-center gap-2">
-        <div className="h-1.5 w-20 bg-zinc-800 rounded-full overflow-hidden">
+        <div className="h-1.5 w-20 bg-border rounded-full overflow-hidden">
           <div
-            className="h-full bg-amber-500 rounded-full transition-all duration-500"
+            className="h-full bg-highlight rounded-full transition-all duration-500"
             style={{ width: `${pctB}%` }}
           />
         </div>
-        <span className={`text-sm font-semibold tabular-nums ${valueB >= valueA ? "text-amber-400" : "text-zinc-400"}`}>
+        <span className={`text-sm font-semibold tabular-nums ${valueB >= valueA ? "text-highlight-text" : "text-muted-foreground"}`}>
           {valueB}
         </span>
       </div>
@@ -81,7 +81,7 @@ function PlayerColumn({
   side: "A" | "B";
 }) {
   const initials = getInitials(data.profile.username);
-  const ringColor = side === "A" ? "ring-green-500/40" : "ring-amber-500/40";
+  const ringColor = side === "A" ? "ring-brand/40" : "ring-highlight/40";
 
   return (
     <div className="flex flex-col items-center gap-2 min-w-0">
@@ -93,14 +93,14 @@ function PlayerColumn({
           />
         )}
         <AvatarFallback
-          className={`${getPeladaGradient(data.profile.username)} text-white text-lg font-bold`}
+          className={`${getPeladaColor(data.profile.username)} text-white text-lg font-bold`}
         >
           {initials}
         </AvatarFallback>
       </Avatar>
 
       <div className="flex flex-col items-center gap-1">
-        <span className="font-semibold text-sm text-white truncate max-w-[120px] text-center">
+        <span className="font-semibold text-sm text-foreground truncate max-w-[120px] text-center">
           {data.profile.username}
         </span>
         {data.profile.position && (
@@ -109,7 +109,7 @@ function PlayerColumn({
           </Badge>
         )}
         <Stars count={stats.stars} />
-        <span className="text-[10px] text-zinc-500 tabular-nums">
+        <span className="text-[10px] text-muted-foreground tabular-nums">
           {stats.matchesPlayed} jogos
         </span>
       </div>
@@ -137,20 +137,20 @@ export function ComparablePlayerStatsCard({
   ];
 
   return (
-    <div className="rounded-xl bg-zinc-900 border border-zinc-800 p-4 space-y-4">
+    <div className="rounded-xl border bg-card-elevated p-4 space-y-4">
       {/* Player headers */}
       <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4">
         <PlayerColumn data={playerA} stats={playerA.stats} side="A" />
 
         <div className="flex flex-col items-center">
-          <span className="text-xl font-black text-zinc-600 tracking-tight">VS</span>
+          <span className="font-display text-heading font-extrabold text-faint-foreground">VS</span>
         </div>
 
         <PlayerColumn data={playerB} stats={playerB.stats} side="B" />
       </div>
 
       {/* Divider */}
-      <div className="border-t border-zinc-800" />
+      <div className="border-t" />
 
       {/* Stat rows */}
       <div className="space-y-0.5">

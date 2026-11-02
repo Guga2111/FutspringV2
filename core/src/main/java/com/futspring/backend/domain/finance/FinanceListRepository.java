@@ -2,19 +2,20 @@ package com.futspring.backend.domain.finance;
 import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Slice;
+import org.springframework.data.domain.Page;
+import com.futspring.backend.domain.finance.FinanceTypes.ListStatus;
 import java.util.*;
 import java.time.Instant;
 import java.math.BigDecimal;
 public interface FinanceListRepository extends JpaRepository<FinanceList, Long> {
     List<FinanceList> findByPeladaId(Long id);
-    @Query("""
-        SELECT l FROM FinanceList l WHERE l.peladaId = :id AND
+    String VISIBLE = """
+        FROM FinanceList l WHERE l.peladaId = :id AND l.status IN :statuses AND
         (:manage = true OR (l.status <> 'DRAFT' AND
         (:transparent = true OR EXISTS (SELECT c.id FROM FinanceCharge c WHERE c.listId = l.id AND c.userId = :userId))))
-        ORDER BY l.id DESC
-        """)
-    Slice<FinanceList> visible(@Param("id") Long id, @Param("manage") boolean manage,
+        """;
+    @Query(value = "SELECT l " + VISIBLE + " ORDER BY l.id DESC", countQuery = "SELECT COUNT(l) " + VISIBLE)
+    Page<FinanceList> visible(@Param("id") Long id, @Param("statuses") Collection<ListStatus> statuses, @Param("manage") boolean manage,
             @Param("transparent") boolean transparent, @Param("userId") Long userId, Pageable page);
     List<FinanceList> findByPeladaIdOrderByIdDesc(Long peladaId, Pageable page);
     Optional<FinanceList> findByIdAndPeladaId(Long id, Long peladaId);

@@ -3,7 +3,7 @@ import { Bookmark01Icon, Calendar03Icon, Clock01Icon, Location01Icon, Settings01
 import { Link } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { dayOfWeekLabel } from "@/lib/constants"
-import { cn, getFileUrl, getInitials, getPeladaGradient } from "@/lib/utils"
+import { cn, getFileUrl, getInitials, getPeladaColor } from "@/lib/utils"
 import type { PeladaDetail } from "@/types/pelada"
 
 interface PeladaBannerProps {
@@ -20,7 +20,7 @@ export function PeladaBanner({ pelada, isCurrentUserAdmin }: PeladaBannerProps) 
     <section
       className={cn(
         "relative flex min-h-[190px] flex-col justify-end overflow-hidden rounded-tile md:min-h-[230px]",
-        !imageUrl && getPeladaGradient(pelada.name),
+        !imageUrl && getPeladaColor(pelada.name),
       )}
     >
       {imageUrl ? (
@@ -28,7 +28,7 @@ export function PeladaBanner({ pelada, isCurrentUserAdmin }: PeladaBannerProps) 
       ) : (
         <span
           aria-hidden
-          className="absolute inset-0 flex select-none items-center justify-center pb-10 text-[56px] font-extrabold tracking-[0.02em] text-white/55"
+          className="absolute inset-0 flex select-none items-center justify-center pb-10 font-display text-hero font-extrabold tracking-[0.02em] text-white/55"
         >
           {getInitials(pelada.name)}
         </span>
@@ -46,7 +46,7 @@ export function PeladaBanner({ pelada, isCurrentUserAdmin }: PeladaBannerProps) 
       )}
 
       <div className="relative flex flex-col gap-2 px-[22px] py-5 text-white">
-        <h1 className="text-2xl font-bold">{pelada.name}</h1>
+        <h1 className="font-display text-heading-lg font-bold">{pelada.name}</h1>
         <div className="flex flex-wrap gap-x-4 gap-y-1 text-[13px] text-white/90 [&_svg]:size-3.5 [&_svg]:shrink-0">
           <span className="flex items-center gap-1.5">
             <HugeiconsIcon icon={Calendar03Icon} />

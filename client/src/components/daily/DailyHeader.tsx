@@ -56,11 +56,11 @@ export function DailyHeader({ daily, ...actions }: DailyHeaderProps) {
           ]}
         />
         <div className="flex flex-wrap items-center gap-2.5">
-          <h1 className="text-[22px] font-bold tracking-[-0.01em] md:text-[28px]">{formatLongDate(daily.dailyDate)}</h1>
+          <h1 className="font-display text-heading font-bold md:text-heading-lg">{formatLongDate(daily.dailyDate)}</h1>
           <DailyStatusBadge status={status} size="lg" />
           {status === "IN_COURSE" && (
-            <span className="flex items-center gap-1.5 text-[13px] font-semibold text-success">
-              <span className="size-2 rounded-full bg-success-strong shadow-[0_0_0_4px_hsl(var(--success-strong)/0.18)]" />
+            <span className="flex items-center gap-1.5 text-[13px] font-semibold text-live-foreground">
+              <span className="size-2 rounded-full bg-highlight shadow-[0_0_0_4px_hsl(var(--highlight)/0.22)]" />
               Ao vivo
             </span>
           )}
@@ -91,20 +91,20 @@ export function DailyHeader({ daily, ...actions }: DailyHeaderProps) {
                 <HugeiconsIcon icon={File01Icon} />
                 Importar mensagem
               </Button>
-              <Button variant="gradient" className={`${actionButton} font-semibold`} onClick={actions.onConfirmDaily}>
+              <Button variant="brand" className={`${actionButton} font-semibold`} onClick={actions.onConfirmDaily}>
                 <HugeiconsIcon icon={CheckmarkCircle02Icon} strokeWidth={2.2} />
                 Confirmar diária
               </Button>
             </>
           )}
           {status === "CONFIRMED" && (
-            <Button variant="gradient" className={`${actionButton} font-semibold`} onClick={actions.onStartSession}>
+            <Button variant="brand" className={`${actionButton} font-semibold`} onClick={actions.onStartSession}>
               <HugeiconsIcon icon={PlayIcon} />
               Iniciar sessão
             </Button>
           )}
           {status === "IN_COURSE" && (
-            <Button variant="gradient" className={`${actionButton} font-semibold`} onClick={actions.onEnterResults}>
+            <Button variant="brand" className={`${actionButton} font-semibold`} onClick={actions.onEnterResults}>
               <HugeiconsIcon icon={Task01Icon} />
               Lançar resultados
             </Button>

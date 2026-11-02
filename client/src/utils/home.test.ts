@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { formatCardDate, greeting, pendingLine, statsKpis, upcomingSessions } from "./home"
+import { formatCardDate, greeting, pendingLine, spotsLabel, statsKpis, upcomingSessions } from "./home"
 import type { PeladaResponse } from "@/types/pelada"
 import type { StatsDTO } from "@/types/stats"
 
@@ -51,5 +51,14 @@ describe("statsKpis", () => {
   it("handles a player without matches", () => {
     const stats = { goals: 0, assists: 0, matchesPlayed: 0, matchWins: 0, sessionsPlayed: 0 } as StatsDTO
     expect(statsKpis(stats)[3].sub).toBe("0% de aproveitamento")
+  })
+})
+
+describe("spotsLabel", () => {
+  it("counts the spots left, full and over the limit", () => {
+    expect(spotsLabel(7, 10)).toBe("3 vagas")
+    expect(spotsLabel(9, 10)).toBe("1 vaga")
+    expect(spotsLabel(10, 10)).toBe("Lotada")
+    expect(spotsLabel(12, 10)).toBe("2 acima do limite")
   })
 })

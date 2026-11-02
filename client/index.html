@@ -1,9 +1,40 @@
 <!doctype html>
-<html lang="en">
+<html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/png" href="/gerrard.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#ffffff" />
+    <script>
+      // Theme before the first paint: the saved choice (localStorage.theme, set by useTheme),
+      // otherwise the OS preference, followed live until the user picks a theme.
+      ;(function () {
+        var root = document.documentElement
+        var media = window.matchMedia("(prefers-color-scheme: dark)")
+        function saved() {
+          try {
+            return localStorage.getItem("theme")
+          } catch (e) {
+            return null
+          }
+        }
+        function apply() {
+          var theme = saved()
+          root.classList.toggle("dark", theme ? theme === "dark" : media.matches)
+        }
+        apply()
+        media.addEventListener("change", function () {
+          if (!saved()) apply()
+        })
+        // The browser chrome (theme-color) follows the page background, whatever changes the class
+        function syncThemeColor() {
+          var meta = document.querySelector('meta[name="theme-color"]')
+          if (meta && document.body) meta.setAttribute("content", getComputedStyle(document.body).backgroundColor)
+        }
+        new MutationObserver(syncThemeColor).observe(root, { attributes: true, attributeFilter: ["class"] })
+        window.addEventListener("load", syncThemeColor)
+      })()
+    </script>
+    <link rel="icon" type="image/png" href="/gerrard.png" />
     <title>Futspring</title>
   </head>
   <body>

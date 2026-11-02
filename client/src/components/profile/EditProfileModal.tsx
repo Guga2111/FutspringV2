@@ -91,7 +91,7 @@ export default function EditProfileModal({ profile, onClose, onProfileUpdated }:
   return (
     <Dialog open onOpenChange={(open) => !open && !submitting && onClose()}>
       <DialogContent className="max-w-md gap-0 overflow-hidden p-0">
-        <div className="relative h-[120px] bg-gradient-primary">
+        <div className="relative h-[120px] bg-brand">
           {backgroundUrl && (
             <img src={backgroundUrl} alt="" className="absolute inset-0 size-full object-cover" />
           )}
@@ -193,7 +193,7 @@ export default function EditProfileModal({ profile, onClose, onProfileUpdated }:
             <Button type="button" variant="outline" onClick={onClose} disabled={submitting}>
               Cancelar
             </Button>
-            <Button type="submit" variant="gradient" disabled={submitting || !form.formState.isDirty}>
+            <Button type="submit" variant="brand" disabled={submitting || !form.formState.isDirty}>
               {submitting ? "Salvando..." : "Salvar"}
             </Button>
           </DialogFooter>
