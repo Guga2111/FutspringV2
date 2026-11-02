@@ -47,10 +47,10 @@ export function NextSessionCard({ daily, timeZone, isAdmin, attendancePending, o
 
   return (
     <section className="flex flex-wrap items-center gap-5 rounded-tile border bg-card p-[18px]">
-      <div className="bg-gradient-date flex h-20 w-[72px] shrink-0 flex-col items-center justify-center rounded-xl text-white">
-        <span className="text-on-brand-muted text-[11px] font-bold tracking-[0.08em]">{weekdayShort(daily.dailyDate).toUpperCase()}</span>
+      <div className="flex h-20 w-[72px] shrink-0 flex-col items-center justify-center rounded-xl bg-brand text-brand-foreground">
+        <span className="text-[11px] font-bold tracking-[0.08em]">{weekdayShort(daily.dailyDate).toUpperCase()}</span>
         <span className="text-[28px] font-extrabold leading-[1.1]">{String(date.getDate()).padStart(2, "0")}</span>
-        <span className="text-on-brand-muted text-[11px] font-semibold">{MONTHS_SHORT[date.getMonth()]}</span>
+        <span className="text-[11px] font-semibold">{MONTHS_SHORT[date.getMonth()]}</span>
       </div>
       <div className="flex min-w-[220px] flex-1 flex-col gap-2">
         <div className="flex items-center gap-2">
@@ -65,7 +65,7 @@ export function NextSessionCard({ daily, timeZone, isAdmin, attendancePending, o
             value={percent}
             aria-label="Confirmados"
             className="h-1.5 max-w-[260px] flex-1 bg-secondary"
-            indicatorClassName="bg-gradient-primary"
+            indicatorClassName="bg-brand"
           />
           <span className="text-[13px] text-muted-foreground">
             <span className="font-semibold text-foreground">{daily.confirmedPlayerCount}</span> de {capacity} confirmados

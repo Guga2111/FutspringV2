@@ -23,7 +23,7 @@ export function HomeBanner({ username, pendingCount, onCreatePelada }: HomeBanne
       <div className="bg-hero-overlay absolute inset-0" />
       <div className="relative flex min-h-[220px] flex-wrap items-end justify-between gap-5 px-5 py-[22px] md:min-h-[240px] md:px-9 md:py-8">
         <div className="flex max-w-[560px] flex-col gap-2.5">
-          <span className="bg-brand-translucent text-on-brand-muted flex items-center gap-1.5 self-start rounded-full border px-2.5 py-1 text-xs font-semibold">
+          <span className="flex items-center gap-1.5 self-start rounded-full bg-brand px-2.5 py-1 text-xs font-semibold text-brand-foreground">
             {formatLongDate(format(now, "yyyy-MM-dd"))}
           </span>
           <h1 className="text-[28px] font-extrabold leading-[1.1] tracking-[-0.015em] text-white md:text-[38px]">
@@ -31,7 +31,7 @@ export function HomeBanner({ username, pendingCount, onCreatePelada }: HomeBanne
           </h1>
           <span className="text-[15px] text-white/85">{pendingLine(pendingCount)}</span>
         </div>
-        <Button variant="gradient" onClick={onCreatePelada} className="h-[42px] gap-2 px-5 font-semibold">
+        <Button variant="brand" onClick={onCreatePelada} className="h-[42px] gap-2 px-5 font-semibold">
           <Plus className="size-[15px]" strokeWidth={2.2} />
           Nova pelada
         </Button>

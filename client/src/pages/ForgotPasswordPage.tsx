@@ -58,7 +58,7 @@ export default function ForgotPasswordPage() {
             )}
           </CardContent>
           <CardFooter className="flex flex-col gap-2">
-            <Button type="submit" variant="gradient" className="w-full" disabled={isSubmitting}>
+            <Button type="submit" variant="brand" className="w-full" disabled={isSubmitting}>
               {isSubmitting ? "Enviando..." : "Enviar link"}
             </Button>
             <Button asChild variant="ghost" className="w-full">

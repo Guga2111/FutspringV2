@@ -53,7 +53,7 @@ client/
 └── src/
     ├── main.tsx          StrictMode > BrowserRouter > AuthProvider > App + <ThemedToaster/> (Sonner `position="top-center"`, bottom-right would cover the chat button; `theme` from `useTheme`)
     ├── App.tsx           routes, React.lazy pages, one <Suspense>, an <ErrorBoundary> per route
-    ├── index.css         Tailwind layers, design tokens (:root / .dark), brand gradient classes, landing animations
+    ├── index.css         Tailwind layers, design tokens (primitives + semantic, :root / .dark), composite classes, reduced-motion block, landing animations
     ├── api/              one module per backend domain; typed async functions returning response.data
     │   ├── client.ts     the axios instance (interceptors are added by AuthContext)
     │   ├── auth.ts, peladas.ts, invitations.ts, dailies.ts, users.ts, chat.ts, notifications.ts
@@ -269,16 +269,16 @@ export const dailyStatusLabel: Record<DailyStatus, string> = {
   | `status-scheduled*`, `status-live*` | status badges (`status-live` is also the "Admin" pill) |
   | `live-foreground`, `live-border` + `.bg-gradient-live` | live session card |
 
-  Composite classes in `index.css`: `.bg-gradient-date`, `.bg-gradient-leader`, photo overlays (`.bg-banner-overlay`, `.bg-photo-overlay`, `.bg-hero-overlay`, the same in both themes because they sit on images) and `.scrollbar-none`. Radii `rounded-tile` (14px) and `rounded-hero` (18px); shadows `shadow-menu`, `shadow-panel`, `shadow-dialog`, `shadow-fab` (overlays only).
+  Composite classes in `index.css`: `.bg-gradient-leader`, photo overlays (`.bg-banner-overlay`, `.bg-photo-overlay`, `.bg-hero-overlay`, the same in both themes because they sit on images) and `.scrollbar-none`. Radii `rounded-tile` (14px) and `rounded-hero` (18px); shadows `shadow-menu`, `shadow-panel`, `shadow-dialog`, `shadow-fab` (overlays only).
 - **Status maps:** `dailyStatusLabel` and `dailyStatusStyle` (badge + dot classes) in `types/daily.ts`, rendered by `DailyStatusBadge` (`size` `sm` | `md` | `lg`, Badge `variant="status"`).
-- **Brand (Electric Blue `#0799D5`)**: `--brand` is the fill (CTA, progress, checkbox, active underline tab, unread dot), the same in both themes; text and icons **on** a brand fill use `--brand-foreground` (Midnight; white on this blue is only 3.2:1), the hover fill is `--brand-hover`, the brand **as text/icon** on a surface is `--brand-text` (a darker blue in light), and soft brand pills use `--brand-muted`. Tailwind: `bg-brand`, `text-brand-foreground`, `hover:bg-brand-hover`, `text-brand-text`, `bg-brand-muted`. The older classes `.bg-gradient-primary`, `.text-gradient-primary`, `.checkbox-gradient`, `.bg-gradient-date` and the Button `variant="gradient"` still exist (historical names, solid colors) and are being migrated (spec step 4). Never retype the hex. Only the landing hero (`.landing-hero-bg`) keeps an animated gradient.
+- **Brand (Electric Blue `#0799D5`)**: `--brand` is the fill (CTA, progress, checkbox, active underline tab, unread dot), the same in both themes; text and icons **on** a brand fill use `--brand-foreground` (Midnight; white on this blue is only 3.2:1), the hover fill is `--brand-hover`, the brand **as text/icon** on a surface is `--brand-text` (a darker blue in light), and soft brand pills use `--brand-muted`. Tailwind: `bg-brand`, `text-brand-foreground`, `hover:bg-brand-hover`, `text-brand-text`, `bg-brand-muted`. The pre-redesign helpers (`.bg-gradient-primary`, `.text-gradient-primary`, `.checkbox-gradient`, `.bg-gradient-date`, `.bg-brand-translucent`, `.text-on-brand-muted`) and the Button `variant="gradient"` were removed. Never retype the hex. Only the landing hero (`.landing-hero-bg`) keeps an animated gradient.
 - **Highlight (Cantaloupe `#FF7356`)**: `--highlight` (+ `-foreground` Midnight, `-text`, `-muted`) is for achievement moments only (champion, session award winners, the goals KPI); never for errors or destructive actions, and never the shadcn `accent`.
 - **Chart colors:** `--chart-1` (blue), `--chart-2` (orange) and `--chart-3` (slate), light and dark, exposed as `chart-1…3` in Tailwind. `--gold` (`text-gold`) is for stars, trophies, crowns and medal positions; it is held to 3:1 (graphical), so don't use it for body text. `--info` is indigo, kept apart from the blue brand (Mensalista badge). In a `ChartConfig` use `color: "hsl(var(--chart-1))"` and reference series as `var(--color-<key>)` (reference: `components/pelada/PlayerHistoryDialog.tsx`).
 - **New colors** (status badges, positions, more chart series): add tokens to both `:root` and `.dark` (e.g. `--chart-1…5`, `--success`) and use them; don't scatter `bg-green-100 text-green-800` maps without dark variants.
 - **Dark mode** is class-based (`.dark` on `<html>`). An inline script in `index.html` applies it before the first paint: the saved choice in `localStorage.theme` (`"dark" | "light"`, written by `useTheme` when toggled from the user menu), otherwise the OS preference (`prefers-color-scheme`), followed live while nothing is saved. The same script keeps `<meta name="theme-color">` equal to the page background. `color-scheme` is set per theme in `index.css` (native controls and scrollbars), and toasts follow the theme (`ThemedToaster`). Every new UI must work in both themes.
 - **Reduced motion:** `index.css` has a global `prefers-reduced-motion: reduce` block (animations and transitions ≈0 ms, one iteration; no hover scaling). New animations need nothing extra, but must not rely on motion to convey information.
 - The document is `<html lang="pt-BR">`.
-- **Composition:** `cn()` from `@/lib/utils` for class names; `cva` variants for repeated styles (`components/ui/button-variants.ts` has `default`, `destructive`, `outline`, `secondary`, `ghost`, `link`, `gradient`).
+- **Composition:** `cn()` from `@/lib/utils` for class names; `cva` variants for repeated styles (`components/ui/button-variants.ts` has `default`, `destructive`, `outline`, `secondary`, `ghost`, `link`, `brand` — the main action, Electric Blue with Midnight text).
 - **Overlays:** `Sheet` for create/edit forms (reference: `CreatePeladaModal`), `Dialog`/`AlertDialog` for confirmations and short forms, `Drawer` for mobile bottom panels (chat), `DropdownMenu` / `Command` for menus.
 - **Responsive:** mobile first; the redesign switches to the mobile layout below **768 px (`md:`)**, which is also the shadcn sidebar's `useIsMobile` breakpoint; use `md:` for new layouts. Older screens still use `sm:` and `lg:` for side panels (chat sidebar). Grids go `grid-cols-1 md:grid-cols-2 lg:grid-cols-3`. Check every screen at 375 px.
 - Buttons are pill-shaped (`rounded-full` in the base variant); don't override the radius per screen.
@@ -477,7 +477,7 @@ Reference: `utils/parseSessionMessage.ts`, `utils/matchStats.ts`.
 
 ### 8. Theme-aware styling
 
-Tokens and `dark:` only where an asset differs per theme. Reference: shadcn components in `components/ui`, `Button variant="gradient"`.
+Tokens and `dark:` only where an asset differs per theme. Reference: shadcn components in `components/ui`, `Button variant="brand"`.
 
 ## Antipatterns
 
@@ -488,7 +488,7 @@ Don't introduce these. Some exist already ("Found in", paths under `src/`); fix 
 | 1 | Hand-rolled modals (`fixed inset-0 bg-black/50`): no focus trap, Esc or aria | `Dialog` / `AlertDialog` / `Sheet` | — |
 | 2 | Raw `<button>`, `<input>`, `<select>`, `<textarea>`, `<label>` | `Button`, `Input`, `Select`, `Textarea`, `Label`/`FieldLabel` | — |
 | 3 | Raw palette colors, hex values, `text-white`/`bg-black` on surfaces, screens hardcoded to one theme | Semantic tokens; new tokens in `index.css` for light and dark | `pelada/ComparePlayersDialog.tsx` (always dark), `profile/StatsOverTimeChart.tsx`, `ProfilePage.tsx` KPI icon colors, `MatchHistoryTable` highlight background, focus rings in the pelada modals, `LandingPage.tsx` (`neutral-*`) |
-| 4 | Retyping the brand gradient instead of the variant | `<Button variant="gradient">` | — |
+| 4 | Retyping the brand color, or `text-white` on a brand fill (3.2:1, fails AA) | `<Button variant="brand">`, `bg-brand text-brand-foreground`, `text-brand-text` for brand-colored text | — |
 | 5 | Forms with `useState` per field and hand-written validation | react-hook-form + zod + `Field` ([Forms](#forms-mandatory)) | `AuthPage`, `CreatePeladaModal`, `FinalizeModal`, `ImportFromMessageModal` |
 | 6 | Casting errors inline (`err as { response?: { data?: { message?: string } } }`) or copying an `extractErrorMessage` per file | One `getErrorMessage(error, fallback)` in `lib/errors.ts`; `applyServerErrors` for forms | — |
 | 7 | Copy-pasted helpers/constants | One helper in `lib/` or `utils/` | — |

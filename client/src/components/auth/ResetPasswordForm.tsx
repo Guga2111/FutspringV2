@@ -76,7 +76,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
           )}
         </CardContent>
         <CardFooter>
-          <Button type="submit" variant="gradient" className="w-full" disabled={isSubmitting}>
+          <Button type="submit" variant="brand" className="w-full" disabled={isSubmitting}>
             {isSubmitting ? "Salvando..." : "Salvar nova senha"}
           </Button>
         </CardFooter>

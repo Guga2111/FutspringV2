@@ -255,7 +255,7 @@ export default function CreatePeladaModal({ onClose, onCreated }: CreatePeladaMo
           </div>
 
           <SheetFooter className="px-6 py-4 border-t">
-            <Button type="submit" variant="gradient" className="w-full" disabled={loading}>
+            <Button type="submit" variant="brand" className="w-full" disabled={loading}>
               {loading ? "Criando..." : "Criar Pelada"}
             </Button>
           </SheetFooter>

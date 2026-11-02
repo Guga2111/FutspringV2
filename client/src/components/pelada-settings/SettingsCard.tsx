@@ -60,7 +60,7 @@ export function SettingsCardFooter({ dirty, submitting, onCancel }: SettingsCard
         <Button type="button" variant="outline" className="flex-1 md:flex-none" disabled={!dirty || submitting} onClick={onCancel}>
           Cancelar
         </Button>
-        <Button type="submit" variant="gradient" className="flex-1 md:flex-none" disabled={!dirty || submitting}>
+        <Button type="submit" variant="brand" className="flex-1 md:flex-none" disabled={!dirty || submitting}>
           Salvar alterações
         </Button>
       </div>

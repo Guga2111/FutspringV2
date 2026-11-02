@@ -90,7 +90,7 @@ export default function DailyDetailPage() {
               targetStatus: 'CONFIRMED',
               title: 'Confirmar sessão',
               description: 'A sessão passa a confirmada. A lista de presença continua aberta até a sessão começar.',
-              variant: 'gradient',
+              variant: 'brand',
             })
           }
           onStartSession={() =>

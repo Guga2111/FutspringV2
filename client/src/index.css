@@ -253,7 +253,7 @@
   }
 }
 
-/* Reduced motion: no infinite or decorative animation, no hover scaling */
+/* Reduced motion: no infinite or decorative animation */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -263,51 +263,11 @@
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
-  .bg-gradient-primary:hover {
-    transform: none;
-  }
 }
 
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
-}
-
-.checkbox-gradient {
-  border: 2px solid hsl(var(--brand));
-}
-
-.checkbox-gradient[data-state=checked] {
-  background: hsl(var(--brand));
-  border-color: transparent;
-}
-
-.bg-gradient-primary {
-  background: hsl(var(--brand));
-  transition: filter 0.15s ease, transform 0.15s ease;
-}
-
-.bg-gradient-primary:hover {
-  filter: brightness(1.12);
-  transform: scale(1.03);
-}
-
-.bg-brand-translucent {
-  background: rgb(21 128 61 / 0.35);
-  border-color: rgb(74 222 128 / 0.35);
-}
-
-.text-on-brand-muted {
-  color: #bbf7d0;
-}
-
-.text-gradient-primary {
-  color: hsl(var(--brand));
-}
-
-/* Next-session date block (brand green) */
-.bg-gradient-date {
-  background: hsl(var(--brand));
 }
 
 /* Live session card */

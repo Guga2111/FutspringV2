@@ -38,7 +38,7 @@ export default function LiveSessionCard({ daily, onEnterResults, onFinalize }: L
           >
             Finalizar sessão
           </Button>
-          <Button variant="gradient" onClick={onEnterResults} className="h-10 gap-2 px-[18px] font-semibold">
+          <Button variant="brand" onClick={onEnterResults} className="h-10 gap-2 px-[18px] font-semibold">
             <Plus className="size-[15px]" strokeWidth={2.2} />
             Lançar resultados
           </Button>

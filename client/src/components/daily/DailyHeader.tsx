@@ -104,20 +104,20 @@ export function DailyHeader({ daily, ...actions }: DailyHeaderProps) {
                 <FileText />
                 Importar mensagem
               </Button>
-              <Button variant="gradient" className={`${actionButton} font-semibold`} onClick={actions.onConfirmDaily}>
+              <Button variant="brand" className={`${actionButton} font-semibold`} onClick={actions.onConfirmDaily}>
                 <CircleCheck strokeWidth={2.2} />
                 Confirmar diária
               </Button>
             </>
           )}
           {status === "CONFIRMED" && (
-            <Button variant="gradient" className={`${actionButton} font-semibold`} onClick={actions.onStartSession}>
+            <Button variant="brand" className={`${actionButton} font-semibold`} onClick={actions.onStartSession}>
               <Play />
               Iniciar sessão
             </Button>
           )}
           {status === "IN_COURSE" && (
-            <Button variant="gradient" className={`${actionButton} font-semibold`} onClick={actions.onEnterResults}>
+            <Button variant="brand" className={`${actionButton} font-semibold`} onClick={actions.onEnterResults}>
               <ClipboardList />
               Lançar resultados
             </Button>

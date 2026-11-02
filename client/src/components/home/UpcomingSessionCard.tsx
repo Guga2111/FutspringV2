@@ -43,7 +43,7 @@ export function UpcomingSessionCard({ pelada, next, pending, onToggle }: Upcomin
         )}
       </div>
       <div className="flex flex-col gap-1.5">
-        <Progress value={percent} aria-label="Confirmados" className="h-1.5 bg-secondary" indicatorClassName="bg-gradient-primary" />
+        <Progress value={percent} aria-label="Confirmados" className="h-1.5 bg-secondary" indicatorClassName="bg-brand" />
         <span className="text-xs text-muted-foreground">
           <span className="font-semibold text-foreground">{next.confirmedCount}</span> de {next.capacity} confirmados
         </span>
