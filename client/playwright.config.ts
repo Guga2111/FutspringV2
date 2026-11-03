@@ -25,6 +25,8 @@ export default defineConfig({
   use: {
     baseURL: `http://localhost:${PORT}`,
     locale: "pt-BR",
+    // native time inputs follow the browser's UI language (LANG on Linux), not the page locale: without it they show "09:00 PM"
+    launchOptions: { args: ["--lang=pt-BR"], env: { ...process.env, LANG: "pt_BR.UTF-8", LANGUAGE: "pt_BR" } },
     timezoneId: "America/Sao_Paulo",
     reducedMotion: "reduce",
   },

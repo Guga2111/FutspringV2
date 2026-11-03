@@ -67,12 +67,12 @@ export function FinanceQrField({ peladaId, qrId, busy, onUpload, onRemove, previ
         )}
         <div className="flex flex-col items-start gap-2">
           <Button type="button" variant="outline" size="sm" disabled={busy} onClick={() => input.current?.click()}>
-            <HugeiconsIcon icon={Upload04Icon} />
+            <HugeiconsIcon icon={Upload04Icon} className="size-[15px]" />
             {qrId === null ? "Enviar QR Code" : "Trocar imagem"}
           </Button>
           {qrId !== null && onRemove && (
             <Button type="button" variant="ghost" size="sm" disabled={busy} onClick={() => void onRemove()}>
-              <HugeiconsIcon icon={Delete02Icon} />
+              <HugeiconsIcon icon={Delete02Icon} className="size-[15px]" />
               Remover
             </Button>
           )}

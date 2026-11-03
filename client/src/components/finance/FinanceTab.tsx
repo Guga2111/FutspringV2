@@ -121,7 +121,7 @@ export function FinanceTab({ peladaId, userId, members, dailies }: { peladaId: n
                 <h2 className="text-xl font-semibold">{manage ? "Cobranças da pelada" : "Minhas cobranças"}</h2>
                 <p className="mt-1 text-sm text-muted-foreground">{manage ? "Abra uma cobrança para receber ou conferir pagamentos." : "Veja o que falta pagar, pague com Pix e informe o pagamento."}</p>
               </div>
-              {manage && <Button variant="brand" data-tour="new-collection" onClick={() => open({ kind: "create" })} disabled={finance.pending}><HugeiconsIcon icon={PlusSignIcon} data-icon="inline-start" />Nova cobrança</Button>}
+              {manage && <Button variant="brand" data-tour="new-collection" onClick={() => open({ kind: "create" })} disabled={finance.pending}><HugeiconsIcon icon={PlusSignIcon} className="size-[15px]" strokeWidth={2.2} />Nova cobrança</Button>}
             </header>
             <ToggleGroup type="single" variant="chip" size="chip" data-tour="scope" value={finance.scope} onValueChange={value => { if (value) finance.setScope(value as FinanceListScope) }} className="justify-start" aria-label="Situação das cobranças">
               {(Object.keys(financeListScopeLabel) as FinanceListScope[]).map(scope => <ToggleGroupItem key={scope} value={scope}>{financeListScopeLabel[scope]}</ToggleGroupItem>)}
@@ -140,7 +140,7 @@ export function FinanceTab({ peladaId, userId, members, dailies }: { peladaId: n
           <header><h2 className="text-xl font-semibold">Caixa da pelada</h2><p className="mt-1 text-sm text-muted-foreground">Dinheiro que já entrou e saiu.</p></header>
           <div className="flex flex-wrap items-end justify-between gap-4 rounded-lg bg-muted p-5">
             <div><p className="text-sm text-muted-foreground">Saldo disponível registrado</p><p className="mt-1 font-display text-score font-bold tabular-nums">{formatFinanceMoney(overview.balance ?? "0.00")}</p></div>
-            {manage && <div className="flex flex-wrap gap-2"><Button variant="brand" onClick={() => open({ kind: "cash", cashKind: "EXPENSE" })}><HugeiconsIcon icon={PlusSignIcon} data-icon="inline-start" />Despesa</Button><Button variant="outline" onClick={() => open({ kind: "cash", cashKind: "INCOME" })}>Outra entrada</Button><DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost">Mais</Button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuGroup><DropdownMenuItem onClick={() => open({ kind: "cash", cashKind: "OPENING" })}>Registrar saldo inicial</DropdownMenuItem></DropdownMenuGroup></DropdownMenuContent></DropdownMenu></div>}
+            {manage && <div className="flex flex-wrap gap-2"><Button variant="brand" onClick={() => open({ kind: "cash", cashKind: "EXPENSE" })}><HugeiconsIcon icon={PlusSignIcon} className="size-[15px]" strokeWidth={2.2} />Despesa</Button><Button variant="outline" onClick={() => open({ kind: "cash", cashKind: "INCOME" })}>Outra entrada</Button><DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost">Mais</Button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuGroup><DropdownMenuItem onClick={() => open({ kind: "cash", cashKind: "OPENING" })}>Registrar saldo inicial</DropdownMenuItem></DropdownMenuGroup></DropdownMenuContent></DropdownMenu></div>}
           </div>
           {tab === "cash" && <FinanceHistory peladaId={peladaId} kind="cash" finance={finance} onReason={askReason} />}
         </TabsContent>}
