@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { FinanceFormError } from "@/components/finance/FinanceFields"
+import { formatWeekdayDayMonth } from "@/utils/dates"
 
 interface Props {
   peladaId: number
@@ -34,7 +35,7 @@ export function FinancePeoplePicker({ peladaId, members, dailies, selected, onSe
   return <FieldGroup className="gap-5">
     {dailies.length > 0 && <Field><FieldLabel htmlFor="finance-attendance-source">Usar participantes de uma sessão</FieldLabel>
       <Select value={String(dailyId ?? "none")} onValueChange={value => setDailyId(value === "none" ? null : Number(value))}>
-        <SelectTrigger id="finance-attendance-source"><SelectValue /></SelectTrigger><SelectContent><SelectGroup><SelectItem value="none">Selecionar manualmente</SelectItem>{dailies.map(d => <SelectItem key={d.id} value={String(d.id)}>{d.dailyDate.split("-").reverse().join("/")}</SelectItem>)}</SelectGroup></SelectContent>
+        <SelectTrigger id="finance-attendance-source"><SelectValue /></SelectTrigger><SelectContent><SelectGroup><SelectItem value="none">Selecionar manualmente</SelectItem>{dailies.map(d => <SelectItem key={d.id} value={String(d.id)}>{formatWeekdayDayMonth(d.dailyDate)}</SelectItem>)}</SelectGroup></SelectContent>
       </Select>
       {dailyId !== null && <><Button type="button" variant="outline" disabled={candidates.loading || Boolean(candidates.error) || eligible.length === 0} onClick={() => onSelect([...new Set([...selected, ...eligible.map(c => c.userId)])])}>{candidates.loading ? "Buscando confirmados…" : `Adicionar ${eligible.length} confirmados`}</Button><FieldDescription>Revise quem realmente participou antes de cobrar.</FieldDescription></>}
       <FinanceFormError message={candidates.error ?? undefined} />

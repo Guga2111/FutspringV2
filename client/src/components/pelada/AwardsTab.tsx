@@ -31,7 +31,7 @@ function LeaderRow({ winner }: { winner: AwardWinner }) {
       <PlayerAvatar userId={winner.userId} username={winner.username} image={winner.userImage} className="size-[38px] text-xs ring-2 ring-highlight" />
       <div className="flex min-w-0 flex-1 flex-col">
         <span className="truncate text-base font-bold">{winner.username}</span>
-        <span className="text-[11px] font-semibold uppercase tracking-[0.05em] text-highlight-text">Líder</span>
+        <span className="text-caption font-semibold text-highlight-text">Líder</span>
       </div>
       <Badge variant="status" className="bg-highlight px-2.5 py-[3px] text-sm font-bold tabular-nums text-highlight-foreground">
         {winner.count}x

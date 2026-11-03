@@ -138,7 +138,7 @@ export function DailyHeader({ daily, ...actions }: DailyHeaderProps) {
                 <>
                   <DropdownMenuItem className={menuItem} onSelect={actions.onChangeChampionPhoto}>
                     <HugeiconsIcon icon={Upload01Icon} />
-                    Trocar foto do campeão
+                    {daily.championImage ? "Trocar foto do campeão" : "Enviar foto do campeão"}
                   </DropdownMenuItem>
                   <DropdownMenuSeparator className="-mx-1 bg-border" />
                 </>

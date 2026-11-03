@@ -20,7 +20,7 @@ export default function LiveSessionCard({ daily, onEnterResults, onFinalize }: L
   return (
     <section className="bg-gradient-live flex flex-wrap items-center gap-5 rounded-tile border border-live-border p-5">
       <div className="flex min-w-[240px] flex-1 flex-col gap-1.5">
-        <span className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.06em] text-live-foreground">
+        <span className="flex items-center gap-2 text-caption font-semibold text-live-foreground">
           <span className="size-2 rounded-full bg-highlight shadow-[0_0_0_4px_hsl(var(--highlight)/0.22)]" />
           Sessão ao vivo
         </span>

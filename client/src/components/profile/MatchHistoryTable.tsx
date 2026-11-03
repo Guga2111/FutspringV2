@@ -292,7 +292,7 @@ export function MatchHistoryTable({ matchHistory, loading }: MatchHistoryTablePr
             {/* md+: the sortable table */}
             <div className="hidden border-t md:block">
               <Table>
-                <TableHeader>
+                <TableHeader className="bg-card-elevated">
                   {table.getHeaderGroups().map((headerGroup) => (
                     <TableRow key={headerGroup.id} className="hover:bg-transparent">
                       {headerGroup.headers.map((header) => (

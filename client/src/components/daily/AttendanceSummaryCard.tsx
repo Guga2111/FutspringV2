@@ -19,7 +19,7 @@ export function AttendanceSummaryCard({ daily, isConfirmed, pending, onToggle }:
   return (
     <section className="flex flex-wrap items-center gap-5 rounded-tile border bg-card p-5">
       <div className="flex min-w-[240px] flex-1 flex-col gap-2.5">
-        <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-subtle-foreground">Presença</span>
+        <span className="text-caption font-semibold text-muted-foreground">Presença</span>
         <div className="flex items-baseline gap-2">
           <span className="text-[32px] font-bold tabular-nums">{count}</span>
           <span className="text-[15px] text-muted-foreground">de {capacity} confirmados</span>

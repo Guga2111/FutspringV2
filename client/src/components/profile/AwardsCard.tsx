@@ -1,10 +1,9 @@
-import { format } from "date-fns"
 import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react"
 import { Agreement02Icon, Award01Icon, Medal01Icon, Target02Icon } from "@hugeicons/core-free-icons"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
 import type { StatsDTO } from "@/types/stats"
-import { parseLocalDate } from "@/utils/dates"
+import { formatShortDate } from "@/utils/dates"
 import { latestDate } from "@/utils/profile"
 
 interface AwardsCardProps {
@@ -30,7 +29,7 @@ export function AwardsCard({ stats }: AwardsCardProps) {
       count: stats.puskasDates?.length ?? 0,
       icon: Award01Icon,
       tone: "text-gold",
-      note: lastPuskas ? `Último em ${format(parseLocalDate(lastPuskas), "dd/MM/yyyy")}` : undefined,
+      note: lastPuskas ? `Último em ${formatShortDate(lastPuskas)}` : undefined,
     },
     { label: "Bola Murcha", count: stats.wiltballWins ?? 0, icon: Medal01Icon, tone: "text-muted-foreground" },
   ]

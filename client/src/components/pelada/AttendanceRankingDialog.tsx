@@ -35,6 +35,7 @@ import {
 } from "@/utils/attendanceRanking"
 import { MEMBERSHIP_FILTERS, countByMembership, type MembershipFilter } from "@/utils/memberFilters"
 import type { PeladaAttendanceDTO } from "@/types/pelada"
+import { rankStyle } from "@/utils/rank"
 
 interface AttendanceRankingDialogProps {
   open: boolean
@@ -42,7 +43,6 @@ interface AttendanceRankingDialogProps {
   peladaId: number
 }
 
-const MEDALS = ["text-gold", "text-silver", "text-bronze"] as const
 
 const FILTERS: { value: MembershipFilter; label: string }[] = [{ value: "ALL", label: "Todos" }, ...MEMBERSHIP_FILTERS]
 
@@ -171,14 +171,10 @@ function AttendanceRanking({ data, onNavigate }: { data: PeladaAttendanceDTO; on
               </TableRow>
             ) : (
               rows.map((row) => {
-                const medal = row.sessionsAttended > 0 && row.position <= 3 ? MEDALS[row.position - 1] : null
+                const rank = rankStyle(row.position, row.sessionsAttended > 0)
                 return (
                   <TableRow key={row.userId} className="border-border/60 text-sm hover:bg-row-hover">
-                    <TableCell
-                      className={cn(cell, "text-center tabular-nums", medal ? cn("font-bold", medal) : "text-subtle-foreground")}
-                    >
-                      {medal ? `${row.position}º` : row.position}
-                    </TableCell>
+                    <TableCell className={cn(cell, "text-center tabular-nums", rank.className)}>{rank.label}</TableCell>
                     <TableCell className={cell}>
                       <div className="flex min-w-0 items-center gap-2.5">
                         <PlayerAvatar userId={row.userId} username={row.username} image={row.userImage} />

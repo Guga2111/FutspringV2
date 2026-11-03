@@ -156,7 +156,7 @@ export function ResultsMatchCard({ daily, index, number, control, setValue, comp
               <div key={`${side}-${t.id}`} className="flex flex-col gap-0.5">
                 <div className="flex items-center gap-2 pb-1.5">
                   <TeamColorDot color={t.color} className="size-[9px]" />
-                  <span className="text-xs font-semibold uppercase tracking-[0.05em] text-muted-foreground">{t.name}</span>
+                  <span className="text-caption font-semibold text-muted-foreground">{t.name}</span>
                   <span className="ml-auto text-[11px] text-faint-foreground">Gols · Assist.</span>
                 </div>
                 {match.playerStats.map((stat, si) =>

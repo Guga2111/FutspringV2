@@ -56,7 +56,7 @@ export function ComparePlayersDialog({
         {/* Player selectors */}
         <div className="grid grid-cols-2 gap-3">
           <div className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            <span className="text-caption font-semibold text-muted-foreground">
               Jogador A
             </span>
             <Select
@@ -80,7 +80,7 @@ export function ComparePlayersDialog({
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            <span className="text-caption font-semibold text-muted-foreground">
               Jogador B
             </span>
             <Select

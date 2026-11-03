@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { PageContainer } from "@/components/layout/PageContainer"
 import { Link, useParams, useSearchParams } from "react-router-dom"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
@@ -52,11 +53,11 @@ export default function ProfilePage() {
   if (!profile || !stats) {
     if (status === "error") {
       return (
-        <div className="page-enter mx-auto w-full max-w-5xl px-4 py-6 md:px-6">
+        <PageContainer className="page-enter">
           <Alert variant="destructive">
             <AlertDescription>Não foi possível carregar o perfil.</AlertDescription>
           </Alert>
-        </div>
+        </PageContainer>
       )
     }
     return (
@@ -77,7 +78,7 @@ export default function ProfilePage() {
   const isOwnProfile = currentUser?.id === profile.id
 
   return (
-    <div className="page-enter mx-auto flex w-full max-w-5xl flex-col gap-5 px-4 py-4 md:px-6 md:py-6">
+    <PageContainer className="page-enter gap-5">
       <ProfileHeader
         profile={profile}
         isOwnProfile={isOwnProfile}
@@ -121,6 +122,6 @@ export default function ProfilePage() {
       {editOpen && (
         <EditProfileModal profile={profile} onClose={() => setEditOpen(false)} onProfileUpdated={setProfile} />
       )}
-    </div>
+    </PageContainer>
   )
 }

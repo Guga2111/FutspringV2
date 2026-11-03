@@ -1,4 +1,5 @@
 import type { ReactNode } from "react"
+import { PageContainer } from "@/components/layout/PageContainer"
 import { Link, useParams } from "react-router-dom"
 import { AutomationCard } from "@/components/pelada-settings/AutomationCard"
 import { DangerZone } from "@/components/pelada-settings/DangerZone"
@@ -88,7 +89,7 @@ export default function PeladaSettingsPage() {
 
   return (
     <div className="page-enter flex flex-1 flex-col">
-      <main className="mx-auto flex w-full max-w-[1120px] flex-col gap-6 px-4 py-5 md:px-8 md:py-7">
+      <PageContainer>
         {id && (
           <PeladaPageHeader
             peladaId={id}
@@ -100,7 +101,7 @@ export default function PeladaSettingsPage() {
           />
         )}
         {content}
-      </main>
+      </PageContainer>
     </div>
   )
 }
@@ -108,7 +109,7 @@ export default function PeladaSettingsPage() {
 function SettingsGroup({ label, children }: { label: string; children: ReactNode }) {
   return (
     <section className="flex flex-col gap-3">
-      <h2 className="text-xs font-semibold uppercase tracking-wider text-faint-foreground">{label}</h2>
+      <h2 className="text-caption font-semibold text-muted-foreground">{label}</h2>
       <div className="flex flex-col gap-4">{children}</div>
     </section>
   )
