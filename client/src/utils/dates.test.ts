@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { formatInZone, formatNextSessionShort, formatWeekdayDayMonth, parseLocalDate } from "./dates"
+import { formatInZone, formatNextSessionShort, formatShortDate, formatWeekdayDayMonth, parseLocalDate } from "./dates"
 
 describe("parseLocalDate", () => {
   it("reads the date in local time", () => {
@@ -33,5 +33,15 @@ describe("formatInZone", () => {
 
   it("crosses midnight into the next day", () => {
     expect(formatInZone("2026-10-31T02:30:00Z", "America/Sao_Paulo")).toBe("sex, 30/10 às 23:30")
+  })
+})
+
+describe("formatShortDate", () => {
+  const now = new Date(2026, 10, 4)
+  it("drops the year inside the current one", () => {
+    expect(formatShortDate("2026-11-10", now)).toBe("10/11")
+  })
+  it("keeps the year for another year", () => {
+    expect(formatShortDate("2025-12-28", now)).toBe("28/12/2025")
   })
 })

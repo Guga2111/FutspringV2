@@ -18,6 +18,12 @@ export function formatWeekdayDayMonth(iso: string): string {
   return `${weekdayShort(iso)}, ${format(parseLocalDate(iso), "dd/MM")}`
 }
 
+// "2026-11-10" -> "10/11", with the year only outside the current one ("10/11/2025"): due dates, payments, awards
+export function formatShortDate(iso: string, now: Date = new Date()): string {
+  const date = parseLocalDate(iso)
+  return format(date, date.getFullYear() === now.getFullYear() ? "dd/MM" : "dd/MM/yyyy")
+}
+
 // Sidebar line under a pelada: "Qui, 08/10 · 21:00" or "Sem sessão agendada"
 export function formatNextSessionShort(next: { date: string; time: string } | null): string {
   return next ? `${formatWeekdayDayMonth(next.date)} · ${next.time}` : "Sem sessão agendada"

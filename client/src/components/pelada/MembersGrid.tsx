@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { Cancel01Icon, CheckListIcon, PlusSignIcon, Search01Icon } from "@hugeicons/core-free-icons"
+import { Cancel01Icon, CheckListIcon, Search01Icon } from "@hugeicons/core-free-icons"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
@@ -34,7 +34,6 @@ interface MembersGridProps {
   removingMember: number | null
   // members a bulk request is changing
   bulkPending: ReadonlySet<number> | null
-  onInvitePlayer: () => void
   onToggleAdmin: (member: PeladaMember) => void
   onRemoveMember: (member: PeladaMember) => void
   onSetStars: (member: PeladaMember) => void
@@ -57,7 +56,6 @@ export function MembersGrid({
   settingStars,
   removingMember,
   bulkPending,
-  onInvitePlayer,
   onToggleAdmin,
   onRemoveMember,
   onSetStars,
@@ -147,12 +145,6 @@ export function MembersGrid({
             {selecting ? "Cancelar" : "Selecionar"}
           </Button>
         )}
-        {isCurrentUserAdmin && (
-          <Button variant="brand" onClick={onInvitePlayer} className="hidden h-9 gap-1.5 px-4 font-semibold md:inline-flex">
-            <HugeiconsIcon icon={PlusSignIcon} className="size-[15px]" strokeWidth={2.2} />
-            Convidar jogador
-          </Button>
-        )}
       </div>
 
       <div className="flex min-h-10 items-center justify-between gap-3">
@@ -167,11 +159,6 @@ export function MembersGrid({
           <span className="text-[13px] text-subtle-foreground">
             {visible.length} de {members.length} membros · {adminCount} {adminCount === 1 ? "admin" : "admins"}
           </span>
-        )}
-        {isCurrentUserAdmin && (
-          <Button variant="brand" size="icon" aria-label="Convidar jogador" onClick={onInvitePlayer} className="size-10 shrink-0 md:hidden">
-            <HugeiconsIcon icon={PlusSignIcon} className="size-[18px]" strokeWidth={2.4} />
-          </Button>
         )}
       </div>
 

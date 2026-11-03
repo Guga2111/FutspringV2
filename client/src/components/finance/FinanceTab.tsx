@@ -33,6 +33,7 @@ import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { formatShortDate } from "@/utils/dates"
 
 type EditorAction = { kind: "create" } | { kind: "list"; list?: FinanceList; template?: FinanceTemplate } | { kind: "participants" } | { kind: "details"; charge: FinanceCharge } | { kind: "charge"; charge: FinanceCharge } | { kind: "replace"; charge: FinanceCharge } | { kind: "cash"; cashKind: Extract<FinanceMovementKind, "EXPENSE" | "INCOME" | "OPENING"> } | { kind: "payment"; charge: FinanceCharge; action: FinancePaymentValues["action"]; notice?: FinanceNotice }
 type Editor = EditorAction & { revision: number }
@@ -70,7 +71,7 @@ export function FinanceTab({ peladaId, userId, members, dailies }: { peladaId: n
           <span className="mt-2 block whitespace-normal text-sm text-muted-foreground">
             {manage
               ? `${formatFinanceMoney(list.totals.received)} recebidos${list.totals.pendingNotices > 0 ? ` · ${list.totals.pendingNotices} para conferir` : ""}`
-              : `${formatFinanceMoney(list.totals.received)} pago${list.dueDate ? ` · vence ${list.dueDate.split("-").reverse().join("/")}` : ""}`}
+              : `${formatFinanceMoney(list.totals.received)} pago${list.dueDate ? ` · vence ${formatShortDate(list.dueDate)}` : ""}`}
           </span>
         </span>
         <span className="shrink-0 text-right">

@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectVa
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import type { DailyListItem } from "@/types/daily"
 import { applyServerErrors } from "@/lib/form-errors"
+import { formatShortDate, formatWeekdayDayMonth } from "@/utils/dates"
 
 export function FinanceCashForm({ peladaId, finance, kind, dailies, onClose }: { peladaId: number; finance: FinanceController; kind: "EXPENSE" | "INCOME" | "OPENING"; dailies: DailyListItem[]; onClose: () => void }) {
   const [options, setOptions] = useState(false)
@@ -35,11 +36,11 @@ export function FinanceCashForm({ peladaId, finance, kind, dailies, onClose }: {
       <FinanceInput control={form.control} name="amount" label="Valor (R$)" placeholder="150,00" />
       {kind === "EXPENSE" && <FinanceInput control={form.control} name="category" label="Categoria" placeholder="Ex.: Campo, juiz ou material" />}
       {kind === "OPENING" && <FinanceInput control={form.control} name="reason" label="Origem deste saldo" multiline />}
-      <Collapsible open={options} onOpenChange={setOptions}><div className="flex items-center justify-between gap-3"><p className="text-sm">{date ? date.split("-").reverse().join("/") : "Hoje"} · {financeMethodLabel[method]}</p><CollapsibleTrigger asChild><Button type="button" variant="ghost" size="sm">{options ? "Recolher" : "Mais opções"}</Button></CollapsibleTrigger></div><CollapsibleContent className="pt-4"><FieldGroup>
+      <Collapsible open={options} onOpenChange={setOptions}><div className="flex items-center justify-between gap-3"><p className="text-sm">{date ? formatShortDate(date) : "Hoje"} · {financeMethodLabel[method]}</p><CollapsibleTrigger asChild><Button type="button" variant="ghost" size="sm">{options ? "Recolher" : "Mais opções"}</Button></CollapsibleTrigger></div><CollapsibleContent className="pt-4"><FieldGroup>
         <FinanceInput control={form.control} name="effectiveDate" label="Data em que o dinheiro entrou ou saiu" type="date" />
         <FinanceSelect control={form.control} name="method" label="Meio de pagamento" options={financeOptions(financeMethodLabel)} />
         {kind !== "OPENING" && <><Field><FieldLabel htmlFor="finance-cash-list">Vincular a uma cobrança (opcional)</FieldLabel><Select value={String(listId ?? "none")} onValueChange={value => form.setValue("listId", value === "none" ? null : Number(value))}><SelectTrigger id="finance-cash-list"><SelectValue /></SelectTrigger><SelectContent><SelectGroup><SelectItem value="none">Sem vínculo</SelectItem>{finance.overview?.lists.map(list => <SelectItem key={list.id} value={String(list.id)}>{list.name}</SelectItem>)}</SelectGroup></SelectContent></Select></Field>
-          <Field><FieldLabel htmlFor="finance-cash-daily">Vincular a uma sessão (opcional)</FieldLabel><Select value={String(dailyId ?? "none")} onValueChange={value => form.setValue("dailyId", value === "none" ? null : Number(value))}><SelectTrigger id="finance-cash-daily"><SelectValue /></SelectTrigger><SelectContent><SelectGroup><SelectItem value="none">Sem vínculo</SelectItem>{dailies.map(daily => <SelectItem key={daily.id} value={String(daily.id)}>{daily.dailyDate.split("-").reverse().join("/")}</SelectItem>)}</SelectGroup></SelectContent></Select></Field></>}
+          <Field><FieldLabel htmlFor="finance-cash-daily">Vincular a uma sessão (opcional)</FieldLabel><Select value={String(dailyId ?? "none")} onValueChange={value => form.setValue("dailyId", value === "none" ? null : Number(value))}><SelectTrigger id="finance-cash-daily"><SelectValue /></SelectTrigger><SelectContent><SelectGroup><SelectItem value="none">Sem vínculo</SelectItem>{dailies.map(daily => <SelectItem key={daily.id} value={String(daily.id)}>{formatWeekdayDayMonth(daily.dailyDate)}</SelectItem>)}</SelectGroup></SelectContent></Select></Field></>}
       </FieldGroup></CollapsibleContent></Collapsible>
     </FieldGroup><FinanceFormError message={form.formState.errors.root?.message} /><Button variant="brand" className="mt-auto" type="submit" disabled={busy}>{busy ? "Salvando…" : title}</Button></form>
   </SheetContent></Sheet>

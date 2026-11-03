@@ -50,7 +50,7 @@ function StatBar({ valueA, valueB, label }: StatRow) {
       </div>
 
       {/* Center label */}
-      <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-widest whitespace-nowrap text-center">
+      <span className="text-caption font-semibold text-muted-foreground whitespace-nowrap text-center">
         {label}
       </span>
 

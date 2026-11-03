@@ -283,7 +283,7 @@ function PlayerHistoryContent({
           )}
 
           <Table>
-              <TableHeader>
+              <TableHeader className="bg-card-elevated">
                 <TableRow>
                   <TableHead className="h-8 px-2 text-xs">Data</TableHead>
                   <TableHead className="h-8 px-2 text-center text-xs" title="Jogos">J</TableHead>

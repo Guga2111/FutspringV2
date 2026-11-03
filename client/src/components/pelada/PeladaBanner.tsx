@@ -26,9 +26,10 @@ export function PeladaBanner({ pelada, isCurrentUserAdmin }: PeladaBannerProps) 
       {imageUrl ? (
         <img src={imageUrl} alt="" className="absolute inset-0 size-full object-cover" style={{ objectPosition: "center 22%" }} />
       ) : (
+        // below md the title and its three lines of details fill the banner, so the initials would sit under the name
         <span
           aria-hidden
-          className="absolute inset-0 flex select-none items-center justify-center pb-10 font-display text-hero font-extrabold tracking-[0.02em] text-white/55"
+          className="absolute inset-0 hidden select-none items-center justify-center pb-10 md:flex font-display text-hero font-extrabold tracking-[0.02em] text-white/55"
         >
           {getInitials(pelada.name)}
         </span>

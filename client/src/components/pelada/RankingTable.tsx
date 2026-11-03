@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { PlayerAvatar } from "@/components/PlayerAvatar"
 import { cn } from "@/lib/utils"
 import type { RankingDTO } from "@/types/daily"
+import { rankStyle } from "@/utils/rank"
 
 export type RankingCol = "goals" | "assists" | "matchesPlayed" | "wins"
 
@@ -25,7 +26,6 @@ const COLUMNS: { col: RankingCol; label: string; width: string }[] = [
   { col: "assists", label: "Assist.", width: "w-11 md:w-16" },
 ]
 
-const MEDALS = ["text-gold", "text-silver", "text-bronze"] as const
 
 // Every column fits at 375 px (no horizontal scroll): narrow fixed columns on mobile
 const cell = "px-1.5 py-2.5 md:px-3"
@@ -56,7 +56,7 @@ export function RankingTable({ ranking, isLoading, sortConfig, onSort, onOpenHis
   return (
     <div className="overflow-hidden rounded-xl border">
       <Table className="table-fixed">
-        <TableHeader className="bg-card [&_tr]:border-b">
+        <TableHeader className="bg-card-elevated [&_tr]:border-b">
           <TableRow className="hover:bg-transparent">
             <TableHead className={cn(cell, "h-auto w-[26px] text-center text-xs font-normal text-subtle-foreground md:w-11")}>#</TableHead>
             <TableHead className={cn(cell, "h-auto text-xs font-normal text-subtle-foreground")}>Jogador</TableHead>
@@ -90,11 +90,7 @@ export function RankingTable({ ranking, isLoading, sortConfig, onSort, onOpenHis
         <TableBody>
           {ranking.map((row, idx) => (
             <TableRow key={row.userId} className={cn("border-border/60 text-sm hover:bg-row-hover", idx === 0 && "bg-highlight-muted hover:bg-highlight-muted")}>
-              <TableCell
-                className={cn(cell, "text-center tabular-nums", idx < 3 ? cn("font-bold", MEDALS[idx]) : "text-subtle-foreground")}
-              >
-                {idx < 3 ? `${idx + 1}º` : idx + 1}
-              </TableCell>
+              <TableCell className={cn(cell, "text-center tabular-nums", rankStyle(idx + 1).className)}>{rankStyle(idx + 1).label}</TableCell>
               <TableCell className={cell}>
                 <div className="flex min-w-0 items-center gap-2.5">
                   <PlayerAvatar userId={row.userId} username={row.username} image={row.userImage} />

@@ -26,8 +26,6 @@ export default function PeladaSessionsPage() {
       <SessionHistoryList
         dailies={otherSessions}
         isLoading={w.dailiesLoading}
-        isAdmin={w.isAdmin}
-        onOpenCreate={w.openCreateSession}
       />
     </div>
   )

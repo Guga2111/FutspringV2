@@ -20,7 +20,7 @@ interface NextSessionCardProps {
   onToggleAttendance: (daily: DailyListItem) => void
 }
 
-const label = "text-[11px] font-semibold uppercase tracking-[0.06em] text-subtle-foreground"
+const label = "text-caption font-semibold text-muted-foreground"
 
 export function NextSessionCard({ daily, timeZone, isAdmin, attendancePending, onToggleAttendance }: NextSessionCardProps) {
   if (!daily) {

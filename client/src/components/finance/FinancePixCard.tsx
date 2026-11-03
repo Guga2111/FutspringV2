@@ -67,7 +67,7 @@ export function FinancePixCard({ peladaId, pixKey, pixRecipient, qrId, amount, c
         </div>
       )}
       <div className="flex min-w-0 flex-1 flex-col gap-3">
-        <p className="flex items-center gap-1.5 text-overline uppercase text-brand-text">
+        <p className="flex items-center gap-1.5 text-caption font-semibold text-brand-text">
           <HugeiconsIcon icon={QrCodeIcon} className="size-4" />
           Pague com Pix
         </p>

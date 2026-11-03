@@ -1,4 +1,5 @@
 import { useMemo, type ReactNode } from "react"
+import { PageContainer } from "@/components/layout/PageContainer"
 import { Link } from "react-router-dom"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
@@ -45,7 +46,7 @@ export default function HomePage() {
 
   return (
     <div className="page-enter flex flex-1 flex-col">
-      <main className="mx-auto flex w-full max-w-[1120px] flex-col gap-9 px-4 py-5 md:p-8">
+      <PageContainer className="gap-9">
         <HomeBanner username={user?.username ?? ""} pendingCount={pendingCount} onCreatePelada={openCreatePelada} />
 
         <PendingInvitations />
@@ -137,7 +138,7 @@ export default function HomePage() {
             {!loading && <CreatePeladaCard onClick={openCreatePelada} />}
           </div>
         </section>
-      </main>
+      </PageContainer>
     </div>
   )
 }
