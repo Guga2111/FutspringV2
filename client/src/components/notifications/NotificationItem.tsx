@@ -30,7 +30,7 @@ export function NotificationItem({ notification, onSelect }: NotificationItemPro
     >
       <span className="relative shrink-0">
         {notification.actor ? (
-          <PlayerAvatar username={notification.actor.username} image={notification.actor.image} className="size-9 text-xs" />
+          <PlayerAvatar userId={notification.actor.id} username={notification.actor.username} image={notification.actor.image} className="size-9 text-xs" />
         ) : notification.pelada ? (
           <PeladaAvatar name={notification.pelada.name} image={notification.pelada.image} className="size-9 rounded-full text-xs" />
         ) : (

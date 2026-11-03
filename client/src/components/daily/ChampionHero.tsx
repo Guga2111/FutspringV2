@@ -79,7 +79,7 @@ export function ChampionHero({ daily, uploadLoading, onChangePhoto }: ChampionHe
               const s = statsById.get(player.id)
               return (
                 <li key={player.id} className="flex items-center gap-2.5 py-1.5">
-                  <PlayerAvatar username={player.username} image={player.image} />
+                  <PlayerAvatar userId={player.id} username={player.username} image={player.image} />
                   <span className="min-w-0 flex-1 truncate text-sm font-medium">{player.username}</span>
                   <span className="text-xs text-muted-foreground">
                     {s?.goals ?? 0} G · {s?.assists ?? 0} A

@@ -56,7 +56,7 @@ export function InvitationList({ items, now, onCancel, disabled }: InvitationLis
       <ul className="flex flex-col md:hidden">
         {items.map((invitation) => (
           <li key={invitation.id} className="flex items-center gap-3 border-b px-4 py-3 last:border-b-0">
-            <PlayerAvatar username={invitation.recipient.username} image={invitation.recipient.image} colorId={invitation.recipient.id} className="size-10 text-caption" />
+            <PlayerAvatar userId={invitation.recipient.id} username={invitation.recipient.username} image={invitation.recipient.image} className="size-10 text-caption" />
             <div className="flex min-w-0 flex-1 flex-col gap-1">
               <div className="flex min-w-0 items-center gap-2">
                 <span className="truncate text-body font-medium">{invitation.recipient.username}</span>
@@ -87,7 +87,7 @@ export function InvitationList({ items, now, onCancel, disabled }: InvitationLis
             <TableRow key={invitation.id} className="hover:bg-row-hover">
               <TableCell className="px-6 py-3">
                 <div className="flex min-w-0 items-center gap-3">
-                  <PlayerAvatar username={invitation.recipient.username} image={invitation.recipient.image} colorId={invitation.recipient.id} className="size-8 text-caption" />
+                  <PlayerAvatar userId={invitation.recipient.id} username={invitation.recipient.username} image={invitation.recipient.image} className="size-8 text-caption" />
                   <span className="truncate text-body font-medium">{invitation.recipient.username}</span>
                 </div>
               </TableCell>

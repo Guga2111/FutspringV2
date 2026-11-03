@@ -97,7 +97,7 @@ export function RankingTable({ ranking, isLoading, sortConfig, onSort, onOpenHis
               </TableCell>
               <TableCell className={cell}>
                 <div className="flex min-w-0 items-center gap-2.5">
-                  <PlayerAvatar username={row.username} image={row.userImage} />
+                  <PlayerAvatar userId={row.userId} username={row.username} image={row.userImage} />
                   <Link to={`/profile/${row.userId}`} className="truncate font-medium hover:underline">
                     {row.username}
                   </Link>

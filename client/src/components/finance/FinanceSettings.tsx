@@ -297,7 +297,7 @@ function ManagersCard({ peladaId, finance, settings, members }: CardProps & { me
                           field.onChange(checked ? [...field.value, member.id] : field.value.filter((id) => id !== member.id))
                         }
                       />
-                      <PlayerAvatar username={member.username} image={member.image} className="size-8 text-xs" />
+                      <PlayerAvatar userId={member.id} username={member.username} image={member.image} className="size-8 text-xs" />
                       <FieldLabel htmlFor={`finance-manager-${member.id}`} className="flex-1 cursor-pointer font-normal">
                         {member.username}
                       </FieldLabel>
