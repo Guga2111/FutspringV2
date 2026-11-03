@@ -52,7 +52,7 @@ A second CI job, `visual`, runs the Playwright visual regression in `mcr.microso
 client/
 ├── docs/                 this file
 ├── e2e/                  Playwright visual regression: visual.spec.ts, mockApi.ts (route table of mocked GETs), fixtures.ts (typed with src/types), __screenshots__/<project>/, docker.sh, own tsconfig.json
-├── public/               static files (gerrard.png logo/favicon, pele.jpg (auth), ronaldo.jpg (home banner), landing/ (the owner's pelada photos for the landing page; README with names and ratios))
+├── public/               static files (gerrard.webp favicon (192 px), logo-64.webp (in-app logo), pele.jpg (auth), ronaldo.jpg (home banner), landing/ (the owner's pelada photos for the landing page; README with names and ratios))
 └── src/
     ├── main.tsx          font imports, StrictMode > BrowserRouter > AuthProvider > App + <ThemedToaster/> (Sonner `position="top-center"`, bottom-right would cover the chat button; `theme` from `useTheme`)
     ├── App.tsx           routes, React.lazy pages, one <Suspense>, an <ErrorBoundary> per route
@@ -406,7 +406,7 @@ return (
 - After a mutation, merge the returned DTO into state instead of refetching the whole detail when the endpoint already returns it.
 - `await` only functions that return a promise; a refetch must return its promise if the caller waits for it.
 - **Memoize** derived lists that sort/filter on every render (`useMemo`), and stabilize callbacks passed to effects (`useCallback`). Don't sprinkle `React.memo` without a measured problem.
-- **Images:** `loading="lazy"` and explicit `width`/`height` on avatars, banners and photos below the fold; keep static assets small (`public/gerrard.png` is 425 KB and used as logo and favicon — use a resized copy).
+- **Images:** `loading="lazy"` and explicit `width`/`height` on avatars, banners and photos below the fold; keep static assets small: resized WebP, not full-size PNG (the logo is `public/logo-64.webp`, about 3 KB; the favicon `public/gerrard.webp`, about 5 KB).
 - **Lists:** paginate long histories (chat, match history) rather than rendering everything.
 - **Debounce** search inputs (300 ms, as `InvitePlayerDialog` does).
 - **Realtime:** there is no polling. The bell is live (one STOMP connection per user, `RealtimeProvider`); session pages update only on reload or after the user's own mutation. If polling is added, put it in the feature hook, pause it when the tab is hidden (`visibilitychange`), stop it when the daily is `FINISHED`/`CANCELED`, and clear the interval on unmount.
