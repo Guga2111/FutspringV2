@@ -6,7 +6,7 @@ export type DailyStatus = "SCHEDULED" | "CONFIRMED" | "IN_COURSE" | "FINISHED" |
 export const dailyStatusLabel: Record<DailyStatus, string> = {
   SCHEDULED: "Agendada",
   CONFIRMED: "Confirmada",
-  IN_COURSE: "Em andamento",
+  IN_COURSE: "Ao vivo",
   FINISHED: "Finalizada",
   CANCELED: "Cancelada",
 }

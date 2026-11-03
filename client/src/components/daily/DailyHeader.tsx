@@ -1,5 +1,5 @@
 import { HugeiconsIcon } from "@hugeicons/react"
-import { CancelCircleIcon, CheckmarkCircle02Icon, Clock01Icon, Delete02Icon, File01Icon, Flag01Icon, FootballIcon, MoreHorizontalIcon, PencilEdit02Icon, PlayIcon, Task01Icon, Upload01Icon, UserGroupIcon } from "@hugeicons/core-free-icons"
+import { CancelCircleIcon, CheckmarkCircle02Icon, Clock01Icon, Delete02Icon, File01Icon, Flag01Icon, FootballIcon, MoreHorizontalIcon, PencilEdit02Icon, PlayIcon, Upload01Icon, UserGroupIcon } from "@hugeicons/core-free-icons"
 import { Button } from "@/components/ui/button"
 import { PeladaBreadcrumb } from "@/components/pelada/PeladaBreadcrumb"
 import { areaPath } from "@/utils/peladaAreas"
@@ -20,7 +20,6 @@ export interface DailyHeaderActions {
   onConfirmDaily: () => void
   onStartSession: () => void
   onCancelDaily: () => void
-  onEnterResults: () => void
   onEditResults: () => void
   onFinalizeDaily: () => void
   onChangeChampionPhoto: () => void
@@ -31,7 +30,7 @@ interface DailyHeaderProps extends DailyHeaderActions {
   daily: DailyDetail
 }
 
-const actionButton = "h-[38px] gap-2 px-4 [&_svg]:size-[15px]"
+const actionButton = "h-[38px] gap-2 px-4"
 const outlineAction = `${actionButton} bg-transparent hover:bg-accent`
 const menuItem = "gap-2.5 p-2 text-sm [&>svg]:size-4 [&>svg]:text-muted-foreground"
 
@@ -58,12 +57,6 @@ export function DailyHeader({ daily, ...actions }: DailyHeaderProps) {
         <div className="flex flex-wrap items-center gap-2.5">
           <h1 className="font-display text-heading font-bold md:text-heading-lg">{formatLongDate(daily.dailyDate)}</h1>
           <DailyStatusBadge status={status} size="lg" />
-          {status === "IN_COURSE" && (
-            <span className="flex items-center gap-1.5 text-[13px] font-semibold text-live-foreground">
-              <span className="size-2 rounded-full bg-highlight shadow-[0_0_0_4px_hsl(var(--highlight)/0.22)]" />
-              Ao vivo
-            </span>
-          )}
         </div>
         <div className="flex flex-wrap gap-x-4 gap-y-1 text-[13px] text-muted-foreground [&_svg]:size-3.5">
           <span className="flex items-center gap-1.5">
@@ -92,8 +85,8 @@ export function DailyHeader({ daily, ...actions }: DailyHeaderProps) {
                 Importar mensagem
               </Button>
               <Button variant="brand" className={`${actionButton} font-semibold`} onClick={actions.onConfirmDaily}>
-                <HugeiconsIcon icon={CheckmarkCircle02Icon} strokeWidth={2.2} />
-                Confirmar diária
+                <HugeiconsIcon icon={CheckmarkCircle02Icon} />
+                Confirmar sessão
               </Button>
             </>
           )}
@@ -103,12 +96,7 @@ export function DailyHeader({ daily, ...actions }: DailyHeaderProps) {
               Iniciar sessão
             </Button>
           )}
-          {status === "IN_COURSE" && (
-            <Button variant="brand" className={`${actionButton} font-semibold`} onClick={actions.onEnterResults}>
-              <HugeiconsIcon icon={Task01Icon} />
-              Lançar resultados
-            </Button>
-          )}
+          {/* IN_COURSE: "Lançar resultados" and "Finalizar sessão" live on LiveSessionCard, only the ⋯ menu stays here */}
           {status === "FINISHED" && (
             <>
               <Button variant="outline" className={outlineAction} onClick={actions.onEditResults}>
@@ -117,7 +105,7 @@ export function DailyHeader({ daily, ...actions }: DailyHeaderProps) {
               </Button>
               <Button variant="outline" className={outlineAction} onClick={actions.onFinalizeDaily}>
                 <HugeiconsIcon icon={Flag01Icon} />
-                Re-finalizar
+                Finalizar de novo
               </Button>
             </>
           )}
@@ -132,7 +120,7 @@ export function DailyHeader({ daily, ...actions }: DailyHeaderProps) {
                 <>
                   <DropdownMenuItem className={menuItem} onSelect={actions.onCancelDaily}>
                     <HugeiconsIcon icon={CancelCircleIcon} />
-                    Cancelar diária
+                    Cancelar sessão
                   </DropdownMenuItem>
                   <DropdownMenuSeparator className="-mx-1 bg-border" />
                 </>

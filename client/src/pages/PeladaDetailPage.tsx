@@ -14,6 +14,7 @@ import { ConfirmRemoveDialog } from "@/components/pelada/ConfirmRemoveDialog"
 import { CreateSessionDialog } from "@/components/pelada/CreateSessionDialog"
 import { SetPlayerStarsDialog } from "@/components/pelada/SetPlayerStarsDialog"
 import { areaFromPath, PELADA_AREAS } from "@/utils/peladaAreas"
+import { cn } from "@/lib/utils"
 
 // Lazy so recharts only downloads when the dialog is first opened
 const PlayerHistoryDialog = lazy(() =>
@@ -100,8 +101,10 @@ export default function PeladaDetailPage() {
       openHistory,
       runBulkAction,
     }
+    // the chat button is fixed in the corner: leave room under the content so it never covers the last row
+    const showChat = area !== "invitations" && area !== "finance"
     content = (
-      <main className="flex min-w-0 flex-col gap-5 p-4 md:gap-6 md:p-6">
+      <main className={cn("flex min-w-0 flex-col gap-5 p-4 md:gap-6 md:p-6", showChat && "pb-24 md:pb-24")}>
         <PeladaPageHeader
           peladaId={pelada.id}
           peladaName={pelada.name}
@@ -114,7 +117,7 @@ export default function PeladaDetailPage() {
         </Suspense>
 
         {/* hidden where it could cover invitation or finance controls */}
-        {area !== "invitations" && area !== "finance" && (
+        {showChat && (
           <PeladaChat
             peladaId={pelada.id}
             peladaName={pelada.name}

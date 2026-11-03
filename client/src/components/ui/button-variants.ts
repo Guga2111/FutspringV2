@@ -14,10 +14,11 @@ export const buttonVariants = cva(
         // the main action: Electric Blue with Midnight text (white on this blue fails AA)
         brand: "bg-brand text-brand-foreground hover:bg-brand-hover",
       },
+      // icons inside text buttons follow the button (24px, 20px on sm); icon-only buttons size their own icon
       size: {
-        default: "h-10 px-4 py-2",
-        sm: "h-9 rounded-full px-3",
-        lg: "h-11 rounded-full px-8",
+        default: "h-10 px-4 py-2 [&_svg]:size-6 [&_svg]:shrink-0",
+        sm: "h-9 rounded-full px-3 [&_svg]:size-5 [&_svg]:shrink-0",
+        lg: "h-11 rounded-full px-8 [&_svg]:size-6 [&_svg]:shrink-0",
         icon: "h-10 w-10",
       },
     },

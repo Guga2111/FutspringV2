@@ -107,7 +107,6 @@ export default function DailyDetailPage() {
               description: 'A sessão será cancelada. Essa ação não pode ser desfeita.',
             })
           }
-          onEnterResults={() => openResults('add')}
           onEditResults={() => openResults('edit')}
           onFinalizeDaily={openFinalize}
           onChangeChampionPhoto={() => fileInputRef.current?.click()}
