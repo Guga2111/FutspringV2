@@ -8,7 +8,7 @@ export function AuthLayout({ children, aside }: { children: ReactNode; aside?: R
     <div className="page-enter flex min-h-screen bg-background">
       <div className="flex flex-1 flex-col px-4 py-8 md:px-8">
         <Link to="/" className="flex items-center gap-2 self-start">
-          <img src="/logo-64.png" alt="" width={32} height={32} className="size-8 rounded-full object-cover" />
+          <img src="/logo-64.webp" alt="" width={32} height={32} className="size-8 rounded-full object-cover" />
           <span className="text-xl font-bold text-brand-text">Futspring</span>
         </Link>
         <div className="flex flex-1 flex-col items-center justify-center gap-6">{children}</div>
