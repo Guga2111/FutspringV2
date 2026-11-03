@@ -30,7 +30,7 @@ interface DailyHeaderProps extends DailyHeaderActions {
   daily: DailyDetail
 }
 
-const actionButton = "h-[38px] gap-2 px-4"
+const actionButton = "h-[38px] gap-2 px-4 [&_svg]:size-[15px]"
 const outlineAction = `${actionButton} bg-transparent hover:bg-accent`
 const menuItem = "gap-2.5 p-2 text-sm [&>svg]:size-4 [&>svg]:text-muted-foreground"
 
@@ -85,7 +85,7 @@ export function DailyHeader({ daily, ...actions }: DailyHeaderProps) {
                 Importar mensagem
               </Button>
               <Button variant="brand" className={`${actionButton} font-semibold`} onClick={actions.onConfirmDaily}>
-                <HugeiconsIcon icon={CheckmarkCircle02Icon} />
+                <HugeiconsIcon icon={CheckmarkCircle02Icon} strokeWidth={2.2} />
                 Confirmar sessão
               </Button>
             </>

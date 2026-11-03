@@ -24,11 +24,11 @@ function Calendar({
         caption_label: "text-sm font-medium",
         nav: "absolute top-1 inset-x-0 flex items-center justify-between px-1",
         button_previous: cn(
-          buttonVariants({ variant: "outline", size: "icon" }),
+          buttonVariants({ variant: "outline" }),
           "size-7 bg-transparent p-0 opacity-50 hover:opacity-100"
         ),
         button_next: cn(
-          buttonVariants({ variant: "outline", size: "icon" }),
+          buttonVariants({ variant: "outline" }),
           "size-7 bg-transparent p-0 opacity-50 hover:opacity-100"
         ),
         month_grid: "w-full border-collapse space-x-1",
