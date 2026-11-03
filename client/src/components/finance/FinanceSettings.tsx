@@ -79,7 +79,7 @@ export function FinanceSettings({ peladaId, finance, members, onTemplate, onAudi
           ))}
         </ul>
         <Button variant="outline" className="self-start" onClick={() => onTemplate()}>
-          <HugeiconsIcon icon={PlusSignIcon} />
+          <HugeiconsIcon icon={PlusSignIcon} className="size-[15px]" />
           Novo modelo
         </Button>
       </SettingsCard>
