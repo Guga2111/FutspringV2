@@ -1,7 +1,7 @@
 import { useState } from "react"
+import { PlayerAvatar } from "@/components/PlayerAvatar"
 import { toast } from "sonner"
 import { invitePlayer } from "@/api/invitations"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -14,7 +14,6 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { getErrorMessage } from "@/lib/errors"
-import { getFileUrl, getInitials } from "@/lib/utils"
 import { getPositionLabel, type PublicUser } from "@/types/user"
 import { MIN_SEARCH_LENGTH, useUserSearch } from "@/components/pelada/hooks/useUserSearch"
 
@@ -72,10 +71,7 @@ export function InvitePlayerDialog({
             const position = getPositionLabel(user.position)
             return (
               <div key={user.id} className="flex items-center gap-3 rounded-md p-2 hover:bg-muted">
-                <Avatar className="size-8">
-                  <AvatarImage src={getFileUrl(user.image)} alt={user.username} />
-                  <AvatarFallback className="text-xs font-semibold">{getInitials(user.username)}</AvatarFallback>
-                </Avatar>
+                <PlayerAvatar userId={user.id} username={user.username} image={user.image} className="size-8 text-xs" />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium">{user.username}</p>
                   {position && <p className="truncate text-xs text-muted-foreground">{position}</p>}

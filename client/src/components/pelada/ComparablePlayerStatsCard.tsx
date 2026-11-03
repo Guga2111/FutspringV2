@@ -1,6 +1,5 @@
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { getPeladaColor, getInitials, getFileUrl } from "@/lib/utils";
+import { PlayerAvatar } from "@/components/PlayerAvatar"
+import { PositionBadge } from "@/components/PositionBadge"
 import type { ProfileDTO } from "@/types/user";
 import type { PlayerPeladaStatsDTO } from "@/types/pelada";
 
@@ -80,34 +79,22 @@ function PlayerColumn({
   stats: PlayerPeladaStatsDTO;
   side: "A" | "B";
 }) {
-  const initials = getInitials(data.profile.username);
   const ringColor = side === "A" ? "ring-brand/40" : "ring-highlight/40";
 
   return (
     <div className="flex flex-col items-center gap-2 min-w-0">
-      <Avatar className={`h-16 w-16 ring-2 ${ringColor}`}>
-        {data.profile.image && (
-          <AvatarImage
-            src={getFileUrl(data.profile.image)}
-            alt={data.profile.username}
-          />
-        )}
-        <AvatarFallback
-          className={`${getPeladaColor(data.profile.username)} text-white text-lg font-bold`}
-        >
-          {initials}
-        </AvatarFallback>
-      </Avatar>
+      <PlayerAvatar
+        userId={data.profile.id}
+        username={data.profile.username}
+        image={data.profile.image}
+        className={`size-16 text-lg ring-2 ${ringColor}`}
+      />
 
       <div className="flex flex-col items-center gap-1">
         <span className="font-semibold text-sm text-foreground truncate max-w-[120px] text-center">
           {data.profile.username}
         </span>
-        {data.profile.position && (
-          <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-            {data.profile.position}
-          </Badge>
-        )}
+        <PositionBadge position={data.profile.position} className="px-1.5 py-0 text-[10px]" />
         <Stars count={stats.stars} />
         <span className="text-[10px] text-muted-foreground tabular-nums">
           {stats.matchesPlayed} jogos

@@ -187,7 +187,7 @@ function PlayerStatsTable({ daily }: { daily: DailyDetail }) {
                 <TableCell className="px-3 py-2.5">
                   <span className="flex min-w-0 items-center gap-2.5">
                     <span className="relative shrink-0">
-                      <PlayerAvatar username={row.username} image={info?.image ?? null} />
+                      <PlayerAvatar userId={row.userId} username={row.username} image={info?.image ?? null} />
                       <TeamColorDot
                         color={info?.color ?? null}
                         className="absolute -bottom-px -right-px border-2 border-background"
@@ -233,7 +233,7 @@ function FinalTeams({ daily }: { daily: DailyDetail }) {
         >
           {team.players.map((player) => (
             <TeamPlayerRow key={player.id}>
-              <PlayerAvatar username={player.username} image={player.image} />
+              <PlayerAvatar userId={player.id} username={player.username} image={player.image} />
               <span className="min-w-0 flex-1 truncate text-sm font-medium">{player.username}</span>
               <StarRow stars={player.stars} />
             </TeamPlayerRow>

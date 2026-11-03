@@ -47,7 +47,7 @@ export function SessionFragment({ stage, className }: { stage: SessionStage; cla
           <Progress value={70} className="mt-2 h-2" indicatorClassName="bg-brand" />
           <div className="mt-4 flex -space-x-2">
             {CONFIRMED.map((id, i) => (
-              <PlayerAvatar key={id} username={["Leal", "Guga", "Rafa", "Bruno", "Tiago"][i]} image={null} colorId={id} className="size-8 border-2 border-card text-[11px]" />
+              <PlayerAvatar key={id} userId={id} username={["Leal", "Guga", "Rafa", "Bruno", "Tiago"][i]} image={null} className="size-8 border-2 border-card text-[11px]" />
             ))}
             <span className="flex size-8 items-center justify-center rounded-full border-2 border-card bg-avatar-fallback text-[11px] font-semibold">+9</span>
           </div>

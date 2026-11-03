@@ -57,7 +57,7 @@ function AttendanceFragment() {
       <ul className="mt-4 space-y-1">
         {ATTENDANCE.map((row) => (
           <li key={row.id} className="flex items-center gap-3 rounded-md px-2 py-2 odd:bg-row-hover">
-            <PlayerAvatar username={row.name} image={null} colorId={row.id} className="size-9 text-xs" />
+            <PlayerAvatar userId={row.id} username={row.name} image={null} className="size-9 text-xs" />
             <span className="flex-1 text-body font-medium">{row.name}</span>
             <MembershipBadge isMensalista={row.isMensalista} />
             <span className="hidden w-20 text-right text-body-sm text-muted-foreground sm:block">{row.at}</span>
