@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button"
 import { FieldGroup } from "@/components/ui/field"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
+import { formatShortDate } from "@/utils/dates"
 
 const SHOWN_NAMES = 5
 
@@ -51,7 +52,7 @@ export function FinanceReceiveAllDialog({ peladaId, finance, list, charges, tota
         {review > 0 && <p className="text-body-sm text-muted-foreground">{review === 1 ? "1 pessoa com pagamento para conferir não entra." : `${review} pessoas com pagamento para conferir não entram.`} Confira cada uma antes.</p>}
         <Collapsible open={options} onOpenChange={setOptions}>
           <div className="flex items-center justify-between gap-3">
-            <p className="text-sm">{date ? date.split("-").reverse().join("/") : "Hoje"} · {financeMethodLabel[method]}</p>
+            <p className="text-sm">{date ? formatShortDate(date) : "Hoje"} · {financeMethodLabel[method]}</p>
             <CollapsibleTrigger asChild><Button type="button" variant="ghost" size="sm">{options ? "Recolher" : "Alterar"}</Button></CollapsibleTrigger>
           </div>
           <CollapsibleContent className="pt-4">

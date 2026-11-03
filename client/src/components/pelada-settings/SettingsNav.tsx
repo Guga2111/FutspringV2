@@ -42,7 +42,7 @@ export function SettingsNav({ sections }: { sections: SettingsSection[] }) {
 
   return (
     <nav aria-label="Nesta página" className="flex flex-col gap-2">
-      <p className="px-3 text-xs font-semibold uppercase tracking-wider text-faint-foreground">Nesta página</p>
+      <p className="px-3 text-caption font-semibold text-muted-foreground">Nesta página</p>
       <ul className="flex flex-col gap-0.5">
         {sections.map((section) => (
           <li key={section.id}>

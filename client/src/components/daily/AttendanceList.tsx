@@ -10,7 +10,7 @@ import { StarRow } from "@/components/StarRow"
 import { cn } from "@/lib/utils"
 import { sortByConfirmation, splitAttendance } from "@/utils/attendance"
 import { formatInZone } from "@/utils/dates"
-import { positionShortLabel } from "@/utils/memberFilters"
+import { PositionBadge } from "@/components/PositionBadge"
 import type { DailyDetail, PlayerDTO } from "@/types/daily"
 
 interface AttendanceListProps {
@@ -161,13 +161,13 @@ interface AttendanceRowProps {
 }
 
 function AttendanceRow({ player, muted = false, overCapacity = false, children }: AttendanceRowProps) {
-  const position = positionShortLabel(player.position)
   return (
     <li className="flex items-center gap-2.5 border-b border-border/60 px-3.5 py-[9px] last:border-b-0">
       <PlayerAvatar
+        userId={player.id}
         username={player.username}
         image={player.image}
-        className={cn("size-[30px]", muted && "[&>span]:bg-accent [&>span]:text-muted-foreground")}
+        className="size-[30px]"
       />
       <span className={cn("min-w-0 truncate text-sm", muted ? "text-secondary-foreground" : "font-medium")}>{player.username}</span>
       <MembershipBadge isMensalista={player.isMensalista ?? false} className="shrink-0 px-[7px] text-[10px]" />
@@ -176,17 +176,10 @@ function AttendanceRow({ player, muted = false, overCapacity = false, children }
           acima do limite
         </Badge>
       )}
-      {position && (
-        <Badge
-          variant="status"
-          className={cn(
-            "hidden px-[7px] py-0.5 text-[10px] font-semibold uppercase tracking-[0.03em] sm:inline-flex",
-            muted ? "bg-accent text-muted-foreground" : "bg-secondary text-secondary-foreground",
-          )}
-        >
-          {position}
-        </Badge>
-      )}
+      <PositionBadge
+        position={player.position}
+        className={cn("hidden px-[7px] text-[10px] sm:inline-flex", muted && "bg-accent text-muted-foreground")}
+      />
       <StarRow stars={player.stars} muted={muted} className="ml-auto text-[11px]" />
       {children}
     </li>

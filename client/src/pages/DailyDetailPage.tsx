@@ -1,4 +1,5 @@
 import { useParams } from 'react-router-dom'
+import { PageContainer } from "@/components/layout/PageContainer"
 import ImportFromMessageModal from '@/components/daily/ImportFromMessageModal'
 import { useAuth } from '@/hooks/useAuth'
 import { Input } from '@/components/ui/input'
@@ -81,7 +82,7 @@ export default function DailyDetailPage() {
 
   return (
     <div className="page-enter flex flex-1 flex-col">
-      <main className="mx-auto flex w-full max-w-[1120px] flex-col gap-7 p-4 md:px-8 md:py-7">
+      <PageContainer className="gap-7">
         <DailyHeader
           daily={daily}
           onImportFromMessage={openImport}
@@ -107,7 +108,6 @@ export default function DailyDetailPage() {
               description: 'A sessão será cancelada. Essa ação não pode ser desfeita.',
             })
           }
-          onEnterResults={() => openResults('add')}
           onEditResults={() => openResults('edit')}
           onFinalizeDaily={openFinalize}
           onChangeChampionPhoto={() => fileInputRef.current?.click()}
@@ -180,7 +180,7 @@ export default function DailyDetailPage() {
             <FinishedSessionTabs daily={daily} />
           </>
         )}
-      </main>
+      </PageContainer>
 
       {/* Champion photo picker, opened from the header menu */}
       {daily.status === 'FINISHED' && daily.isAdmin && (

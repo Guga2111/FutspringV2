@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { PlayerAvatar } from "@/components/PlayerAvatar"
 import { Controller, useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { HugeiconsIcon } from "@hugeicons/react"
@@ -6,7 +7,6 @@ import { Camera01Icon } from "@hugeicons/core-free-icons"
 import { toast } from "sonner"
 import { updateUser, uploadUserImage } from "@/api/users"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -21,7 +21,6 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { getErrorMessage } from "@/lib/errors"
 import { applyServerErrors } from "@/lib/form-errors"
-import { getFileUrl, getInitials } from "@/lib/utils"
 import { IMAGE_ACCEPT, validateImageFile } from "@/schemas/upload"
 import { profileSchema, type ProfileValues } from "@/schemas/user"
 import { EDITABLE_POSITIONS, positionLabel, type ProfileDTO } from "@/types/user"
@@ -90,10 +89,7 @@ export default function EditProfileModal({ profile, onClose, onProfileUpdated }:
       <DialogContent className="max-w-md gap-0 overflow-hidden p-0">
         <div className="px-6 pt-6">
           <label htmlFor="avatar-input" className="group relative block w-fit cursor-pointer" aria-label="Alterar foto">
-            <Avatar className="size-20">
-              <AvatarImage src={getFileUrl(current.image)} alt={current.username} />
-              <AvatarFallback className="text-lg font-bold">{getInitials(current.username)}</AvatarFallback>
-            </Avatar>
+            <PlayerAvatar userId={current.id} username={current.username} image={current.image} className="size-20 text-lg" />
             <span className="absolute bottom-0 right-0 flex size-7 items-center justify-center rounded-full border bg-background">
               <HugeiconsIcon icon={Camera01Icon} className="size-3.5" />
             </span>

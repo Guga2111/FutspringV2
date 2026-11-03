@@ -63,7 +63,7 @@ export function PendingInvitations() {
             <Card key={invitation.id} className="flex flex-col gap-4 p-4">
               <InvitationPreview pelada={invitation.pelada} />
               <p className="flex min-w-0 items-center gap-2 text-body-sm text-muted-foreground">
-                <PlayerAvatar username={invitation.sender.username} image={invitation.sender.image} className="size-6 text-overline" />
+                <PlayerAvatar userId={invitation.sender.id} username={invitation.sender.username} image={invitation.sender.image} className="size-6 text-overline" />
                 <span className="truncate">
                   <span className="font-medium text-foreground">{invitation.sender.username}</span> te convidou · expira {relativeToNow(invitation.expiresAt, now)}
                 </span>

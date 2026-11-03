@@ -1,11 +1,11 @@
 import { useMemo, useState } from "react"
+import { PlayerAvatar } from "@/components/PlayerAvatar"
 import { Link, useNavigate } from "react-router-dom"
 import { format, parseISO } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { ChampionIcon, LinkSquare02Icon } from "@hugeicons/core-free-icons"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -38,7 +38,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { cn, getFileUrl, getInitials } from "@/lib/utils"
+import { cn } from "@/lib/utils"
 import { usePlayerPeladaHistory } from "@/components/pelada/hooks/usePlayerPeladaHistory"
 import type { PeladaMember, PlayerPeladaHistoryRow } from "@/types/pelada"
 
@@ -172,14 +172,7 @@ function PlayerHistoryContent({
             {members.map((member) => (
               <SelectItem key={member.id} value={member.id.toString()}>
                 <span className="flex items-center gap-2">
-                  <Avatar className="h-5 w-5">
-                    {member.image && (
-                      <AvatarImage src={getFileUrl(member.image)} alt="" />
-                    )}
-                    <AvatarFallback className="text-[10px]">
-                      {getInitials(member.username)}
-                    </AvatarFallback>
-                  </Avatar>
+                  <PlayerAvatar userId={member.id} username={member.username} image={member.image} className="size-5 text-[10px]" />
                   {member.username}
                 </span>
               </SelectItem>
@@ -290,7 +283,7 @@ function PlayerHistoryContent({
           )}
 
           <Table>
-              <TableHeader>
+              <TableHeader className="bg-card-elevated">
                 <TableRow>
                   <TableHead className="h-8 px-2 text-xs">Data</TableHead>
                   <TableHead className="h-8 px-2 text-center text-xs" title="Jogos">J</TableHead>

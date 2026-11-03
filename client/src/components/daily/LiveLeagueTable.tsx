@@ -3,6 +3,7 @@ import { TeamColorDot } from "@/components/daily/TeamColorDot"
 import { cn } from "@/lib/utils"
 import { formatGoalDiff, goalDiffClass } from "@/utils/liveSession"
 import type { DailyDetail } from "@/types/daily"
+import { rankStyle } from "@/utils/rank"
 
 const COLS = [
   { key: "played", label: "J", width: "w-[30px]" },
@@ -25,7 +26,7 @@ export function LiveLeagueTable({ daily }: { daily: DailyDetail }) {
       <h2 className="text-base font-semibold">Classificação ao vivo</h2>
       <div className="overflow-hidden rounded-xl border">
         <Table className="table-fixed">
-          <TableHeader className="bg-card">
+          <TableHeader className="bg-card-elevated">
             <TableRow className="hover:bg-transparent">
               <TableHead className="h-auto w-7 px-3 py-2.5 text-xs font-normal text-subtle-foreground">#</TableHead>
               <TableHead className="h-auto px-1 py-2.5 text-xs font-normal text-subtle-foreground">Time</TableHead>
@@ -43,7 +44,7 @@ export function LiveLeagueTable({ daily }: { daily: DailyDetail }) {
               const values = { played: row.wins + row.draws + row.losses, wins: row.wins, draws: row.draws, losses: row.losses }
               return (
                 <TableRow key={row.teamId} className={cn("border-border/60 text-sm hover:bg-transparent", row.position === 1 && "bg-highlight-muted")}>
-                  <TableCell className={cn("px-3 py-[11px] font-bold", row.position === 1 ? "text-highlight-text" : "text-subtle-foreground")}>{row.position}</TableCell>
+                  <TableCell className={cn("px-3 py-[11px] tabular-nums", rankStyle(row.position).className)}>{rankStyle(row.position).label}</TableCell>
                   <TableCell className="px-1 py-[11px]">
                     <span className="flex min-w-0 items-center gap-2 font-medium">
                       <TeamColorDot color={colorOf.get(row.teamId) ?? null} />

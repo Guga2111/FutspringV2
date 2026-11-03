@@ -34,7 +34,7 @@ function AwardCard({ award, daily }: { award: AwardCardData; daily: DailyDetail 
       ) : (
         <div className="flex items-center gap-2.5">
           {single ? (
-            <PlayerAvatar username={single.username} image={single.image} className="size-9 text-xs" />
+            <PlayerAvatar userId={single.id} username={single.username} image={single.image} className="size-9 text-xs" />
           ) : (
             <Avatar className="size-9 shrink-0 text-xs">
               <AvatarFallback className="bg-avatar-fallback font-semibold">+{award.winnerNames.length}</AvatarFallback>

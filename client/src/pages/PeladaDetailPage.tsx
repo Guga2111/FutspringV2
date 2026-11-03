@@ -1,4 +1,8 @@
 import { lazy, Suspense, useState } from "react"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { PlusSignIcon } from "@hugeicons/core-free-icons"
+import { Button } from "@/components/ui/button"
+import { PageContainer } from "@/components/layout/PageContainer"
 import { Outlet, useLocation, useParams } from "react-router-dom"
 import type { PeladaMember } from "@/types/pelada"
 import type { BulkMemberAction } from "@/utils/bulkMemberActions"
@@ -14,6 +18,7 @@ import { ConfirmRemoveDialog } from "@/components/pelada/ConfirmRemoveDialog"
 import { CreateSessionDialog } from "@/components/pelada/CreateSessionDialog"
 import { SetPlayerStarsDialog } from "@/components/pelada/SetPlayerStarsDialog"
 import { areaFromPath, PELADA_AREAS } from "@/utils/peladaAreas"
+import { cn } from "@/lib/utils"
 
 // Lazy so recharts only downloads when the dialog is first opened
 const PlayerHistoryDialog = lazy(() =>
@@ -100,21 +105,37 @@ export default function PeladaDetailPage() {
       openHistory,
       runBulkAction,
     }
+    // the area's main action sits in the header, at the right of the title (admins only)
+    const headerAction =
+      isAdmin && area === "members" ? (
+        <Button variant="brand" onClick={() => setShowInvitePlayer(true)} className="h-9 gap-1.5 px-4 font-semibold">
+          <HugeiconsIcon icon={PlusSignIcon} className="size-[15px]" strokeWidth={2.2} />
+          Convidar jogador
+        </Button>
+      ) : isAdmin && area === "sessions" ? (
+        <Button variant="brand" onClick={() => setShowCreateSession(true)} className="h-9 gap-1.5 px-4 font-semibold">
+          <HugeiconsIcon icon={PlusSignIcon} className="size-[15px]" strokeWidth={2.2} />
+          Nova sessão
+        </Button>
+      ) : null
+    // the chat button is fixed in the corner: leave room under the content so it never covers the last row
+    const showChat = area !== "invitations" && area !== "finance"
     content = (
-      <main className="flex min-w-0 flex-col gap-5 p-4 md:gap-6 md:p-6">
+      <PageContainer className={cn(showChat && "pb-24 md:pb-24")}>
         <PeladaPageHeader
           peladaId={pelada.id}
           peladaName={pelada.name}
           area={area}
           isAdmin={isAdmin}
           title={area === "overview" ? undefined : PELADA_AREAS[area].label}
+          actions={headerAction}
         />
         <Suspense fallback={<DetailSkeleton />}>
           <Outlet context={workspace} />
         </Suspense>
 
         {/* hidden where it could cover invitation or finance controls */}
-        {area !== "invitations" && area !== "finance" && (
+        {showChat && (
           <PeladaChat
             peladaId={pelada.id}
             peladaName={pelada.name}
@@ -122,7 +143,7 @@ export default function PeladaDetailPage() {
             currentUserId={currentUser?.id ?? null}
           />
         )}
-      </main>
+      </PageContainer>
     )
   }
 

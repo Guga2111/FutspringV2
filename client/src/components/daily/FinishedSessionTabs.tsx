@@ -10,8 +10,8 @@ import { cn } from "@/lib/utils"
 import { matchStatNames, sortPlayerStats, type PlayerSortKey } from "@/utils/finishedSession"
 import { formatGoalDiff, goalDiffClass } from "@/utils/liveSession"
 import type { DailyDetail } from "@/types/daily"
+import { rankStyle } from "@/utils/rank"
 
-const MEDALS = ["text-gold", "text-silver", "text-bronze"] as const
 const INITIAL_MATCHES = 6
 
 // Final table, matches, players and teams of a finished session (replaces the old stacked sections)
@@ -49,7 +49,7 @@ function FinalLeagueTable({ daily }: { daily: DailyDetail }) {
   return (
     <div className="overflow-hidden rounded-xl border">
       <Table className="table-fixed">
-        <TableHeader className="bg-card">
+        <TableHeader className="bg-card-elevated">
           <TableRow className="hover:bg-transparent">
             <TableHead className={cn(head, "w-6 pl-3 md:w-11")}>#</TableHead>
             <TableHead className={cn(head, "pl-2 text-left md:pl-3")}>Time</TableHead>
@@ -64,7 +64,7 @@ function FinalLeagueTable({ daily }: { daily: DailyDetail }) {
         <TableBody>
           {daily.leagueTable.map((row, i) => (
             <TableRow key={row.teamId} className={cn("border-border/60 text-sm hover:bg-transparent", i === 0 && "bg-highlight-muted hover:bg-highlight-muted")}>
-              <TableCell className={cn(num, "pl-3 font-bold", MEDALS[i] ?? "text-faint-foreground")}>{row.position}º</TableCell>
+              <TableCell className={cn(num, "pl-3", rankStyle(row.position).className)}>{rankStyle(row.position).label}</TableCell>
               <TableCell className="py-3 pl-2 pr-1 md:pl-3">
                 <span className={cn("flex min-w-0 items-center gap-2", i === 0 ? "font-bold" : "font-medium")}>
                   <TeamColorDot color={colorOf.get(row.teamId) ?? null} />
@@ -101,7 +101,7 @@ function MatchCards({ daily }: { daily: DailyDetail }) {
           const s2 = match.team2Score ?? 0
           return (
             <article key={match.id} className="flex flex-col gap-3 rounded-xl border bg-card p-3.5">
-              <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-faint-foreground">Partida {i + 1}</span>
+              <span className="text-caption font-semibold text-muted-foreground">Partida {i + 1}</span>
               <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2.5 text-[15px]">
                 <span className={cn("flex min-w-0 items-center gap-2", s1 > s2 && "font-bold")}>
                   <TeamColorDot color={colorOf.get(match.team1Id) ?? null} />
@@ -155,7 +155,7 @@ function PlayerStatsTable({ daily }: { daily: DailyDetail }) {
   return (
     <div className="overflow-hidden rounded-xl border">
       <Table className="table-fixed">
-        <TableHeader className="bg-card">
+        <TableHeader className="bg-card-elevated">
           <TableRow className="hover:bg-transparent">
             <TableHead className="h-auto px-3 py-1.5 text-xs font-normal text-subtle-foreground">Jogador</TableHead>
             {SORT_COLUMNS.map(({ key, label }) => (
@@ -187,7 +187,7 @@ function PlayerStatsTable({ daily }: { daily: DailyDetail }) {
                 <TableCell className="px-3 py-2.5">
                   <span className="flex min-w-0 items-center gap-2.5">
                     <span className="relative shrink-0">
-                      <PlayerAvatar username={row.username} image={info?.image ?? null} />
+                      <PlayerAvatar userId={row.userId} username={row.username} image={info?.image ?? null} />
                       <TeamColorDot
                         color={info?.color ?? null}
                         className="absolute -bottom-px -right-px border-2 border-background"
@@ -233,7 +233,7 @@ function FinalTeams({ daily }: { daily: DailyDetail }) {
         >
           {team.players.map((player) => (
             <TeamPlayerRow key={player.id}>
-              <PlayerAvatar username={player.username} image={player.image} />
+              <PlayerAvatar userId={player.id} username={player.username} image={player.image} />
               <span className="min-w-0 flex-1 truncate text-sm font-medium">{player.username}</span>
               <StarRow stars={player.stars} />
             </TeamPlayerRow>

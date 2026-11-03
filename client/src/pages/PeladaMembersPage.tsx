@@ -16,7 +16,6 @@ export default function PeladaMembersPage() {
       settingStars={w.settingStars}
       removingMember={w.removingMember}
       bulkPending={w.bulkPending}
-      onInvitePlayer={w.openInvite}
       onToggleAdmin={w.toggleAdmin}
       onRemoveMember={w.confirmRemove}
       onSetStars={w.openStars}

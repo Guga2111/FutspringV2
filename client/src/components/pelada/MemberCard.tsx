@@ -1,7 +1,6 @@
 import { Link, useNavigate } from "react-router-dom"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { CalendarCheckIn01Icon, CalendarRemove01Icon, CrownIcon, Delete02Icon, MoreHorizontalIcon, ShieldCheckIcon, ShieldOffIcon, StarIcon, UserIcon } from "@hugeicons/core-free-icons"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
@@ -15,7 +14,7 @@ import { MembershipBadge } from "@/components/MembershipBadge"
 import { PlayerAvatar } from "@/components/PlayerAvatar"
 import { StarRow } from "@/components/StarRow"
 import { cn } from "@/lib/utils"
-import { positionShortLabel } from "@/utils/memberFilters"
+import { PositionBadge } from "@/components/PositionBadge"
 import type { PeladaMember } from "@/types/pelada"
 
 export interface MemberStats {
@@ -63,7 +62,6 @@ export function MemberCard({
   onToggleSelected,
 }: MemberCardProps) {
   const navigate = useNavigate()
-  const position = positionShortLabel(member.position)
 
   return (
     <article
@@ -87,7 +85,7 @@ export function MemberCard({
             className="shrink-0"
           />
         )}
-        <PlayerAvatar username={member.username} image={member.image} colorId={member.id} className="size-[42px] text-[13px]" />
+        <PlayerAvatar userId={member.id} username={member.username} image={member.image} className="size-[42px] text-[13px]" />
         <div className="flex min-w-0 flex-1 flex-col gap-1">
           <div className="flex min-w-0 items-center gap-1.5">
             {selectable ? (
@@ -167,11 +165,7 @@ export function MemberCard({
       {/* one line on every card (same height with or without a position), so the stats line up across a row */}
       <div className="flex h-[22px] items-center gap-2 overflow-hidden">
         <MembershipBadge isMensalista={member.isMensalista} />
-        {position && (
-          <Badge variant="status" className="bg-secondary px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.03em] text-secondary-foreground">
-            {position}
-          </Badge>
-        )}
+        <PositionBadge position={member.position} />
       </div>
       <dl className="mt-auto grid grid-cols-3 border-t pt-2.5">
         {(

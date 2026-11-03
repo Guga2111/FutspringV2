@@ -170,7 +170,7 @@ export default function TeamsSection({
                     const isSelected = selectedPlayer?.id === player.id
                     return (
                       <TeamPlayerRow key={player.id} className={cn(isSelected && "-mx-2 rounded-lg bg-accent px-2")}>
-                        <PlayerAvatar username={player.username} image={player.image} />
+                        <PlayerAvatar userId={player.id} username={player.username} image={player.image} />
                         <span className="min-w-0 flex-1 truncate text-sm font-medium">{player.username}</span>
                         <StarRow stars={player.stars} />
                         {isAdminOpen && (

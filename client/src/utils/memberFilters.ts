@@ -1,4 +1,5 @@
 import type { PeladaMember } from "@/types/pelada"
+import { positionLabel } from "@/types/user"
 
 // The four positions offered in the app; profiles may still hold the English values
 export type PositionFilter = "ALL" | "GOLEIRO" | "ZAGUEIRO" | "MEIO" | "ATACANTE"
@@ -16,10 +17,10 @@ const NORMALIZED: Record<string, Exclude<PositionFilter, "ALL">> = {
 
 export const POSITION_FILTERS: { value: PositionFilter; label: string }[] = [
   { value: "ALL", label: "Todos" },
-  { value: "GOLEIRO", label: "Goleiro" },
-  { value: "ZAGUEIRO", label: "Zagueiro" },
-  { value: "MEIO", label: "Meio" },
-  { value: "ATACANTE", label: "Atacante" },
+  { value: "GOLEIRO", label: positionLabel.GOLEIRO },
+  { value: "ZAGUEIRO", label: positionLabel.ZAGUEIRO },
+  { value: "MEIO", label: positionLabel.MEIO },
+  { value: "ATACANTE", label: positionLabel.ATACANTE },
 ]
 
 export function normalizePosition(position: string | null): Exclude<PositionFilter, "ALL"> | null {
@@ -73,7 +74,3 @@ export function filterMembers(
 }
 
 // Short pt-BR label of any position value ("MIDFIELDER" -> "Meio"), or null
-export function positionShortLabel(position: string | null): string | null {
-  const normalized = normalizePosition(position)
-  return POSITION_FILTERS.find((f) => f.value === normalized)?.label ?? null
-}

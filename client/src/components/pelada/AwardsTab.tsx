@@ -28,10 +28,10 @@ function LeaderRow({ winner }: { winner: AwardWinner }) {
   return (
     <div className="bg-gradient-leader -mx-1.5 mb-1 mt-0.5 flex items-center gap-3 rounded-[10px] border border-highlight/30 p-2.5">
       <HugeiconsIcon icon={ChampionIcon} className="size-[18px] shrink-0 text-highlight-text" />
-      <PlayerAvatar username={winner.username} image={winner.userImage} className="size-[38px] text-xs ring-2 ring-highlight" />
+      <PlayerAvatar userId={winner.userId} username={winner.username} image={winner.userImage} className="size-[38px] text-xs ring-2 ring-highlight" />
       <div className="flex min-w-0 flex-1 flex-col">
         <span className="truncate text-base font-bold">{winner.username}</span>
-        <span className="text-[11px] font-semibold uppercase tracking-[0.05em] text-highlight-text">Líder</span>
+        <span className="text-caption font-semibold text-highlight-text">Líder</span>
       </div>
       <Badge variant="status" className="bg-highlight px-2.5 py-[3px] text-sm font-bold tabular-nums text-highlight-foreground">
         {winner.count}x
@@ -44,7 +44,7 @@ function WinnerRow({ winner, place }: { winner: AwardWinner; place: number }) {
   return (
     <div className="flex items-center gap-3 border-b border-accent px-1 py-[9px]">
       <HugeiconsIcon icon={ChampionIcon} className={cn("size-4 shrink-0", PLACE_COLORS[place - 1] ?? "text-faint-foreground/70")} />
-      <PlayerAvatar username={winner.username} image={winner.userImage} />
+      <PlayerAvatar userId={winner.userId} username={winner.username} image={winner.userImage} />
       <span className="min-w-0 flex-1 truncate text-sm font-medium">{winner.username}</span>
       <Badge variant="status" className="bg-secondary px-2 py-0.5 text-xs font-semibold tabular-nums text-foreground">
         {winner.count}x

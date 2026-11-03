@@ -1,8 +1,7 @@
 import { useMemo } from "react"
 import { Link } from "react-router-dom"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { ArrowRight01Icon, GridViewIcon, LeftToRightListBulletIcon, PlusSignIcon, UserGroupIcon } from "@hugeicons/core-free-icons"
-import { Button } from "@/components/ui/button"
+import { ArrowRight01Icon, GridViewIcon, LeftToRightListBulletIcon, UserGroupIcon } from "@hugeicons/core-free-icons"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { SessionGallery } from "@/components/pelada/SessionGallery"
@@ -16,12 +15,10 @@ import type { DailyListItem } from "@/types/daily"
 interface SessionHistoryListProps {
   dailies: DailyListItem[]
   isLoading: boolean
-  isAdmin: boolean
-  onOpenCreate: () => void
 }
 
 // Every session except the next one: grouped by month (list) or the finished ones as photos (gallery)
-export function SessionHistoryList({ dailies, isLoading, isAdmin, onOpenCreate }: SessionHistoryListProps) {
+export function SessionHistoryList({ dailies, isLoading }: SessionHistoryListProps) {
   const [view, setView] = useSessionsView()
   const months = useMemo(() => groupDailiesByMonth(dailies), [dailies])
   const finishedCount = dailies.filter((d) => d.status === "FINISHED").length
@@ -53,12 +50,6 @@ export function SessionHistoryList({ dailies, isLoading, isAdmin, onOpenCreate }
               <HugeiconsIcon icon={GridViewIcon} />
             </ToggleGroupItem>
           </ToggleGroup>
-          {isAdmin && (
-          <Button variant="outline" onClick={onOpenCreate} className="h-[34px] gap-1.5 bg-transparent px-3.5 hover:bg-accent">
-            <HugeiconsIcon icon={PlusSignIcon} className="size-3.5" strokeWidth={2.2} />
-            Nova sessão
-          </Button>
-          )}
         </div>
       </div>
 
@@ -73,7 +64,7 @@ export function SessionHistoryList({ dailies, isLoading, isAdmin, onOpenCreate }
       ) : (
         months.map((month) => (
           <div key={month.key} className="flex flex-col gap-2">
-            <h3 className="text-xs font-semibold uppercase tracking-[0.06em] text-faint-foreground">{month.label}</h3>
+            <h3 className="text-caption font-semibold text-muted-foreground">{month.label}</h3>
             <ul className="overflow-hidden rounded-xl border">
               {month.dailies.map((daily) => (
                 <SessionRow key={daily.id} daily={daily} />
@@ -115,7 +106,8 @@ export function SessionRow({ daily }: { daily: DailyListItem }) {
             style={{ objectPosition: "center 55%" }}
           />
         ) : (
-          <span title="Sem foto do campeão" className="hidden size-10 shrink-0 rounded-lg border border-dashed border-input md:block" />
+          // keeps the column so the badges line up with rows that have a photo; nothing is drawn
+          <span aria-hidden className="hidden size-10 shrink-0 md:block" />
         )}
         <HugeiconsIcon icon={ArrowRight01Icon} className="size-4 shrink-0 text-faint-foreground" />
       </Link>

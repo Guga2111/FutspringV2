@@ -90,7 +90,7 @@ export function InvitationsCard({ peladaId, version, onInvite }: { peladaId: num
           <CardDescription>Convide uma conta cadastrada. O jogador decide se quer entrar.</CardDescription>
         </div>
         <Button variant="brand" onClick={onInvite} className="w-full shrink-0 md:w-auto">
-          <HugeiconsIcon icon={UserAdd01Icon} />
+          <HugeiconsIcon icon={UserAdd01Icon} className="size-[15px]" strokeWidth={2.2} />
           Convidar jogador
         </Button>
       </CardHeader>
@@ -112,12 +112,7 @@ export function InvitationsCard({ peladaId, version, onInvite }: { peladaId: num
             list={pending}
             onCancel={setCanceling}
             disabled={busy}
-            empty={
-              <>
-                <p className="text-body text-muted-foreground">Nenhum convite pendente.</p>
-                <Button variant="outline" size="sm" onClick={onInvite}>Convidar jogador</Button>
-              </>
-            }
+            empty={<p className="text-body text-muted-foreground">Nenhum convite pendente.</p>}
           />
         </TabsContent>
         <TabsContent value="history" className="mt-0">

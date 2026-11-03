@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom"
+import { PlayerAvatar } from "@/components/PlayerAvatar"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { Logout01Icon, Moon02Icon, Notification01Icon, Sun03Icon, UnfoldMoreIcon, UserIcon } from "@hugeicons/core-free-icons"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,18 +14,9 @@ import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/ui
 import { useSidebar } from "@/components/ui/sidebar-context"
 import { useAuth } from "@/hooks/useAuth"
 import { useTheme } from "@/hooks/useTheme"
-import { getFileUrl, getInitials } from "@/lib/utils"
 
-function UserAvatar({ username, image }: { username: string; image: string | null }) {
-  return (
-    <Avatar className="size-8 shrink-0 rounded-lg">
-      <AvatarImage src={getFileUrl(image)} alt="" className="object-cover" />
-      <AvatarFallback className="rounded-lg bg-avatar-fallback text-xs font-semibold">
-        {getInitials(username)}
-      </AvatarFallback>
-    </Avatar>
-  )
-}
+// the square corners mark the account menu; the color is the player's own, as on every screen
+const userAvatarClass = "size-8 rounded-lg text-xs [&>span]:rounded-lg"
 
 const itemClass = "gap-2.5 rounded-md px-2 py-[7px] text-sm [&>svg]:size-4 [&>svg]:text-muted-foreground"
 
@@ -63,7 +54,7 @@ export function UserMenu() {
               aria-label="Menu do usuário"
               className="h-auto gap-2.5 rounded-[10px] p-2 data-[state=open]:bg-sidebar-accent group-data-[collapsible=icon]:!size-auto group-data-[collapsible=icon]:!p-1"
             >
-              <UserAvatar username={user.username} image={user.image} />
+              <PlayerAvatar userId={user.id} username={user.username} image={user.image} className={userAvatarClass} />
               <span className="flex min-w-0 flex-1 flex-col group-data-[collapsible=icon]:hidden">
                 <span className="truncate text-sm font-semibold">{user.username}</span>
                 <span className="truncate text-xs text-muted-foreground">{user.email}</span>
@@ -78,7 +69,7 @@ export function UserMenu() {
             className="w-60 rounded-[10px] p-1 shadow-menu"
           >
             <DropdownMenuLabel className="flex items-center gap-2.5 p-2 font-normal">
-              <UserAvatar username={user.username} image={user.image} />
+              <PlayerAvatar userId={user.id} username={user.username} image={user.image} className={userAvatarClass} />
               <span className="flex min-w-0 flex-col">
                 <span className="truncate text-sm font-semibold">{user.username}</span>
                 <span className="truncate text-xs text-muted-foreground">{user.email}</span>
