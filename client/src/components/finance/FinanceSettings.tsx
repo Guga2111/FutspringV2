@@ -2,7 +2,7 @@ import { useState } from "react"
 import { Controller, useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { ArrowDown01Icon, ArrowRight01Icon, PlusSignIcon } from "@hugeicons/core-free-icons"
+import { ArrowDown01Icon, PlusSignIcon } from "@hugeicons/core-free-icons"
 import { toast } from "sonner"
 import * as api from "@/api/finance"
 import { financeManagersSchema, financePixSchema, financeVisibilitySchema } from "@/schemas/finance"
@@ -29,7 +29,6 @@ interface FinanceSettingsProps {
   finance: FinanceController
   members: PeladaMember[]
   onTemplate: (template?: FinanceTemplate) => void
-  onAudit: () => void
 }
 
 const VISIBILITY: Record<FinanceVisibility, { title: string; description: string }> = {
@@ -43,8 +42,8 @@ const VISIBILITY: Record<FinanceVisibility, { title: string; description: string
   },
 }
 
-// The finance settings, one card per subject (Pix, visibility, people, templates, history), each saving on its own
-export function FinanceSettings({ peladaId, finance, members, onTemplate, onAudit }: FinanceSettingsProps) {
+// The finance settings, one card per subject (Pix, visibility, people, templates), each saving on its own; the audit has its own tab
+export function FinanceSettings({ peladaId, finance, members, onTemplate }: FinanceSettingsProps) {
   const overview = finance.overview
   if (!overview) return null
   const settings = overview.settings
@@ -80,16 +79,6 @@ export function FinanceSettings({ peladaId, finance, members, onTemplate, onAudi
         <Button variant="outline" className="self-start" onClick={() => onTemplate()}>
           <HugeiconsIcon icon={PlusSignIcon} className="size-[15px]" />
           Novo modelo
-        </Button>
-      </SettingsCard>
-      <SettingsCard
-        id="finance-history"
-        title="Histórico de alterações"
-        description="Quem criou, recebeu, corrigiu ou cancelou cada coisa no financeiro, com o motivo."
-      >
-        <Button variant="outline" className="self-start" onClick={onAudit}>
-          Ver histórico
-          <HugeiconsIcon icon={ArrowRight01Icon} />
         </Button>
       </SettingsCard>
     </div>
