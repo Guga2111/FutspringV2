@@ -13,10 +13,9 @@ import { financeClassificationLabel } from "@/types/finance"
 import { FinanceInput } from "@/components/finance/FinanceFields"
 import { FinanceQrField } from "@/components/finance/FinanceQrField"
 import { SettingsCard, SettingsCardFooter, SettingsRootError } from "@/components/SettingsCard"
-import { PlayerAvatar } from "@/components/PlayerAvatar"
+import { FinanceMemberChecklist } from "@/components/finance/FinanceMemberChecklist"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
@@ -228,7 +227,10 @@ function ManagersCard({ peladaId, finance, settings, members }: CardProps & { me
   const form = useForm({ resolver: zodResolver(financeManagersSchema), defaultValues: defaults })
   // admins (the creator included) already manage the finance; only the other members can be appointed
   const admins = members.filter((member) => member.isAdmin)
-  const candidates = members.filter((member) => !member.isAdmin)
+  // the saved responsáveis first, so they are easy to untick; the order stays put while ticking
+  const candidates = members
+    .filter((member) => !member.isAdmin)
+    .sort((a, b) => Number(settings.managerIds.includes(b.id)) - Number(settings.managerIds.includes(a.id)))
   // the member list is long: it opens on demand, with the current choice summarized above it
   const [open, setOpen] = useState(false)
   const userIds = useWatch({ control: form.control, name: "userIds" })
@@ -287,24 +289,10 @@ function ManagersCard({ peladaId, finance, settings, members }: CardProps & { me
               control={form.control}
               name="userIds"
               render={({ field, fieldState }) => (
-                <FieldGroup className="gap-0 rounded-lg border">
-                  {candidates.map((member) => (
-                    <Field key={member.id} orientation="horizontal" className="items-center gap-3 border-b p-3 last:border-b-0">
-                      <Checkbox
-                        id={`finance-manager-${member.id}`}
-                        checked={field.value.includes(member.id)}
-                        onCheckedChange={(checked) =>
-                          field.onChange(checked ? [...field.value, member.id] : field.value.filter((id) => id !== member.id))
-                        }
-                      />
-                      <PlayerAvatar userId={member.id} username={member.username} image={member.image} className="size-8 text-xs" />
-                      <FieldLabel htmlFor={`finance-manager-${member.id}`} className="flex-1 cursor-pointer font-normal">
-                        {member.username}
-                      </FieldLabel>
-                    </Field>
-                  ))}
+                <Field data-invalid={fieldState.invalid}>
+                  <FinanceMemberChecklist idPrefix="finance-manager" members={candidates} selected={field.value} onChange={field.onChange} />
                   <FieldError errors={[fieldState.error]} />
-                </FieldGroup>
+                </Field>
               )}
             />
           </CollapsibleContent>

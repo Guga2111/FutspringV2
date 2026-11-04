@@ -163,7 +163,7 @@ export function FinanceTab({ peladaId, userId, members, dailies, timeZone }: { p
     {editor?.kind === "payment" && detail && <FinancePaymentForm peladaId={peladaId} finance={formFinance} list={detail.collection} charge={editor.charge} action={editor.action} notice={editor.notice} onClose={close} />}
     {editor?.kind === "details" && detail && <FinanceChargeDetails peladaId={peladaId} userId={userId} timeZone={timeZone} finance={formFinance} list={detail.collection} charge={editor.charge} onClose={close} onPayment={payment} onAdjust={() => open({ kind: "charge", charge: editor.charge })} onReplace={() => open({ kind: "replace", charge: editor.charge })} onReason={askReason} />}
     {editor?.kind === "charge" && detail && <FinanceChargeForm peladaId={peladaId} finance={formFinance} list={detail.collection} charge={editor.charge} onClose={close} />}
-    {editor?.kind === "replace" && detail && <FinanceReplacementForm peladaId={peladaId} finance={formFinance} list={detail.collection} charge={editor.charge} members={members} onClose={close} />}
+    {editor?.kind === "replace" && detail && <FinanceReplacementForm peladaId={peladaId} finance={formFinance} list={detail.collection} charge={editor.charge} members={members} excluded={detail.charges.filter(c => !c.canceled).map(c => c.userId)} onClose={close} />}
     {editor?.kind === "cash" && <FinanceCashForm peladaId={peladaId} finance={formFinance} kind={editor.cashKind} dailies={dailies} onClose={close} />}
     {reason && <FinanceReasonForm finance={formFinance} action={reason} onClose={() => setReason(null)} />}
   </div>
