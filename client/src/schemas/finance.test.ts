@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { financeMoneySchema, financeSignedMoneySchema, financeListSchema, financeCashSchema, financeReplacementSchema, financeImageSchema } from "@/schemas/finance"
+import { financeMoneySchema, financeSignedMoneySchema, financeListSchema, financeCashSchema, financeReplacementSchema, financeImageSchema, makeFinanceBulkAdjustSchema } from "@/schemas/finance"
 
 describe("finance contracts", () => {
   it("keeps exact decimal strings and rejects precision/coercion", () => {
@@ -53,5 +53,18 @@ describe("daily organizer forms", () => {
     expect(financeCreateSchema.safeParse({ ...values, detailedPrice: true, components: [{ name: "", amount: "inválido" }] }).success).toBe(false)
     expect(financeCreateSchema.parse(values).guestNames).toEqual(["Convidado"])
     expect(financeCreateSchema.safeParse({ ...values, amount: "0" }).success).toBe(false)
+  })
+})
+
+describe("makeFinanceBulkAdjustSchema", () => {
+  const values = { components: [{ name: "Juiz", amount: "5,00" }], adjustment: "-1,50", reason: "" }
+  it("normalizes pt-BR amounts and requires a reason only after publication", () => {
+    expect(makeFinanceBulkAdjustSchema(false).parse(values)).toEqual({ components: [{ name: "Juiz", amount: "5.00" }], adjustment: "-1.50", reason: "" })
+    expect(makeFinanceBulkAdjustSchema(true).safeParse(values).success).toBe(false)
+    expect(makeFinanceBulkAdjustSchema(true).safeParse({ ...values, reason: "Mensalistas" }).success).toBe(true)
+  })
+  it("rejects negative components and an empty composition", () => {
+    expect(makeFinanceBulkAdjustSchema(false).safeParse({ ...values, components: [{ name: "Juiz", amount: "-5" }] }).success).toBe(false)
+    expect(makeFinanceBulkAdjustSchema(false).safeParse({ ...values, components: [] }).success).toBe(false)
   })
 })

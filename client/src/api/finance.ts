@@ -1,5 +1,5 @@
 import apiClient from "@/api/client"
-import type { FinanceCreateValues, FinanceCommand, FinanceListValues, FinanceTemplateValues, FinanceChargeValues, FinanceParticipantsValues, FinanceCashValues, FinanceReceiptValues, FinanceRefundValues, FinanceReceiveAllValues } from "@/schemas/finance"
+import type { FinanceCreateValues, FinanceCommand, FinanceListValues, FinanceTemplateValues, FinanceChargeValues, FinanceParticipantsValues, FinanceCashValues, FinanceReceiptValues, FinanceRefundValues, FinanceReceiveAllValues, FinanceBulkAdjustValues } from "@/schemas/finance"
 import type { FinanceOverview, FinanceDetail, FinanceResult, FinancePage, FinanceMovement, FinanceAudit, FinanceCandidate, FinanceSettings, FinancePaymentMethod, FinanceListScope, FinanceAuditOperation } from "@/types/finance"
 
 const root = (id: number) => `/api/v1/peladas/${id}/finance`
@@ -49,6 +49,11 @@ export function receiveFinance(id: number, listId: number, chargeId: number, com
 // "Receber selecionados": each charge receives what it still owes, all or nothing (one revision, one audit entry)
 export function receiveAllFinance(id: number, listId: number, command: FinanceCommand, chargeIds: number[], values: FinanceReceiveAllValues) {
   return post(id, `/lists/${listId}/receive-all`, { command, chargeIds, effectiveDate: optional(values.effectiveDate), method: values.method })
+}
+// "Ajustar valor": the same components and adjustment for every charge, all or nothing (one revision, one audit entry);
+// each charge keeps its due date
+export function adjustFinanceCharges(id: number, listId: number, command: FinanceCommand, chargeIds: number[], values: Pick<FinanceBulkAdjustValues, "components" | "adjustment">) {
+  return post(id, `/lists/${listId}/charges/adjust`, { command, chargeIds, components: values.components, adjustment: values.adjustment })
 }
 export function confirmFinanceNotice(id: number, listId: number, chargeId: number, noticeId: number, command: FinanceCommand, values: { effectiveDate: string; method: FinancePaymentMethod }) {
   return post(id, `/lists/${listId}/charges/${chargeId}/notices/${noticeId}/confirm`, { command, effectiveDate: optional(values.effectiveDate), method: values.method })

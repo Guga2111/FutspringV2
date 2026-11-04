@@ -1,5 +1,5 @@
 import { normalizeSearch } from "@/lib/utils"
-import type { FinanceCharge, FinanceChargeStatus } from "@/types/finance"
+import type { FinanceCharge, FinanceChargeStatus, FinanceComponent } from "@/types/finance"
 
 // Exact decimal strings throughout: formatting and parsing never use floating point arithmetic.
 export function formatFinanceMoney(value: string) {
@@ -115,4 +115,49 @@ export function planReceiveAll(selected: FinanceCharge[]) {
   const charges = selected.filter(canReceiveCharge)
   const review = selected.filter(c => !c.canceled && c.paymentStatus !== "PAID" && c.outstanding !== "0.00" && pendingFinanceNotice(c)).length
   return { charges, total: sumFinanceAmounts(charges.map(c => c.outstanding)), review }
+}
+
+// "Ajustar valor": a charge can get a new composition unless it is canceled or a reported payment waits for review
+// (paid charges included); null when it can be selected
+export function adjustChargeHint(charge: FinanceCharge): string | null {
+  if (charge.canceled) return "Cancelada"
+  if (pendingFinanceNotice(charge)) return "Confira o pagamento antes"
+  return null
+}
+export function canAdjustCharge(charge: FinanceCharge): boolean {
+  return adjustChargeHint(charge) === null
+}
+
+// What each action of the selection bar changes, like planBulkActions for the members grid: Receber counts only
+// the selected charges that can be received now (skipped: the others), Ajustar valor every adjustable one
+export function planBulkFinanceActions(selected: FinanceCharge[]) {
+  const receive = planReceiveAll(selected)
+  const adjust = selected.filter(canAdjustCharge)
+  return {
+    receive: { ...receive, skipped: selected.length - receive.charges.length, hint: receive.charges.length === 0 ? "Nenhum selecionado pode receber agora" : null },
+    adjust: { charges: adjust, hint: adjust.length === 0 ? "Nenhum selecionado pode ser ajustado" : null },
+  }
+}
+
+// "Selecionar mensalistas": the adjustable charges of members who are mensalistas today (guests never match)
+export function mensalistaCharges(charges: FinanceCharge[], members: { id: number; isMensalista: boolean }[]) {
+  const mensalistas = new Set(members.filter(m => m.isMensalista).map(m => m.id))
+  return charges.filter(c => c.userId !== null && mensalistas.has(c.userId) && canAdjustCharge(c))
+}
+
+const sameComposition = (charge: FinanceCharge, components: FinanceComponent[], adjustment: string) =>
+  normalizeFinanceAmount(charge.adjustment) === normalizeFinanceAmount(adjustment) && charge.components.length === components.length &&
+  charge.components.every((c, i) => c.name.trim() === components[i].name.trim() && normalizeFinanceAmount(c.amount) === normalizeFinanceAmount(components[i].amount))
+
+// Live summary of the bulk adjust form: what each person will owe, the total, and how many of the selected
+// charges had a composition of their own (different from the list's) that the new one replaces.
+// Amounts are pt-BR input; an invalid one yields null for the amounts.
+export function bulkAdjustSummary(values: { components: { amount: string }[]; adjustment: string }, charges: FinanceCharge[], list: { components: FinanceComponent[] }) {
+  const amounts = [...values.components.map(c => c.amount), values.adjustment].map(normalizeFinanceAmount)
+  const each = amounts.every((a): a is string => a !== null) ? sumFinanceAmounts(amounts) : null
+  return {
+    each,
+    total: each === null ? null : sumFinanceAmounts(charges.map(() => each)),
+    differs: charges.filter(c => !sameComposition(c, list.components, "0.00")).length,
+  }
 }

@@ -231,6 +231,38 @@ public class FinanceCollectionService {
             return new Change(before, reads.detail(ctx, listId), listId);
         });
     }
+    // "Ajustar valor": every listed charge gets the same components and adjustment, in one revision and one audit entry.
+    // All or nothing: a charge from another list, canceled, waiting for a notice review or already paid above the new
+    // value fails the batch. Due dates and identities stay as they are.
+    public FinanceViews.Result adjustCharges(Long id, Long listId, FinanceRequests.BulkAdjust request, String email) {
+        return tx.execute(id, email, request.command(), "CHARGE_SAVE", "LIST:" + listId, request, true, ctx -> {
+            var list = reads.findList(id, listId); require(list.getStatus() != ListStatus.CANCELED, "A lista está cancelada");
+            if (list.getPublishedAt() != null) reason(request.command());
+            var ids = new LinkedHashSet<>(request.chargeIds());
+            if (ids.size() != request.chargeIds().size()) throw new AppException(HttpStatus.BAD_REQUEST, "Cada cobrança só pode aparecer uma vez");
+            var rows = charges.findByIdInAndPeladaIdAndListIdOrderById(ids, id, listId);
+            if (rows.size() != ids.size()) throw missing("Cobrança");
+            var newComponents = components(request.components());
+            BigDecimal adjustment = parse(request.adjustment());
+            BigDecimal total = check(newComponents.stream().map(PriceComponent::getAmount).reduce(ZERO, BigDecimal::add).add(adjustment));
+            require(total.signum() >= 0, "O valor devido não pode ser negativo");
+            var pending = new HashSet<>(notices.chargeIdsWithStatus(ids, NoticeStatus.PENDING));
+            var paid = reads.paid(rows);
+            for (var c : rows) {
+                active(c);
+                require(!pending.contains(c.getId()), "Confira o pagamento informado por " + c.getPersonName() + " antes de ajustar");
+                BigDecimal received = paid.getOrDefault(c.getId(), ZERO);
+                require(received.compareTo(total) <= 0, c.getPersonName() + " já pagou " + display(received) + ", acima do novo valor");
+            }
+            var before = reads.detail(ctx, listId);
+            for (var c : rows) {
+                c.getComponents().clear(); c.getComponents().addAll(copyComponents(newComponents));
+                c.setAdjustment(adjustment); c.setAmountDue(total);
+            }
+            charges.saveAll(rows);
+            return new Change(before, reads.detail(ctx, listId), listId);
+        });
+    }
     public FinanceViews.Result cancelCharge(Long id, Long listId, Long chargeId, FinanceRequests.Command command, String email) {
         return tx.execute(id, email, command, "CHARGE_CANCEL", "CHARGE:" + chargeId, command, true, ctx -> {
             var list = reads.findList(id, listId); require(list.getStatus() != ListStatus.CANCELED, "A lista está cancelada");

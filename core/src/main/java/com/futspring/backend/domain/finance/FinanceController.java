@@ -72,6 +72,8 @@ public class FinanceController {
             @Valid @RequestBody FinanceRequests.Charge body, @AuthenticationPrincipal String email) { return collections.charge(peladaId, listId, null, false, body, email); }
     @PutMapping("/lists/{listId}/charges/{chargeId}") public FinanceViews.Result updateCharge(@PathVariable Long peladaId, @PathVariable Long listId,
             @PathVariable Long chargeId, @Valid @RequestBody FinanceRequests.Charge body, @AuthenticationPrincipal String email) { return collections.charge(peladaId, listId, chargeId, false, body, email); }
+    @PostMapping("/lists/{listId}/charges/adjust") public FinanceViews.Result adjustCharges(@PathVariable Long peladaId, @PathVariable Long listId,
+            @Valid @RequestBody FinanceRequests.BulkAdjust body, @AuthenticationPrincipal String email) { return collections.adjustCharges(peladaId, listId, body, email); }
     @PostMapping("/lists/{listId}/charges/{chargeId}/replace") public FinanceViews.Result replaceCharge(@PathVariable Long peladaId, @PathVariable Long listId,
             @PathVariable Long chargeId, @Valid @RequestBody FinanceRequests.Charge body, @AuthenticationPrincipal String email) { return collections.charge(peladaId, listId, chargeId, true, body, email); }
     @PostMapping("/lists/{listId}/charges/{chargeId}/cancel") public FinanceViews.Result cancelCharge(@PathVariable Long peladaId, @PathVariable Long listId,

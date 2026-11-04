@@ -28,6 +28,11 @@ export function useSelection<T extends { id: number }>(
     })
   }, [])
 
+  // Marks these ids, keeping the ones already marked (e.g. "Selecionar mensalistas")
+  const select = useCallback((ids: number[]) => {
+    setSelectedIds((prev) => new Set([...prev, ...ids]))
+  }, [])
+
   const selected = useMemo(() => items.filter((item) => selectedIds.has(item.id)), [items, selectedIds])
   const visibleSelectable = useMemo(() => visible.filter(selectable), [visible, selectable])
   const allVisibleSelected = visibleSelectable.length > 0 && visibleSelectable.every((item) => selectedIds.has(item.id))
@@ -59,5 +64,5 @@ export function useSelection<T extends { id: number }>(
     return () => document.removeEventListener("keydown", onKeyDown)
   }, [active, exit])
 
-  return { active, selectedIds, selected, outsideFilter, allVisibleSelected, enter, exit, toggle, toggleVisible }
+  return { active, selectedIds, selected, outsideFilter, allVisibleSelected, enter, exit, toggle, toggleVisible, select }
 }

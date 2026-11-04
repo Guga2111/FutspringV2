@@ -1,0 +1,6 @@
+{
+  "command": { "revision": 7, "requestKey": "3f2b8c1e-5d4a-4e9b-8a6f-1c2d3e4f5a6b", "reason": "Mensalistas pagam só o juiz" },
+  "chargeIds": [11, 12, 13],
+  "components": [{ "name": "Juiz", "amount": "5.00" }],
+  "adjustment": "0.00"
+}

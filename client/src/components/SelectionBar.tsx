@@ -30,7 +30,7 @@ export function SelectionBar({ count, outsideFilter, summary, note, pending, onE
     >
       <span className="flex min-w-0 flex-col text-sm">
         <span className="font-semibold">
-          {count} {count === 1 ? "selecionado" : "selecionados"}
+          <span className="whitespace-nowrap">{count} {count === 1 ? "selecionado" : "selecionados"}</span>
           {summary}
           {outsideFilter > 0 && <span className="font-normal text-subtle-foreground"> · {outsideFilter} fora do filtro</span>}
         </span>
