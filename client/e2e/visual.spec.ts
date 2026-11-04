@@ -133,6 +133,8 @@ test("finance manager: collection with its Pix", async ({ page }) => {
   const unmatched = await open(page, FINANCE)
   await page.getByRole("button", { name: /Mensalidade de novembro/ }).click()
   await page.getByRole("button", { name: "Informações da cobrança e Pix" }).click()
+  // the click scrolls the trigger into view, and a full-page shot draws the fixed sidebar at that scroll offset
+  await page.evaluate(() => window.scrollTo(0, 0))
   await settle(page)
   await expect(page).toHaveScreenshot("finance-detail-manager.png", { fullPage: true })
   expect(unmatched, "requests without a fixture").toEqual([])
