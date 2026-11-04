@@ -21,6 +21,11 @@ export function getFileUrl(filename: string | null | undefined): string | undefi
   return `${API_BASE}/api/v1/files/${filename}`
 }
 
+// Case- and accent-insensitive search key: "  André " -> "andre"
+export function normalizeSearch(value: string): string {
+  return value.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLocaleLowerCase("pt-BR").trim()
+}
+
 // "Pelada do Fut" -> "PF", "leal" -> "LE"; used for avatar and banner fallbacks
 export function getInitials(name: string): string {
   const tokens = name.trim().split(/\s+/).filter(Boolean)

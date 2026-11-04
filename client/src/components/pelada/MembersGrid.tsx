@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { MemberCard, type MemberStats } from "@/components/pelada/MemberCard"
 import { MemberSelectionBar } from "@/components/pelada/MemberSelectionBar"
-import { useMemberSelection } from "@/components/pelada/hooks/useMemberSelection"
+import { useSelection } from "@/hooks/useSelection"
 import type { BulkMemberAction } from "@/utils/bulkMemberActions"
 import {
   countByMembership,
@@ -78,7 +78,7 @@ export function MembersGrid({
       : null
   const statsById = useMemo(() => new Map(ranking.map((r) => [r.userId, r])), [ranking])
   const adminCount = useMemo(() => members.filter((m) => m.isAdmin).length, [members])
-  const selection = useMemberSelection(members, visible)
+  const selection = useSelection(members, visible)
   const selecting = isCurrentUserAdmin && selection.active
 
   async function handleBulkAction(action: BulkMemberAction, targets: PeladaMember[], stars?: number) {

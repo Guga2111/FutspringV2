@@ -1,3 +1,4 @@
+import { normalizeSearch } from "@/lib/utils"
 import type { FinanceCharge } from "@/types/finance"
 
 // Exact decimal strings throughout: formatting and parsing never use floating point arithmetic.
@@ -49,10 +50,9 @@ export function financeQueueCounts(charges: FinanceCharge[]) {
   }
 }
 export function filterFinanceCharges(charges: FinanceCharge[], filter: FinanceQueueFilter, search: string) {
-  const normalize = (value: string) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("pt-BR")
-  const query = normalize(search.trim())
+  const query = normalizeSearch(search)
   const priority = (c: FinanceCharge) => c.canceled ? 4 : pendingFinanceNotice(c) ? 0 : c.overdue ? 1 : c.paymentStatus !== "PAID" ? 2 : 3
-  return charges.filter(c => normalize(c.name).includes(query) && (filter === "all" || (!c.canceled && (
+  return charges.filter(c => normalizeSearch(c.name).includes(query) && (filter === "all" || (!c.canceled && (
     filter === "review" ? Boolean(pendingFinanceNotice(c)) : filter === "paid" ? c.paymentStatus === "PAID" : c.paymentStatus !== "PAID"
   )))).sort((a, b) => priority(a) - priority(b) || a.name.localeCompare(b.name, "pt-BR"))
 }

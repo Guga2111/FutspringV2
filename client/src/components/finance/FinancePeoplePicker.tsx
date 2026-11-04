@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectVa
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { FinanceFormError } from "@/components/finance/FinanceFields"
 import { formatWeekdayDayMonth } from "@/utils/dates"
+import { normalizeSearch } from "@/lib/utils"
 
 interface Props {
   peladaId: number
@@ -28,8 +29,8 @@ export function FinancePeoplePicker({ peladaId, members, dailies, selected, onSe
   const [dailyId, setDailyId] = useState<number | null>(null)
   const candidates = useFinanceCandidates(peladaId, dailyId)
   const available = members.filter(m => !excluded.includes(m.id))
-  const normalize = (value: string) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("pt-BR")
-  const shown = available.filter(m => normalize(m.username).includes(normalize(search)) && (type === "all" || (type === "monthly") === m.isMensalista))
+  const query = normalizeSearch(search)
+  const shown = available.filter(m => normalizeSearch(m.username).includes(query) && (type === "all" || (type === "monthly") === m.isMensalista))
   const eligible = candidates.rows.filter(c => available.some(m => m.id === c.userId))
   const allSelected = shown.length > 0 && shown.every(m => selected.includes(m.id))
   return <FieldGroup className="gap-5">

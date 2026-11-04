@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react"
 import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react"
-import { ArrowDown01Icon, CalendarCheckIn01Icon, CalendarRemove01Icon, Cancel01Icon, CheckListIcon, Delete02Icon, ShieldCheckIcon, ShieldOffIcon, StarIcon } from "@hugeicons/core-free-icons"
+import { ArrowDown01Icon, CalendarCheckIn01Icon, CalendarRemove01Icon, CheckListIcon, Delete02Icon, ShieldCheckIcon, ShieldOffIcon, StarIcon } from "@hugeicons/core-free-icons"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { ConfirmActionDialog } from "@/components/ConfirmActionDialog"
+import { SelectionBar } from "@/components/SelectionBar"
 import { SetPlayerStarsDialog } from "@/components/pelada/SetPlayerStarsDialog"
 import {
   bulkActionLabel,
@@ -75,26 +76,9 @@ export function MemberSelectionBar({
     else onAction(action, plan[action].targets)
   }
 
-  const count = (
-    <span className="flex min-w-0 flex-col text-sm">
-      <span className="font-semibold">
-        {selected.length} {selected.length === 1 ? "selecionado" : "selecionados"}
-        {outsideFilter > 0 && <span className="font-normal text-subtle-foreground"> · {outsideFilter} fora do filtro</span>}
-      </span>
-      {skipNote && removeTargets.length > 0 && (
-        <span className="truncate text-xs text-subtle-foreground">
-          Remover {removeTargets.length} de {selected.length} · {skipNote}
-        </span>
-      )}
-    </span>
-  )
+  const note = skipNote && removeTargets.length > 0 ? `Remover ${removeTargets.length} de ${selected.length} · ${skipNote}` : null
 
   const visibleLabel = allVisibleSelected ? "Desmarcar visíveis" : "Selecionar visíveis"
-  const exitButton = (
-    <Button variant="ghost" size="icon" aria-label="Sair da seleção" onClick={onExit} className="size-9 shrink-0">
-      <HugeiconsIcon icon={Cancel01Icon} className="size-4" />
-    </Button>
-  )
 
   function actionItem(action: BulkMemberAction) {
     const { targets, hint } = plan[action]
@@ -134,13 +118,7 @@ export function MemberSelectionBar({
 
   return (
     <>
-      <div
-        role="toolbar"
-        aria-label="Ações em massa"
-        aria-busy={pending}
-        className="sticky bottom-4 z-10 flex items-center gap-2 rounded-hero border bg-card p-2 pl-4 shadow-panel"
-      >
-        {count}
+      <SelectionBar count={selected.length} outsideFilter={outsideFilter} note={note} pending={pending} onExit={onExit}>
 
         {/* desktop: one control per group of actions */}
         <div className="ml-auto hidden items-center gap-2 md:flex">
@@ -163,11 +141,10 @@ export function MemberSelectionBar({
             <HugeiconsIcon icon={Delete02Icon} className="size-4" />
             Remover ({removeTargets.length})
           </Button>
-          {exitButton}
         </div>
 
         {/* below md: every action in one menu */}
-        <div className="ml-auto flex items-center gap-1 md:hidden">
+        <div className="ml-auto flex items-center md:hidden">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" disabled={pending} className="h-9 gap-1 px-3.5">
@@ -190,9 +167,8 @@ export function MemberSelectionBar({
               <DropdownMenuGroup>{actionItem("remove")}</DropdownMenuGroup>
             </DropdownMenuContent>
           </DropdownMenu>
-          {exitButton}
         </div>
-      </div>
+      </SelectionBar>
 
       {starsOpen && (
         <SetPlayerStarsDialog
