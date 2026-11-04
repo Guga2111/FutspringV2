@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import type { FinanceCharge } from "@/types/finance"
-import { clampFinancePage, financeChargeStatus, filterFinanceCharges, financeOptionsSummary, planReceiveAll, financePageCount, financeQueueCounts, formatFinanceMoney, normalizeFinanceAmount, sumFinanceAmounts } from "@/utils/finance"
+import { canReceiveCharge, clampFinancePage, financeChargeStatus, filterFinanceCharges, financeOptionsSummary, planReceiveAll, financePageCount, financeQueueCounts, formatFinanceMoney, normalizeFinanceAmount, receiveChargeHint, sumFinanceAmounts } from "@/utils/finance"
 
 it("formats cents without floating point rounding", () => {
   expect(formatFinanceMoney("999999999999.99")).toBe("R$ 999.999.999.999,99")
@@ -25,7 +25,12 @@ describe("administrator payment queue", () => {
   const paid = charge(4, "Carlos", { paymentStatus: "PAID", received: "45.00", outstanding: "0.00" })
   const canceled = charge(5, "Daniel", { canceled: true })
   const rows = [pending, paid, canceled, overdue, review]
-  it("receives everyone who owes, leaving out paid, canceled and payments to review", () => {
+  it("only lets a charge that still owes, with no payment to review, be selected", () => {
+    const settled = charge(7, "Fábio", { paymentStatus: "PARTIAL", received: "45.00", outstanding: "0.00" })
+    expect([pending, overdue, paid, canceled, review, settled].map(receiveChargeHint)).toEqual([null, null, "Já pago", "Cancelada", "Confira o pagamento antes", "Já pago"])
+    expect([pending, overdue, paid, canceled, review, settled].map(canReceiveCharge)).toEqual([true, true, false, false, false, false])
+  })
+  it("receives the selected charges that still owe, counting the ones that now have a payment to review", () => {
     const partial = charge(6, "Eduardo", { paymentStatus: "PARTIAL", received: "20.00", outstanding: "25.00" })
     const plan = planReceiveAll([...rows, partial])
     expect(plan.charges.map(c => c.id)).toEqual([1, 2, 6])

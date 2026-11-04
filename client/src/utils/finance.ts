@@ -97,10 +97,22 @@ export function financeOptionsSummary(values: FinanceOptionsSummaryInput, defaul
   ].filter(Boolean).join(" · ")
 }
 
-// "Receber todos" on the rows on screen: who still owes and has no payment waiting for review, the total, and how
-// many were left out because a reported payment must be reviewed first (the server refuses a receipt meanwhile)
-export function planReceiveAll(rows: FinanceCharge[]) {
-  const open = rows.filter(c => !c.canceled && c.paymentStatus !== "PAID" && c.outstanding !== "0.00")
-  const charges = open.filter(c => !pendingFinanceNotice(c))
-  return { charges, total: sumFinanceAmounts(charges.map(c => c.outstanding)), review: open.length - charges.length }
+// Why a charge can't be received right now, shown next to its disabled checkbox in selection mode; null when it can
+// (the server refuses a receipt while a reported payment waits for review)
+export function receiveChargeHint(charge: FinanceCharge): string | null {
+  if (charge.canceled) return "Cancelada"
+  if (charge.paymentStatus === "PAID" || charge.outstanding === "0.00") return "Já pago"
+  if (pendingFinanceNotice(charge)) return "Confira o pagamento antes"
+  return null
+}
+export function canReceiveCharge(charge: FinanceCharge): boolean {
+  return receiveChargeHint(charge) === null
+}
+
+// "Receber selecionados": the selected charges that can be received, their total, and how many still owe but were
+// left out because a reported payment arrived after they were selected and must be reviewed first
+export function planReceiveAll(selected: FinanceCharge[]) {
+  const charges = selected.filter(canReceiveCharge)
+  const review = selected.filter(c => !c.canceled && c.paymentStatus !== "PAID" && c.outstanding !== "0.00" && pendingFinanceNotice(c)).length
+  return { charges, total: sumFinanceAmounts(charges.map(c => c.outstanding)), review }
 }

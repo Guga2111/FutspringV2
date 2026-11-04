@@ -1,22 +1,26 @@
 import { useMemo, useState } from "react"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { ArrowLeft02Icon, MoreHorizontalIcon, PlusSignIcon, Search01Icon } from "@hugeicons/core-free-icons"
+import { ArrowLeft02Icon, Cancel01Icon, CheckListIcon, MoreHorizontalIcon, PlusSignIcon, Search01Icon } from "@hugeicons/core-free-icons"
 import * as api from "@/api/finance"
 import type { FinanceController } from "@/components/finance/hooks/useFinance"
 import type { FinanceCharge, FinanceNotice } from "@/types/finance"
 import { financeChargeStatusLabel, financeChargeStatusStyle, financeListStatusLabel, financeListStatusStyle } from "@/types/finance"
 import type { FinanceReasonAction } from "@/components/finance/FinanceReasonForm"
 import type { FinancePaymentValues } from "@/schemas/finance"
-import { financeChargeStatus, filterFinanceCharges, planReceiveAll, financeQueueCounts, financeQueueLabels, pendingFinanceNotice, formatFinanceMoney, sumFinanceAmounts, type FinanceQueueFilter } from "@/utils/finance"
+import { canReceiveCharge, financeChargeStatus, filterFinanceCharges, planReceiveAll, receiveChargeHint, financeQueueCounts, financeQueueLabels, pendingFinanceNotice, formatFinanceMoney, sumFinanceAmounts, type FinanceQueueFilter } from "@/utils/finance"
 import { FinancePixCard } from "@/components/finance/FinancePixCard"
 import { FinanceQrField } from "@/components/finance/FinanceQrField"
 import { FinanceReceiveAllDialog } from "@/components/finance/FinanceReceiveAllDialog"
+import { SelectionBar } from "@/components/SelectionBar"
+import { useSelection } from "@/hooks/useSelection"
+import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 import { getErrorMessage } from "@/lib/errors"
 import { PlayerAvatar } from "@/components/PlayerAvatar"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Field, FieldLabel } from "@/components/ui/field"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
@@ -36,7 +40,11 @@ export function FinanceListDetail({ peladaId, userId, finance, onEdit, onPartici
   const charges = detail?.charges
   // individual mode: a member only receives their own charges, so filters and search have nothing to sort
   const queue = Boolean(finance.overview?.permissions.viewCash)
-  const rows = useMemo(() => filterFinanceCharges(charges ?? [], queue ? filter : "all", search), [charges, queue, filter, search])
+  const allCharges = useMemo(() => charges ?? [], [charges])
+  const rows = useMemo(() => filterFinanceCharges(allCharges, queue ? filter : "all", search), [allCharges, queue, filter, search])
+  // "Receber selecionados": only charges that can be received now are selectable; the selection survives search,
+  // queue chips and refreshes (a charge paid or canceled meanwhile drops out of the plan)
+  const selection = useSelection(allCharges, rows, canReceiveCharge)
   if (!detail) return null
   const list = detail.collection
   const manage = Boolean(finance.overview?.permissions.manage)
@@ -44,9 +52,11 @@ export function FinanceListDetail({ peladaId, userId, finance, onEdit, onPartici
   const counts = financeQueueCounts(detail.charges)
   const owed = sumFinanceAmounts(detail.charges.filter(c => c.userId === userId && !c.canceled).map(c => c.outstanding))
   const payable = !manage && list.status === "OPEN" && owed !== "0.00"
-  // "Receber todos": managers, open list, "A receber" queue, the rows on screen (search included), two or more
-  const receiveAll = planReceiveAll(rows)
-  const canReceiveAll = manage && list.status === "OPEN" && filter === "pending" && receiveAll.charges.length >= 2
+  const selectable = manage && queue && list.status === "OPEN" && detail.charges.some(canReceiveCharge)
+  const selecting = selectable && selection.active
+  const receiveSelected = planReceiveAll(selection.selected)
+  const visibleReceivable = rows.filter(canReceiveCharge).length
+  const toggleVisibleLabel = selection.allVisibleSelected ? "Desmarcar todos" : `Selecionar todos a receber (${visibleReceivable})`
   async function uploadQr(file: File) {
     const run = (command: Parameters<FinanceReasonAction["run"]>[0]) => api.uploadFinanceQr(peladaId, list.id, command, file)
     // after publication a change to the Pix instructions needs a reason, like any other edit
@@ -73,19 +83,26 @@ export function FinanceListDetail({ peladaId, userId, finance, onEdit, onPartici
     {queue && <div className="flex flex-wrap items-center justify-between gap-3"><ToggleGroup type="single" value={filter} onValueChange={value => { if (value) setFilter(value as FinanceQueueFilter) }} variant="chip" size="chip" className="flex-wrap justify-start" aria-label="Situação dos pagamentos">{(Object.keys(financeQueueLabels) as FinanceQueueFilter[]).map(value => <ToggleGroupItem className="group max-md:min-h-11" value={value} key={value}>{financeQueueLabels[value]}<span className="text-xs tabular-nums text-subtle-foreground group-data-[state=on]:text-primary-foreground/60">{counts[value]}</span></ToggleGroupItem>)}</ToggleGroup>
       <div className="flex w-full flex-wrap items-center gap-2 lg:w-auto lg:flex-nowrap">
         <Field className="min-w-0 flex-1 lg:w-56 lg:flex-none"><FieldLabel htmlFor="finance-payment-search" className="sr-only">Buscar participante</FieldLabel><div className="relative"><HugeiconsIcon icon={Search01Icon} aria-hidden className="pointer-events-none absolute left-3 top-3 size-4 text-muted-foreground" /><Input id="finance-payment-search" placeholder="Buscar participante" className="pl-9" value={search} onChange={event => setSearch(event.target.value)} /></div></Field>
-        {canReceiveAll && <Button variant="outline" className="max-md:min-h-11 max-sm:w-full" onClick={() => setReceivingAll(true)} disabled={finance.pending}>Receber todos ({receiveAll.charges.length})</Button>}
+        {selectable && <Button variant="outline" className="max-md:min-h-11 max-sm:w-full" onClick={selecting ? selection.exit : selection.enter} aria-pressed={selecting}><HugeiconsIcon icon={selecting ? Cancel01Icon : CheckListIcon} data-icon="inline-start" />{selecting ? "Cancelar" : "Selecionar"}</Button>}
       </div>
     </div>}
-    {receivingAll && <FinanceReceiveAllDialog peladaId={peladaId} finance={finance} list={list} charges={receiveAll.charges} total={receiveAll.total} review={receiveAll.review} onClose={() => setReceivingAll(false)} />}
+    {selecting && <p className="flex flex-wrap items-center gap-x-2 text-body-sm text-subtle-foreground">{selection.selected.length === 0 && "Toque nas cobranças para selecionar"}{visibleReceivable > 0 && <Button variant="link" onClick={selection.toggleVisible} className="h-auto p-0 text-body-sm">{toggleVisibleLabel}</Button>}</p>}
+    {receivingAll && <FinanceReceiveAllDialog peladaId={peladaId} finance={finance} list={list} charges={receiveSelected.charges} total={receiveSelected.total} review={receiveSelected.review} onReceived={selection.exit} onClose={() => setReceivingAll(false)} />}
     {rows.length === 0 ? <div className="flex flex-col items-start gap-3 rounded-lg border p-6"><h3 className="font-medium">{counts.all === 0 ? "Quem vai participar desta cobrança?" : filter === "pending" && !search ? "Nenhum pagamento pendente" : "Nenhum participante neste filtro"}</h3><p className="text-sm text-muted-foreground">{counts.all === 0 ? "Adicione membros da pelada ou convidados." : "Os registros continuam disponíveis nos outros filtros."}</p>{counts.all === 0 && editable ? <Button variant="brand" size="sm" onClick={onParticipants}>Adicionar pessoas</Button> : filter !== "all" && <Button size="sm" variant="outline" onClick={() => setFilter("all")}>Ver todos</Button>}</div> : <ul className="flex flex-col rounded-lg border">{rows.map(charge => {
       const notice = pendingFinanceNotice(charge)
       const status = financeChargeStatus(charge)
       const canReceive = manage && list.status === "OPEN" && !charge.canceled && !notice && charge.paymentStatus !== "PAID"
       const canReport = !manage && charge.userId === userId && list.status === "OPEN" && !charge.canceled && !notice && charge.paymentStatus !== "PAID"
-      return <li key={charge.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 border-b p-3 last:border-b-0 lg:grid-cols-[minmax(0,1fr)_minmax(112px,auto)_auto] md:p-4"><div className="flex min-w-0 items-center gap-3"><PlayerAvatar userId={charge.userId} username={charge.name} image={null} className="size-9" /><div className="min-w-0"><p className="break-words text-sm font-medium">{charge.name}</p><p className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-muted-foreground"><Badge variant="status" className={financeChargeStatusStyle[status]}>{financeChargeStatusLabel[status]}</Badge>{[notice && "Pagamento para conferir", charge.overdue && "Vencida", charge.userId === null && "Convidado"].filter(Boolean).join(" · ")}</p></div></div><p className="text-right text-sm font-semibold tabular-nums">{formatFinanceMoney(charge.paymentStatus === "PAID" || charge.canceled ? charge.amountDue : charge.outstanding)}</p>
-        <div className="col-span-2 flex justify-end gap-2 lg:col-span-1"><Button className="max-md:min-h-11" variant="ghost" size="sm" onClick={() => onDetails(charge)}>Detalhes</Button>{notice && manage ? <Button className="max-md:min-h-11" size="sm" variant="outline" onClick={() => onDetails(charge)} disabled={finance.pending}>Conferir</Button> : canReceive ? <Button variant="brand" className="max-md:min-h-11" size="sm" onClick={() => onPayment(charge, "receive")} disabled={finance.pending}>Receber</Button> : canReport ? <Button variant="brand" className="max-md:min-h-11" size="sm" onClick={() => onPayment(charge, "report")} disabled={finance.pending}>Informar pagamento</Button> : null}</div>
+      const hint = selecting ? receiveChargeHint(charge) : null
+      const checked = selection.selectedIds.has(charge.id)
+      return <li key={charge.id} onClick={selecting && !hint ? () => selection.toggle(charge.id) : undefined} className={cn("grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 border-b p-3 last:border-b-0 lg:grid-cols-[minmax(0,1fr)_minmax(112px,auto)_auto] md:p-4", selecting && !hint && "cursor-pointer select-none hover:bg-row-hover", checked && "bg-muted hover:bg-muted")}><div className="flex min-w-0 items-center gap-3">{selecting && <Checkbox checked={checked} disabled={hint !== null} onCheckedChange={() => selection.toggle(charge.id)} onClick={event => event.stopPropagation()} aria-label={`Selecionar ${charge.name}`} className="shrink-0" />}<PlayerAvatar userId={charge.userId} username={charge.name} image={null} className="size-9" /><div className="min-w-0"><p className="break-words text-sm font-medium">{charge.name}</p><p className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-muted-foreground"><Badge variant="status" className={financeChargeStatusStyle[status]}>{financeChargeStatusLabel[status]}</Badge>{[notice && "Pagamento para conferir", charge.overdue && "Vencida", charge.userId === null && "Convidado"].filter(Boolean).join(" · ")}</p></div></div><p className="text-right text-sm font-semibold tabular-nums">{formatFinanceMoney(charge.paymentStatus === "PAID" || charge.canceled ? charge.amountDue : charge.outstanding)}</p>
+        {selecting ? <p className="col-span-2 text-right text-xs text-subtle-foreground lg:col-span-1">{hint}</p> : <div className="col-span-2 flex justify-end gap-2 lg:col-span-1"><Button className="max-md:min-h-11" variant="ghost" size="sm" onClick={() => onDetails(charge)}>Detalhes</Button>{notice && manage ? <Button className="max-md:min-h-11" size="sm" variant="outline" onClick={() => onDetails(charge)} disabled={finance.pending}>Conferir</Button> : canReceive ? <Button variant="brand" className="max-md:min-h-11" size="sm" onClick={() => onPayment(charge, "receive")} disabled={finance.pending}>Receber</Button> : canReport ? <Button variant="brand" className="max-md:min-h-11" size="sm" onClick={() => onPayment(charge, "report")} disabled={finance.pending}>Informar pagamento</Button> : null}</div>}
       </li>
     })}</ul>}
+    {selecting && selection.selected.length > 0 && <SelectionBar count={selection.selected.length} summary={<><span className="max-md:hidden"> · </span><span className="whitespace-nowrap max-md:block">{formatFinanceMoney(receiveSelected.total)}</span></>} outsideFilter={selection.outsideFilter} pending={finance.pending} onExit={selection.exit}>
+      <Button variant="ghost" className="ml-auto hidden h-9 gap-1.5 px-3.5 md:inline-flex" disabled={finance.pending || visibleReceivable === 0} onClick={selection.toggleVisible}><HugeiconsIcon icon={CheckListIcon} className="size-4" />{toggleVisibleLabel}</Button>
+      <Button variant="brand" className="ml-auto h-9 px-4 md:ml-0" disabled={finance.pending || receiveSelected.charges.length === 0} onClick={() => setReceivingAll(true)}>Receber</Button>
+    </SelectionBar>}
     <Collapsible><CollapsibleTrigger asChild><Button variant="ghost" size="sm">{payable ? "Informações da cobrança" : "Informações da cobrança e Pix"}</Button></CollapsibleTrigger><CollapsibleContent className="pt-3"><div className="flex flex-col gap-4 rounded-lg bg-muted p-4">{list.description && <p className="whitespace-pre-wrap break-words text-sm">{list.description}</p>}<p className="text-sm">Valor total: {formatFinanceMoney(list.totals.due)}</p>{!payable && <FinancePixCard peladaId={peladaId} pixKey={list.pixKey} pixRecipient={list.pixRecipient} qrId={list.qrId} />}{!list.pixKey && list.qrId === null && <p className="text-sm text-muted-foreground">Esta cobrança não tem Pix cadastrado.</p>}{editable && <FinanceQrField peladaId={peladaId} qrId={list.qrId} busy={finance.pending} onUpload={uploadQr} preview={payable || list.qrId === null} />}</div></CollapsibleContent></Collapsible>
   </section>
 }
