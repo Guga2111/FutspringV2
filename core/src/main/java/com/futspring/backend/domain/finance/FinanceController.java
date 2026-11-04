@@ -7,7 +7,10 @@ import org.springframework.http.*;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.format.annotation.DateTimeFormat;
+import java.time.LocalDate;
 import java.util.List;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/api/v1/peladas/{peladaId}/finance")
@@ -25,13 +28,18 @@ public class FinanceController {
             @AuthenticationPrincipal String email) { return reads.detail(peladaId, listId, email); }
     @GetMapping("/movements") public FinanceViews.Page<FinanceViews.Movement> movements(@PathVariable Long peladaId,
             @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size,
-            @AuthenticationPrincipal String email) { return reads.ledger(peladaId, email, page, size); }
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+            @AuthenticationPrincipal String email) { return reads.ledger(peladaId, email, page, size, from, to); }
     @GetMapping("/lists/{listId}/charges/{chargeId}/notices") public FinanceViews.Page<FinanceViews.Notice> noticeHistory(@PathVariable Long peladaId,
             @PathVariable Long listId, @PathVariable Long chargeId, @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size, @AuthenticationPrincipal String email) { return reads.noticeHistory(peladaId, listId, chargeId, email, page, size); }
     @GetMapping("/audit") public FinanceViews.Page<FinanceViews.Audit> audit(@PathVariable Long peladaId,
             @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size,
-            @AuthenticationPrincipal String email) { return reads.audit(peladaId, email, page, size); }
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+            @RequestParam(required = false) Set<FinanceTypes.AuditOperation> operations,
+            @AuthenticationPrincipal String email) { return reads.audit(peladaId, email, page, size, from, to, operations); }
     @GetMapping("/daily-candidates/{dailyId}") public List<FinanceViews.Candidate> candidates(@PathVariable Long peladaId,
             @PathVariable Long dailyId, @AuthenticationPrincipal String email) { return reads.importCandidates(peladaId, dailyId, email); }
     @PutMapping("/settings") public FinanceViews.Result settings(@PathVariable Long peladaId, @Valid @RequestBody FinanceRequests.Settings body,
@@ -64,6 +72,8 @@ public class FinanceController {
             @Valid @RequestBody FinanceRequests.Charge body, @AuthenticationPrincipal String email) { return collections.charge(peladaId, listId, null, false, body, email); }
     @PutMapping("/lists/{listId}/charges/{chargeId}") public FinanceViews.Result updateCharge(@PathVariable Long peladaId, @PathVariable Long listId,
             @PathVariable Long chargeId, @Valid @RequestBody FinanceRequests.Charge body, @AuthenticationPrincipal String email) { return collections.charge(peladaId, listId, chargeId, false, body, email); }
+    @PostMapping("/lists/{listId}/charges/adjust") public FinanceViews.Result adjustCharges(@PathVariable Long peladaId, @PathVariable Long listId,
+            @Valid @RequestBody FinanceRequests.BulkAdjust body, @AuthenticationPrincipal String email) { return collections.adjustCharges(peladaId, listId, body, email); }
     @PostMapping("/lists/{listId}/charges/{chargeId}/replace") public FinanceViews.Result replaceCharge(@PathVariable Long peladaId, @PathVariable Long listId,
             @PathVariable Long chargeId, @Valid @RequestBody FinanceRequests.Charge body, @AuthenticationPrincipal String email) { return collections.charge(peladaId, listId, chargeId, true, body, email); }
     @PostMapping("/lists/{listId}/charges/{chargeId}/cancel") public FinanceViews.Result cancelCharge(@PathVariable Long peladaId, @PathVariable Long listId,

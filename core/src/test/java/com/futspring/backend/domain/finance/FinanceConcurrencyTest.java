@@ -131,6 +131,16 @@ class FinanceConcurrencyTest {
         assertThat(movements.findByChargeIdIn(List.of(f.charge()))).hasSize(1);
         assertThat(reads.detail(f.pelada(), f.list(), f.admin().getEmail()).charges().getFirst().outstanding()).isEqualTo("0.00");
     }
+    @Test void bulkAdjustRacingAReceiptOfTheSameChargeLetsOneWin() throws Exception {
+        var f = fixture();
+        var adjust = new FinanceRequests.BulkAdjust(command(f.pelada(), f.admin()), List.of(f.charge()), List.of(new FinanceRequests.Component("Juiz", "5.00")), "0.00");
+        var one = new FinanceRequests.Receipt(command(f.pelada(), f.admin()), null, null, PaymentMethod.PIX);
+        assertThat(race(() -> collections.adjustCharges(f.pelada(), f.list(), adjust, f.admin().getEmail()), () -> ledger.receive(f.pelada(), f.list(), f.charge(), one, f.admin().getEmail())))
+                .containsExactlyInAnyOrder(HttpStatus.OK, HttpStatus.CONFLICT);
+        var charge = reads.detail(f.pelada(), f.list(), f.admin().getEmail()).charges().getFirst();
+        // either the receipt settled the old 45.00 (adjust refused) or the adjustment landed with nothing received
+        assertThat(List.of(charge.amountDue(), charge.received())).isIn(List.of("45.00", "45.00"), List.of("5.00", "0.00"));
+    }
     @Test void duplicateConcurrentConfirmationHasOneReceiptEvenWithDifferentRequestKeys() throws Exception {
         var f = fixture(); ledger.report(f.pelada(), f.list(), f.charge(), command(f.pelada(), f.admin()), null, f.player().getEmail());
         Long notice = reads.detail(f.pelada(), f.list(), f.admin().getEmail()).charges().getFirst().notices().getFirst().id();

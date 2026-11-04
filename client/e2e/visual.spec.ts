@@ -133,8 +133,22 @@ test("finance manager: collection with its Pix", async ({ page }) => {
   const unmatched = await open(page, FINANCE)
   await page.getByRole("button", { name: /Mensalidade de novembro/ }).click()
   await page.getByRole("button", { name: "Informações da cobrança e Pix" }).click()
+  // the click scrolls the trigger into view, and a full-page shot draws the fixed sidebar at that scroll offset
+  await page.evaluate(() => window.scrollTo(0, 0))
   await settle(page)
   await expect(page).toHaveScreenshot("finance-detail-manager.png", { fullPage: true })
+  expect(unmatched, "requests without a fixture").toEqual([])
+})
+
+test("finance manager: selecting charges to receive", async ({ page }) => {
+  const unmatched = await open(page, FINANCE)
+  await page.getByRole("button", { name: /Mensalidade de novembro/ }).click()
+  await page.getByRole("button", { name: "Selecionar", exact: true }).click()
+  await page.getByRole("button", { name: /Selecionar todos/ }).first().click()
+  await expect(page.getByRole("toolbar", { name: "Ações em massa" })).toBeVisible()
+  await settle(page)
+  await expectNoHorizontalScroll(page)
+  await expect(page).toHaveScreenshot("finance-detail-selection.png", { fullPage: true })
   expect(unmatched, "requests without a fixture").toEqual([])
 })
 
@@ -151,6 +165,25 @@ test("finance manager: settings", async ({ page }) => {
   await page.getByRole("tab", { name: "Configurações" }).click()
   await settle(page)
   await expect(page).toHaveScreenshot("finance-settings.png", { fullPage: true })
+  expect(unmatched, "requests without a fixture").toEqual([])
+})
+
+test("finance manager: history with filters", async ({ page }, testInfo) => {
+  const unmatched = await open(page, FINANCE)
+  await page.getByRole("tab", { name: "Histórico" }).click()
+  await expect(page.getByText("Chegou só no segundo tempo")).toBeVisible()
+  await settle(page)
+  await expectNoHorizontalScroll(page)
+  await expect(page).toHaveScreenshot("finance-history.png", { fullPage: true })
+  await page.getByRole("radio", { name: "Pagamentos" }).click()
+  await expect(page.getByText("Chegou só no segundo tempo")).toHaveCount(0)
+  // the period popover: two months on desktop, one at 375 px
+  if (testInfo.project.name.startsWith("desktop")) {
+    await page.getByRole("button", { name: "Todo o período" }).click()
+    await expect(page.getByRole("dialog")).toBeVisible()
+    await settle(page)
+    await expect(page).toHaveScreenshot("finance-history-period.png", DIALOG_SHOT)
+  }
   expect(unmatched, "requests without a fixture").toEqual([])
 })
 

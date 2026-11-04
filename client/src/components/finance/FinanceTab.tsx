@@ -1,12 +1,12 @@
 import { useState } from "react"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { ArrowLeft02Icon, ArrowRight01Icon, PlusSignIcon, RefreshIcon } from "@hugeicons/core-free-icons"
+import { ArrowRight01Icon, PlusSignIcon, RefreshIcon } from "@hugeicons/core-free-icons"
 import { toast } from "sonner"
 import * as api from "@/api/finance"
 import type { PeladaMember } from "@/types/pelada"
 import type { DailyListItem } from "@/types/daily"
 import type { FinanceCharge, FinanceNotice, FinanceTemplate, FinanceList, FinanceMovementKind, FinanceListScope } from "@/types/finance"
-import { financeListScopeLabel, financeListStatusLabel } from "@/types/finance"
+import { financeListScopeLabel, financeListStatusLabel, financeListStatusStyle } from "@/types/finance"
 import { ListPagination } from "@/components/ListPagination"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { cn } from "@/lib/utils"
@@ -18,6 +18,7 @@ import { FinanceListForm } from "@/components/finance/FinanceListForm"
 import { FinancePaymentForm } from "@/components/finance/FinancePaymentForm"
 import { FinanceParticipantsForm } from "@/components/finance/FinanceParticipantsForm"
 import { FinanceChargeForm } from "@/components/finance/FinanceChargeForm"
+import { FinanceBulkChargeForm } from "@/components/finance/FinanceBulkChargeForm"
 import { FinanceChargeDetails } from "@/components/finance/FinanceChargeDetails"
 import { FinanceReplacementForm } from "@/components/finance/FinanceReplacementForm"
 import { FinanceCashForm } from "@/components/finance/FinanceCashForm"
@@ -35,14 +36,13 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { formatShortDate } from "@/utils/dates"
 
-type EditorAction = { kind: "create" } | { kind: "list"; list?: FinanceList; template?: FinanceTemplate } | { kind: "participants" } | { kind: "details"; charge: FinanceCharge } | { kind: "charge"; charge: FinanceCharge } | { kind: "replace"; charge: FinanceCharge } | { kind: "cash"; cashKind: Extract<FinanceMovementKind, "EXPENSE" | "INCOME" | "OPENING"> } | { kind: "payment"; charge: FinanceCharge; action: FinancePaymentValues["action"]; notice?: FinanceNotice }
+type EditorAction = { kind: "create" } | { kind: "list"; list?: FinanceList; template?: FinanceTemplate } | { kind: "participants" } | { kind: "details"; charge: FinanceCharge } | { kind: "charge"; charge: FinanceCharge } | { kind: "bulkAdjust"; charges: FinanceCharge[]; onDone: () => void } | { kind: "replace"; charge: FinanceCharge } | { kind: "cash"; cashKind: Extract<FinanceMovementKind, "EXPENSE" | "INCOME" | "OPENING"> } | { kind: "payment"; charge: FinanceCharge; action: FinancePaymentValues["action"]; notice?: FinanceNotice }
 type Editor = EditorAction & { revision: number }
 
-export function FinanceTab({ peladaId, userId, members, dailies }: { peladaId: number; userId: number | null; members: PeladaMember[]; dailies: DailyListItem[] }) {
+// timeZone: the pelada's, for the dates and times of payments and notices
+export function FinanceTab({ peladaId, userId, members, dailies, timeZone }: { peladaId: number; userId: number | null; members: PeladaMember[]; dailies: DailyListItem[]; timeZone: string }) {
   const finance = useFinance(peladaId)
   const [tab, setTab] = useState("collections")
-  // the settings tab shows the settings cards or the audit history
-  const [settingsView, setSettingsView] = useState<"settings" | "audit">("settings")
   const [editor, setEditor] = useState<Editor | null>(null)
   const [reason, setReason] = useState<(FinanceReasonAction & { revision: number }) | null>(null)
   const overview = finance.overview
@@ -59,14 +59,14 @@ export function FinanceTab({ peladaId, userId, members, dailies }: { peladaId: n
   }
   const manage = Boolean(overview?.permissions.manage)
   // the tour points at the collections list, so it brings it on screen first
-  const prepareTour = () => { setEditor(null); setReason(null); setTab("collections"); setSettingsView("settings"); finance.select(null) }
+  const prepareTour = () => { setEditor(null); setReason(null); setTab("collections"); finance.select(null) }
   const collectionRow = (list: FinanceList) => (
     <li key={list.id} className="border-b last:border-b-0">
       <Button variant="ghost" className="h-auto w-full justify-between gap-4 rounded-none px-4 py-4 text-left" onClick={() => finance.select(list.id)}>
         <span className="min-w-0 flex-1">
           <span className="flex flex-wrap items-center gap-2">
             <span className="whitespace-normal font-medium">{list.name}</span>
-            <Badge variant="secondary">{financeListStatusLabel[list.status]}</Badge>
+            <Badge variant="status" className={financeListStatusStyle[list.status]}>{financeListStatusLabel[list.status]}</Badge>
           </span>
           <span className="mt-2 block whitespace-normal text-sm text-muted-foreground">
             {manage
@@ -98,16 +98,16 @@ export function FinanceTab({ peladaId, userId, members, dailies }: { peladaId: n
   return <div className="flex min-w-0 flex-col gap-5">
     {!overview ? finance.error ? <><FinanceFormError message={finance.error} /><Button variant="outline" onClick={finance.refresh}>Tentar de novo</Button></> : <><Skeleton className="h-10 w-64" /><Skeleton className="h-48 w-full" /></> : <>
       <FinanceTour manage={manage} viewCash={overview.permissions.viewCash} canAutoStart={tab === "collections" && finance.selected === null && !editor && !reason}>
-      <Tabs value={tab} onValueChange={value => { setTab(value); setSettingsView("settings") }} className="min-w-0">
+      <Tabs value={tab} onValueChange={setTab} className="min-w-0">
         <div className="mb-3 flex items-center justify-between gap-3">
           {/* min-w-0 + horizontal scroll: at 375 px the tabs and the two icon buttons don't fit, the row scrolls instead of the page */}
           <TabsList variant="underline" className="min-w-0 overflow-x-auto scrollbar-none">
             <TabsTrigger variant="underline" value="collections" onClick={() => finance.select(null)}>
-              {finance.selected !== null && tab === "collections" && <HugeiconsIcon icon={ArrowLeft02Icon} className="mr-2 size-4" />}
               {manage ? "Cobranças" : "Minhas cobranças"}
             </TabsTrigger>
             {overview.permissions.viewCash && <TabsTrigger variant="underline" value="cash" data-tour="cash-tab">Caixa</TabsTrigger>}
             {manage && <TabsTrigger variant="underline" value="settings" data-tour="settings-tab">Configurações</TabsTrigger>}
+            {manage && <TabsTrigger variant="underline" value="history">Histórico</TabsTrigger>}
           </TabsList>
           <div className="flex shrink-0 items-center">
             <FinanceTourButton onPrepare={prepareTour} />
@@ -135,7 +135,7 @@ export function FinanceTab({ peladaId, userId, members, dailies }: { peladaId: n
               </div>
             ) : <ul data-tour="collections" className="rounded-lg border">{overview.lists.map(collectionRow)}</ul>}
             <ListPagination page={finance.page} total={overview.total} size={api.FINANCE_LISTS_PAGE_SIZE} noun={["cobrança", "cobranças"]} disabled={finance.pending} onPage={finance.setPage} />
-          </> : finance.detailError ? <><FinanceFormError message={finance.detailError} /><Button variant="outline" onClick={finance.refresh}>Tentar de novo</Button><Button variant="ghost" onClick={() => finance.select(null)}>Voltar às cobranças</Button></> : !detail ? <Skeleton className="h-64 w-full" /> : <FinanceListDetail key={detail.collection.id} peladaId={peladaId} userId={userId} finance={finance} onEdit={() => open({ kind: "list", list: detail.collection })} onParticipants={() => open({ kind: "participants" })} onDetails={charge => open({ kind: "details", charge })} onPayment={payment} onReason={askReason} onSimple={action => { void simple(action) }} />}
+          </> : finance.detailError ? <><FinanceFormError message={finance.detailError} /><Button variant="outline" onClick={finance.refresh}>Tentar de novo</Button><Button variant="ghost" onClick={() => finance.select(null)}>Voltar às cobranças</Button></> : !detail ? <Skeleton className="h-64 w-full" /> : <FinanceListDetail key={detail.collection.id} peladaId={peladaId} userId={userId} finance={finance} members={members} onBulkAdjust={(charges, onDone) => open({ kind: "bulkAdjust", charges, onDone })} onEdit={() => open({ kind: "list", list: detail.collection })} onParticipants={() => open({ kind: "participants" })} onDetails={charge => open({ kind: "details", charge })} onPayment={payment} onReason={askReason} onSimple={action => { void simple(action) }} />}
         </TabsContent>
         {overview.permissions.viewCash && <TabsContent value="cash" className="mt-0 flex flex-col gap-6">
           <header><h2 className="text-xl font-semibold">Caixa da pelada</h2><p className="mt-1 text-sm text-muted-foreground">Dinheiro que já entrou e saiu.</p></header>
@@ -143,16 +143,15 @@ export function FinanceTab({ peladaId, userId, members, dailies }: { peladaId: n
             <div><p className="text-sm text-muted-foreground">Saldo disponível registrado</p><p className="mt-1 font-display text-score font-bold tabular-nums">{formatFinanceMoney(overview.balance ?? "0.00")}</p></div>
             {manage && <div className="flex flex-wrap gap-2"><Button variant="brand" onClick={() => open({ kind: "cash", cashKind: "EXPENSE" })}><HugeiconsIcon icon={PlusSignIcon} className="size-[15px]" strokeWidth={2.2} />Despesa</Button><Button variant="outline" onClick={() => open({ kind: "cash", cashKind: "INCOME" })}>Outra entrada</Button><DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost">Mais</Button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuGroup><DropdownMenuItem onClick={() => open({ kind: "cash", cashKind: "OPENING" })}>Registrar saldo inicial</DropdownMenuItem></DropdownMenuGroup></DropdownMenuContent></DropdownMenu></div>}
           </div>
-          {tab === "cash" && <FinanceHistory peladaId={peladaId} kind="cash" finance={finance} onReason={askReason} />}
+          {tab === "cash" && <FinanceHistory peladaId={peladaId} kind="cash" finance={finance} timeZone={timeZone} members={members} onReason={askReason} />}
         </TabsContent>}
         {manage && <TabsContent value="settings" className="mt-0 flex flex-col gap-5">
-          {settingsView === "audit" ? <>
-            <Button className="self-start" variant="ghost" onClick={() => setSettingsView("settings")}><HugeiconsIcon icon={ArrowLeft02Icon} data-icon="inline-start" />Voltar às configurações</Button>
-            {tab === "settings" && <FinanceHistory peladaId={peladaId} kind="audit" finance={finance} onReason={askReason} />}
-          </> : <>
-            <header><h2 className="text-xl font-semibold">Configurações do financeiro</h2><p className="mt-1 text-sm text-muted-foreground">Pix, visibilidade, responsáveis e modelos de cobrança.</p></header>
-            {tab === "settings" && <FinanceSettings key={overview.revision} peladaId={peladaId} finance={finance} members={members} onTemplate={template => open({ kind: "list", template })} onAudit={() => setSettingsView("audit")} />}
-          </>}
+          <header><h2 className="text-xl font-semibold">Configurações do financeiro</h2><p className="mt-1 text-sm text-muted-foreground">Pix, visibilidade, responsáveis e modelos de cobrança.</p></header>
+          {tab === "settings" && <FinanceSettings key={overview.revision} peladaId={peladaId} finance={finance} members={members} onTemplate={template => open({ kind: "list", template })} />}
+        </TabsContent>}
+        {manage && <TabsContent value="history" className="mt-0 flex flex-col gap-5">
+          <header><h2 className="text-xl font-semibold">Histórico de alterações</h2><p className="mt-1 text-sm text-muted-foreground">Quem criou, recebeu, corrigiu ou cancelou cada coisa no financeiro, com o motivo.</p></header>
+          {tab === "history" && <FinanceHistory peladaId={peladaId} kind="audit" finance={finance} timeZone={timeZone} members={members} onReason={askReason} />}
         </TabsContent>}
       </Tabs>
       </FinanceTour>
@@ -161,9 +160,10 @@ export function FinanceTab({ peladaId, userId, members, dailies }: { peladaId: n
     {editor?.kind === "list" && <FinanceListForm peladaId={peladaId} finance={formFinance} list={editor.list} template={editor.template} asTemplate={!editor.list} dailies={dailies} onClose={close} />}
     {editor?.kind === "participants" && detail && <FinanceParticipantsForm peladaId={peladaId} finance={formFinance} detail={detail} members={members} dailies={dailies} onClose={close} />}
     {editor?.kind === "payment" && detail && <FinancePaymentForm peladaId={peladaId} finance={formFinance} list={detail.collection} charge={editor.charge} action={editor.action} notice={editor.notice} onClose={close} />}
-    {editor?.kind === "details" && detail && <FinanceChargeDetails peladaId={peladaId} userId={userId} finance={formFinance} list={detail.collection} charge={editor.charge} onClose={close} onPayment={payment} onAdjust={() => open({ kind: "charge", charge: editor.charge })} onReplace={() => open({ kind: "replace", charge: editor.charge })} onReason={askReason} />}
+    {editor?.kind === "details" && detail && <FinanceChargeDetails peladaId={peladaId} userId={userId} timeZone={timeZone} finance={formFinance} list={detail.collection} charge={editor.charge} onClose={close} onPayment={payment} onAdjust={() => open({ kind: "charge", charge: editor.charge })} onReplace={() => open({ kind: "replace", charge: editor.charge })} onReason={askReason} />}
     {editor?.kind === "charge" && detail && <FinanceChargeForm peladaId={peladaId} finance={formFinance} list={detail.collection} charge={editor.charge} onClose={close} />}
-    {editor?.kind === "replace" && detail && <FinanceReplacementForm peladaId={peladaId} finance={formFinance} list={detail.collection} charge={editor.charge} members={members} onClose={close} />}
+    {editor?.kind === "bulkAdjust" && detail && <FinanceBulkChargeForm peladaId={peladaId} finance={formFinance} list={detail.collection} charges={editor.charges} onAdjusted={editor.onDone} onClose={close} />}
+    {editor?.kind === "replace" && detail && <FinanceReplacementForm peladaId={peladaId} finance={formFinance} list={detail.collection} charge={editor.charge} members={members} excluded={detail.charges.filter(c => !c.canceled).map(c => c.userId)} onClose={close} />}
     {editor?.kind === "cash" && <FinanceCashForm peladaId={peladaId} finance={formFinance} kind={editor.cashKind} dailies={dailies} onClose={close} />}
     {reason && <FinanceReasonForm finance={formFinance} action={reason} onClose={() => setReason(null)} />}
   </div>

@@ -11,7 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.futspring.backend.shared.exception.AppException;
 import java.math.BigDecimal;
-import java.time.Instant;
+import java.time.*;
 import java.util.*;
 import java.util.stream.Collectors;
 import static com.futspring.backend.domain.finance.FinanceTypes.*;
@@ -140,10 +140,14 @@ public class FinanceReadService {
         return new FinanceViews.Template(null, name, kind, "", List.of(new FinanceViews.Component("Campo", "0.00")),
                 ctx.account().getPixKey(), ctx.account().getPixRecipient(), ctx.account().getQrId(), false);
     }
-    public FinanceViews.Page<FinanceViews.Movement> ledger(Long id, String email, int page, int size) {
+    // from/to filter effectiveDate inclusively; without them the whole statement (effectiveDate is never in the future)
+    public FinanceViews.Page<FinanceViews.Movement> ledger(Long id, String email, int page, int size, LocalDate from, LocalDate to) {
         var ctx = access.read(id, email);
         if (!ctx.viewCash()) throw new AppException(HttpStatus.FORBIDDEN, "O extrato é restrito aos gestores neste modo");
-        var rows = movements.findByPeladaIdOrderByIdDesc(id, PageRequest.of(page(page), limit(size)));
+        requireRange(from, to);
+        var rows = movements.findByPeladaIdAndEffectiveDateBetweenOrderByIdDesc(id,
+                from != null ? from : LocalDate.EPOCH, to != null ? to : access.today(ctx).plusDays(1),
+                PageRequest.of(page(page), limit(size)));
         Set<Long> reversed = rows.isEmpty() ? Set.of() : movements.reversedIds(rows.stream().map(FinanceMovement::getId).toList());
         return new FinanceViews.Page<>(rows.stream().limit(limit(size)).map(m -> movementView(m, reversed.contains(m.getId()))).toList(), rows.hasNext(), rows.getTotalElements());
     }
@@ -159,9 +163,17 @@ public class FinanceReadService {
         var rows = notices.findByPeladaIdAndChargeIdOrderByIdDesc(id, chargeId, PageRequest.of(page(page), limit(size)));
         return new FinanceViews.Page<>(rows.stream().map(this::noticeView).toList(), rows.hasNext(), rows.getTotalElements());
     }
-    public FinanceViews.Page<FinanceViews.Audit> audit(Long id, String email, int page, int size) {
+    // from/to are inclusive days in the pelada's zone; no operations means all of them
+    public FinanceViews.Page<FinanceViews.Audit> audit(Long id, String email, int page, int size,
+            LocalDate from, LocalDate to, Set<AuditOperation> operations) {
         var ctx = access.read(id, email); ctx.requireManager();
-        var rows = audits.findByPeladaIdOrderByIdDesc(id, PageRequest.of(page(page), limit(size)));
+        requireRange(from, to);
+        ZoneId zone = ZoneId.of(ctx.pelada().getTimeZone());
+        Instant start = from != null ? from.atStartOfDay(zone).toInstant() : Instant.EPOCH;
+        Instant end = to != null ? to.plusDays(1).atStartOfDay(zone).toInstant() : access.now().plus(Duration.ofDays(1));
+        var rows = audits.findByPeladaIdAndCreatedAtGreaterThanEqualAndCreatedAtLessThanAndOperationInOrderByIdDesc(id, start, end,
+                operations == null || operations.isEmpty() ? EnumSet.allOf(AuditOperation.class) : operations,
+                PageRequest.of(page(page), limit(size)));
         return new FinanceViews.Page<>(rows.stream().limit(limit(size)).map(a -> new FinanceViews.Audit(a.getId(), a.getActorId(),
                 a.getActorName(), a.getOperation(), a.getTarget(), a.getReason(), a.getCreatedAt(), a.getBeforeData(), a.getAfterData())).toList(), rows.hasNext(), rows.getTotalElements());
     }
@@ -175,6 +187,9 @@ public class FinanceReadService {
         Daily daily = dailies.findById(dailyId).orElseThrow(() -> missing("Diária"));
         if (!daily.getPelada().getId().equals(id)) throw missing("Diária");
         return daily;
+    }
+    private static void requireRange(LocalDate from, LocalDate to) {
+        if (from != null && to != null && from.isAfter(to)) throw new AppException(HttpStatus.BAD_REQUEST, "Período inválido");
     }
     static int limit(int size) { return Math.clamp(size, 1, 50); }
     static int page(int page) { return Math.clamp(page, 0, 1000000); }

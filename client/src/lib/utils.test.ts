@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { cn, getAvatarColor, getFileUrl, getInitials, getPeladaColor } from "./utils"
+import { cn, getAvatarColor, getFileUrl, getInitials, getPeladaColor, normalizeSearch } from "./utils"
 import { dayOfWeekLabel } from "./constants"
 
 describe("getInitials", () => {
@@ -49,5 +49,13 @@ describe("cn", () => {
   it("keeps a named font size next to a text color", () => {
     expect(cn("font-display text-score", "text-highlight-text")).toBe("font-display text-score text-highlight-text")
     expect(cn("text-xs text-white", "text-display text-white/60")).toBe("text-display text-white/60")
+  })
+})
+
+describe("normalizeSearch", () => {
+  it("drops accents, case and surrounding spaces", () => {
+    expect(normalizeSearch("  André ")).toBe("andre")
+    expect(normalizeSearch("JOÃO Conceição")).toBe("joao conceicao")
+    expect(normalizeSearch("")).toBe("")
   })
 })

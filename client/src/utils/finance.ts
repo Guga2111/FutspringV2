@@ -1,4 +1,5 @@
-import type { FinanceCharge } from "@/types/finance"
+import { normalizeSearch } from "@/lib/utils"
+import type { FinanceCharge, FinanceChargeStatus, FinanceComponent } from "@/types/finance"
 
 // Exact decimal strings throughout: formatting and parsing never use floating point arithmetic.
 export function formatFinanceMoney(value: string) {
@@ -39,6 +40,9 @@ export function sumFinanceAmounts(values: string[]): string {
 export const financeOptions = (map: Record<string, string>) => Object.entries(map).map(([value, label]) => ({ value, label }))
 export type FinanceQueueFilter = "pending" | "review" | "paid" | "all"
 export const financeQueueLabels: Record<FinanceQueueFilter, string> = { pending: "A receber", review: "Conferir", paid: "Pagos", all: "Todos" }
+export function financeChargeStatus(charge: Pick<FinanceCharge, "canceled" | "paymentStatus">): FinanceChargeStatus {
+  return charge.canceled ? "CANCELED" : charge.paymentStatus
+}
 export function pendingFinanceNotice(charge: FinanceCharge) { return charge.notices.find(n => n.status === "PENDING") }
 export function financeQueueCounts(charges: FinanceCharge[]) {
   return {
@@ -49,10 +53,9 @@ export function financeQueueCounts(charges: FinanceCharge[]) {
   }
 }
 export function filterFinanceCharges(charges: FinanceCharge[], filter: FinanceQueueFilter, search: string) {
-  const normalize = (value: string) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("pt-BR")
-  const query = normalize(search.trim())
+  const query = normalizeSearch(search)
   const priority = (c: FinanceCharge) => c.canceled ? 4 : pendingFinanceNotice(c) ? 0 : c.overdue ? 1 : c.paymentStatus !== "PAID" ? 2 : 3
-  return charges.filter(c => normalize(c.name).includes(query) && (filter === "all" || (!c.canceled && (
+  return charges.filter(c => normalizeSearch(c.name).includes(query) && (filter === "all" || (!c.canceled && (
     filter === "review" ? Boolean(pendingFinanceNotice(c)) : filter === "paid" ? c.paymentStatus === "PAID" : c.paymentStatus !== "PAID"
   )))).sort((a, b) => priority(a) - priority(b) || a.name.localeCompare(b.name, "pt-BR"))
 }
@@ -94,10 +97,67 @@ export function financeOptionsSummary(values: FinanceOptionsSummaryInput, defaul
   ].filter(Boolean).join(" · ")
 }
 
-// "Receber todos" on the rows on screen: who still owes and has no payment waiting for review, the total, and how
-// many were left out because a reported payment must be reviewed first (the server refuses a receipt meanwhile)
-export function planReceiveAll(rows: FinanceCharge[]) {
-  const open = rows.filter(c => !c.canceled && c.paymentStatus !== "PAID" && c.outstanding !== "0.00")
-  const charges = open.filter(c => !pendingFinanceNotice(c))
-  return { charges, total: sumFinanceAmounts(charges.map(c => c.outstanding)), review: open.length - charges.length }
+// Why a charge can't be received right now, shown next to its disabled checkbox in selection mode; null when it can
+// (the server refuses a receipt while a reported payment waits for review)
+export function receiveChargeHint(charge: FinanceCharge): string | null {
+  if (charge.canceled) return "Cancelada"
+  if (charge.paymentStatus === "PAID" || charge.outstanding === "0.00") return "Já pago"
+  if (pendingFinanceNotice(charge)) return "Confira o pagamento antes"
+  return null
+}
+export function canReceiveCharge(charge: FinanceCharge): boolean {
+  return receiveChargeHint(charge) === null
+}
+
+// "Receber selecionados": the selected charges that can be received, their total, and how many still owe but were
+// left out because a reported payment arrived after they were selected and must be reviewed first
+export function planReceiveAll(selected: FinanceCharge[]) {
+  const charges = selected.filter(canReceiveCharge)
+  const review = selected.filter(c => !c.canceled && c.paymentStatus !== "PAID" && c.outstanding !== "0.00" && pendingFinanceNotice(c)).length
+  return { charges, total: sumFinanceAmounts(charges.map(c => c.outstanding)), review }
+}
+
+// "Ajustar valor": a charge can get a new composition unless it is canceled or a reported payment waits for review
+// (paid charges included); null when it can be selected
+export function adjustChargeHint(charge: FinanceCharge): string | null {
+  if (charge.canceled) return "Cancelada"
+  if (pendingFinanceNotice(charge)) return "Confira o pagamento antes"
+  return null
+}
+export function canAdjustCharge(charge: FinanceCharge): boolean {
+  return adjustChargeHint(charge) === null
+}
+
+// What each action of the selection bar changes, like planBulkActions for the members grid: Receber counts only
+// the selected charges that can be received now (skipped: the others), Ajustar valor every adjustable one
+export function planBulkFinanceActions(selected: FinanceCharge[]) {
+  const receive = planReceiveAll(selected)
+  const adjust = selected.filter(canAdjustCharge)
+  return {
+    receive: { ...receive, skipped: selected.length - receive.charges.length, hint: receive.charges.length === 0 ? "Nenhum selecionado pode receber agora" : null },
+    adjust: { charges: adjust, hint: adjust.length === 0 ? "Nenhum selecionado pode ser ajustado" : null },
+  }
+}
+
+// "Selecionar mensalistas": the adjustable charges of members who are mensalistas today (guests never match)
+export function mensalistaCharges(charges: FinanceCharge[], members: { id: number; isMensalista: boolean }[]) {
+  const mensalistas = new Set(members.filter(m => m.isMensalista).map(m => m.id))
+  return charges.filter(c => c.userId !== null && mensalistas.has(c.userId) && canAdjustCharge(c))
+}
+
+const sameComposition = (charge: FinanceCharge, components: FinanceComponent[], adjustment: string) =>
+  normalizeFinanceAmount(charge.adjustment) === normalizeFinanceAmount(adjustment) && charge.components.length === components.length &&
+  charge.components.every((c, i) => c.name.trim() === components[i].name.trim() && normalizeFinanceAmount(c.amount) === normalizeFinanceAmount(components[i].amount))
+
+// Live summary of the bulk adjust form: what each person will owe, the total, and how many of the selected
+// charges had a composition of their own (different from the list's) that the new one replaces.
+// Amounts are pt-BR input; an invalid one yields null for the amounts.
+export function bulkAdjustSummary(values: { components: { amount: string }[]; adjustment: string }, charges: FinanceCharge[], list: { components: FinanceComponent[] }) {
+  const amounts = [...values.components.map(c => c.amount), values.adjustment].map(normalizeFinanceAmount)
+  const each = amounts.every((a): a is string => a !== null) ? sumFinanceAmounts(amounts) : null
+  return {
+    each,
+    total: each === null ? null : sumFinanceAmounts(charges.map(() => each)),
+    differs: charges.filter(c => !sameComposition(c, list.components, "0.00")).length,
+  }
 }

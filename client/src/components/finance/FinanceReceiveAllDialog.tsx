@@ -18,9 +18,11 @@ import { formatShortDate } from "@/utils/dates"
 
 const SHOWN_NAMES = 5
 
-// Confirms "Receber todos": who, how much, when and how; the server receives everything or nothing
-export function FinanceReceiveAllDialog({ peladaId, finance, list, charges, total, review, onClose }: {
-  peladaId: number; finance: FinanceController; list: FinanceList; charges: FinanceCharge[]; total: string; review: number; onClose: () => void
+// Confirms "Receber selecionados": who, how much, when and how; the server receives everything or nothing.
+// onReceived runs only on success (the list leaves selection mode); on an error the selection stays
+// skipped: selected charges that don't enter (already paid or with a payment to review); review: those waiting for review
+export function FinanceReceiveAllDialog({ peladaId, finance, list, charges, total, review, skipped, onReceived, onClose }: {
+  peladaId: number; finance: FinanceController; list: FinanceList; charges: FinanceCharge[]; total: string; review: number; skipped: number; onReceived: () => void; onClose: () => void
 }) {
   const [options, setOptions] = useState(false)
   const form = useForm<FinanceReceiveAllValues>({ resolver: zodResolver(financeReceiveAllSchema), defaultValues: { effectiveDate: "", method: "PIX" } })
@@ -33,7 +35,8 @@ export function FinanceReceiveAllDialog({ peladaId, finance, list, charges, tota
   async function submit(values: FinanceReceiveAllValues) {
     try {
       await finance.mutate(JSON.stringify({ receiveAll: list.id, ids, values }), "", command => api.receiveAllFinance(peladaId, list.id, command, ids, values))
-      toast.success(`${charges.length} pagamentos registrados`)
+      toast.success(charges.length === 1 ? "1 pagamento registrado" : `${charges.length} pagamentos registrados`)
+      onReceived()
       onClose()
     } catch (error) {
       applyServerErrors(form, error, "Não foi possível registrar os pagamentos")
@@ -44,12 +47,13 @@ export function FinanceReceiveAllDialog({ peladaId, finance, list, charges, tota
     <AlertDialogContent>
       <form onSubmit={form.handleSubmit(submit)} noValidate className="flex flex-col gap-4">
         <AlertDialogHeader>
-          <AlertDialogTitle>Receber {charges.length} pagamentos · {formatFinanceMoney(total)}</AlertDialogTitle>
+          <AlertDialogTitle>Receber {charges.length === 1 ? "1 pagamento" : `${charges.length} pagamentos`} · {formatFinanceMoney(total)}</AlertDialogTitle>
           <AlertDialogDescription>
             Cada pessoa fica quitada com o que ainda devia: {names.join(", ")}{more > 0 ? ` e mais ${more}` : ""}.
           </AlertDialogDescription>
         </AlertDialogHeader>
         {review > 0 && <p className="text-body-sm text-muted-foreground">{review === 1 ? "1 pessoa com pagamento para conferir não entra." : `${review} pessoas com pagamento para conferir não entram.`} Confira cada uma antes.</p>}
+        {skipped - review > 0 && <p className="text-body-sm text-muted-foreground">{skipped - review === 1 ? "1 selecionado já está pago e não entra." : `${skipped - review} selecionados já estão pagos e não entram.`}</p>}
         <Collapsible open={options} onOpenChange={setOptions}>
           <div className="flex items-center justify-between gap-3">
             <p className="text-sm">{date ? formatShortDate(date) : "Hoje"} · {financeMethodLabel[method]}</p>

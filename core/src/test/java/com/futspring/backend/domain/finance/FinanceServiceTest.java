@@ -129,6 +129,76 @@ class FinanceServiceTest extends BaseIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(receiveAll(chargeIds(l)))))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.detail.collection.totals.outstanding").value("0.00"));
     }
+    FinanceRequests.BulkAdjust adjust(List<Long> ids, String reason) {
+        return new FinanceRequests.BulkAdjust(command(reason), ids, List.of(new FinanceRequests.Component("Juiz", "5.00")), "0.00");
+    }
+    Long openWithThree() {
+        pelada.getMembers().add(outsider); peladas.save(pelada);
+        Long l = draft(Classification.DAILY); add(l, member); add(l, other); add(l, outsider);
+        collections.transition(id(), l, "PUBLISH", command(), admin.getEmail()); return l;
+    }
+    @Test void adjustChargesReplacesEveryCompositionInOneRevisionAndReplaysSafely() {
+        Long l = openWithThree(); var ids = chargeIds(l);
+        long revision = accounts.findByPeladaId(id()).orElseThrow().getRevision();
+        int auditsBefore = audits.findByPeladaId(id()).size();
+        var request = adjust(ids, "Mensalistas pagam só o juiz");
+        var result = collections.adjustCharges(id(), l, request, admin.getEmail());
+        assertThat(result.detail().charges()).hasSize(3).allSatisfy(c -> {
+            assertThat(c.amountDue()).isEqualTo("5.00");
+            assertThat(c.components()).extracting(FinanceViews.Component::name).containsExactly("Juiz");
+            assertThat(c.dueDate()).isEqualTo(LocalDate.of(2026, 10, 30));
+        });
+        assertThat(result.overview().revision()).isEqualTo(revision + 1);
+        var entries = audits.findByPeladaId(id());
+        assertThat(entries).hasSize(auditsBefore + 1);
+        var entry = entries.stream().filter(a -> a.getRequestKey().equals(request.command().requestKey())).findFirst().orElseThrow();
+        assertThat(entry.getOperation()).isEqualTo(FinanceTypes.AuditOperation.CHARGE_SAVE);
+        assertThat(entry.getTarget()).isEqualTo("LIST:" + l);
+        collections.adjustCharges(id(), l, request, admin.getEmail());
+        assertThat(audits.findByPeladaId(id())).hasSize(auditsBefore + 1);
+    }
+    @Test void adjustChargesIsAllOrNothing() {
+        Long l = openWithThree(); var ids = chargeIds(l);
+        ledger.report(id(), l, ids.get(1), command(), null, other.getEmail());
+        fails(() -> collections.adjustCharges(id(), l, adjust(ids, "Juiz"), admin.getEmail()), HttpStatus.CONFLICT);
+        collections.cancelCharge(id(), l, ids.get(2), command(), admin.getEmail());
+        fails(() -> collections.adjustCharges(id(), l, adjust(List.of(ids.getFirst(), ids.get(2)), "Juiz"), admin.getEmail()), HttpStatus.CONFLICT);
+        ledger.receive(id(), l, ids.getFirst(), new FinanceRequests.Receipt(command(), "20.00", null, PaymentMethod.PIX), admin.getEmail());
+        assertThatThrownBy(() -> collections.adjustCharges(id(), l, adjust(List.of(ids.getFirst()), "Juiz"), admin.getEmail()))
+                .isInstanceOfSatisfying(AppException.class, e -> {
+                    assertThat(e.getStatus()).isEqualTo(HttpStatus.CONFLICT);
+                    assertThat(e.getMessage()).contains(member.getUsername()).contains("R$ 20,00");
+                });
+        assertThat(reads.detail(id(), l, admin.getEmail()).charges()).filteredOn(c -> !c.canceled()).allSatisfy(c -> assertThat(c.amountDue()).isEqualTo("45.00"));
+    }
+    @Test void adjustChargesChecksManagerReasonAndScope() {
+        Long l = openWithThree(); Long other = open();
+        fails(() -> collections.adjustCharges(id(), l, adjust(chargeIds(l), "Juiz"), member.getEmail()), HttpStatus.FORBIDDEN);
+        fails(() -> collections.adjustCharges(id(), l, adjust(List.of(chargeIds(l).getFirst(), charge(other)), "Juiz"), admin.getEmail()), HttpStatus.NOT_FOUND);
+        fails(() -> collections.adjustCharges(id(), l, adjust(chargeIds(l), null), admin.getEmail()), HttpStatus.BAD_REQUEST);
+        fails(() -> collections.adjustCharges(id(), l, adjust(List.of(charge(l), charge(l)), "Juiz"), admin.getEmail()), HttpStatus.BAD_REQUEST);
+        Long draft = draft(Classification.DAILY); add(draft, member);
+        assertThat(collections.adjustCharges(id(), draft, adjust(chargeIds(draft), null), admin.getEmail()).detail().charges().getFirst().amountDue()).isEqualTo("5.00");
+    }
+    @Test void adjustChargesRestValidatesTheBody() throws Exception {
+        Long l = openWithThree();
+        String path = "/api/v1/peladas/" + id() + "/finance/lists/" + l + "/charges/adjust";
+        String token = bearerToken(admin.getId(), admin.getEmail());
+        var tooMany = java.util.stream.LongStream.rangeClosed(1, 201).boxed().toList();
+        for (var body : List.of(adjust(List.of(), "Juiz"), adjust(tooMany, "Juiz"))) {
+            mockMvc.perform(post(path).header("Authorization", token).contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(body)))
+                    .andExpect(status().isBadRequest());
+        }
+        var invalid = new FinanceRequests.BulkAdjust(command("Juiz"), chargeIds(l), List.of(new FinanceRequests.Component("Juiz", "5")), "0.00");
+        mockMvc.perform(post(path).header("Authorization", token).contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(invalid)))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(post(path).header("Authorization", bearerToken(member.getId(), member.getEmail()))
+                        .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(adjust(chargeIds(l), "Juiz"))))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post(path).header("Authorization", token)
+                        .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(adjust(chargeIds(l), "Juiz"))))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.detail.collection.totals.due").value("15.00"));
+    }
     @Test void guidedCreationPublishesPeopleAndExactTotalsInOneRevisionAndReplaysSafely() {
         var request = new FinanceRequests.CreateCollection(
                 new FinanceRequests.Collection(command(), "Diária de sábado", Classification.DAILY, "", null, null, price(), "pix", "Gestor", null),
@@ -180,11 +250,11 @@ class FinanceServiceTest extends BaseIntegrationTest {
         assertThat(view(l).paymentStatus()).isEqualTo(PaymentStatus.PAID);
         var refund = ledger.refund(id(), l, charge(l), new FinanceRequests.Refund(command(), "10.00", null, PaymentMethod.CASH, true), admin.getEmail());
         assertThat(refund.overview().balance()).isEqualTo("30.00"); assertThat(view(l).amountDue()).isEqualTo("30.00");
-        Long refundId = reads.ledger(id(), admin.getEmail(), 0, 20).items().getFirst().id();
+        Long refundId = reads.ledger(id(), admin.getEmail(), 0, 20, null, null).items().getFirst().id();
         ledger.reverse(id(), refundId, command(), admin.getEmail());
         assertThat(view(l).amountDue()).isEqualTo("40.00"); assertThat(view(l).received()).isEqualTo("40.00");
         assertThat(reads.overview(id(), admin.getEmail(), 0, 50).balance()).isEqualTo("40.00");
-        assertThat(reads.audit(id(), admin.getEmail(), 0, 50).items()).allSatisfy(a -> assertThat(a.actorId()).isEqualTo(admin.getId()));
+        assertThat(reads.audit(id(), admin.getEmail(), 0, 50, null, null, null).items()).allSatisfy(a -> assertThat(a.actorId()).isEqualTo(admin.getId()));
     }
     @Test void pendingIsNotCashBlocksChangesAndConfirmationIsIdempotent() {
         Long l = open(); var report = command(); ledger.report(id(), l, charge(l), report, null, member.getEmail());
@@ -216,8 +286,8 @@ class FinanceServiceTest extends BaseIntegrationTest {
         assertThat(reads.overview(id(), member.getEmail(), 0, 50).balance()).isNull();
         assertThat(reads.detail(id(), l, member.getEmail()).charges()).hasSize(1);
         fails(() -> reads.detail(id(), hidden, member.getEmail()), HttpStatus.NOT_FOUND);
-        fails(() -> reads.ledger(id(), member.getEmail(), 0, 20), HttpStatus.FORBIDDEN);
-        fails(() -> reads.audit(id(), member.getEmail(), 0, 20), HttpStatus.FORBIDDEN);
+        fails(() -> reads.ledger(id(), member.getEmail(), 0, 20, null, null), HttpStatus.FORBIDDEN);
+        fails(() -> reads.audit(id(), member.getEmail(), 0, 20, null, null, null), HttpStatus.FORBIDDEN);
         collections.settings(id(), new FinanceRequests.Settings(command(), Visibility.TRANSPARENT, "novo", "Novo", null), admin.getEmail());
         var visible = reads.detail(id(), l, other.getEmail()); assertThat(visible.charges()).hasSize(2);
         assertThat(visible.charges().getFirst().notices()).isEmpty();
@@ -269,10 +339,10 @@ class FinanceServiceTest extends BaseIntegrationTest {
     }
     @Test void ledgerAndAuditPagesReportTheirTotal() {
         Long l = open(); receive(l, "10.00"); receive(l, "5.00"); receive(l, "1.00");
-        var page = reads.ledger(id(), admin.getEmail(), 0, 2);
+        var page = reads.ledger(id(), admin.getEmail(), 0, 2, null, null);
         assertThat(page.items()).hasSize(2); assertThat(page.hasMore()).isTrue(); assertThat(page.total()).isEqualTo(3);
-        assertThat(reads.ledger(id(), admin.getEmail(), 1, 2).items()).hasSize(1);
-        var audit = reads.audit(id(), admin.getEmail(), 0, 50);
+        assertThat(reads.ledger(id(), admin.getEmail(), 1, 2, null, null).items()).hasSize(1);
+        var audit = reads.audit(id(), admin.getEmail(), 0, 50, null, null, null);
         assertThat(audit.total()).isEqualTo(audit.items().size());
     }
     @Test void closeReopenDuplicateAndReplacementPreserveAllocations() {
@@ -301,7 +371,7 @@ class FinanceServiceTest extends BaseIntegrationTest {
     }
     @Test void correctedOpeningBalanceAndCanceledListsNeverEraseCash() {
         ledger.cash(id(), new FinanceRequests.Cash(command(), MovementKind.OPENING, "-10.00", "Saldo inicial", null, null, PaymentMethod.OTHER, null, null), admin.getEmail());
-        Long opening = reads.ledger(id(), admin.getEmail(), 0, 20).items().getFirst().id();
+        Long opening = reads.ledger(id(), admin.getEmail(), 0, 20, null, null).items().getFirst().id();
         ledger.reverse(id(), opening, command(), admin.getEmail());
         ledger.cash(id(), new FinanceRequests.Cash(command(), MovementKind.OPENING, "15.00", "Saldo corrigido", null, null, PaymentMethod.OTHER, null, null), admin.getEmail());
         Long l = draft(Classification.OTHER);
@@ -381,5 +451,78 @@ class FinanceServiceTest extends BaseIntegrationTest {
         }
         mockMvc.perform(get("/api/v1/peladas/" + id() + "/finance").header("Authorization", bearerToken(member.getId(), member.getEmail())))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.balance").isEmpty()).andExpect(jsonPath("$.lists[0].totals.due").value("45.00"));
+    }
+
+    // History filters (SPEC §4/§5): inclusive days in the pelada's zone, filtered totals, compatible without params
+    List<Long> auditIds(LocalDate from, LocalDate to, Set<AuditOperation> operations) {
+        var page = reads.audit(id(), admin.getEmail(), 0, 50, from, to, operations);
+        assertThat(page.total()).isEqualTo(page.items().size());
+        return page.items().stream().map(FinanceViews.Audit::id).toList();
+    }
+    @Test void auditFiltersByDayInThePeladaZone() {
+        LocalDate day30 = LocalDate.of(2026, 10, 30), day31 = LocalDate.of(2026, 10, 31);
+        clock.now = Instant.parse("2026-10-31T02:59:59Z"); draft(Classification.DAILY);   // 30/10 23:59:59 in São Paulo
+        Long late = auditIds(null, null, null).getFirst();
+        clock.now = Instant.parse("2026-10-31T03:00:00Z"); draft(Classification.DAILY);   // 31/10 00:00 in São Paulo
+        Long midnight = auditIds(null, null, null).getFirst();
+        assertThat(auditIds(day30, day30, null)).containsExactly(late);
+        assertThat(auditIds(day31, day31, null)).containsExactly(midnight);
+        assertThat(auditIds(day31, null, null)).containsExactly(midnight);
+        assertThat(auditIds(null, day30, null)).containsExactly(late);
+        pelada.setTimeZone("Asia/Tokyo"); peladas.saveAndFlush(pelada);                     // both are 31/10 in Tokyo
+        assertThat(auditIds(day30, day30, null)).isEmpty();
+        assertThat(auditIds(day31, day31, null)).containsExactly(midnight, late);
+    }
+    @Test void auditFiltersByOperationAndStaysScopedToThePelada() {
+        open();
+        assertThat(audits.findByPeladaId(id())).extracting(FinanceAudit::getOperation)
+                .containsExactlyInAnyOrder(AuditOperation.LIST_SAVE, AuditOperation.CHARGE_SAVE, AuditOperation.PUBLISH);
+        assertThat(reads.audit(id(), admin.getEmail(), 0, 50, null, null, Set.of(AuditOperation.PUBLISH)).items())
+                .extracting(FinanceViews.Audit::operation).containsExactly(AuditOperation.PUBLISH);
+        assertThat(reads.audit(id(), admin.getEmail(), 0, 50, null, null, EnumSet.of(AuditOperation.LIST_SAVE, AuditOperation.PUBLISH)).total()).isEqualTo(2);
+        assertThat(auditIds(null, null, Set.of())).hasSize(3);
+        assertThat(reads.audit(id(), admin.getEmail(), 0, 50, null, null, Set.of(AuditOperation.RECEIVE)).total()).isZero();
+        Pelada otherPelada = peladas.save(Pelada.builder().name("Outra").dayOfWeek("SUNDAY").timeOfDay("10:00").duration(1f)
+                .creator(outsider).members(new HashSet<>(Set.of(outsider))).admins(new HashSet<>(Set.of(outsider))).build());
+        assertThat(reads.audit(otherPelada.getId(), outsider.getEmail(), 0, 50, null, null, null).total()).isZero();
+        assertThat(reads.ledger(otherPelada.getId(), outsider.getEmail(), 0, 50, null, null).total()).isZero();
+        fails(() -> reads.audit(id(), member.getEmail(), 0, 20, LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 31), Set.of(AuditOperation.PUBLISH)), HttpStatus.FORBIDDEN);
+    }
+    @Test void ledgerFiltersByEffectiveDateWithoutChangingTheBalance() {
+        Long l = open(); Long c = charge(l);
+        for (int day : new int[]{1, 15, 31})
+            ledger.receive(id(), l, c, new FinanceRequests.Receipt(command(), "5.00", LocalDate.of(2026, 10, day), PaymentMethod.PIX), admin.getEmail());
+        assertThat(reads.ledger(id(), admin.getEmail(), 0, 20, null, null).total()).isEqualTo(3);
+        var page = reads.ledger(id(), admin.getEmail(), 0, 20, LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 15));
+        assertThat(page.total()).isEqualTo(2);
+        assertThat(page.items()).extracting(FinanceViews.Movement::effectiveDate)
+                .containsExactly(LocalDate.of(2026, 10, 15), LocalDate.of(2026, 10, 1));
+        assertThat(reads.ledger(id(), admin.getEmail(), 0, 20, LocalDate.of(2026, 10, 31), null).items()).hasSize(1);
+        assertThat(reads.ledger(id(), admin.getEmail(), 0, 20, LocalDate.of(2026, 10, 2), LocalDate.of(2026, 10, 14)).total()).isZero();
+        assertThat(reads.overview(id(), admin.getEmail(), ListScope.ACTIVE, 0, 50).balance()).isEqualTo("15.00");
+    }
+    @Test void historyFiltersRejectAnInvertedPeriod() {
+        LocalDate from = LocalDate.of(2026, 10, 31), to = LocalDate.of(2026, 10, 1);
+        fails(() -> reads.audit(id(), admin.getEmail(), 0, 20, from, to, null), HttpStatus.BAD_REQUEST);
+        fails(() -> reads.ledger(id(), admin.getEmail(), 0, 20, from, to), HttpStatus.BAD_REQUEST);
+        assertThat(reads.audit(id(), admin.getEmail(), 0, 20, from, from, null).total()).isZero();
+    }
+    @Test void historyFiltersOverRest() throws Exception {
+        open();
+        String base = "/api/v1/peladas/" + id() + "/finance";
+        String token = bearerToken(admin.getId(), admin.getEmail());
+        mockMvc.perform(get(base + "/audit?from=2026-10-31&to=2026-10-31&operations=PUBLISH&operations=CHARGE_SAVE").header("Authorization", token))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.total").value(2)).andExpect(jsonPath("$.items.length()").value(2));
+        mockMvc.perform(get(base + "/audit").header("Authorization", token))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.total").value(3));
+        mockMvc.perform(get(base + "/audit?operations=NOPE").header("Authorization", token)).andExpect(status().isBadRequest());
+        mockMvc.perform(get(base + "/audit?from=31/10/2026").header("Authorization", token)).andExpect(status().isBadRequest());
+        mockMvc.perform(get(base + "/audit?from=2026-10-31&to=2026-10-01").header("Authorization", token))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.message").value("Período inválido"));
+        mockMvc.perform(get(base + "/audit?from=2026-10-01").header("Authorization", bearerToken(member.getId(), member.getEmail())))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get(base + "/movements?from=2026-10-01&to=2026-10-31").header("Authorization", token))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.total").value(0));
+        mockMvc.perform(get(base + "/movements?from=2026-10-31&to=2026-10-01").header("Authorization", token)).andExpect(status().isBadRequest());
     }
 }
