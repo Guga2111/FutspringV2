@@ -1,5 +1,5 @@
 import { normalizeSearch } from "@/lib/utils"
-import type { FinanceCharge } from "@/types/finance"
+import type { FinanceCharge, FinanceChargeStatus } from "@/types/finance"
 
 // Exact decimal strings throughout: formatting and parsing never use floating point arithmetic.
 export function formatFinanceMoney(value: string) {
@@ -40,6 +40,9 @@ export function sumFinanceAmounts(values: string[]): string {
 export const financeOptions = (map: Record<string, string>) => Object.entries(map).map(([value, label]) => ({ value, label }))
 export type FinanceQueueFilter = "pending" | "review" | "paid" | "all"
 export const financeQueueLabels: Record<FinanceQueueFilter, string> = { pending: "A receber", review: "Conferir", paid: "Pagos", all: "Todos" }
+export function financeChargeStatus(charge: Pick<FinanceCharge, "canceled" | "paymentStatus">): FinanceChargeStatus {
+  return charge.canceled ? "CANCELED" : charge.paymentStatus
+}
 export function pendingFinanceNotice(charge: FinanceCharge) { return charge.notices.find(n => n.status === "PENDING") }
 export function financeQueueCounts(charges: FinanceCharge[]) {
   return {

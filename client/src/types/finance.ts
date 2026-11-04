@@ -46,7 +46,23 @@ export const financeListStatusLabel: Record<FinanceListStatus, string> = { DRAFT
 export const financeClassificationLabel: Record<FinanceClassification, string> = { DAILY: "Diária", MONTHLY: "Mensalidade", OTHER: "Outra" }
 export const financeMethodLabel: Record<FinancePaymentMethod, string> = { PIX: "Pix", CASH: "Dinheiro", TRANSFER: "Transferência", OTHER: "Outro" }
 export const financeMovementLabel: Record<FinanceMovementKind, string> = { OPENING: "Saldo inicial", RECEIPT: "Recebimento", INCOME: "Outra entrada", EXPENSE: "Despesa", REFUND: "Devolução", REVERSAL: "Anulação" }
-export const financePaymentLabel: Record<FinanceCharge["paymentStatus"], string> = { UNPAID: "Em aberto", PARTIAL: "Parcial", PAID: "Paga" }
+// one status per charge (utils/finance.financeChargeStatus): the row, the list header and the charge details read these maps
+export type FinanceChargeStatus = "CANCELED" | "PAID" | "PARTIAL" | "UNPAID"
+export const financeChargeStatusLabel: Record<FinanceChargeStatus, string> = { CANCELED: "Cancelada", PAID: "Paga", PARTIAL: "Parcial", UNPAID: "Em aberto" }
+// Badge variant="status" classes, like dailyStatusStyle
+export const financeChargeStatusStyle: Record<FinanceChargeStatus, string> = {
+  CANCELED: "bg-muted text-muted-foreground",
+  PAID: "bg-success-muted text-success-soft",
+  // its own card fill: warning text only reaches 4.5:1 on card
+  PARTIAL: "border-border bg-card text-warning",
+  UNPAID: "bg-secondary text-secondary-foreground",
+}
+export const financeListStatusStyle: Record<FinanceListStatus, string> = {
+  DRAFT: "border-border bg-transparent text-muted-foreground",
+  OPEN: "bg-brand-muted text-brand-text",
+  CLOSED: "bg-secondary text-secondary-foreground",
+  CANCELED: "bg-destructive-muted text-destructive-soft",
+}
 export const financeNoticeLabel: Record<FinanceNotice["status"], string> = { PENDING: "Aguardando conferência", CONFIRMED: "Confirmado", REJECTED: "Rejeitado" }
 
 export type FinanceAuditOperation = "SETTINGS" | "MANAGERS" | "TEMPLATE" | "LIST_SAVE" | "PUBLISH" | "CLOSE" | "REOPEN" | "CANCEL" | "DUPLICATE" | "CHARGE_REPLACE" | "CHARGE_SAVE" | "PARTICIPANTS" | "CHARGE_CANCEL" | "RECEIVE" | "REPORT" | "CONFIRM" | "REJECT" | "CASH" | "REFUND" | "REVERSE" | "QR" | "MANAGERS_REVOKED" | "DAILY_DETACHED"
@@ -54,16 +70,16 @@ export const financeAuditLabel: Record<FinanceAuditOperation, string> = {
   SETTINGS: "Configuração alterada",
   MANAGERS: "Responsáveis alterados",
   TEMPLATE: "Modelo salvo",
-  LIST_SAVE: "Lista salva",
-  PUBLISH: "Lista publicada",
-  CLOSE: "Lista encerrada",
-  REOPEN: "Lista reaberta",
-  CANCEL: "Lista cancelada",
-  DUPLICATE: "Lista duplicada",
-  CHARGE_REPLACE: "Participante substituído",
-  CHARGE_SAVE: "Cobrança salva",
+  LIST_SAVE: "Cobrança salva",
+  PUBLISH: "Cobrança publicada",
+  CLOSE: "Cobrança encerrada",
+  REOPEN: "Cobrança reaberta",
+  CANCEL: "Cobrança cancelada",
+  DUPLICATE: "Cobrança duplicada",
+  CHARGE_REPLACE: "Participante trocado",
+  CHARGE_SAVE: "Valor de participante ajustado",
   PARTICIPANTS: "Participantes adicionados",
-  CHARGE_CANCEL: "Cobrança cancelada",
+  CHARGE_CANCEL: "Participante cancelado",
   RECEIVE: "Recebimento registrado",
   REPORT: "Pagamento informado",
   CONFIRM: "Aviso confirmado",
@@ -73,5 +89,5 @@ export const financeAuditLabel: Record<FinanceAuditOperation, string> = {
   REVERSE: "Lançamento anulado",
   QR: "QR Code atualizado",
   MANAGERS_REVOKED: "Responsabilidade revogada",
-  DAILY_DETACHED: "Diária desvinculada",
+  DAILY_DETACHED: "Sessão desvinculada",
 }
