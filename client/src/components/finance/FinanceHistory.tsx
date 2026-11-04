@@ -2,7 +2,7 @@ import { useState } from "react"
 import { format } from "date-fns"
 import type { FinanceController } from "@/components/finance/hooks/useFinance"
 import { useFinanceHistory } from "@/components/finance/hooks/useFinanceHistory"
-import { financeMovementLabel, financeMethodLabel, financeAuditLabel, financeAuditGroupLabel, financeAuditGroupOperations } from "@/types/finance"
+import { financeMovementLabel, financeMethodLabel, financeAuditGroupLabel, financeAuditGroupOperations } from "@/types/finance"
 import type { FinanceAudit, FinanceAuditGroup, FinanceMovement } from "@/types/finance"
 import type { PeladaMember } from "@/types/pelada"
 import { FINANCE_HISTORY_PAGE_SIZE, reverseFinanceMovement, type FinanceHistoryFilter } from "@/api/finance"
@@ -16,7 +16,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { FinanceFormError } from "@/components/finance/FinanceFields"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { formatFinanceMoney } from "@/utils/finance"
-import { auditChanges, auditSubject } from "@/utils/financeAudit"
+import { auditTitle, auditChanges, auditSubject } from "@/utils/financeAudit"
 import { formatInZone, formatShortDate, type DateRange } from "@/utils/dates"
 
 type AuditGroupFilter = "ALL" | FinanceAuditGroup
@@ -100,7 +100,7 @@ function AuditItem({ entry, members, timeZone }: { entry: FinanceAudit; members:
   const changes = auditChanges(entry, members)
   return <>
     <div className="flex min-w-0 flex-col gap-1">
-      <p className="break-words"><span className="font-semibold">{entry.actorName}</span> · {financeAuditLabel[entry.operation]}</p>
+      <p className="break-words"><span className="font-semibold">{entry.actorName}</span> · {auditTitle(entry)}</p>
       {subject && <p className="break-words text-sm">{subject}</p>}
       <p className="text-sm text-muted-foreground">{formatInZone(entry.createdAt, timeZone)}</p>
     </div>

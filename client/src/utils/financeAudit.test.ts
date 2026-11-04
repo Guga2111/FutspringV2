@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import type { FinanceAudit, FinanceCharge, FinanceDetail, FinanceMovement, FinanceSettings, FinanceTemplate } from "@/types/finance"
-import { auditChanges, auditSubject } from "@/utils/financeAudit"
+import { auditChanges, auditSubject, auditTitle } from "@/utils/financeAudit"
 import { formatShortDate } from "@/utils/dates"
 
 const members = [{ id: 1, username: "Ana" }, { id: 2, username: "Pedro" }]
@@ -102,5 +102,21 @@ describe("auditChanges", () => {
     expect(auditChanges({ operation: "SETTINGS", target: "SETTINGS", beforeData: "{nope", afterData: "]" }, members)).toEqual([])
     expect(auditChanges(entry("SETTINGS", "SETTINGS", { foo: 1 }, { bar: 2 }), members)).toEqual([])
     expect(auditSubject({ operation: "LIST_SAVE", target: "LIST:1", beforeData: null, afterData: "not json" })).toBeNull()
+  })
+})
+
+describe("auditTitle", () => {
+  it("counts the participants a bulk adjust changed", () => {
+    const before = detail([charge(1, "Ana"), charge(2, "Pedro"), charge(3, "Caio")])
+    const juiz = { components: [{ name: "Juiz", amount: "5.00" }], amountDue: "5.00" }
+    const after = detail([charge(1, "Ana", juiz), charge(2, "Pedro", juiz), charge(3, "Caio")])
+    expect(auditTitle(entry("CHARGE_SAVE", "LIST:12", before, after))).toBe("Valor de 2 participantes ajustado")
+    expect(auditTitle(entry("CHARGE_SAVE", "LIST:12", before, detail([charge(1, "Ana", juiz), charge(2, "Pedro"), charge(3, "Caio")])))).toBe("Valor de 1 participante ajustado")
+  })
+  it("keeps the operation's label otherwise", () => {
+    const d = detail([charge(1, "Ana")])
+    expect(auditTitle(entry("CHARGE_SAVE", "CHARGE:12:1", d, d))).toBe("Valor de participante ajustado")
+    expect(auditTitle(entry("RECEIVE", "LIST:12", d, d))).toBe("Recebimento registrado")
+    expect(auditTitle(entry("CHARGE_SAVE", "LIST:12", undefined, "oops"))).toBe("Valor de participante ajustado")
   })
 })

@@ -1,5 +1,5 @@
 import type { FinanceAudit, FinanceCharge, FinanceDetail, FinanceMovement, FinanceSettings, FinanceTemplate } from "@/types/finance"
-import { financeChargeStatusLabel, financeListStatusLabel, financeMovementLabel, financeVisibilityLabel } from "@/types/finance"
+import { financeAuditLabel, financeChargeStatusLabel, financeListStatusLabel, financeMovementLabel, financeVisibilityLabel } from "@/types/finance"
 import { financeChargeStatus, formatFinanceMoney, sumFinanceAmounts } from "@/utils/finance"
 import { formatShortDate } from "@/utils/dates"
 
@@ -44,6 +44,23 @@ function targetChargeId(target: string): number | null {
 const money = (value: string | null | undefined) => (value ? formatFinanceMoney(value) : null)
 const date = (value: string | null | undefined) => (value ? formatShortDate(value) : null)
 const perPerson = (components: { amount: string }[]) => formatFinanceMoney(sumFinanceAmounts(components.map((c) => c.amount)))
+
+const composition = (c: FinanceCharge) => JSON.stringify([c.amountDue, c.adjustment, (c.components ?? []).map((p) => [p.name, p.amount])])
+
+// The entry's title: the operation's label, except for "Ajustar valor" (CHARGE_SAVE on a whole list), which says how
+// many participants got a new value: "Valor de 8 participantes ajustado"
+export function auditTitle(entry: Entry): string {
+  if (entry.operation === "CHARGE_SAVE" && entry.target.startsWith("LIST:")) {
+    const before = parse(entry.beforeData)
+    const after = parse(entry.afterData)
+    if (isDetail(before) && isDetail(after)) {
+      const previous = new Map(before.charges.map((c): [number, string] => [c.id, composition(c)]))
+      const changed = after.charges.filter((c) => previous.has(c.id) && previous.get(c.id) !== composition(c)).length
+      if (changed > 0) return changed === 1 ? "Valor de 1 participante ajustado" : `Valor de ${changed} participantes ajustado`
+    }
+  }
+  return financeAuditLabel[entry.operation]
+}
 
 // "Ana · Mensalidade de novembro", "Mensalidade de novembro", "Modelo Diária", "Pix", or null when nothing names it
 export function auditSubject(entry: Entry): string | null {

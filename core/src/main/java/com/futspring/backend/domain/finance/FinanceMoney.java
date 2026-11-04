@@ -25,4 +25,10 @@ final class FinanceMoney {
         return amount;
     }
     static String text(BigDecimal amount) { return amount.setScale(2, RoundingMode.UNNECESSARY).toPlainString(); }
+    // pt-BR money for messages the user reads: "R$ 1.234,56"
+    static String display(BigDecimal amount) {
+        String[] parts = text(amount.abs()).split("\\.");
+        String whole = parts[0].replaceAll("\\B(?=(\\d{3})+(?!\\d))", ".");
+        return (amount.signum() < 0 ? "-" : "") + "R$ " + whole + "," + parts[1];
+    }
 }

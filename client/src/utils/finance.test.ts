@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import type { FinanceCharge } from "@/types/finance"
-import { canReceiveCharge, clampFinancePage, financeChargeStatus, filterFinanceCharges, financeOptionsSummary, planReceiveAll, financePageCount, financeQueueCounts, formatFinanceMoney, normalizeFinanceAmount, receiveChargeHint, sumFinanceAmounts } from "@/utils/finance"
+import { adjustChargeHint, bulkAdjustSummary, canAdjustCharge, mensalistaCharges, planBulkFinanceActions, canReceiveCharge, clampFinancePage, financeChargeStatus, filterFinanceCharges, financeOptionsSummary, planReceiveAll, financePageCount, financeQueueCounts, formatFinanceMoney, normalizeFinanceAmount, receiveChargeHint, sumFinanceAmounts } from "@/utils/finance"
 
 it("formats cents without floating point rounding", () => {
   expect(formatFinanceMoney("999999999999.99")).toBe("R$ 999.999.999.999,99")
@@ -94,5 +94,40 @@ describe("charge status", () => {
     expect(financeChargeStatus({ canceled: false, paymentStatus: "PARTIAL" })).toBe("PARTIAL")
     expect(financeChargeStatus({ canceled: false, paymentStatus: "UNPAID" })).toBe("UNPAID")
     expect(financeChargeStatus({ canceled: false, paymentStatus: "PAID" })).toBe("PAID")
+  })
+})
+
+describe("bulk actions of the selection", () => {
+  const notice = { id: 1, userId: 3, amount: "45.00", status: "PENDING" as const, createdAt: "2026-11-01T12:00:00Z", resolvedAt: null, resolvedBy: null, reason: null, receiptExpiresAt: null, receiptAvailable: false }
+  const owing = charge(1, "Ana")
+  const paid = charge(2, "Bruno", { paymentStatus: "PAID", received: "45.00", outstanding: "0.00" })
+  const review = charge(3, "Caio", { notices: [notice] })
+  const canceled = charge(4, "Davi", { canceled: true })
+  const guest = charge(5, "Convidado", { userId: null })
+  it("lets paid charges be adjusted, never canceled ones or those with a payment to review", () => {
+    expect([owing, paid, review, canceled].map(adjustChargeHint)).toEqual([null, null, "Confira o pagamento antes", "Cancelada"])
+    expect([owing, paid, review, canceled].map(canAdjustCharge)).toEqual([true, true, false, false])
+  })
+  it("counts only what each action changes", () => {
+    const plan = planBulkFinanceActions([owing, paid, guest])
+    expect(plan.receive.charges.map(c => c.id)).toEqual([1, 5])
+    expect(plan.receive.total).toBe("90.00")
+    expect(plan.receive.skipped).toBe(1)
+    expect(plan.receive.hint).toBeNull()
+    expect(plan.adjust.charges.map(c => c.id)).toEqual([1, 2, 5])
+    expect(planBulkFinanceActions([paid]).receive.hint).toBe("Nenhum selecionado pode receber agora")
+    expect(planBulkFinanceActions([]).adjust.hint).toBe("Nenhum selecionado pode ser ajustado")
+  })
+  it("selects today's mensalistas among the adjustable charges, never guests", () => {
+    const members = [{ id: 1, isMensalista: true }, { id: 2, isMensalista: true }, { id: 3, isMensalista: true }, { id: 4, isMensalista: true }, { id: 6, isMensalista: false }]
+    expect(mensalistaCharges([owing, paid, review, canceled, guest, charge(6, "Edu")], members).map(c => c.id)).toEqual([1, 2])
+  })
+  it("summarizes the new value per person and in total without floating point", () => {
+    const list = { components: [{ name: "Diária", amount: "21.50" }, { name: "Juiz", amount: "5.00" }] }
+    const own = charge(7, "Fábio", { components: [{ name: "Juiz", amount: "5.00" }], adjustment: "0.00" })
+    const standard = charge(8, "Gil", { components: list.components })
+    const summary = bulkAdjustSummary({ components: [{ amount: "5,00" }], adjustment: "0,10" }, [own, standard, standard], list)
+    expect(summary).toEqual({ each: "5.10", total: "15.30", differs: 1 })
+    expect(bulkAdjustSummary({ components: [{ amount: "abc" }], adjustment: "0" }, [own], list).each).toBeNull()
   })
 })

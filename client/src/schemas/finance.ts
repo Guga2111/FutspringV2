@@ -111,3 +111,11 @@ export const financeCashFormSchema = financeCashSchema.safeExtend({ amount: fina
 
 export const financePeopleFormSchema = z.object({ userIds: z.array(id).max(100), guestNames: z.array(z.string().trim().max(200)).max(100).transform(names => names.filter(Boolean)), reason })
   .refine(values => values.userIds.length + values.guestNames.length > 0, { message: "Selecione ao menos uma pessoa", path: ["userIds"] })
+
+// mirrors FinanceRequests.BulkAdjust ("Ajustar valor"): the charge ids come from the selection; the components and
+// adjustment are pt-BR inputs like the single charge form; the reason is required once the list is published
+export const makeFinanceBulkAdjustSchema = (published: boolean) => financeChargeFormSchema.pick({ components: true, adjustment: true }).extend({
+  reason: published ? requiredReason : reason,
+})
+export type FinanceBulkAdjustInput = z.input<ReturnType<typeof makeFinanceBulkAdjustSchema>>
+export type FinanceBulkAdjustValues = z.output<ReturnType<typeof makeFinanceBulkAdjustSchema>>

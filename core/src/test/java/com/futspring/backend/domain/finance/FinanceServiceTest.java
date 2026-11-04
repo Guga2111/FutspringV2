@@ -129,6 +129,76 @@ class FinanceServiceTest extends BaseIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(receiveAll(chargeIds(l)))))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.detail.collection.totals.outstanding").value("0.00"));
     }
+    FinanceRequests.BulkAdjust adjust(List<Long> ids, String reason) {
+        return new FinanceRequests.BulkAdjust(command(reason), ids, List.of(new FinanceRequests.Component("Juiz", "5.00")), "0.00");
+    }
+    Long openWithThree() {
+        pelada.getMembers().add(outsider); peladas.save(pelada);
+        Long l = draft(Classification.DAILY); add(l, member); add(l, other); add(l, outsider);
+        collections.transition(id(), l, "PUBLISH", command(), admin.getEmail()); return l;
+    }
+    @Test void adjustChargesReplacesEveryCompositionInOneRevisionAndReplaysSafely() {
+        Long l = openWithThree(); var ids = chargeIds(l);
+        long revision = accounts.findByPeladaId(id()).orElseThrow().getRevision();
+        int auditsBefore = audits.findByPeladaId(id()).size();
+        var request = adjust(ids, "Mensalistas pagam só o juiz");
+        var result = collections.adjustCharges(id(), l, request, admin.getEmail());
+        assertThat(result.detail().charges()).hasSize(3).allSatisfy(c -> {
+            assertThat(c.amountDue()).isEqualTo("5.00");
+            assertThat(c.components()).extracting(FinanceViews.Component::name).containsExactly("Juiz");
+            assertThat(c.dueDate()).isEqualTo(LocalDate.of(2026, 10, 30));
+        });
+        assertThat(result.overview().revision()).isEqualTo(revision + 1);
+        var entries = audits.findByPeladaId(id());
+        assertThat(entries).hasSize(auditsBefore + 1);
+        var entry = entries.stream().filter(a -> a.getRequestKey().equals(request.command().requestKey())).findFirst().orElseThrow();
+        assertThat(entry.getOperation()).isEqualTo(FinanceTypes.AuditOperation.CHARGE_SAVE);
+        assertThat(entry.getTarget()).isEqualTo("LIST:" + l);
+        collections.adjustCharges(id(), l, request, admin.getEmail());
+        assertThat(audits.findByPeladaId(id())).hasSize(auditsBefore + 1);
+    }
+    @Test void adjustChargesIsAllOrNothing() {
+        Long l = openWithThree(); var ids = chargeIds(l);
+        ledger.report(id(), l, ids.get(1), command(), null, other.getEmail());
+        fails(() -> collections.adjustCharges(id(), l, adjust(ids, "Juiz"), admin.getEmail()), HttpStatus.CONFLICT);
+        collections.cancelCharge(id(), l, ids.get(2), command(), admin.getEmail());
+        fails(() -> collections.adjustCharges(id(), l, adjust(List.of(ids.getFirst(), ids.get(2)), "Juiz"), admin.getEmail()), HttpStatus.CONFLICT);
+        ledger.receive(id(), l, ids.getFirst(), new FinanceRequests.Receipt(command(), "20.00", null, PaymentMethod.PIX), admin.getEmail());
+        assertThatThrownBy(() -> collections.adjustCharges(id(), l, adjust(List.of(ids.getFirst()), "Juiz"), admin.getEmail()))
+                .isInstanceOfSatisfying(AppException.class, e -> {
+                    assertThat(e.getStatus()).isEqualTo(HttpStatus.CONFLICT);
+                    assertThat(e.getMessage()).contains(member.getUsername()).contains("R$ 20,00");
+                });
+        assertThat(reads.detail(id(), l, admin.getEmail()).charges()).filteredOn(c -> !c.canceled()).allSatisfy(c -> assertThat(c.amountDue()).isEqualTo("45.00"));
+    }
+    @Test void adjustChargesChecksManagerReasonAndScope() {
+        Long l = openWithThree(); Long other = open();
+        fails(() -> collections.adjustCharges(id(), l, adjust(chargeIds(l), "Juiz"), member.getEmail()), HttpStatus.FORBIDDEN);
+        fails(() -> collections.adjustCharges(id(), l, adjust(List.of(chargeIds(l).getFirst(), charge(other)), "Juiz"), admin.getEmail()), HttpStatus.NOT_FOUND);
+        fails(() -> collections.adjustCharges(id(), l, adjust(chargeIds(l), null), admin.getEmail()), HttpStatus.BAD_REQUEST);
+        fails(() -> collections.adjustCharges(id(), l, adjust(List.of(charge(l), charge(l)), "Juiz"), admin.getEmail()), HttpStatus.BAD_REQUEST);
+        Long draft = draft(Classification.DAILY); add(draft, member);
+        assertThat(collections.adjustCharges(id(), draft, adjust(chargeIds(draft), null), admin.getEmail()).detail().charges().getFirst().amountDue()).isEqualTo("5.00");
+    }
+    @Test void adjustChargesRestValidatesTheBody() throws Exception {
+        Long l = openWithThree();
+        String path = "/api/v1/peladas/" + id() + "/finance/lists/" + l + "/charges/adjust";
+        String token = bearerToken(admin.getId(), admin.getEmail());
+        var tooMany = java.util.stream.LongStream.rangeClosed(1, 201).boxed().toList();
+        for (var body : List.of(adjust(List.of(), "Juiz"), adjust(tooMany, "Juiz"))) {
+            mockMvc.perform(post(path).header("Authorization", token).contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(body)))
+                    .andExpect(status().isBadRequest());
+        }
+        var invalid = new FinanceRequests.BulkAdjust(command("Juiz"), chargeIds(l), List.of(new FinanceRequests.Component("Juiz", "5")), "0.00");
+        mockMvc.perform(post(path).header("Authorization", token).contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(invalid)))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(post(path).header("Authorization", bearerToken(member.getId(), member.getEmail()))
+                        .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(adjust(chargeIds(l), "Juiz"))))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post(path).header("Authorization", token)
+                        .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(adjust(chargeIds(l), "Juiz"))))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.detail.collection.totals.due").value("15.00"));
+    }
     @Test void guidedCreationPublishesPeopleAndExactTotalsInOneRevisionAndReplaysSafely() {
         var request = new FinanceRequests.CreateCollection(
                 new FinanceRequests.Collection(command(), "Diária de sábado", Classification.DAILY, "", null, null, price(), "pix", "Gestor", null),

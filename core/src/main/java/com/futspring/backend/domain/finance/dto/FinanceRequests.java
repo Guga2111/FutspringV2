@@ -44,6 +44,11 @@ public final class FinanceRequests {
     public record Receipt(@NotNull @Valid Command command,
                           @Pattern(regexp = "[0-9]{1,12}\\.[0-9]{2}") @JsonDeserialize(using = DecimalStringDeserializer.class) String amount,
                           LocalDate effectiveDate, @NotNull PaymentMethod method) {}
+    // "Ajustar valor": the same components and adjustment for every listed charge of the route's list, in one transaction
+    public record BulkAdjust(@NotNull @Valid Command command,
+                             @NotEmpty(message = "Selecione ao menos uma cobrança") @Size(max = 200, message = "No máximo 200 cobranças por vez") List<@NotNull @Positive Long> chargeIds,
+                             @NotNull @Size(min = 1, max = 20) List<@NotNull @Valid Component> components,
+                             @NotNull @Pattern(regexp = "-?[0-9]{1,12}\\.[0-9]{2}") @JsonDeserialize(using = DecimalStringDeserializer.class) String adjustment) {}
     // Receive what each charge still owes, in one transaction; at most 200 charges of the route's list
     public record ReceiveAll(@NotNull @Valid Command command,
                              @NotEmpty(message = "Selecione ao menos uma cobrança") @Size(max = 200, message = "No máximo 200 cobranças por vez") List<@NotNull @Positive Long> chargeIds,

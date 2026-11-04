@@ -20,8 +20,9 @@ const SHOWN_NAMES = 5
 
 // Confirms "Receber selecionados": who, how much, when and how; the server receives everything or nothing.
 // onReceived runs only on success (the list leaves selection mode); on an error the selection stays
-export function FinanceReceiveAllDialog({ peladaId, finance, list, charges, total, review, onReceived, onClose }: {
-  peladaId: number; finance: FinanceController; list: FinanceList; charges: FinanceCharge[]; total: string; review: number; onReceived: () => void; onClose: () => void
+// skipped: selected charges that don't enter (already paid or with a payment to review); review: those waiting for review
+export function FinanceReceiveAllDialog({ peladaId, finance, list, charges, total, review, skipped, onReceived, onClose }: {
+  peladaId: number; finance: FinanceController; list: FinanceList; charges: FinanceCharge[]; total: string; review: number; skipped: number; onReceived: () => void; onClose: () => void
 }) {
   const [options, setOptions] = useState(false)
   const form = useForm<FinanceReceiveAllValues>({ resolver: zodResolver(financeReceiveAllSchema), defaultValues: { effectiveDate: "", method: "PIX" } })
@@ -52,6 +53,7 @@ export function FinanceReceiveAllDialog({ peladaId, finance, list, charges, tota
           </AlertDialogDescription>
         </AlertDialogHeader>
         {review > 0 && <p className="text-body-sm text-muted-foreground">{review === 1 ? "1 pessoa com pagamento para conferir não entra." : `${review} pessoas com pagamento para conferir não entram.`} Confira cada uma antes.</p>}
+        {skipped - review > 0 && <p className="text-body-sm text-muted-foreground">{skipped - review === 1 ? "1 selecionado já está pago e não entra." : `${skipped - review} selecionados já estão pagos e não entram.`}</p>}
         <Collapsible open={options} onOpenChange={setOptions}>
           <div className="flex items-center justify-between gap-3">
             <p className="text-sm">{date ? formatShortDate(date) : "Hoje"} · {financeMethodLabel[method]}</p>

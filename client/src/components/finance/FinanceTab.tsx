@@ -18,6 +18,7 @@ import { FinanceListForm } from "@/components/finance/FinanceListForm"
 import { FinancePaymentForm } from "@/components/finance/FinancePaymentForm"
 import { FinanceParticipantsForm } from "@/components/finance/FinanceParticipantsForm"
 import { FinanceChargeForm } from "@/components/finance/FinanceChargeForm"
+import { FinanceBulkChargeForm } from "@/components/finance/FinanceBulkChargeForm"
 import { FinanceChargeDetails } from "@/components/finance/FinanceChargeDetails"
 import { FinanceReplacementForm } from "@/components/finance/FinanceReplacementForm"
 import { FinanceCashForm } from "@/components/finance/FinanceCashForm"
@@ -35,7 +36,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { formatShortDate } from "@/utils/dates"
 
-type EditorAction = { kind: "create" } | { kind: "list"; list?: FinanceList; template?: FinanceTemplate } | { kind: "participants" } | { kind: "details"; charge: FinanceCharge } | { kind: "charge"; charge: FinanceCharge } | { kind: "replace"; charge: FinanceCharge } | { kind: "cash"; cashKind: Extract<FinanceMovementKind, "EXPENSE" | "INCOME" | "OPENING"> } | { kind: "payment"; charge: FinanceCharge; action: FinancePaymentValues["action"]; notice?: FinanceNotice }
+type EditorAction = { kind: "create" } | { kind: "list"; list?: FinanceList; template?: FinanceTemplate } | { kind: "participants" } | { kind: "details"; charge: FinanceCharge } | { kind: "charge"; charge: FinanceCharge } | { kind: "bulkAdjust"; charges: FinanceCharge[]; onDone: () => void } | { kind: "replace"; charge: FinanceCharge } | { kind: "cash"; cashKind: Extract<FinanceMovementKind, "EXPENSE" | "INCOME" | "OPENING"> } | { kind: "payment"; charge: FinanceCharge; action: FinancePaymentValues["action"]; notice?: FinanceNotice }
 type Editor = EditorAction & { revision: number }
 
 // timeZone: the pelada's, for the dates and times of payments and notices
@@ -134,7 +135,7 @@ export function FinanceTab({ peladaId, userId, members, dailies, timeZone }: { p
               </div>
             ) : <ul data-tour="collections" className="rounded-lg border">{overview.lists.map(collectionRow)}</ul>}
             <ListPagination page={finance.page} total={overview.total} size={api.FINANCE_LISTS_PAGE_SIZE} noun={["cobrança", "cobranças"]} disabled={finance.pending} onPage={finance.setPage} />
-          </> : finance.detailError ? <><FinanceFormError message={finance.detailError} /><Button variant="outline" onClick={finance.refresh}>Tentar de novo</Button><Button variant="ghost" onClick={() => finance.select(null)}>Voltar às cobranças</Button></> : !detail ? <Skeleton className="h-64 w-full" /> : <FinanceListDetail key={detail.collection.id} peladaId={peladaId} userId={userId} finance={finance} onEdit={() => open({ kind: "list", list: detail.collection })} onParticipants={() => open({ kind: "participants" })} onDetails={charge => open({ kind: "details", charge })} onPayment={payment} onReason={askReason} onSimple={action => { void simple(action) }} />}
+          </> : finance.detailError ? <><FinanceFormError message={finance.detailError} /><Button variant="outline" onClick={finance.refresh}>Tentar de novo</Button><Button variant="ghost" onClick={() => finance.select(null)}>Voltar às cobranças</Button></> : !detail ? <Skeleton className="h-64 w-full" /> : <FinanceListDetail key={detail.collection.id} peladaId={peladaId} userId={userId} finance={finance} members={members} onBulkAdjust={(charges, onDone) => open({ kind: "bulkAdjust", charges, onDone })} onEdit={() => open({ kind: "list", list: detail.collection })} onParticipants={() => open({ kind: "participants" })} onDetails={charge => open({ kind: "details", charge })} onPayment={payment} onReason={askReason} onSimple={action => { void simple(action) }} />}
         </TabsContent>
         {overview.permissions.viewCash && <TabsContent value="cash" className="mt-0 flex flex-col gap-6">
           <header><h2 className="text-xl font-semibold">Caixa da pelada</h2><p className="mt-1 text-sm text-muted-foreground">Dinheiro que já entrou e saiu.</p></header>
@@ -161,6 +162,7 @@ export function FinanceTab({ peladaId, userId, members, dailies, timeZone }: { p
     {editor?.kind === "payment" && detail && <FinancePaymentForm peladaId={peladaId} finance={formFinance} list={detail.collection} charge={editor.charge} action={editor.action} notice={editor.notice} onClose={close} />}
     {editor?.kind === "details" && detail && <FinanceChargeDetails peladaId={peladaId} userId={userId} timeZone={timeZone} finance={formFinance} list={detail.collection} charge={editor.charge} onClose={close} onPayment={payment} onAdjust={() => open({ kind: "charge", charge: editor.charge })} onReplace={() => open({ kind: "replace", charge: editor.charge })} onReason={askReason} />}
     {editor?.kind === "charge" && detail && <FinanceChargeForm peladaId={peladaId} finance={formFinance} list={detail.collection} charge={editor.charge} onClose={close} />}
+    {editor?.kind === "bulkAdjust" && detail && <FinanceBulkChargeForm peladaId={peladaId} finance={formFinance} list={detail.collection} charges={editor.charges} onAdjusted={editor.onDone} onClose={close} />}
     {editor?.kind === "replace" && detail && <FinanceReplacementForm peladaId={peladaId} finance={formFinance} list={detail.collection} charge={editor.charge} members={members} excluded={detail.charges.filter(c => !c.canceled).map(c => c.userId)} onClose={close} />}
     {editor?.kind === "cash" && <FinanceCashForm peladaId={peladaId} finance={formFinance} kind={editor.cashKind} dailies={dailies} onClose={close} />}
     {reason && <FinanceReasonForm finance={formFinance} action={reason} onClose={() => setReason(null)} />}
