@@ -6,7 +6,7 @@ import * as api from "@/api/finance"
 import type { PeladaMember } from "@/types/pelada"
 import type { DailyListItem } from "@/types/daily"
 import type { FinanceCharge, FinanceNotice, FinanceTemplate, FinanceList, FinanceMovementKind, FinanceListScope } from "@/types/finance"
-import { financeListScopeLabel, financeListStatusLabel } from "@/types/finance"
+import { financeListScopeLabel, financeListStatusLabel, financeListStatusStyle } from "@/types/finance"
 import { ListPagination } from "@/components/ListPagination"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { cn } from "@/lib/utils"
@@ -38,7 +38,8 @@ import { formatShortDate } from "@/utils/dates"
 type EditorAction = { kind: "create" } | { kind: "list"; list?: FinanceList; template?: FinanceTemplate } | { kind: "participants" } | { kind: "details"; charge: FinanceCharge } | { kind: "charge"; charge: FinanceCharge } | { kind: "replace"; charge: FinanceCharge } | { kind: "cash"; cashKind: Extract<FinanceMovementKind, "EXPENSE" | "INCOME" | "OPENING"> } | { kind: "payment"; charge: FinanceCharge; action: FinancePaymentValues["action"]; notice?: FinanceNotice }
 type Editor = EditorAction & { revision: number }
 
-export function FinanceTab({ peladaId, userId, members, dailies }: { peladaId: number; userId: number | null; members: PeladaMember[]; dailies: DailyListItem[] }) {
+// timeZone: the pelada's, for the dates and times of payments and notices
+export function FinanceTab({ peladaId, userId, members, dailies, timeZone }: { peladaId: number; userId: number | null; members: PeladaMember[]; dailies: DailyListItem[]; timeZone: string }) {
   const finance = useFinance(peladaId)
   const [tab, setTab] = useState("collections")
   // the settings tab shows the settings cards or the audit history
@@ -66,7 +67,7 @@ export function FinanceTab({ peladaId, userId, members, dailies }: { peladaId: n
         <span className="min-w-0 flex-1">
           <span className="flex flex-wrap items-center gap-2">
             <span className="whitespace-normal font-medium">{list.name}</span>
-            <Badge variant="secondary">{financeListStatusLabel[list.status]}</Badge>
+            <Badge variant="status" className={financeListStatusStyle[list.status]}>{financeListStatusLabel[list.status]}</Badge>
           </span>
           <span className="mt-2 block whitespace-normal text-sm text-muted-foreground">
             {manage
@@ -103,7 +104,6 @@ export function FinanceTab({ peladaId, userId, members, dailies }: { peladaId: n
           {/* min-w-0 + horizontal scroll: at 375 px the tabs and the two icon buttons don't fit, the row scrolls instead of the page */}
           <TabsList variant="underline" className="min-w-0 overflow-x-auto scrollbar-none">
             <TabsTrigger variant="underline" value="collections" onClick={() => finance.select(null)}>
-              {finance.selected !== null && tab === "collections" && <HugeiconsIcon icon={ArrowLeft02Icon} className="mr-2 size-4" />}
               {manage ? "Cobranças" : "Minhas cobranças"}
             </TabsTrigger>
             {overview.permissions.viewCash && <TabsTrigger variant="underline" value="cash" data-tour="cash-tab">Caixa</TabsTrigger>}
@@ -161,7 +161,7 @@ export function FinanceTab({ peladaId, userId, members, dailies }: { peladaId: n
     {editor?.kind === "list" && <FinanceListForm peladaId={peladaId} finance={formFinance} list={editor.list} template={editor.template} asTemplate={!editor.list} dailies={dailies} onClose={close} />}
     {editor?.kind === "participants" && detail && <FinanceParticipantsForm peladaId={peladaId} finance={formFinance} detail={detail} members={members} dailies={dailies} onClose={close} />}
     {editor?.kind === "payment" && detail && <FinancePaymentForm peladaId={peladaId} finance={formFinance} list={detail.collection} charge={editor.charge} action={editor.action} notice={editor.notice} onClose={close} />}
-    {editor?.kind === "details" && detail && <FinanceChargeDetails peladaId={peladaId} userId={userId} finance={formFinance} list={detail.collection} charge={editor.charge} onClose={close} onPayment={payment} onAdjust={() => open({ kind: "charge", charge: editor.charge })} onReplace={() => open({ kind: "replace", charge: editor.charge })} onReason={askReason} />}
+    {editor?.kind === "details" && detail && <FinanceChargeDetails peladaId={peladaId} userId={userId} timeZone={timeZone} finance={formFinance} list={detail.collection} charge={editor.charge} onClose={close} onPayment={payment} onAdjust={() => open({ kind: "charge", charge: editor.charge })} onReplace={() => open({ kind: "replace", charge: editor.charge })} onReason={askReason} />}
     {editor?.kind === "charge" && detail && <FinanceChargeForm peladaId={peladaId} finance={formFinance} list={detail.collection} charge={editor.charge} onClose={close} />}
     {editor?.kind === "replace" && detail && <FinanceReplacementForm peladaId={peladaId} finance={formFinance} list={detail.collection} charge={editor.charge} members={members} onClose={close} />}
     {editor?.kind === "cash" && <FinanceCashForm peladaId={peladaId} finance={formFinance} kind={editor.cashKind} dailies={dailies} onClose={close} />}

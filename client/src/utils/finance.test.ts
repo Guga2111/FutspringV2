@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import type { FinanceCharge } from "@/types/finance"
-import { clampFinancePage, filterFinanceCharges, financeOptionsSummary, planReceiveAll, financePageCount, financeQueueCounts, formatFinanceMoney, normalizeFinanceAmount, sumFinanceAmounts } from "@/utils/finance"
+import { clampFinancePage, financeChargeStatus, filterFinanceCharges, financeOptionsSummary, planReceiveAll, financePageCount, financeQueueCounts, formatFinanceMoney, normalizeFinanceAmount, sumFinanceAmounts } from "@/utils/finance"
 
 it("formats cents without floating point rounding", () => {
   expect(formatFinanceMoney("999999999999.99")).toBe("R$ 999.999.999.999,99")
@@ -80,5 +80,14 @@ describe("financeOptionsSummary", () => {
 
   it("has no Pix without a key", () => {
     expect(financeOptionsSummary({ componentCount: 1, pixKey: "", pixRecipient: "" }, undefined)).toBe("Sem vencimento · Sem Pix")
+  })
+})
+
+describe("charge status", () => {
+  it("cancellation wins over the payment status", () => {
+    expect(financeChargeStatus({ canceled: true, paymentStatus: "PAID" })).toBe("CANCELED")
+    expect(financeChargeStatus({ canceled: false, paymentStatus: "PARTIAL" })).toBe("PARTIAL")
+    expect(financeChargeStatus({ canceled: false, paymentStatus: "UNPAID" })).toBe("UNPAID")
+    expect(financeChargeStatus({ canceled: false, paymentStatus: "PAID" })).toBe("PAID")
   })
 })
