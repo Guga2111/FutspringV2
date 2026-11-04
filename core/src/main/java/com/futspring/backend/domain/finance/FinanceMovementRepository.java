@@ -4,10 +4,10 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Page;
 import java.util.*;
-import java.time.Instant;
+import java.time.*;
 import java.math.BigDecimal;
 public interface FinanceMovementRepository extends JpaRepository<FinanceMovement, Long> {
-    Page<FinanceMovement> findByPeladaIdOrderByIdDesc(Long peladaId, Pageable page);
+    Page<FinanceMovement> findByPeladaIdAndEffectiveDateBetweenOrderByIdDesc(Long peladaId, LocalDate from, LocalDate to, Pageable page);
     List<FinanceMovement> findByChargeIdIn(Collection<Long> ids);
     Optional<FinanceMovement> findByIdAndPeladaId(Long id, Long peladaId);
     boolean existsByOriginalId(Long id);

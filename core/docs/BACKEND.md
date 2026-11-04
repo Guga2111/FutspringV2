@@ -258,6 +258,7 @@ New status-like fields must be Java enums stored with `@Enumerated(EnumType.STRI
 | V12 | Adds isolated finance tables, exact monetary components, idempotency/audit, partial uniqueness for active charges and pending notices, unique notice receipts/reversals, private image metadata and preservation guards; no historical debt/payment inference. See Pelada finance |
 | V11 | Creates `pelada_invitations`, `pelada_invite_links`, `pelada_link_blocks` with FKs/indexes and partial uniqueness for pending invitations and unrevoked links; adds nullable `notifications.invitation_id` and invitation/join types. Additive; existing membership and sporting history remain unchanged |
 | V13 | Creates `user_tours` (PK `(user_id, tour)`, CHECK on `tour`, FK `ON DELETE CASCADE`): guided tours each user has seen; non-destructive |
+| V14 | Indexes `finance_audit(pelada_id, created_at DESC)` and `finance_movements(pelada_id, effective_date DESC)` for the date filters of `/finance/audit` and `/finance/movements`; non-destructive |
 
 ### Migration rules
 
@@ -435,9 +436,9 @@ All paths below are relative to `/api/v1/peladas/{peladaId}/finance`; authentica
 | GET | `/lists/{listId}/charges/{chargeId}/notices?page=0&size=20` | Owner/manager-only paged notice history |
 | POST | `/lists/{listId}/charges/{chargeId}/notices/{noticeId}/{confirm|reject}` | Confirm: `{command,effectiveDate,method}`; reject: `Command` with reason |
 | POST | `/lists/{listId}/charges/{chargeId}/refund` | `{command,amount,effectiveDate,method,reduceObligation}` with reason |
-| GET / POST | `/movements` | Paged statement; create `{command,kind:OPENING|INCOME|EXPENSE,amount,description,category,effectiveDate,method,listId?,dailyId?}`; expenses need a category |
+| GET / POST | `/movements` | Paged statement, `?page&size&from&to` (optional ISO dates, inclusive on `effectiveDate`; `from` after `to` → 400 "Período inválido"; `total` is the filtered count, the overview `balance` stays the unfiltered total; without them the whole statement); create `{command,kind:OPENING|INCOME|EXPENSE,amount,description,category,effectiveDate,method,listId?,dailyId?}`; expenses need a category |
 | POST | `/movements/{movementId}/reverse` | `Command` with reason |
-| GET | `/audit` | Manager-only paginated actor/time/operation/reason and before/after JSON (no image contents) |
+| GET | `/audit`, `?page&size&from&to&operations` | Manager-only paginated actor/time/operation/reason and before/after JSON (no image contents). Optional filters: `from`/`to` ISO dates, inclusive days in the pelada's `timeZone` (`createdAt ≥ from 00:00` and `< to + 1 day 00:00`; `from` after `to` → 400 "Período inválido"), `operations` repeated (`?operations=RECEIVE&operations=REPORT`; unknown value → 400; none = all); `total` is the filtered count; without filters the whole history |
 | POST | `/qr`, `/lists/{listId}/qr` | Multipart JSON `command` and image `file`; list instructions snapshot QR identity |
 | GET | `/qr/{qrId}`, `/notices/{noticeId}/receipt` | Authenticated, scoped image bytes with `Cache-Control: no-store`, no-cache and nosniff |
 

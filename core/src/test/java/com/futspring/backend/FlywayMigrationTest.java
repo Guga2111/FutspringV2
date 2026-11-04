@@ -67,4 +67,14 @@ class FlywayMigrationTest {
                 .contains("SESSION_REMINDER")
                 .contains("DIARISTA_WINDOW_OPEN");
     }
+
+    // V14: date filters of the finance history and cash statement
+    @Test
+    void financeHistoryFiltersHaveTheirIndexes() {
+        assertThat(jdbcTemplate.queryForList(
+                "SELECT indexdef FROM pg_indexes WHERE indexname IN ('ix_finance_audit_pelada_created', 'ix_finance_movements_pelada_effective')",
+                String.class))
+                .anySatisfy(d -> assertThat(d).contains("finance_audit").contains("(pelada_id, created_at DESC)"))
+                .anySatisfy(d -> assertThat(d).contains("finance_movements").contains("(pelada_id, effective_date DESC)"));
+    }
 }

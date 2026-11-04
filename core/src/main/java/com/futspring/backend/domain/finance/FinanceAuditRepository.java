@@ -9,5 +9,6 @@ import java.math.BigDecimal;
 public interface FinanceAuditRepository extends JpaRepository<FinanceAudit, Long> {
     List<FinanceAudit> findByPeladaId(Long id);
     Optional<FinanceAudit> findByPeladaIdAndRequestKey(Long id, UUID key);
-    Page<FinanceAudit> findByPeladaIdOrderByIdDesc(Long id, Pageable page);
+    Page<FinanceAudit> findByPeladaIdAndCreatedAtGreaterThanEqualAndCreatedAtLessThanAndOperationInOrderByIdDesc(
+            Long id, Instant from, Instant to, Collection<FinanceTypes.AuditOperation> operations, Pageable page);
 }
