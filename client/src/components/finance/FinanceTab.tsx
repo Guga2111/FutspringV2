@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { ArrowLeft02Icon, ArrowRight01Icon, PlusSignIcon, RefreshIcon } from "@hugeicons/core-free-icons"
+import { ArrowRight01Icon, PlusSignIcon, RefreshIcon } from "@hugeicons/core-free-icons"
 import { toast } from "sonner"
 import * as api from "@/api/finance"
 import type { PeladaMember } from "@/types/pelada"
@@ -42,8 +42,6 @@ type Editor = EditorAction & { revision: number }
 export function FinanceTab({ peladaId, userId, members, dailies, timeZone }: { peladaId: number; userId: number | null; members: PeladaMember[]; dailies: DailyListItem[]; timeZone: string }) {
   const finance = useFinance(peladaId)
   const [tab, setTab] = useState("collections")
-  // the settings tab shows the settings cards or the audit history
-  const [settingsView, setSettingsView] = useState<"settings" | "audit">("settings")
   const [editor, setEditor] = useState<Editor | null>(null)
   const [reason, setReason] = useState<(FinanceReasonAction & { revision: number }) | null>(null)
   const overview = finance.overview
@@ -60,7 +58,7 @@ export function FinanceTab({ peladaId, userId, members, dailies, timeZone }: { p
   }
   const manage = Boolean(overview?.permissions.manage)
   // the tour points at the collections list, so it brings it on screen first
-  const prepareTour = () => { setEditor(null); setReason(null); setTab("collections"); setSettingsView("settings"); finance.select(null) }
+  const prepareTour = () => { setEditor(null); setReason(null); setTab("collections"); finance.select(null) }
   const collectionRow = (list: FinanceList) => (
     <li key={list.id} className="border-b last:border-b-0">
       <Button variant="ghost" className="h-auto w-full justify-between gap-4 rounded-none px-4 py-4 text-left" onClick={() => finance.select(list.id)}>
@@ -99,7 +97,7 @@ export function FinanceTab({ peladaId, userId, members, dailies, timeZone }: { p
   return <div className="flex min-w-0 flex-col gap-5">
     {!overview ? finance.error ? <><FinanceFormError message={finance.error} /><Button variant="outline" onClick={finance.refresh}>Tentar de novo</Button></> : <><Skeleton className="h-10 w-64" /><Skeleton className="h-48 w-full" /></> : <>
       <FinanceTour manage={manage} viewCash={overview.permissions.viewCash} canAutoStart={tab === "collections" && finance.selected === null && !editor && !reason}>
-      <Tabs value={tab} onValueChange={value => { setTab(value); setSettingsView("settings") }} className="min-w-0">
+      <Tabs value={tab} onValueChange={setTab} className="min-w-0">
         <div className="mb-3 flex items-center justify-between gap-3">
           {/* min-w-0 + horizontal scroll: at 375 px the tabs and the two icon buttons don't fit, the row scrolls instead of the page */}
           <TabsList variant="underline" className="min-w-0 overflow-x-auto scrollbar-none">
@@ -108,6 +106,7 @@ export function FinanceTab({ peladaId, userId, members, dailies, timeZone }: { p
             </TabsTrigger>
             {overview.permissions.viewCash && <TabsTrigger variant="underline" value="cash" data-tour="cash-tab">Caixa</TabsTrigger>}
             {manage && <TabsTrigger variant="underline" value="settings" data-tour="settings-tab">Configurações</TabsTrigger>}
+            {manage && <TabsTrigger variant="underline" value="history">Histórico</TabsTrigger>}
           </TabsList>
           <div className="flex shrink-0 items-center">
             <FinanceTourButton onPrepare={prepareTour} />
@@ -143,16 +142,15 @@ export function FinanceTab({ peladaId, userId, members, dailies, timeZone }: { p
             <div><p className="text-sm text-muted-foreground">Saldo disponível registrado</p><p className="mt-1 font-display text-score font-bold tabular-nums">{formatFinanceMoney(overview.balance ?? "0.00")}</p></div>
             {manage && <div className="flex flex-wrap gap-2"><Button variant="brand" onClick={() => open({ kind: "cash", cashKind: "EXPENSE" })}><HugeiconsIcon icon={PlusSignIcon} className="size-[15px]" strokeWidth={2.2} />Despesa</Button><Button variant="outline" onClick={() => open({ kind: "cash", cashKind: "INCOME" })}>Outra entrada</Button><DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost">Mais</Button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuGroup><DropdownMenuItem onClick={() => open({ kind: "cash", cashKind: "OPENING" })}>Registrar saldo inicial</DropdownMenuItem></DropdownMenuGroup></DropdownMenuContent></DropdownMenu></div>}
           </div>
-          {tab === "cash" && <FinanceHistory peladaId={peladaId} kind="cash" finance={finance} onReason={askReason} />}
+          {tab === "cash" && <FinanceHistory peladaId={peladaId} kind="cash" finance={finance} timeZone={timeZone} members={members} onReason={askReason} />}
         </TabsContent>}
         {manage && <TabsContent value="settings" className="mt-0 flex flex-col gap-5">
-          {settingsView === "audit" ? <>
-            <Button className="self-start" variant="ghost" onClick={() => setSettingsView("settings")}><HugeiconsIcon icon={ArrowLeft02Icon} data-icon="inline-start" />Voltar às configurações</Button>
-            {tab === "settings" && <FinanceHistory peladaId={peladaId} kind="audit" finance={finance} onReason={askReason} />}
-          </> : <>
-            <header><h2 className="text-xl font-semibold">Configurações do financeiro</h2><p className="mt-1 text-sm text-muted-foreground">Pix, visibilidade, responsáveis e modelos de cobrança.</p></header>
-            {tab === "settings" && <FinanceSettings key={overview.revision} peladaId={peladaId} finance={finance} members={members} onTemplate={template => open({ kind: "list", template })} onAudit={() => setSettingsView("audit")} />}
-          </>}
+          <header><h2 className="text-xl font-semibold">Configurações do financeiro</h2><p className="mt-1 text-sm text-muted-foreground">Pix, visibilidade, responsáveis e modelos de cobrança.</p></header>
+          {tab === "settings" && <FinanceSettings key={overview.revision} peladaId={peladaId} finance={finance} members={members} onTemplate={template => open({ kind: "list", template })} />}
+        </TabsContent>}
+        {manage && <TabsContent value="history" className="mt-0 flex flex-col gap-5">
+          <header><h2 className="text-xl font-semibold">Histórico de alterações</h2><p className="mt-1 text-sm text-muted-foreground">Quem criou, recebeu, corrigiu ou cancelou cada coisa no financeiro, com o motivo.</p></header>
+          {tab === "history" && <FinanceHistory peladaId={peladaId} kind="audit" finance={finance} timeZone={timeZone} members={members} onReason={askReason} />}
         </TabsContent>}
       </Tabs>
       </FinanceTour>

@@ -166,6 +166,25 @@ test("finance manager: settings", async ({ page }) => {
   expect(unmatched, "requests without a fixture").toEqual([])
 })
 
+test("finance manager: history with filters", async ({ page }, testInfo) => {
+  const unmatched = await open(page, FINANCE)
+  await page.getByRole("tab", { name: "Histórico" }).click()
+  await expect(page.getByText("Chegou só no segundo tempo")).toBeVisible()
+  await settle(page)
+  await expectNoHorizontalScroll(page)
+  await expect(page).toHaveScreenshot("finance-history.png", { fullPage: true })
+  await page.getByRole("radio", { name: "Pagamentos" }).click()
+  await expect(page.getByText("Chegou só no segundo tempo")).toHaveCount(0)
+  // the period popover: two months on desktop, one at 375 px
+  if (testInfo.project.name.startsWith("desktop")) {
+    await page.getByRole("button", { name: "Todo o período" }).click()
+    await expect(page.getByRole("dialog")).toBeVisible()
+    await settle(page)
+    await expect(page).toHaveScreenshot("finance-history-period.png", DIALOG_SHOT)
+  }
+  expect(unmatched, "requests without a fixture").toEqual([])
+})
+
 test("finance member: my charges, Pix and report", async ({ page }) => {
   await page.clock.setFixedTime(NOW)
   const unmatched = await mockApi(page)

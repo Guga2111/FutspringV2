@@ -7,7 +7,7 @@ import type { DailyDetail, DailyListItem, PlayerDTO, RankingDTO, TeamDTO } from 
 import type { StatsDTO, UserMatchHistoryDTO, UserStatsTimelineDTO } from "../src/types/stats"
 import type { NotificationPreference, NotificationResponse } from "../src/types/notification"
 import type { Invitation, InvitationStatus, InviteLink } from "../src/types/invitation"
-import type { FinanceDetail, FinanceMovement, FinanceOverview, FinancePage, FinanceTemplate } from "../src/types/finance"
+import type { FinanceAudit, FinanceDetail, FinanceMovement, FinanceOverview, FinancePage, FinanceSettings, FinanceTemplate } from "../src/types/finance"
 
 // Wednesday 2026-11-04 15:00 in São Paulo
 export const NOW = new Date("2026-11-04T18:00:00.000Z")
@@ -538,4 +538,33 @@ export const financeDetail: FinanceDetail = {
 export const financeMemberDetail: FinanceDetail = {
   collection: financeMemberOverview.lists[0],
   charges: [{ ...financeDetail.charges[2], userId: me.id, name: me.username }],
+}
+
+// the Histórico tab: a payment, an adjusted value with its reason, the publication, a settings change and an expense,
+// with before/after in the JSON shape the backend stores (the views it returned)
+const auditBefore: FinanceDetail = {
+  ...financeDetail,
+  charges: financeDetail.charges.map((c, i) => (i === 2 ? { ...c, received: "0.00", outstanding: "100.00", paymentStatus: "UNPAID" } : c)),
+}
+const adjusted: FinanceDetail = {
+  ...financeDetail,
+  charges: financeDetail.charges.map((c, i) => (i === 3 ? { ...c, adjustment: "-20.00", amountDue: "80.00", outstanding: "80.00" } : c)),
+}
+const draft: FinanceDetail = { collection: { ...financeList, status: "DRAFT", publishedAt: null }, charges: auditBefore.charges }
+const settingsBefore: FinanceSettings = { ...financeOverview.settings, visibility: "TRANSPARENT", pixRecipient: null }
+const actor = members[0]
+const audit = (id: number, operation: FinanceAudit["operation"], target: string, createdAt: string, before: unknown, after: unknown, reason: string | null = null): FinanceAudit => ({
+  id, actorId: actor.id, actorName: actor.username, operation, target, reason, createdAt,
+  beforeData: before === null ? null : JSON.stringify(before), afterData: after === null ? null : JSON.stringify(after),
+})
+export const financeAudit: FinancePage<FinanceAudit> = {
+  items: [
+    audit(805, "RECEIVE", `CHARGE:50:${financeDetail.charges[2].id}`, "2026-11-03T22:30:00.000Z", auditBefore, financeDetail),
+    audit(804, "CHARGE_SAVE", `CHARGE:50:${financeDetail.charges[3].id}`, "2026-11-02T14:10:00.000Z", financeDetail, adjusted, "Chegou só no segundo tempo"),
+    audit(803, "CASH", "CASH", "2026-11-02T12:00:00.000Z", null, financeMovements.items[1]),
+    audit(802, "PUBLISH", "LIST:50", "2026-11-01T12:00:00.000Z", draft, auditBefore),
+    audit(801, "SETTINGS", "SETTINGS", "2026-10-30T20:00:00.000Z", settingsBefore, financeOverview.settings),
+  ],
+  hasMore: false,
+  total: 5,
 }

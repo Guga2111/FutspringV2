@@ -1,6 +1,6 @@
 import apiClient from "@/api/client"
 import type { FinanceCreateValues, FinanceCommand, FinanceListValues, FinanceTemplateValues, FinanceChargeValues, FinanceParticipantsValues, FinanceCashValues, FinanceReceiptValues, FinanceRefundValues, FinanceReceiveAllValues } from "@/schemas/finance"
-import type { FinanceOverview, FinanceDetail, FinanceResult, FinancePage, FinanceMovement, FinanceAudit, FinanceCandidate, FinanceSettings, FinancePaymentMethod, FinanceListScope } from "@/types/finance"
+import type { FinanceOverview, FinanceDetail, FinanceResult, FinancePage, FinanceMovement, FinanceAudit, FinanceCandidate, FinanceSettings, FinancePaymentMethod, FinanceListScope, FinanceAuditOperation } from "@/types/finance"
 
 const root = (id: number) => `/api/v1/peladas/${id}/finance`
 const optional = (value: string) => value || null
@@ -8,8 +8,15 @@ export const FINANCE_LISTS_PAGE_SIZE = 10
 export const FINANCE_HISTORY_PAGE_SIZE = 20
 export async function getFinance(id: number, scope: FinanceListScope = "ACTIVE", page = 0): Promise<FinanceOverview> { return (await apiClient.get<FinanceOverview>(root(id), { params: { scope, page, size: FINANCE_LISTS_PAGE_SIZE } })).data }
 export async function getFinanceList(id: number, listId: number): Promise<FinanceDetail> { return (await apiClient.get<FinanceDetail>(`${root(id)}/lists/${listId}`)).data }
-export async function getFinanceMovements(id: number, page = 0): Promise<FinancePage<FinanceMovement>> { return (await apiClient.get<FinancePage<FinanceMovement>>(`${root(id)}/movements`, { params: { page, size: FINANCE_HISTORY_PAGE_SIZE } })).data }
-export async function getFinanceAudit(id: number, page = 0): Promise<FinancePage<FinanceAudit>> { return (await apiClient.get<FinancePage<FinanceAudit>>(`${root(id)}/audit`, { params: { page, size: FINANCE_HISTORY_PAGE_SIZE } })).data }
+// history filters: ISO dates (yyyy-MM-dd, inclusive, the audit's in the pelada's zone) and audit operations; unset = no filter
+export interface FinanceHistoryFilter { from?: string; to?: string; operations?: FinanceAuditOperation[] }
+function historyParams(page: number, { from, to, operations }: FinanceHistoryFilter) {
+  return { page, size: FINANCE_HISTORY_PAGE_SIZE, ...(from ? { from } : {}), ...(to ? { to } : {}), ...(operations?.length ? { operations } : {}) }
+}
+// indexes: null repeats a list (?operations=RECEIVE&operations=REPORT), the form Spring reads
+const historyConfig = (page: number, filter: FinanceHistoryFilter) => ({ params: historyParams(page, filter), paramsSerializer: { indexes: null } })
+export async function getFinanceMovements(id: number, page = 0, filter: Pick<FinanceHistoryFilter, "from" | "to"> = {}): Promise<FinancePage<FinanceMovement>> { return (await apiClient.get<FinancePage<FinanceMovement>>(`${root(id)}/movements`, historyConfig(page, filter))).data }
+export async function getFinanceAudit(id: number, page = 0, filter: FinanceHistoryFilter = {}): Promise<FinancePage<FinanceAudit>> { return (await apiClient.get<FinancePage<FinanceAudit>>(`${root(id)}/audit`, historyConfig(page, filter))).data }
 export async function getFinanceCandidates(id: number, dailyId: number): Promise<FinanceCandidate[]> { return (await apiClient.get<FinanceCandidate[]>(`${root(id)}/daily-candidates/${dailyId}`)).data }
 async function post(id: number, path: string, body: unknown): Promise<FinanceResult> { return (await apiClient.post<FinanceResult>(`${root(id)}${path}`, body)).data }
 async function put(id: number, path: string, body: unknown): Promise<FinanceResult> { return (await apiClient.put<FinanceResult>(`${root(id)}${path}`, body)).data }

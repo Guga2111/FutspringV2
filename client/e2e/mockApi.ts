@@ -5,6 +5,18 @@ const QR_IMAGE = new URL("./assets/qr.png", import.meta.url).pathname
 
 type Handler = (match: RegExpMatchArray, url: URL) => unknown
 
+// the history filters (from / to / operations), so a filter picked in a test shows what the API would answer;
+// without a filter the fixture page as it is (its total may count more pages)
+function filterHistory<T>(page: { items: T[]; hasMore: boolean; total: number }, url: URL, day: (item: T) => string, operation?: (item: T) => string) {
+  const from = url.searchParams.get("from")
+  const to = url.searchParams.get("to")
+  const operations = url.searchParams.getAll("operations")
+  if (!from && !to && operations.length === 0) return page
+  const items = page.items.filter((item) =>
+    (!from || day(item) >= from) && (!to || day(item) <= to) && (operations.length === 0 || !operation || operations.includes(operation(item))))
+  return { items, hasMore: false, total: items.length }
+}
+
 // GET routes the screens read. Anything else answers 404 and is recorded, so a new request
 // shows up as a test failure instead of an error state baked into a screenshot.
 const routes: [RegExp, Handler][] = [
@@ -20,8 +32,8 @@ const routes: [RegExp, Handler][] = [
   [/^\/peladas\/\d+\/invite-link$/, () => f.inviteLink],
   [/^\/peladas\/\d+\/finance$/, () => f.financeOverview],
   [/^\/peladas\/\d+\/finance\/lists\/\d+$/, () => f.financeDetail],
-  [/^\/peladas\/\d+\/finance\/movements$/, () => f.financeMovements],
-  [/^\/peladas\/\d+\/finance\/audit$/, () => ({ items: [], hasMore: false, total: 0 })],
+  [/^\/peladas\/\d+\/finance\/movements$/, (_, url) => filterHistory(f.financeMovements, url, (m) => m.effectiveDate)],
+  [/^\/peladas\/\d+\/finance\/audit$/, (_, url) => filterHistory(f.financeAudit, url, (a) => a.createdAt.slice(0, 10), (a) => a.operation)],
   // both finance tours already seen, so the screenshots show the page, not the tour
   [/^\/tours$/, () => ({ seen: ["FINANCE_MANAGER", "FINANCE_MEMBER"] })],
   [/^\/dailies\/(\d+)$/, (m) => ({ [f.SCHEDULED_ID]: f.scheduledDaily, [f.LIVE_ID]: f.liveDaily, [f.FINISHED_ID]: f.finishedDaily })[Number(m[1])]],

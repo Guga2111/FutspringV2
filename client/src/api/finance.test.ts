@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 vi.mock("@/api/client", () => ({ default: { post: vi.fn(), get: vi.fn(), put: vi.fn() } }))
 import apiClient from "@/api/client"
-import { receiveAllFinance, receiveFinance, reportFinancePayment, saveFinanceList, confirmFinanceNotice, getFinanceImage, refundFinance, getFinance, getFinanceMovements } from "@/api/finance"
+import { receiveAllFinance, receiveFinance, reportFinancePayment, saveFinanceList, confirmFinanceNotice, getFinanceImage, refundFinance, getFinance, getFinanceMovements, getFinanceAudit } from "@/api/finance"
 const command = { revision: 12, requestKey: "ed51d453-c4b5-407e-9709-99348e9fca42", reason: null }
 beforeEach(() => { vi.resetAllMocks(); vi.mocked(apiClient.post).mockResolvedValue({ data: {} }); vi.mocked(apiClient.get).mockResolvedValue({ data: new Blob() }); vi.mocked(apiClient.put).mockResolvedValue({ data: {} }) })
 describe("finance API", () => {
@@ -9,7 +9,15 @@ describe("finance API", () => {
     await getFinance(1, "ARCHIVED", 2)
     expect(apiClient.get).toHaveBeenLastCalledWith("/api/v1/peladas/1/finance", { params: { scope: "ARCHIVED", page: 2, size: 10 } })
     await getFinanceMovements(1, 3)
-    expect(apiClient.get).toHaveBeenLastCalledWith("/api/v1/peladas/1/finance/movements", { params: { page: 3, size: 20 } })
+    expect(apiClient.get).toHaveBeenLastCalledWith("/api/v1/peladas/1/finance/movements", { params: { page: 3, size: 20 }, paramsSerializer: { indexes: null } })
+  })
+  it("sends only the history filters that are set, repeating operations", async () => {
+    await getFinanceMovements(1, 0, { from: "2026-10-01", to: "2026-10-31" })
+    expect(apiClient.get).toHaveBeenLastCalledWith("/api/v1/peladas/1/finance/movements", { params: { page: 0, size: 20, from: "2026-10-01", to: "2026-10-31" }, paramsSerializer: { indexes: null } })
+    await getFinanceAudit(1, 2, { operations: ["RECEIVE", "REPORT"] })
+    expect(apiClient.get).toHaveBeenLastCalledWith("/api/v1/peladas/1/finance/audit", { params: { page: 2, size: 20, operations: ["RECEIVE", "REPORT"] }, paramsSerializer: { indexes: null } })
+    await getFinanceAudit(1, 0, { operations: [] })
+    expect(apiClient.get).toHaveBeenLastCalledWith("/api/v1/peladas/1/finance/audit", { params: { page: 0, size: 20 }, paramsSerializer: { indexes: null } })
   })
   it("receives every listed charge in one command, letting the server take today", async () => {
     await receiveAllFinance(1, 2, command, [5, 6], { effectiveDate: "", method: "CASH" })

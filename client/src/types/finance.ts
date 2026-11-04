@@ -43,6 +43,7 @@ export interface FinanceAudit { id: number; actorId: number; actorName: string; 
 export interface FinancePage<T> { items: T[]; hasMore: boolean; total: number }
 export interface FinanceCandidate { userId: number; name: string; mensalista: boolean }
 export const financeListStatusLabel: Record<FinanceListStatus, string> = { DRAFT: "Rascunho", OPEN: "Aberta", CLOSED: "Encerrada", CANCELED: "Cancelada" }
+export const financeVisibilityLabel: Record<FinanceVisibility, string> = { INDIVIDUAL: "Individual", TRANSPARENT: "Transparente" }
 export const financeClassificationLabel: Record<FinanceClassification, string> = { DAILY: "Diária", MONTHLY: "Mensalidade", OTHER: "Outra" }
 export const financeMethodLabel: Record<FinancePaymentMethod, string> = { PIX: "Pix", CASH: "Dinheiro", TRANSFER: "Transferência", OTHER: "Outro" }
 export const financeMovementLabel: Record<FinanceMovementKind, string> = { OPENING: "Saldo inicial", RECEIPT: "Recebimento", INCOME: "Outra entrada", EXPENSE: "Despesa", REFUND: "Devolução", REVERSAL: "Anulação" }
@@ -90,4 +91,14 @@ export const financeAuditLabel: Record<FinanceAuditOperation, string> = {
   QR: "QR Code atualizado",
   MANAGERS_REVOKED: "Responsabilidade revogada",
   DAILY_DETACHED: "Sessão desvinculada",
+}
+
+// the Histórico tab's type chips: each group filters the audit by these operations
+export type FinanceAuditGroup = "CHARGES" | "PAYMENTS" | "CASH" | "SETTINGS"
+export const financeAuditGroupLabel: Record<FinanceAuditGroup, string> = { CHARGES: "Cobranças", PAYMENTS: "Pagamentos", CASH: "Caixa", SETTINGS: "Configurações" }
+export const financeAuditGroupOperations: Record<FinanceAuditGroup, FinanceAuditOperation[]> = {
+  CHARGES: ["LIST_SAVE", "PUBLISH", "CLOSE", "REOPEN", "CANCEL", "DUPLICATE", "PARTICIPANTS", "CHARGE_SAVE", "CHARGE_REPLACE", "CHARGE_CANCEL"],
+  PAYMENTS: ["RECEIVE", "REPORT", "CONFIRM", "REJECT", "REFUND"],
+  CASH: ["CASH", "REVERSE"],
+  SETTINGS: ["SETTINGS", "MANAGERS", "MANAGERS_REVOKED", "TEMPLATE", "QR", "DAILY_DETACHED"],
 }
