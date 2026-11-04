@@ -3,25 +3,21 @@ import { Link } from "react-router-dom"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { Calendar03Icon, ChampionIcon } from "@hugeicons/core-free-icons"
+import { ChampionIcon } from "@hugeicons/core-free-icons"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Calendar } from "@/components/ui/calendar"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
-import { useIsMobile } from "@/hooks/useIsMobile"
+import { DateRangeFilter } from "@/components/DateRangeFilter"
 import { getFileUrl } from "@/lib/utils"
-import { formatWeekdayDayMonth, parseLocalDate } from "@/utils/dates"
+import { formatWeekdayDayMonth, parseLocalDate, type DateRange } from "@/utils/dates"
 import {
   GALLERY_RESULTS,
   filterGallery,
-  formatRangeLabel,
   formatSessionCount,
   galleryCounts,
   galleryResultLabel,
   gallerySessions,
-  type GalleryRange,
   type GalleryResult,
 } from "@/utils/sessionGallery"
 import { formatLongDate, formatSessionMeta } from "@/utils/sessions"
@@ -34,10 +30,8 @@ interface SessionGalleryProps {
 
 // Finished sessions as champion photos, filtered by the caller's result and a date range
 export function SessionGallery({ dailies, isLoading }: SessionGalleryProps) {
-  const isMobile = useIsMobile()
   const [result, setResult] = useState<GalleryResult>("ALL")
-  const [range, setRange] = useState<GalleryRange | undefined>(undefined)
-  const [rangeOpen, setRangeOpen] = useState(false)
+  const [range, setRange] = useState<DateRange | undefined>(undefined)
 
   const finished = useMemo(() => gallerySessions(dailies), [dailies])
   const counts = useMemo(() => galleryCounts(finished, range), [finished, range])
@@ -95,32 +89,11 @@ export function SessionGallery({ dailies, isLoading }: SessionGalleryProps) {
         <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
           <h3 className="text-title font-semibold">{galleryResultLabel[result]}</h3>
           <div className="flex items-center gap-3">
-            <Popover open={rangeOpen} onOpenChange={setRangeOpen}>
-              <PopoverTrigger asChild>
-                <Button variant="outline" className="h-[34px] gap-1.5 bg-transparent px-3.5 tabular-nums hover:bg-accent">
-                  <HugeiconsIcon icon={Calendar03Icon} className="size-3.5" />
-                  {formatRangeLabel(range)}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="end">
-                <Calendar
-                  mode="range"
-                  locale={ptBR}
-                  numberOfMonths={isMobile ? 1 : 2}
-                  selected={range?.from ? { from: range.from, to: range.to } : undefined}
-                  onSelect={(next) => setRange(next?.from ? { from: next.from, to: next.to } : undefined)}
-                  defaultMonth={range?.from ?? (finished[0] ? parseLocalDate(finished[0].dailyDate) : undefined)}
-                />
-                <div className="flex justify-end gap-2 border-t px-3 py-2">
-                  <Button variant="ghost" size="sm" disabled={!range?.from} onClick={() => setRange(undefined)}>
-                    Limpar
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={() => setRangeOpen(false)}>
-                    Fechar
-                  </Button>
-                </div>
-              </PopoverContent>
-            </Popover>
+            <DateRangeFilter
+              value={range}
+              onChange={setRange}
+              defaultMonth={finished[0] ? parseLocalDate(finished[0].dailyDate) : undefined}
+            />
             <span className="whitespace-nowrap text-body-sm tabular-nums text-subtle-foreground">
               {isLoading ? "…" : formatSessionCount(visible.length)}
             </span>

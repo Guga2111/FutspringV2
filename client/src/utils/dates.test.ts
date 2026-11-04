@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { formatInZone, formatNextSessionShort, formatShortDate, formatWeekdayDayMonth, parseLocalDate } from "./dates"
+import { formatInZone, formatNextSessionShort, formatRangeLabel, formatShortDate, formatWeekdayDayMonth, parseLocalDate } from "./dates"
 
 describe("parseLocalDate", () => {
   it("reads the date in local time", () => {
@@ -43,5 +43,14 @@ describe("formatShortDate", () => {
   })
   it("keeps the year for another year", () => {
     expect(formatShortDate("2025-12-28", now)).toBe("28/12/2025")
+  })
+})
+
+describe("formatRangeLabel", () => {
+  it("names the period", () => {
+    expect(formatRangeLabel(undefined)).toBe("Todo o período")
+    expect(formatRangeLabel({ from: new Date(2026, 9, 8) })).toBe("08/10/2026")
+    expect(formatRangeLabel({ from: new Date(2026, 9, 1), to: new Date(2026, 9, 31) })).toBe("01/10 – 31/10/2026")
+    expect(formatRangeLabel({ from: new Date(2025, 11, 15), to: new Date(2026, 0, 10) })).toBe("15/12/2025 – 10/01/2026")
   })
 })

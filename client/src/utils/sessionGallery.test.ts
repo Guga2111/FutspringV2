@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { filterGallery, formatRangeLabel, formatSessionCount, galleryCounts, gallerySessions } from "./sessionGallery"
+import { filterGallery, formatSessionCount, galleryCounts, gallerySessions } from "./sessionGallery"
 import type { DailyListItem, DailyStatus } from "@/types/daily"
 
 const daily = (id: number, dailyDate: string, wonSession: boolean | null, status: DailyStatus = "FINISHED"): DailyListItem => ({
@@ -58,15 +58,6 @@ describe("galleryCounts", () => {
     const finished = gallerySessions(sessions)
     expect(galleryCounts(finished, undefined)).toEqual({ ALL: 4, WON: 2, NOT_WON: 1 })
     expect(galleryCounts(finished, { from: new Date(2026, 9, 1), to: new Date(2026, 9, 31) })).toEqual({ ALL: 3, WON: 1, NOT_WON: 1 })
-  })
-})
-
-describe("formatRangeLabel", () => {
-  it("names the period", () => {
-    expect(formatRangeLabel(undefined)).toBe("Todo o período")
-    expect(formatRangeLabel({ from: new Date(2026, 9, 8) })).toBe("08/10/2026")
-    expect(formatRangeLabel({ from: new Date(2026, 9, 1), to: new Date(2026, 9, 31) })).toBe("01/10 – 31/10/2026")
-    expect(formatRangeLabel({ from: new Date(2025, 11, 15), to: new Date(2026, 0, 10) })).toBe("15/12/2025 – 10/01/2026")
   })
 })
 

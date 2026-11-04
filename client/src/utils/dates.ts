@@ -44,3 +44,19 @@ export function formatInZone(iso: string, timeZone: string): string {
   const weekday = part("weekday").replace(".", "").toLocaleLowerCase("pt-BR")
   return `${weekday}, ${part("day")}/${part("month")} às ${part("hour")}:${part("minute")}`
 }
+
+// A calendar range (react-day-picker's DateRange shape); `to` missing means a single day
+export interface DateRange {
+  from?: Date
+  to?: Date
+}
+
+// "Todo o período", "08/10/2026", "01/10 – 31/10/2026" or "15/12/2025 – 10/01/2026"
+export function formatRangeLabel(range: DateRange | undefined): string {
+  if (!range?.from) return "Todo o período"
+  const { from } = range
+  const to = range.to ?? from
+  if (format(from, "yyyy-MM-dd") === format(to, "yyyy-MM-dd")) return format(from, "dd/MM/yyyy")
+  if (from.getFullYear() === to.getFullYear()) return `${format(from, "dd/MM")} – ${format(to, "dd/MM/yyyy")}`
+  return `${format(from, "dd/MM/yyyy")} – ${format(to, "dd/MM/yyyy")}`
+}
