@@ -39,7 +39,7 @@ export function cancelFinanceCharge(id: number, listId: number, chargeId: number
 export function receiveFinance(id: number, listId: number, chargeId: number, command: FinanceCommand, values: FinanceReceiptValues, remaining = false) {
   return post(id, `/lists/${listId}/charges/${chargeId}/receive`, { command, amount: remaining ? null : values.amount, effectiveDate: optional(values.effectiveDate), method: values.method })
 }
-// "Receber todos": each charge receives what it still owes, all or nothing (one revision, one audit entry)
+// "Receber selecionados": each charge receives what it still owes, all or nothing (one revision, one audit entry)
 export function receiveAllFinance(id: number, listId: number, command: FinanceCommand, chargeIds: number[], values: FinanceReceiveAllValues) {
   return post(id, `/lists/${listId}/receive-all`, { command, chargeIds, effectiveDate: optional(values.effectiveDate), method: values.method })
 }

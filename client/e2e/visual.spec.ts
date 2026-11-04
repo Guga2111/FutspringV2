@@ -138,6 +138,18 @@ test("finance manager: collection with its Pix", async ({ page }) => {
   expect(unmatched, "requests without a fixture").toEqual([])
 })
 
+test("finance manager: selecting charges to receive", async ({ page }) => {
+  const unmatched = await open(page, FINANCE)
+  await page.getByRole("button", { name: /Mensalidade de novembro/ }).click()
+  await page.getByRole("button", { name: "Selecionar", exact: true }).click()
+  await page.getByRole("button", { name: /Selecionar todos a receber/ }).first().click()
+  await expect(page.getByRole("toolbar", { name: "Ações em massa" })).toBeVisible()
+  await settle(page)
+  await expectNoHorizontalScroll(page)
+  await expect(page).toHaveScreenshot("finance-detail-selection.png", { fullPage: true })
+  expect(unmatched, "requests without a fixture").toEqual([])
+})
+
 test("finance manager: cash with numbered pages", async ({ page }) => {
   const unmatched = await open(page, FINANCE)
   await page.getByRole("tab", { name: "Caixa" }).click()
