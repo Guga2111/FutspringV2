@@ -84,6 +84,21 @@ for (const { name, path, auth, ready } of pages) {
   })
 }
 
+// Collapsed sidebar: every row is one 40 px square at the same x (icons and avatars on one axis)
+test("sidebar collapsed", async ({ page }, testInfo) => {
+  test.skip(!testInfo.project.name.startsWith("desktop"), "below md the sidebar is a Sheet")
+  await page.addInitScript(() => localStorage.setItem("sidebar_open", "false"))
+  await open(page, PELADA)
+  const sidebar = page.locator('[data-sidebar="sidebar"]')
+  const left = (await sidebar.boundingBox())?.x ?? 0
+  const tiles = sidebar.locator('[data-sidebar="header"] button, [data-sidebar="menu-button"], [aria-label="Nova pelada"]')
+  expect(await tiles.count()).toBeGreaterThanOrEqual(6)
+  for (const box of await tiles.evaluateAll((els) => els.map((el) => el.getBoundingClientRect().toJSON()))) {
+    expect({ x: box.x - left, width: box.width, height: box.height }).toEqual({ x: 12, width: 40, height: 40 })
+  }
+  await expect(sidebar).toHaveScreenshot("sidebar-collapsed.png")
+})
+
 test("dialog compare players", async ({ page }) => {
   await open(page, `${PELADA}/ranking`)
   await page.getByRole("button", { name: "Ações", exact: true }).click()
