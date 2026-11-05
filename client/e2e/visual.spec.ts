@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test"
 import { mockApi, login } from "./mockApi"
-import { FINISHED_ID, LIVE_ID, NOW, PELADA_ID, SCHEDULED_ID, financeMemberDetail, financeMemberOverview } from "./fixtures"
+import { FINISHED_ID, LIVE_ID, NOW, PELADA_ID, SCHEDULED_ID, financeDetail, financeMemberDetail, financeMemberOverview } from "./fixtures"
 
 const PELADA = `/pelada/${PELADA_ID}`
 
@@ -164,6 +164,22 @@ test("finance manager: selecting charges to receive", async ({ page }) => {
   await settle(page)
   await expectNoHorizontalScroll(page)
   await expect(page).toHaveScreenshot("finance-detail-selection.png", { fullPage: true })
+  expect(unmatched, "requests without a fixture").toEqual([])
+})
+
+test("finance manager: deep link and WhatsApp message", async ({ page }) => {
+  await page.clock.setFixedTime(NOW)
+  const unmatched = await mockApi(page)
+  await login(page)
+  // the link of the message opens the collection directly
+  await page.goto(`${FINANCE}/${financeDetail.collection.id}`)
+  await expect(page.getByRole("heading", { name: financeDetail.collection.name })).toBeVisible({ timeout: READY_TIMEOUT })
+  await page.getByRole("button", { name: "Opções da cobrança" }).click()
+  await page.getByRole("menuitem", { name: "Compartilhar no WhatsApp" }).click()
+  const dialog = page.getByRole("dialog", { name: "Compartilhar no WhatsApp" })
+  await expect(dialog.getByLabel("Mensagem")).toHaveValue(new RegExp(`financeiro/${financeDetail.collection.id}$`))
+  await settle(page)
+  await expect(page).toHaveScreenshot("finance-whatsapp.png", DIALOG_SHOT)
   expect(unmatched, "requests without a fixture").toEqual([])
 })
 
