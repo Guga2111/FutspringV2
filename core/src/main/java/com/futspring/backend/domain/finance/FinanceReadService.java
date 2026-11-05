@@ -84,13 +84,17 @@ public class FinanceReadService {
     private Data data(List<FinanceCharge> rows) {
         if (rows.isEmpty()) return new Data(Map.of(), Map.of());
         var ids = rows.stream().map(FinanceCharge::getId).toList();
-        Map<Long, BigDecimal> paid = new HashMap<>();
-        movements.findByChargeIdIn(ids).forEach(m -> paid.merge(m.getChargeId(), m.getAmount(), BigDecimal::add));
-        return new Data(paid, notices.recentByChargeIds(ids).stream().collect(Collectors.groupingBy(FinanceNotice::getChargeId)));
+        return new Data(paid(rows), notices.recentByChargeIds(ids).stream().collect(Collectors.groupingBy(FinanceNotice::getChargeId)));
     }
-    // Received so far per charge, in one query for the whole batch
-    Map<Long, BigDecimal> paid(List<FinanceCharge> rows) { return data(rows).paid(); }
-    BigDecimal paid(FinanceCharge charge) { return data(List.of(charge)).paid().getOrDefault(charge.getId(), ZERO); }
+    // Received so far per charge, in one query for the whole batch (notices are not loaded)
+    Map<Long, BigDecimal> paid(List<FinanceCharge> rows) {
+        if (rows.isEmpty()) return Map.of();
+        Map<Long, BigDecimal> paid = new HashMap<>();
+        movements.findByChargeIdIn(rows.stream().map(FinanceCharge::getId).toList())
+                .forEach(m -> paid.merge(m.getChargeId(), m.getAmount(), BigDecimal::add));
+        return paid;
+    }
+    BigDecimal paid(FinanceCharge charge) { return paid(List.of(charge)).getOrDefault(charge.getId(), ZERO); }
     BigDecimal remaining(FinanceCharge charge) { return charge.getAmountDue().subtract(paid(charge)); }
     FinanceViews.Collection collection(FinanceList list, List<FinanceCharge> rows, Data data) { return collection(list, rows, data, true); }
     private FinanceViews.Collection collection(FinanceList list, List<FinanceCharge> rows, Data data, boolean includeComponents) {
