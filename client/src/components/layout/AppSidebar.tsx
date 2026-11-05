@@ -11,11 +11,13 @@ import {
   SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
+  SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarMenuSkeleton,
 } from "@/components/ui/sidebar"
 import { useSidebar } from "@/components/ui/sidebar-context"
+import { useMyInvitationsContext } from "@/hooks/useMyInvitationsContext"
 import { useMyPeladasContext } from "@/hooks/useMyPeladasContext"
 import { SidebarPeladaItem } from "@/components/layout/SidebarPeladaItem"
 import { UserMenu } from "@/components/layout/UserMenu"
@@ -28,6 +30,11 @@ export function AppSidebar() {
   const { peladas, loading, openCreatePelada } = useMyPeladasContext()
   const { isMobile, state, toggleSidebar, setOpenMobile } = useSidebar()
   const closeOnMobile = () => setOpenMobile(false)
+  // pending invitations are answered on Home, so their count sits on "Início"
+  const invitations = useMyInvitationsContext()
+  const inviteCount = invitations.items.length
+  const inviteLabel = `${inviteCount}${invitations.hasMore ? "+" : ""}`
+  const inviteText = inviteCount ? `${inviteLabel} ${inviteCount === 1 && !invitations.hasMore ? "convite pendente" : "convites pendentes"}` : null
 
   return (
     <Sidebar collapsible="icon" className="border-sidebar-border">
@@ -65,7 +72,7 @@ export function AppSidebar() {
               <SidebarMenuButton
                 asChild
                 isActive={pathname === "/home"}
-                tooltip="Início"
+                tooltip={inviteText ? `Início · ${inviteText}` : "Início"}
                 className={cn(
                   "h-auto gap-2.5 rounded-lg px-2.5 py-2 font-medium text-muted-foreground hover:bg-sidebar-accent/70 hover:text-foreground data-[active=true]:text-foreground",
                   collapsedTile,
@@ -73,9 +80,21 @@ export function AppSidebar() {
               >
                 <Link to="/home" onClick={closeOnMobile}>
                   <HugeiconsIcon icon={Home01Icon} />
-                  <span>Início</span>
+                  <span>
+                    Início
+                    {inviteText && <span className="sr-only">, {inviteText}</span>}
+                  </span>
                 </Link>
               </SidebarMenuButton>
+              {inviteText && (
+                <>
+                  <SidebarMenuBadge aria-hidden className="right-2 top-1/2 -translate-y-1/2 rounded-full peer-data-[size=default]/menu-button:top-1/2 bg-brand px-1.5 text-brand-foreground peer-hover/menu-button:text-brand-foreground peer-data-[active=true]/menu-button:text-brand-foreground">
+                    {inviteLabel}
+                  </SidebarMenuBadge>
+                  {/* collapsed: a dot on the tile instead of the count */}
+                  <span aria-hidden className="pointer-events-none absolute left-7 top-1.5 hidden size-2 rounded-full bg-brand group-data-[collapsible=icon]:block" />
+                </>
+              )}
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarGroup>
