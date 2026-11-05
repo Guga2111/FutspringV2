@@ -38,8 +38,8 @@ describe("financeWhatsAppMessage", () => {
     charge(8, "Convidado Rui", { userId: null }),
   ]
 
-  it("lists names in transparent mode, sorted without accents or case", () => {
-    expect(financeWhatsAppMessage(detail(charges), "TRANSPARENT", LINK, TODAY)).toBe([
+  it("names who owes, who is under review and who paid, sorted without accents or case", () => {
+    expect(financeWhatsAppMessage(detail(charges), LINK, TODAY)).toBe([
       "*Mensalidade de novembro*",
       "Vence 15/11",
       "",
@@ -63,24 +63,8 @@ describe("financeWhatsAppMessage", () => {
     ].join("\n"))
   })
 
-  it("is anonymous in individual mode, with exact totals", () => {
-    const text = financeWhatsAppMessage(detail(charges), "INDIVIDUAL", LINK, TODAY)
-    expect(text).toContain("⏳ 4 pessoas ainda não pagaram · R$ 162,00 em aberto")
-    expect(text).toContain("🔎 1 pagamento em conferência")
-    expect(text).toContain("✅ 2 já pagaram")
-    expect(text).not.toContain("Ana")
-    expect(text).not.toContain("Carla")
-  })
-
-  it("uses the singular for one person", () => {
-    const text = financeWhatsAppMessage(detail([charge(1, "Ana"), paid(2, "Bia"), charge(3, "Caio", { notices: [pendingNotice] }), charge(4, "Duda", { notices: [pendingNotice] })]), "INDIVIDUAL", LINK, TODAY)
-    expect(text).toContain("⏳ 1 pessoa ainda não pagou · R$ 45,50 em aberto")
-    expect(text).toContain("✅ 1 já pagou")
-    expect(text).toContain("🔎 2 pagamentos em conferência")
-  })
-
   it("says everybody paid when nobody owes and nothing is under review", () => {
-    const text = financeWhatsAppMessage(detail([paid(1, "Ana"), paid(2, "Bia"), charge(3, "Caio", { canceled: true })]), "TRANSPARENT", LINK, TODAY)
+    const text = financeWhatsAppMessage(detail([paid(1, "Ana"), paid(2, "Bia"), charge(3, "Caio", { canceled: true })]), LINK, TODAY)
     expect(text).toContain("✅ Todos pagaram!")
     expect(text).not.toContain("Pagos")
     expect(text).not.toContain("Faltam")
@@ -88,7 +72,7 @@ describe("financeWhatsAppMessage", () => {
 
   it("shows a single component as Valor and omits empty blocks", () => {
     const one = [{ name: "Diária", amount: "20.00" }]
-    const text = financeWhatsAppMessage(detail([charge(1, "Ana", { components: one })], { components: one }), "TRANSPARENT", LINK, TODAY)
+    const text = financeWhatsAppMessage(detail([charge(1, "Ana", { components: one })], { components: one }), LINK, TODAY)
     expect(text).toContain("Valor: R$ 20,00")
     expect(text).not.toContain("Total")
     expect(text).not.toContain("Pagos")
@@ -96,22 +80,22 @@ describe("financeWhatsAppMessage", () => {
   })
 
   it("notes different values from an adjustment or other components, ignoring canceled charges", () => {
-    const adjusted = financeWhatsAppMessage(detail([charge(1, "Ana", { adjustment: "-5.00" })]), "TRANSPARENT", LINK, TODAY)
+    const adjusted = financeWhatsAppMessage(detail([charge(1, "Ana", { adjustment: "-5.00" })]), LINK, TODAY)
     expect(adjusted).toContain("Alguns participantes têm valor diferente.")
-    const other = financeWhatsAppMessage(detail([charge(1, "Ana", { components: [{ name: "Campo", amount: "40.00" }] })]), "TRANSPARENT", LINK, TODAY)
+    const other = financeWhatsAppMessage(detail([charge(1, "Ana", { components: [{ name: "Campo", amount: "40.00" }] })]), LINK, TODAY)
     expect(other).toContain("Alguns participantes têm valor diferente.")
-    const canceled = financeWhatsAppMessage(detail([charge(1, "Ana"), charge(2, "Bia", { canceled: true, adjustment: "3.00" })]), "TRANSPARENT", LINK, TODAY)
+    const canceled = financeWhatsAppMessage(detail([charge(1, "Ana"), charge(2, "Bia", { canceled: true, adjustment: "3.00" })]), LINK, TODAY)
     expect(canceled).not.toContain("Alguns participantes")
   })
 
   it("reads due dates against today and drops the Pix line without a key", () => {
-    expect(financeWhatsAppMessage(detail([charge(1, "Ana")], { dueDate: "2026-11-04" }), "TRANSPARENT", LINK, TODAY)).toContain("Venceu 04/11")
-    expect(financeWhatsAppMessage(detail([charge(1, "Ana")], { dueDate: TODAY }), "TRANSPARENT", LINK, TODAY)).toContain("Vence 05/11")
-    expect(financeWhatsAppMessage(detail([charge(1, "Ana")], { dueDate: "2027-01-10" }), "TRANSPARENT", LINK, TODAY)).toContain("Vence 10/01/2027")
-    const plain = financeWhatsAppMessage(detail([charge(1, "Ana")], { dueDate: null, pixKey: null }), "TRANSPARENT", LINK, TODAY)
+    expect(financeWhatsAppMessage(detail([charge(1, "Ana")], { dueDate: "2026-11-04" }), LINK, TODAY)).toContain("Venceu 04/11")
+    expect(financeWhatsAppMessage(detail([charge(1, "Ana")], { dueDate: TODAY }), LINK, TODAY)).toContain("Vence 05/11")
+    expect(financeWhatsAppMessage(detail([charge(1, "Ana")], { dueDate: "2027-01-10" }), LINK, TODAY)).toContain("Vence 10/01/2027")
+    const plain = financeWhatsAppMessage(detail([charge(1, "Ana")], { dueDate: null, pixKey: null }), LINK, TODAY)
     expect(plain).not.toContain("Vence")
     expect(plain).not.toContain("Pix:")
-    expect(financeWhatsAppMessage(detail([charge(1, "Ana")], { pixRecipient: null }), "TRANSPARENT", LINK, TODAY)).toContain("Pix: pix@futspring.com\n")
+    expect(financeWhatsAppMessage(detail([charge(1, "Ana")], { pixRecipient: null }), LINK, TODAY)).toContain("Pix: pix@futspring.com\n")
   })
 })
 

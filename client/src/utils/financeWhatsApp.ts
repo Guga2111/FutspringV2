@@ -1,5 +1,5 @@
 import { normalizeSearch } from "@/lib/utils"
-import type { FinanceCharge, FinanceComponent, FinanceDetail, FinanceVisibility } from "@/types/finance"
+import type { FinanceCharge, FinanceComponent, FinanceDetail } from "@/types/finance"
 import { formatFinanceMoney, pendingFinanceNotice, sumFinanceAmounts } from "@/utils/finance"
 import { formatShortDate, parseLocalDate } from "@/utils/dates"
 
@@ -11,15 +11,15 @@ export function whatsAppUrl(text: string): string {
 }
 
 const byName = (a: FinanceCharge, b: FinanceCharge) => normalizeSearch(a.name).localeCompare(normalizeSearch(b.name), "pt-BR")
-const plural = (n: number, one: string, many: string) => (n === 1 ? one : many)
 
 function sameComponents(a: FinanceComponent[], b: FinanceComponent[]): boolean {
   return a.length === b.length && a.every((c, i) => c.name === b[i].name && c.amount === b[i].amount)
 }
 
 // The WhatsApp message of an open collection, built from the detail on screen (plain text, *bold* in WhatsApp's syntax).
-// visibility: names only in TRANSPARENT mode; today: "yyyy-MM-dd" in the pelada's zone
-export function financeWhatsAppMessage(detail: FinanceDetail, visibility: FinanceVisibility, link: string, today: string): string {
+// Only managers build it, and they see every charge: it always names who owes and who paid, whatever the
+// visibility members have in the app. today: "yyyy-MM-dd" in the pelada's zone
+export function financeWhatsAppMessage(detail: FinanceDetail, link: string, today: string): string {
   const list = detail.collection
   const now = parseLocalDate(today)
   const blocks: string[] = []
@@ -50,7 +50,7 @@ export function financeWhatsAppMessage(detail: FinanceDetail, visibility: Financ
   if (active.length > 0) {
     const status: string[] = []
     if (debtors.length === 0 && reviewing.length === 0) status.push("✅ Todos pagaram!")
-    else if (visibility === "TRANSPARENT") {
+    else {
       if (debtors.length > 0) {
         status.push(`⏳ Faltam pagar (${debtors.length}):`)
         debtors.forEach((c, i) => {
@@ -62,13 +62,6 @@ export function financeWhatsAppMessage(detail: FinanceDetail, visibility: Financ
         status.push(`✅ Pagos (${paid.length}):`)
         paid.forEach((c, i) => status.push(`${i + 1}. ${c.name} — ${formatFinanceMoney(c.amountDue)}`))
       }
-    } else {
-      if (debtors.length > 0) {
-        const open = formatFinanceMoney(sumFinanceAmounts(debtors.map((c) => c.outstanding)))
-        status.push(`⏳ ${debtors.length} ${plural(debtors.length, "pessoa ainda não pagou", "pessoas ainda não pagaram")} · ${open} em aberto`)
-      }
-      if (reviewing.length > 0) status.push(`🔎 ${reviewing.length} ${plural(reviewing.length, "pagamento em conferência", "pagamentos em conferência")}`)
-      if (paid.length > 0) status.push(`✅ ${paid.length} ${plural(paid.length, "já pagou", "já pagaram")}`)
     }
     blocks.push(status.join("\n"))
   }

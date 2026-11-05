@@ -11,7 +11,7 @@ O gestor financeiro de uma pelada gera, a partir de uma cobrança aberta, uma me
 | Tema | Decisão |
 |------|---------|
 | Composição | Os componentes da lista aparecem **uma vez no topo** (preço por pessoa + total); depois uma lista única de devedores com o valor que falta para cada um |
-| Privacidade | Nomes **só no modo Transparente**. No modo Individual (padrão) a mensagem é anônima: contagens e total em aberto |
+| Privacidade | A mensagem **sempre lista nomes e valores**: só gestores a montam, e o gestor vê todas as cobranças. A visibilidade Individual / Transparente vale só para o que os membros veem no app (revisado em 2026-11-05; antes a mensagem era anônima no modo Individual) |
 | Link | Deep link novo para a cobrança no app (`/pelada/:id/financeiro/:listId`), com login; nenhuma página pública |
 | Onde a mensagem é montada | **No frontend**, a partir do `FinanceDetail` já carregado na tela: nenhum endpoint e nenhuma requisição nova (evitar carga no servidor) |
 | Prévia | **Editável** antes de copiar/enviar; a edição não é salva |
@@ -30,8 +30,7 @@ Abordagens descartadas: o backend renderizar o texto (`GET /lists/{id}/share-tex
    - um componente: só `Valor: R$ {valor}`;
    - se algum participante ativo tiver composição/ajuste diferente da lista: a nota `Alguns participantes têm valor diferente.`
 3. Situação dos pagamentos:
-   - **Transparente:** `⏳ Faltam pagar ({n}):` e uma linha numerada por devedor `{n}. {nome} — R$ {outstanding}`, com ` (parcial)` quando `PARTIAL` e ` ⚠️ vencida` quando `overdue`; depois `✅ Pagos ({n}):` e uma linha numerada por pago `{n}. {nome} — R$ {valor devido}`. Convidados entram pelo nome.
-   - **Individual:** `⏳ {n} pessoas ainda não pagaram · R$ {total em aberto} em aberto` e `✅ {n} já pagaram` (singular quando 1).
+   - `⏳ Faltam pagar ({n}):` e uma linha numerada por devedor `{n}. {nome} — R$ {outstanding}`, com ` (parcial)` quando `PARTIAL` e ` ⚠️ vencida` quando `overdue`; depois `✅ Pagos ({n}):` e uma linha numerada por pago `{n}. {nome} — R$ {valor devido}`. Convidados entram pelo nome.
    - Ninguém devendo: `✅ Todos pagaram!` no lugar dos blocos acima.
 4. Pix da própria lista (`collection.pixKey` / `pixRecipient`, os que a lista gravou): `Pix: {chave} ({recebedor})`; a linha some sem chave.
 5. `👉 Pague e informe aqui: {link}`.
@@ -39,7 +38,7 @@ Abordagens descartadas: o backend renderizar o texto (`GET /lists/{id}/share-tex
 **Regras dos dados:**
 
 - Cobranças canceladas (`canceled`) nunca entram em nenhuma contagem.
-- Quem tem um aviso de pagamento pendente (`notices` com `PENDING`) não entra em "Faltam pagar" (está sendo conferido, não deve ser cobrado à toa) nem em "Pagos"; no Transparente aparece a linha `🔎 Conferindo ({n}): {nomes}`, no Individual `🔎 {n} pagamentos em conferência`. Só aparece quando houver algum.
+- Quem tem um aviso de pagamento pendente (`notices` com `PENDING`) não entra em "Faltam pagar" (está sendo conferido, não deve ser cobrado à toa) nem em "Pagos"; aparece a linha `🔎 Conferindo ({n}): {nomes}`. Só aparece quando houver algum.
 - Devedor = não cancelado, sem aviso pendente, `outstanding` > 0. Pago = não cancelado, `paymentStatus` `PAID`.
 - Devedores e pagos ordenados por nome, sem diferenciar acento/caixa (`normalizeSearch`).
 - Valores com `formatFinanceMoney` e somas em string exata (helpers de `utils/finance.ts`), sem ponto flutuante.
@@ -64,7 +63,6 @@ Abordagens descartadas: o backend renderizar o texto (`GET /lists/{id}/share-tex
 |------|---------------|
 | Mensagem | `Textarea` com `Label` "Mensagem", preenchido com o texto gerado ao abrir; cresce com o conteúdo até uma altura máxima, depois rola. **Editável** |
 | Restaurar texto original | Botão `ghost`, visível só depois de uma edição; volta ao texto gerado |
-| Aviso | Só no modo Individual, `Alert` discreto: "Modo Individual: a mensagem não mostra quem deve. Para listar nomes, mude para Transparente em Configurações." |
 | **Abrir no WhatsApp** | `Button variant="brand"`; abre `https://wa.me/?text={encodeURIComponent(texto)}` em nova aba (no celular abre o app para escolher o grupo; o texto chega editável) |
 | Copiar | `outline`; `navigator.clipboard.writeText`, toast "Mensagem copiada" (erro: toast "Não foi possível copiar") |
 | Compartilhar | Botão de ícone (`aria-label="Compartilhar"`), só onde `navigator.share` existe, como em `InviteLinkCard` |
@@ -79,7 +77,7 @@ Abordagens descartadas: o backend renderizar o texto (`GET /lists/{id}/share-tex
 
 ### Código
 
-- `utils/financeWhatsApp.ts`: função pura `financeWhatsAppMessage(detail, visibility, link, today)` → `string` (sem React), com testes ao lado.
+- `utils/financeWhatsApp.ts`: função pura `financeWhatsAppMessage(detail, link, today)` → `string` (sem React), com testes ao lado.
 - `components/finance/FinanceWhatsAppDialog.tsx`: o diálogo.
 - Ajustes em `FinanceListDetail` (item do menu), `FinanceTab` / `useFinance` (seleção pela URL), `App.tsx` (rota), `utils/peladaAreas.ts`.
 
@@ -87,10 +85,10 @@ Abordagens descartadas: o backend renderizar o texto (`GET /lists/{id}/share-tex
 
 **Testes (Vitest):**
 
-- `utils/financeWhatsApp.test.ts`: Transparente vs Individual; um componente vs vários; nota de valores diferentes; parcial; vencida; conferindo fora dos devedores; canceladas fora; convidados; "Todos pagaram"; sem Pix; sem vencimento / venceu; ordem sem acento; singular/plural; valores exatos em string.
+- `utils/financeWhatsApp.test.ts`: um componente vs vários; nota de valores diferentes; parcial; vencida; conferindo fora dos devedores; canceladas fora; convidados; "Todos pagaram"; sem Pix; sem vencimento / venceu; ordem sem acento; singular/plural; valores exatos em string.
 - `utils/peladaAreas.test.ts`: `financeiro/42` reconhecido como Financeiro.
 
-**Visual (Playwright):** snapshot do diálogo numa lista Aberta em modo Transparente (sem fixture nova: nenhum endpoint novo); o deep link abrindo o detalhe direto.
+**Visual (Playwright):** snapshot do diálogo numa lista Aberta (sem fixture nova: nenhum endpoint novo); o deep link abrindo o detalhe direto.
 
 **Docs:** `client/docs/FRONTEND.md` — rota `/pelada/:id/financeiro/:listId` na tabela de rotas e em "Pelada navigation", o diálogo na seção Financeiro, o util e o componente na árvore de pastas. `core/docs/BACKEND.md` não muda.
 
@@ -107,7 +105,8 @@ Abordagens descartadas: o backend renderizar o texto (`GET /lists/{id}/share-tex
 - `areaFromPath` só aceita segundo segmento em `financeiro/<dígitos>`; qualquer outro continua desconhecido.
 - "Hoje" no fuso da pelada: novo `todayInZone(timeZone)` em `utils/dates.ts`; "Venceu" quando `dueDate` é anterior a hoje (no dia do vencimento ainda é "Vence").
 - Blocos vazios somem: sem pagos não há "✅ Pagos" / "já pagaram"; sem conferência, sem "🔎"; sem participantes ativos, sem bloco de situação. "✅ Todos pagaram!" só quando ninguém deve **e** ninguém está em conferência.
-- Pix sem recebedor: `Pix: {chave}`. Singulares: "1 pessoa ainda não pagou", "1 já pagou", "1 pagamento em conferência".
+- Pix sem recebedor: `Pix: {chave}`.
 - Limite do "Abrir no WhatsApp": a **URL codificada** acima de 2000 caracteres (`WHATSAPP_URL_MAX`), porque emoji e acentos ocupam vários caracteres codificados.
 - O diálogo é montado só enquanto aberto (como `FinanceReceiveAllDialog`), então reabrir sempre gera o texto de novo. O campo cresce com `field-sizing: content` até 50vh; navegadores sem suporte ficam com 10 linhas e rolagem.
-- Snapshot visual `finance-whatsapp.png` (4 projetos): abre `/financeiro/50` direto e troca a visibilidade da fixture para Transparente com um `page.route` no teste, sem fixture nova.
+- Snapshot visual `finance-whatsapp.png` (4 projetos): abre `/financeiro/50` direto, com as fixtures existentes.
+- Revisão (2026-11-05): a mensagem passou a listar nomes e valores sempre (também os pagos, com o valor devido) e o aviso do modo Individual saiu do diálogo; a visibilidade controla só o app dos membros.

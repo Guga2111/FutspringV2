@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test"
 import { mockApi, login } from "./mockApi"
-import { FINISHED_ID, LIVE_ID, NOW, PELADA_ID, SCHEDULED_ID, financeDetail, financeMemberDetail, financeMemberOverview, financeOverview } from "./fixtures"
+import { FINISHED_ID, LIVE_ID, NOW, PELADA_ID, SCHEDULED_ID, financeDetail, financeMemberDetail, financeMemberOverview } from "./fixtures"
 
 const PELADA = `/pelada/${PELADA_ID}`
 
@@ -170,8 +170,6 @@ test("finance manager: selecting charges to receive", async ({ page }) => {
 test("finance manager: deep link and WhatsApp message", async ({ page }) => {
   await page.clock.setFixedTime(NOW)
   const unmatched = await mockApi(page)
-  // registered later, so it answers before the default fixture: names are listed only in transparent mode
-  await page.route(/\/finance(\?|$)/, (route) => route.fulfill({ json: { ...financeOverview, settings: { ...financeOverview.settings, visibility: "TRANSPARENT" } } }))
   await login(page)
   // the link of the message opens the collection directly
   await page.goto(`${FINANCE}/${financeDetail.collection.id}`)

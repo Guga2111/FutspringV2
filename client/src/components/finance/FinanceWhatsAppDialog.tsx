@@ -2,14 +2,13 @@ import { useState } from "react"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { Copy01Icon, Share08Icon, WhatsappIcon } from "@hugeicons/core-free-icons"
 import { toast } from "sonner"
-import type { FinanceDetail, FinanceVisibility } from "@/types/finance"
+import type { FinanceDetail } from "@/types/finance"
 import { financeWhatsAppMessage, whatsAppUrl, WHATSAPP_URL_MAX } from "@/utils/financeWhatsApp"
 import { todayInZone } from "@/utils/dates"
 import { areaPath } from "@/utils/peladaAreas"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 
 const canShare = typeof navigator !== "undefined" && typeof navigator.share === "function"
@@ -17,12 +16,12 @@ const canShare = typeof navigator !== "undefined" && typeof navigator.share === 
 // "Compartilhar no WhatsApp": the message is built from the detail on screen when the dialog opens (no request) and can be
 // edited before sending; the edit is not saved, reopening builds it again from the current data.
 // Plain useState, no react-hook-form: nothing goes to the server and the only rule is "not empty".
-export function FinanceWhatsAppDialog({ peladaId, detail, visibility, timeZone, onClose }: {
-  peladaId: number; detail: FinanceDetail; visibility: FinanceVisibility; timeZone: string; onClose: () => void
+export function FinanceWhatsAppDialog({ peladaId, detail, timeZone, onClose }: {
+  peladaId: number; detail: FinanceDetail; timeZone: string; onClose: () => void
 }) {
   const [original] = useState(() => {
     const link = `${window.location.origin}${areaPath(peladaId, "finance")}/${detail.collection.id}`
-    return financeWhatsAppMessage(detail, visibility, link, todayInZone(timeZone))
+    return financeWhatsAppMessage(detail, link, todayInZone(timeZone))
   })
   const [text, setText] = useState(original)
   const empty = text.trim() === ""
@@ -54,11 +53,6 @@ export function FinanceWhatsAppDialog({ peladaId, detail, visibility, timeZone, 
           <DialogTitle>Compartilhar no WhatsApp</DialogTitle>
           <DialogDescription>Revise a mensagem e envie para o grupo. O link leva direto a esta cobrança no app.</DialogDescription>
         </DialogHeader>
-        {visibility === "INDIVIDUAL" && (
-          <Alert>
-            <AlertDescription>Modo Individual: a mensagem não mostra quem deve. Para listar nomes, mude para Transparente em Configurações.</AlertDescription>
-          </Alert>
-        )}
         <div className="flex min-w-0 flex-col gap-2">
           <div className="flex min-h-8 items-center justify-between gap-2">
             <Label htmlFor="finance-whatsapp-message">Mensagem</Label>
