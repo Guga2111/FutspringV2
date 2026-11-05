@@ -7,6 +7,7 @@ import {
   confirmAttendance,
   disconfirmAttendance,
   markBumpsSeen,
+  saveTeams as saveTeamsRequest,
   sortTeams,
   swapPlayers,
   updateDailyStatus,
@@ -15,9 +16,10 @@ import {
   uploadChampionImage,
 } from '@/api/dailies'
 import { useNotificationsContext } from '@/hooks/useNotificationsContext'
-import { getErrorMessage } from '@/lib/errors'
+import { getErrorMessage, getErrorStatus } from '@/lib/errors'
 import { validateImageFile } from '@/schemas/upload'
 import type { DailyDetail, DailyStatus, TeamDTO } from '@/types/daily'
+import type { SaveTeamsInput } from '@/api/dailies'
 
 interface Options {
   daily: DailyDetail | null
@@ -110,15 +112,31 @@ export function useDailyActions({ daily, setDaily, refetch }: Options) {
     setSwapLoading(false)
   }
 
+  // A 409 (the teams can't start: attendance changed meanwhile) shows the server's reason and reloads the session
   async function changeStatus(targetStatus: DailyStatus): Promise<boolean> {
     if (!daily) return false
     setStatusLoading(true)
-    const ok = await run(async () => {
+    try {
       const updated = await updateDailyStatus(daily.id, targetStatus)
       setDaily((prev) => (prev ? { ...prev, status: updated.status, isFinished: updated.isFinished } : prev))
-    }, 'Status atualizado', 'Não foi possível atualizar o status', false)
-    setStatusLoading(false)
-    return ok
+      toast.success('Status atualizado')
+      return true
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Não foi possível atualizar o status'))
+      if (getErrorStatus(error) === 409) await refetch()
+      return false
+    } finally {
+      setStatusLoading(false)
+    }
+  }
+
+  // The teams editor is a form: it handles the error itself, so this rethrows instead of toasting it
+  async function saveTeams(payload: SaveTeamsInput) {
+    if (!daily) return
+    const teams = await saveTeamsRequest(daily.id, payload)
+    setDaily((prev) => (prev ? { ...prev, teams } : prev))
+    setSelectedPlayer(null)
+    toast.success('Times salvos')
   }
 
   async function uploadChampion(file: File) {
@@ -184,6 +202,7 @@ export function useDailyActions({ daily, setDaily, refetch }: Options) {
     handleSortTeams,
     handlePlayerClick,
     changeStatus,
+    saveTeams,
     uploadChampion,
     changeTeamName,
     changeTeamColor,

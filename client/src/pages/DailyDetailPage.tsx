@@ -9,6 +9,8 @@ import { ResultsDialog } from '@/components/daily/ResultsDialog'
 import FinalizeModal from '@/components/daily/FinalizeModal'
 import DeleteDailyDialog from '@/components/daily/DeleteDailyDialog'
 import StatusConfirmDialog from '@/components/daily/StatusConfirmDialog'
+import { TeamsEditorSheet } from '@/components/daily/TeamsEditorSheet'
+import { dailyTeamPendencies, pendencyLines } from '@/utils/teamDraft'
 import LiveSessionCard from '@/components/daily/LiveSessionCard'
 import { LiveLeagueTable } from '@/components/daily/LiveLeagueTable'
 import { SavedMatchesList } from '@/components/daily/SavedMatchesList'
@@ -39,6 +41,7 @@ export default function DailyDetailPage() {
     importOpen, openImport, closeImport,
     statusDialog, setStatusDialog,
     deleteOpen, setDeleteOpen,
+    teamsEditorOpen, openTeamsEditor, closeTeamsEditor,
     attendanceOpen, setAttendanceOpen,
     fileInputRef,
   } = useDailyModals()
@@ -94,13 +97,19 @@ export default function DailyDetailPage() {
               variant: 'brand',
             })
           }
-          onStartSession={() =>
+          onStartSession={() => {
+            // short teams and confirmed players without a team don't block, but the admin reads them first
+            const details = pendencyLines(dailyTeamPendencies(daily), daily.playersPerTeam)
             setStatusDialog({
               targetStatus: 'IN_COURSE',
               title: 'Iniciar sessão',
-              description: 'A sessão fica ao vivo e a presença e os times não podem mais mudar.',
+              description: details.length > 0
+                ? 'Há pendências nos times. A sessão fica ao vivo e a presença e os times não podem mais mudar.'
+                : 'A sessão fica ao vivo e a presença e os times não podem mais mudar.',
+              details,
+              confirmLabel: details.length > 0 ? 'Iniciar mesmo assim' : undefined,
             })
-          }
+          }}
           onCancelDaily={() =>
             setStatusDialog({
               targetStatus: 'CANCELED',
@@ -154,6 +163,7 @@ export default function DailyDetailPage() {
               currentUserId={user?.id ?? null}
               onTeamNameChange={actions.changeTeamName}
               onTeamColorChange={actions.changeTeamColor}
+              onEditTeams={openTeamsEditor}
             />
           </>
         )}
@@ -221,10 +231,16 @@ export default function DailyDetailPage() {
         />
       )}
 
+      {teamsEditorOpen && daily.isAdmin && open && (
+        <TeamsEditorSheet daily={daily} onSave={actions.saveTeams} refetch={refetch} onClose={closeTeamsEditor} />
+      )}
+
       {statusDialog && (
         <StatusConfirmDialog
           title={statusDialog.title}
           description={statusDialog.description}
+          details={statusDialog.details}
+          confirmLabel={statusDialog.confirmLabel}
           variant={statusDialog.variant}
           loading={actions.statusLoading}
           onConfirm={handleStatusConfirm}

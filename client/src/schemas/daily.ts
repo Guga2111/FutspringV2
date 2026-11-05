@@ -68,3 +68,29 @@ export function toMatchResultInputs(rows: MatchRowValues[]) {
       .map((s) => ({ userId: s.userId, goals: s.goals, assists: s.assists })),
   }))
 }
+
+// mirrors SaveTeamsRequestDTO (2–10 teams, name ≤ 30, optional #rrggbb color, positive player ids); the server
+// also refuses an empty team, a player twice or a player who isn't confirmed
+export const saveTeamsSchema = z.object({
+  teams: z
+    .array(
+      z.object({
+        name: z.string().trim().min(1, "O nome do time é obrigatório").max(30, "Máximo de 30 caracteres"),
+        color: z
+          .string()
+          .regex(/^#[0-9a-fA-F]{6}$/, "A cor deve ser um hexadecimal de 6 dígitos (ex.: #3b82f6)")
+          .nullable(),
+        playerIds: z.array(z.number().int().positive()),
+      }),
+    )
+    .min(2, "Monte de 2 a 10 times")
+    .max(10, "Monte de 2 a 10 times")
+    .superRefine((teams, ctx) => {
+      teams.forEach((team, index) => {
+        if (team.playerIds.length === 0) {
+          ctx.addIssue({ code: "custom", path: [index, "playerIds"], message: `O ${team.name.trim() || "time"} está vazio` })
+        }
+      })
+    }),
+})
+export type SaveTeamsValues = z.infer<typeof saveTeamsSchema>
