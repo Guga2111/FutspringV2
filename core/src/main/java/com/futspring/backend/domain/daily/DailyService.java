@@ -99,12 +99,19 @@ public class DailyService {
     @Transactional
     public DailyListItemDTO updateStatus(Long id, DailyStatus newStatus, String currentUserEmail) {
         User caller = userAuthHelper.getAuthenticatedUser(currentUserEmail);
-        Daily daily = findDaily(id);
+        // Same row lock as attendance: a withdrawal can't race the start check
+        Daily daily = dailyRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Sessão não encontrada"));
         accessHelper.requireAdmin(daily.getPelada(), caller);
 
         if (!daily.getStatus().canTransitionTo(newStatus)) {
             throw new AppException(HttpStatus.BAD_REQUEST,
                     "Não é possível mudar o status de " + daily.getStatus() + " para " + newStatus);
+        }
+        if (newStatus == DailyStatus.IN_COURSE) {
+            Set<Long> confirmedIds = attendanceRepository.findUsersByDaily(daily).stream()
+                    .map(User::getId).collect(Collectors.toSet());
+            TeamsReadiness.requireStartable(teamRepository.findByDailyWithPlayers(daily), confirmedIds);
         }
 
         daily.setStatus(newStatus);
