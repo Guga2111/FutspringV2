@@ -8,5 +8,6 @@ import java.math.BigDecimal;
 public interface FinancePersonRepository extends JpaRepository<FinancePerson, Long> {
     List<FinancePerson> findByPeladaId(Long id);
     Optional<FinancePerson> findByPeladaIdAndUserId(Long peladaId, Long userId);
+    List<FinancePerson> findByPeladaIdAndUserIdIn(Long peladaId, Collection<Long> userIds);
     Optional<FinancePerson> findByIdAndPeladaId(Long id, Long peladaId);
 }
