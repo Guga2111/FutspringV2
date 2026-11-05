@@ -56,6 +56,7 @@ class FinanceServiceTest extends BaseIntegrationTest {
     @Autowired DailyRepository dailies;
     @Autowired DailyService dailyService;
     @Autowired jakarta.persistence.EntityManager em;
+    @Autowired com.futspring.backend.support.QueryCounter queryCounter;
     User admin, member, other, outsider;
     Pelada pelada;
     @BeforeEach void setup() {
@@ -344,6 +345,36 @@ class FinanceServiceTest extends BaseIntegrationTest {
         assertThat(reads.ledger(id(), admin.getEmail(), 1, 2, null, null).items()).hasSize(1);
         var audit = reads.audit(id(), admin.getEmail(), 0, 50, null, null, null);
         assertThat(audit.total()).isEqualTo(audit.items().size());
+    }
+    // Reads per transition (publish, close, reopen, cancel) of a list with `size` participants
+    List<Long> transitionReads(int size) {
+        Long l = draft(Classification.DAILY);
+        for (int i = 0; i < size; i++) { var u = user("Jogador"); pelada.getMembers().add(u); add(l, u); }
+        long publish = queryCounter.reads(() -> collections.transition(id(), l, "PUBLISH", command(), admin.getEmail()));
+        // A receipt registered by mistake and reversed: cancel goes through paid() and hasValidReceipts()
+        receive(l, "10.00");
+        Long receipt = movements.findByChargeIdIn(List.of(charge(l))).getFirst().getId();
+        ledger.reverse(id(), receipt, command(), admin.getEmail());
+        long close = queryCounter.reads(() -> collections.transition(id(), l, "CLOSE", command(), admin.getEmail()));
+        long reopen = queryCounter.reads(() -> collections.transition(id(), l, "REOPEN", command(), admin.getEmail()));
+        long cancel = queryCounter.reads(() -> collections.transition(id(), l, "CANCEL", command(), admin.getEmail()));
+        assertThat(lists.findById(l).orElseThrow().getStatus()).isEqualTo(ListStatus.CANCELED);
+        return List.of(publish, close, reopen, cancel);
+    }
+    @Test void transitionsReadAConstantNumberOfQueries() {
+        transitionReads(2); // warm-up: one-off context loads (account, caller) don't count
+        assertThat(transitionReads(20)).isEqualTo(transitionReads(2));
+    }
+    @Test void aPendingNoticeOnAnyChargeBlocksClosing() {
+        Long l = draft(Classification.DAILY); add(l, admin); add(l, member); add(l, other);
+        collections.transition(id(), l, "PUBLISH", command(), admin.getEmail());
+        ledger.report(id(), l, chargeIds(l).getLast(), command(), null, other.getEmail());
+        assertThatThrownBy(() -> collections.transition(id(), l, "CLOSE", command(), admin.getEmail()))
+                .isInstanceOfSatisfying(AppException.class, e -> {
+                    assertThat(e.getStatus()).isEqualTo(HttpStatus.CONFLICT);
+                    assertThat(e.getMessage()).isEqualTo("Resolva todos os avisos pendentes antes de encerrar");
+                });
+        assertThat(lists.findById(l).orElseThrow().getStatus()).isEqualTo(ListStatus.OPEN);
     }
     @Test void closeReopenDuplicateAndReplacementPreserveAllocations() {
         Long l = open(); receive(l, "20.00"); collections.transition(id(), l, "CLOSE", command(), admin.getEmail());

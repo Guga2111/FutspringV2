@@ -118,7 +118,9 @@ public class FinanceCollectionService {
         return tx.execute(id, email, command, operation, "LIST:" + listId, command, true, ctx -> {
             var list = reads.findList(id, listId); var before = reads.detail(ctx, listId);
             var chargeRows = charges.findByListIdOrderById(listId);
-            boolean pending = chargeRows.stream().anyMatch(c -> notices.existsByChargeIdAndStatus(c.getId(), NoticeStatus.PENDING));
+            var ids = chargeRows.stream().map(FinanceCharge::getId).toList();
+            // One query for the whole list: a pending notice on any charge blocks close/cancel
+            boolean pending = !ids.isEmpty() && !notices.chargeIdsWithStatus(ids, NoticeStatus.PENDING).isEmpty();
             switch (operation) {
                 case "PUBLISH" -> {
                     require(list.getStatus() == ListStatus.DRAFT, "Apenas rascunhos podem ser publicados");
@@ -136,7 +138,7 @@ public class FinanceCollectionService {
                     reason(command); require(list.getStatus() == ListStatus.DRAFT || list.getStatus() == ListStatus.OPEN || list.getStatus() == ListStatus.CLOSED,
                             "A lista já está cancelada");
                     require(!pending, "Resolva os avisos pendentes antes de cancelar");
-                    require(chargeRows.stream().allMatch(c -> reads.paid(c).signum() == 0), "A lista tem recebimentos confirmados");
+                    require(reads.paid(chargeRows).values().stream().allMatch(v -> v.signum() == 0), "A lista tem recebimentos confirmados");
                     // Even a fully refunded receipt is still a confirmed historical receipt unless reversed.
                     require(!hasValidReceipts(chargeRows), "Anule os recebimentos registrados por engano antes de cancelar");
                     list.setStatus(ListStatus.CANCELED);

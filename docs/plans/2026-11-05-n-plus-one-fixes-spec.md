@@ -61,6 +61,13 @@ public long statements(Runnable block) // every prepared statement, inserts incl
 
 ## PR A — Transições da cobrança (item 2) + `paid()`
 
+- [x] Concluído (PR #68)
+
+Decisões:
+- O teste de contagem falhou no código antigo: 29 → 47 leituras por transição com 2 → 20 participantes, e 31 → 85 no cancelar. Depois da correção, o número é igual nos dois tamanhos.
+- `QueryCounter` fica em `support/` como `@Component`. Os `@SpringBootTest` o encontram pelo component scan, e os `@DataJpaTest` não o carregam.
+- O cancelar medido passa por um recebimento anulado (`receive` + `reverse`), então cobre `paid(rows)` e `hasValidReceipts`.
+
 ### `FinanceReadService`
 
 - `Map<Long, BigDecimal> paid(List<FinanceCharge> rows)`: **uma** consulta (`movements.findByChargeIdIn`), sem carregar avisos. Lista vazia → mapa vazio, sem consulta.
