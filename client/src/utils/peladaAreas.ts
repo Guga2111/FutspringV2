@@ -39,11 +39,13 @@ export function areaPath(peladaId: number | string, area: PeladaArea): string {
   return segment ? `/pelada/${peladaId}/${segment}` : `/pelada/${peladaId}`
 }
 
-// The area of a /pelada/:id/... pathname; null outside a pelada or on an unknown segment
+// The area of a /pelada/:id/... pathname; null outside a pelada or on an unknown segment.
+// One sub-path is an area too: a collection of the finance area (/pelada/:id/financeiro/:listId)
 export function areaFromPath(pathname: string): PeladaArea | null {
-  const match = /^\/pelada\/[^/]+(?:\/([^/]+))?\/?$/.exec(pathname)
+  const match = /^\/pelada\/[^/]+(?:\/([^/]+)(?:\/([^/]+))?)?\/?$/.exec(pathname)
   if (!match) return null
   const segment = match[1] ?? ""
+  if (match[2] !== undefined) return segment === PELADA_AREAS.finance.segment && /^\d+$/.test(match[2]) ? "finance" : null
   return AREA_ORDER.find((area) => PELADA_AREAS[area].segment === segment) ?? null
 }
 

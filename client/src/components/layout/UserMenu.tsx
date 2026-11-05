@@ -14,6 +14,8 @@ import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/ui
 import { useSidebar } from "@/components/ui/sidebar-context"
 import { useAuth } from "@/hooks/useAuth"
 import { useTheme } from "@/hooks/useTheme"
+import { collapsedTile } from "@/components/layout/sidebarTile"
+import { cn } from "@/lib/utils"
 
 // the square corners mark the account menu; the color is the player's own, as on every screen
 const userAvatarClass = "size-8 rounded-lg text-xs [&>span]:rounded-lg"
@@ -52,7 +54,7 @@ export function UserMenu() {
           <DropdownMenuTrigger asChild>
             <SidebarMenuButton
               aria-label="Menu do usuário"
-              className="h-auto gap-2.5 rounded-[10px] p-2 data-[state=open]:bg-sidebar-accent group-data-[collapsible=icon]:!size-auto group-data-[collapsible=icon]:!p-1"
+              className={cn("h-auto gap-2.5 rounded-[10px] p-2 data-[state=open]:bg-sidebar-accent", collapsedTile)}
             >
               <PlayerAvatar userId={user.id} username={user.username} image={user.image} className={userAvatarClass} />
               <span className="flex min-w-0 flex-1 flex-col group-data-[collapsible=icon]:hidden">

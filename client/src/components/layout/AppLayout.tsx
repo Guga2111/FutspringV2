@@ -2,7 +2,9 @@ import { Suspense, useCallback, useMemo, useState } from "react"
 import { Outlet } from "react-router-dom"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import { MyPeladasContext, type MyPeladasContextValue } from "@/context/my-peladas-context-value"
+import { MyInvitationsContext } from "@/context/my-invitations-context-value"
 import { NotificationsContext } from "@/context/notifications-context-value"
+import { useMyInvitations } from "@/hooks/useMyInvitations"
 import { useMyPeladas } from "@/hooks/useMyPeladas"
 import { useNotifications } from "@/hooks/useNotifications"
 import CreatePeladaModal from "@/components/CreatePeladaModal"
@@ -31,7 +33,7 @@ function saveSidebarOpen(open: boolean) {
 const pageFallback = <div className="flex flex-1 items-center justify-center p-8 text-sm text-muted-foreground">Carregando…</div>
 
 // Shell of every private page: sidebar with the user's peladas (Sheet on mobile) and the page in <Outlet/>.
-// Opens the user's realtime connection and loads the peladas and the notifications once, shared through contexts.
+// Opens the user's realtime connection and loads the peladas, the notifications and the pending invitations once, shared through contexts.
 export function AppLayout() {
   return (
     <RealtimeProvider>
@@ -55,6 +57,7 @@ function AppShell() {
     [peladas, updateNextDaily],
   )
   const notifications = useNotifications(clearBumps)
+  const invitations = useMyInvitations()
 
   const contextValue = useMemo<MyPeladasContextValue>(
     () => ({ peladas, loading, error, reload, updateNextDaily, openCreatePelada: () => setCreateOpen(true) }),
@@ -69,6 +72,7 @@ function AppShell() {
   return (
     <MyPeladasContext.Provider value={contextValue}>
       <NotificationsContext.Provider value={notifications}>
+      <MyInvitationsContext.Provider value={invitations}>
       <SidebarProvider open={sidebarOpen} onOpenChange={handleSidebarOpenChange}>
         <AppSidebar />
         <SidebarInset className="min-w-0">
@@ -87,6 +91,7 @@ function AppShell() {
           }}
         />
       )}
+      </MyInvitationsContext.Provider>
       </NotificationsContext.Provider>
     </MyPeladasContext.Provider>
   )

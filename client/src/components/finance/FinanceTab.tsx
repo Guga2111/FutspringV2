@@ -1,4 +1,5 @@
-import { useState } from "react"
+import { useCallback, useState } from "react"
+import { useNavigate, useParams } from "react-router-dom"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { ArrowRight01Icon, PlusSignIcon, RefreshIcon } from "@hugeicons/core-free-icons"
 import { toast } from "sonner"
@@ -35,14 +36,30 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { formatShortDate } from "@/utils/dates"
+import { areaPath } from "@/utils/peladaAreas"
 
 type EditorAction = { kind: "create" } | { kind: "list"; list?: FinanceList; template?: FinanceTemplate } | { kind: "participants" } | { kind: "details"; charge: FinanceCharge } | { kind: "charge"; charge: FinanceCharge } | { kind: "bulkAdjust"; charges: FinanceCharge[]; onDone: () => void } | { kind: "replace"; charge: FinanceCharge } | { kind: "cash"; cashKind: Extract<FinanceMovementKind, "EXPENSE" | "INCOME" | "OPENING"> } | { kind: "payment"; charge: FinanceCharge; action: FinancePaymentValues["action"]; notice?: FinanceNotice }
 type Editor = EditorAction & { revision: number }
 
 // timeZone: the pelada's, for the dates and times of payments and notices
 export function FinanceTab({ peladaId, userId, members, dailies, timeZone }: { peladaId: number; userId: number | null; members: PeladaMember[]; dailies: DailyListItem[]; timeZone: string }) {
-  const finance = useFinance(peladaId)
-  const [tab, setTab] = useState("collections")
+  // the open collection lives in the URL (/financeiro/:listId): back/forward, reload and the WhatsApp link open it
+  const { listId } = useParams<{ listId: string }>()
+  const selected = listId && /^\d+$/.test(listId) ? Number(listId) : null
+  const navigate = useNavigate()
+  const select = useCallback((id: number | null) => {
+    if (id === selected) return
+    const base = areaPath(peladaId, "finance")
+    navigate(id === null ? base : `${base}/${id}`)
+  }, [navigate, peladaId, selected])
+  const finance = useFinance(peladaId, selected, select)
+  const [tabState, setTabState] = useState("collections")
+  // a collection in the URL is always shown on the collections tab
+  const tab = selected !== null ? "collections" : tabState
+  const setTab = (next: string) => {
+    setTabState(next)
+    if (next !== "collections" && selected !== null) navigate(areaPath(peladaId, "finance"), { replace: true })
+  }
   const [editor, setEditor] = useState<Editor | null>(null)
   const [reason, setReason] = useState<(FinanceReasonAction & { revision: number }) | null>(null)
   const overview = finance.overview
@@ -106,8 +123,8 @@ export function FinanceTab({ peladaId, userId, members, dailies, timeZone }: { p
               {manage ? "Cobranças" : "Minhas cobranças"}
             </TabsTrigger>
             {overview.permissions.viewCash && <TabsTrigger variant="underline" value="cash" data-tour="cash-tab">Caixa</TabsTrigger>}
-            {manage && <TabsTrigger variant="underline" value="settings" data-tour="settings-tab">Configurações</TabsTrigger>}
             {manage && <TabsTrigger variant="underline" value="history">Histórico</TabsTrigger>}
+            {manage && <TabsTrigger variant="underline" value="settings" data-tour="settings-tab">Configurações</TabsTrigger>}
           </TabsList>
           <div className="flex shrink-0 items-center">
             <FinanceTourButton onPrepare={prepareTour} />
@@ -135,7 +152,7 @@ export function FinanceTab({ peladaId, userId, members, dailies, timeZone }: { p
               </div>
             ) : <ul data-tour="collections" className="rounded-lg border">{overview.lists.map(collectionRow)}</ul>}
             <ListPagination page={finance.page} total={overview.total} size={api.FINANCE_LISTS_PAGE_SIZE} noun={["cobrança", "cobranças"]} disabled={finance.pending} onPage={finance.setPage} />
-          </> : finance.detailError ? <><FinanceFormError message={finance.detailError} /><Button variant="outline" onClick={finance.refresh}>Tentar de novo</Button><Button variant="ghost" onClick={() => finance.select(null)}>Voltar às cobranças</Button></> : !detail ? <Skeleton className="h-64 w-full" /> : <FinanceListDetail key={detail.collection.id} peladaId={peladaId} userId={userId} finance={finance} members={members} onBulkAdjust={(charges, onDone) => open({ kind: "bulkAdjust", charges, onDone })} onEdit={() => open({ kind: "list", list: detail.collection })} onParticipants={() => open({ kind: "participants" })} onDetails={charge => open({ kind: "details", charge })} onPayment={payment} onReason={askReason} onSimple={action => { void simple(action) }} />}
+          </> : finance.detailError ? <><FinanceFormError message={finance.detailError} /><Button variant="outline" onClick={finance.refresh}>Tentar de novo</Button><Button variant="ghost" onClick={() => finance.select(null)}>Voltar às cobranças</Button></> : !detail ? <Skeleton className="h-64 w-full" /> : <FinanceListDetail key={detail.collection.id} peladaId={peladaId} userId={userId} timeZone={timeZone} finance={finance} members={members} onBulkAdjust={(charges, onDone) => open({ kind: "bulkAdjust", charges, onDone })} onEdit={() => open({ kind: "list", list: detail.collection })} onParticipants={() => open({ kind: "participants" })} onDetails={charge => open({ kind: "details", charge })} onPayment={payment} onReason={askReason} onSimple={action => { void simple(action) }} />}
         </TabsContent>
         {overview.permissions.viewCash && <TabsContent value="cash" className="mt-0 flex flex-col gap-6">
           <header><h2 className="text-xl font-semibold">Caixa da pelada</h2><p className="mt-1 text-sm text-muted-foreground">Dinheiro que já entrou e saiu.</p></header>

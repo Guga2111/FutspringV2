@@ -1,42 +1,29 @@
-import { useEffect } from "react"
 import { Link } from "react-router-dom"
 import { toast } from "sonner"
 import { InvitationPreview } from "@/components/invitations/InvitationPreview"
 import { useInvitationResponse } from "@/components/invitations/hooks/useInvitationResponse"
-import { useInvitations } from "@/components/invitations/hooks/useInvitations"
 import { PlayerAvatar } from "@/components/PlayerAvatar"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useNowUntil } from "@/hooks/useNowUntil"
-import { useRealtime } from "@/hooks/useRealtime"
-import type { NotificationPush } from "@/types/notification"
+import { useMyInvitationsContext } from "@/hooks/useMyInvitationsContext"
 import { relativeToNow } from "@/utils/invitations"
 
 export function PendingInvitations() {
-  const { connectionId, subscribe } = useRealtime()
-  const inbox = useInvitations(undefined, true, connectionId)
+  const inbox = useMyInvitationsContext()
   const { reload } = inbox
   const { pending, respond: send } = useInvitationResponse()
   const now = useNowUntil(null)
 
-  useEffect(() => subscribe("/user/queue/notifications", body => {
-    try {
-      const push = JSON.parse(body) as NotificationPush
-      if (push.notification.type === "PELADA_INVITATION") reload()
-    } catch { /* An invalid frame must not interrupt the inbox. */ }
-  }), [subscribe, reload])
-  useEffect(() => {
-    const visible = () => { if (document.visibilityState === "visible") reload() }
-    document.addEventListener("visibilitychange", visible)
-    return () => document.removeEventListener("visibilitychange", visible)
-  }, [reload])
-
   async function respond(id: number, accept: boolean) {
     const error = await send(id, accept)
-    if (error) toast.error(error)
-    reload()
+    // success already refreshed the inbox; after an error it may be stale (answered elsewhere, expired)
+    if (error) {
+      toast.error(error)
+      reload()
+    }
   }
 
   if (inbox.loading) return <Skeleton className="h-40 rounded-tile" aria-label="Carregando convites" />

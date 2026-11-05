@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test"
 import { mockApi, login } from "./mockApi"
-import { FINISHED_ID, LIVE_ID, NOW, PELADA_ID, SCHEDULED_ID, financeMemberDetail, financeMemberOverview } from "./fixtures"
+import { FINISHED_ID, LIVE_ID, NOW, PELADA_ID, SCHEDULED_ID, financeDetail, financeMemberDetail, financeMemberOverview } from "./fixtures"
 
 const PELADA = `/pelada/${PELADA_ID}`
 
@@ -84,6 +84,21 @@ for (const { name, path, auth, ready } of pages) {
   })
 }
 
+// Collapsed sidebar: every row is one 40 px square at the same x (icons and avatars on one axis)
+test("sidebar collapsed", async ({ page }, testInfo) => {
+  test.skip(!testInfo.project.name.startsWith("desktop"), "below md the sidebar is a Sheet")
+  await page.addInitScript(() => localStorage.setItem("sidebar_open", "false"))
+  await open(page, PELADA)
+  const sidebar = page.locator('[data-sidebar="sidebar"]')
+  const left = (await sidebar.boundingBox())?.x ?? 0
+  const tiles = sidebar.locator('[data-sidebar="header"] button, [data-sidebar="menu-button"], [aria-label="Nova pelada"]')
+  expect(await tiles.count()).toBeGreaterThanOrEqual(6)
+  for (const box of await tiles.evaluateAll((els) => els.map((el) => el.getBoundingClientRect().toJSON()))) {
+    expect({ x: box.x - left, width: box.width, height: box.height }).toEqual({ x: 12, width: 40, height: 40 })
+  }
+  await expect(sidebar).toHaveScreenshot("sidebar-collapsed.png")
+})
+
 test("dialog compare players", async ({ page }) => {
   await open(page, `${PELADA}/ranking`)
   await page.getByRole("button", { name: "Ações", exact: true }).click()
@@ -149,6 +164,22 @@ test("finance manager: selecting charges to receive", async ({ page }) => {
   await settle(page)
   await expectNoHorizontalScroll(page)
   await expect(page).toHaveScreenshot("finance-detail-selection.png", { fullPage: true })
+  expect(unmatched, "requests without a fixture").toEqual([])
+})
+
+test("finance manager: deep link and WhatsApp message", async ({ page }) => {
+  await page.clock.setFixedTime(NOW)
+  const unmatched = await mockApi(page)
+  await login(page)
+  // the link of the message opens the collection directly
+  await page.goto(`${FINANCE}/${financeDetail.collection.id}`)
+  await expect(page.getByRole("heading", { name: financeDetail.collection.name })).toBeVisible({ timeout: READY_TIMEOUT })
+  await page.getByRole("button", { name: "Opções da cobrança" }).click()
+  await page.getByRole("menuitem", { name: "Compartilhar no WhatsApp" }).click()
+  const dialog = page.getByRole("dialog", { name: "Compartilhar no WhatsApp" })
+  await expect(dialog.getByLabel("Mensagem")).toHaveValue(new RegExp(`financeiro/${financeDetail.collection.id}$`))
+  await settle(page)
+  await expect(page).toHaveScreenshot("finance-whatsapp.png", DIALOG_SHOT)
   expect(unmatched, "requests without a fixture").toEqual([])
 })
 

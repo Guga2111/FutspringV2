@@ -5,16 +5,18 @@ import type { FinanceOverview, FinanceDetail, FinanceResult, FinanceListScope } 
 import { clampFinancePage } from "@/utils/finance"
 import { getErrorMessage, getErrorStatus } from "@/lib/errors"
 
-export function useFinance(peladaId: number) {
+// selected: the open collection, read from the URL (/financeiro/:listId); select navigates there
+export function useFinance(peladaId: number, selected: number | null, select: (id: number | null) => void) {
   const [attempt, setAttempt] = useState(0)
   // the list section (open / closed) and its numbered page
   const [scope, setScopeState] = useState<FinanceListScope>("ACTIVE")
   const [page, setPage] = useState(0)
   const [overview, setOverview] = useState<FinanceOverview | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [selected, setSelected] = useState<number | null>(null)
-  const [detail, setDetail] = useState<FinanceDetail | null>(null)
-  const [detailError, setDetailError] = useState<string | null>(null)
+  // keyed by collection id: opening another collection shows the skeleton, never the previous one
+  const [detailState, setDetailState] = useState<{ id: number; data: FinanceDetail | null; error: string | null } | null>(null)
+  const detail = detailState?.id === selected ? detailState.data : null
+  const detailError = detailState?.id === selected ? detailState.error : null
   const [pending, setPending] = useState(false)
   const busy = useRef(false)
   const generation = useRef(0)
@@ -39,9 +41,9 @@ export function useFinance(peladaId: number) {
     let cancelled = false
     const request = ++detailGeneration.current
     api.getFinanceList(peladaId, selected).then(data => {
-      if (!cancelled && detailGeneration.current === request) { setDetail(data); setDetailError(null) }
+      if (!cancelled && detailGeneration.current === request) setDetailState({ id: selected, data, error: null })
     }).catch(e => {
-      if (!cancelled && detailGeneration.current === request) setDetailError(getErrorMessage(e, "Não foi possível carregar a lista"))
+      if (!cancelled && detailGeneration.current === request) setDetailState(previous => ({ id: selected, data: previous?.id === selected ? previous.data : null, error: getErrorMessage(e, "Não foi possível carregar a lista") }))
     })
     return () => { cancelled = true }
   }, [peladaId, selected, attempt])
@@ -50,7 +52,6 @@ export function useFinance(peladaId: number) {
     document.addEventListener("visibilitychange", visible)
     return () => document.removeEventListener("visibilitychange", visible)
   }, [refresh])
-  const select = (id: number | null) => { setSelected(id); setDetail(null); setDetailError(null) }
   async function mutate(signature: string, reason: string, action: (command: FinanceCommand) => Promise<FinanceResult>, expectedRevision?: number) {
     if (!overview || busy.current) throw new Error("Aguarde a operação em andamento")
     busy.current = true
@@ -64,7 +65,12 @@ export function useFinance(peladaId: number) {
       // so a change never sends the user back to page 1 or to the other section
       setOverview(previous => previous ? { ...result.overview, lists: previous.lists, hasMore: previous.hasMore, total: previous.total } : result.overview)
       setError(null)
-      if (result.detail) { setDetail(result.detail); setSelected(result.detail.collection.id); setDetailError(null) }
+      if (result.detail) {
+        const id = result.detail.collection.id
+        setDetailState({ id, data: result.detail, error: null })
+        // a new collection (create, duplicate) opens at its own URL
+        if (id !== selected) select(id)
+      }
       retryCommand.current = null
       refresh()
       return result
