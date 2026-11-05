@@ -12,6 +12,7 @@ import { adjustChargeHint, canAdjustCharge, financeChargeStatus, filterFinanceCh
 import { FinancePixCard } from "@/components/finance/FinancePixCard"
 import { FinanceQrField } from "@/components/finance/FinanceQrField"
 import { FinanceReceiveAllDialog } from "@/components/finance/FinanceReceiveAllDialog"
+import { FinanceWhatsAppDialog } from "@/components/finance/FinanceWhatsAppDialog"
 import { SelectionBar } from "@/components/SelectionBar"
 import { useSelection } from "@/hooks/useSelection"
 import { cn } from "@/lib/utils"
@@ -28,8 +29,9 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem,
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { formatShortDate } from "@/utils/dates"
 
-export function FinanceListDetail({ peladaId, userId, finance, members, onEdit, onParticipants, onDetails, onPayment, onReason, onSimple, onBulkAdjust }: {
-  peladaId: number; userId: number | null; finance: FinanceController; members: PeladaMember[]; onEdit: () => void; onParticipants: () => void
+export function FinanceListDetail({ peladaId, userId, timeZone, finance, members, onEdit, onParticipants, onDetails, onPayment, onReason, onSimple, onBulkAdjust }: {
+  // timeZone: the pelada's, for "Vence" / "Venceu" in the WhatsApp message
+  peladaId: number; userId: number | null; timeZone: string; finance: FinanceController; members: PeladaMember[]; onEdit: () => void; onParticipants: () => void
   onDetails: (charge: FinanceCharge) => void
   onPayment: (charge: FinanceCharge, action: FinancePaymentValues["action"], notice?: FinanceNotice) => void
   onReason: (action: FinanceReasonAction) => void; onSimple: (action: api.FinanceListAction) => void
@@ -39,6 +41,7 @@ export function FinanceListDetail({ peladaId, userId, finance, members, onEdit, 
   const [filter, setFilter] = useState<FinanceQueueFilter>("pending")
   const [search, setSearch] = useState("")
   const [receivingAll, setReceivingAll] = useState(false)
+  const [sharing, setSharing] = useState(false)
   const detail = finance.detail
   const charges = detail?.charges
   // individual mode: a member only receives their own charges, so filters and search have nothing to sort
@@ -81,6 +84,7 @@ export function FinanceListDetail({ peladaId, userId, finance, members, onEdit, 
         {editable && <DropdownMenuItem onClick={onParticipants}>Adicionar pessoas</DropdownMenuItem>}
         {editable && <DropdownMenuItem onClick={onEdit}>Editar cobrança e Pix</DropdownMenuItem>}
         {list.status === "DRAFT" && <DropdownMenuItem onClick={() => onSimple("publish")}>Publicar cobrança</DropdownMenuItem>}
+        {list.status === "OPEN" && <DropdownMenuItem onClick={() => setSharing(true)}>Compartilhar no WhatsApp</DropdownMenuItem>}
         {list.status === "OPEN" && <DropdownMenuItem onClick={() => onSimple("close")}>Encerrar cobrança</DropdownMenuItem>}
         {list.status === "CLOSED" && <DropdownMenuItem onClick={() => onReason({ title: "Reabrir cobrança", description: "A cobrança voltará a aceitar avisos e recebimentos.", signature: `reopen:${list.id}`, run: command => api.financeListAction(peladaId, list.id, "reopen", command) })}>Reabrir cobrança</DropdownMenuItem>}
         <DropdownMenuItem onClick={() => onSimple("duplicate")}>Duplicar como rascunho</DropdownMenuItem>
@@ -98,6 +102,7 @@ export function FinanceListDetail({ peladaId, userId, finance, members, onEdit, 
       </div>
     </div>}
     {selecting && <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-body-sm text-subtle-foreground">{selection.selected.length === 0 && <span>Toque nas cobranças para selecionar</span>}{visibleSelectable > 0 && <Button variant="link" onClick={selection.toggleVisible} className="h-auto p-0 text-body-sm">{toggleVisibleLabel}</Button>}{mensalistas.length > 0 && <Button variant="link" onClick={selectMensalistas} className="h-auto p-0 text-body-sm">{mensalistasLabel}</Button>}</p>}
+    {sharing && finance.overview && <FinanceWhatsAppDialog peladaId={peladaId} detail={detail} visibility={finance.overview.settings.visibility} timeZone={timeZone} onClose={() => setSharing(false)} />}
     {receivingAll && <FinanceReceiveAllDialog peladaId={peladaId} finance={finance} list={list} charges={plan.receive.charges} total={plan.receive.total} review={plan.receive.review} skipped={plan.receive.skipped} onReceived={selection.exit} onClose={() => setReceivingAll(false)} />}
     {rows.length === 0 ? <div className="flex flex-col items-start gap-3 rounded-lg border p-6"><h3 className="font-medium">{counts.all === 0 ? "Quem vai participar desta cobrança?" : filter === "pending" && !search ? "Nenhum pagamento pendente" : "Nenhum participante neste filtro"}</h3><p className="text-sm text-muted-foreground">{counts.all === 0 ? "Adicione membros da pelada ou convidados." : "Os registros continuam disponíveis nos outros filtros."}</p>{counts.all === 0 && editable ? <Button variant="brand" size="sm" onClick={onParticipants}>Adicionar pessoas</Button> : filter !== "all" && <Button size="sm" variant="outline" onClick={() => setFilter("all")}>Ver todos</Button>}</div> : <ul className="flex flex-col rounded-lg border">{rows.map(charge => {
       const notice = pendingFinanceNotice(charge)

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { formatInZone, formatNextSessionShort, formatRangeLabel, formatShortDate, formatWeekdayDayMonth, parseLocalDate } from "./dates"
+import { formatInZone, formatNextSessionShort, formatRangeLabel, formatShortDate, formatWeekdayDayMonth, parseLocalDate, todayInZone } from "@/utils/dates"
 
 describe("parseLocalDate", () => {
   it("reads the date in local time", () => {
@@ -52,5 +52,14 @@ describe("formatRangeLabel", () => {
     expect(formatRangeLabel({ from: new Date(2026, 9, 8) })).toBe("08/10/2026")
     expect(formatRangeLabel({ from: new Date(2026, 9, 1), to: new Date(2026, 9, 31) })).toBe("01/10 – 31/10/2026")
     expect(formatRangeLabel({ from: new Date(2025, 11, 15), to: new Date(2026, 0, 10) })).toBe("15/12/2025 – 10/01/2026")
+  })
+})
+
+describe("todayInZone", () => {
+  it("reads the calendar day in the given zone", () => {
+    // 02:00 UTC on Nov 5 is still Nov 4 in São Paulo
+    const instant = new Date("2026-11-05T02:00:00Z")
+    expect(todayInZone("America/Sao_Paulo", instant)).toBe("2026-11-04")
+    expect(todayInZone("Europe/Lisbon", instant)).toBe("2026-11-05")
   })
 })

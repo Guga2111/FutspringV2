@@ -60,3 +60,8 @@ export function formatRangeLabel(range: DateRange | undefined): string {
   if (from.getFullYear() === to.getFullYear()) return `${format(from, "dd/MM")} – ${format(to, "dd/MM/yyyy")}`
   return `${format(from, "dd/MM/yyyy")} – ${format(to, "dd/MM/yyyy")}`
 }
+
+// Today as "yyyy-MM-dd" in a time zone (the pelada's): "en-CA" formats dates in ISO order
+export function todayInZone(timeZone: string, now: Date = new Date()): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).format(now)
+}

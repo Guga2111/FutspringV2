@@ -1,6 +1,6 @@
 # Spec — Compartilhar cobrança no WhatsApp
 
-Data: 2026-11-05 · Status: aprovada (brainstorm) · Escopo: só frontend (`client/`)
+Data: 2026-11-05 · Status: implementada (`feat/finance-whatsapp-share`) · Escopo: só frontend (`client/`)
 
 ## Objetivo
 
@@ -95,3 +95,19 @@ Abordagens descartadas: o backend renderizar o texto (`GET /lists/{id}/share-tex
 **Docs:** `client/docs/FRONTEND.md` — rota `/pelada/:id/financeiro/:listId` na tabela de rotas e em "Pelada navigation", o diálogo na seção Financeiro, o util e o componente na árvore de pastas. `core/docs/BACKEND.md` não muda.
 
 **Fora de escopo:** página pública sem login; modelo de mensagem salvo por pelada; envio automático (WhatsApp Business API); mensagem para Rascunho/Encerrada/Cancelada; lembrete agendado; exportar várias cobranças de uma vez.
+
+## Implementação
+
+- [x] Deep link, gerador da mensagem, diálogo, testes e docs (2026-11-05)
+
+**Decisões de implementação:**
+
+- `useFinance(peladaId, selected, select)`: a cobrança aberta vem da URL (`FinanceTab` lê `listId`); detalhe e erro ficam guardados por id de cobrança, então trocar de cobrança mostra o skeleton e nunca a anterior. Um resultado de comando de outra cobrança (criar, duplicar) navega para ela (entra no histórico do navegador).
+- Trocar para Caixa / Configurações / Histórico com uma cobrança aberta substitui a URL por `…/financeiro` (`replace`), para a aba e a URL não se contradizerem. Um `listId` não numérico abre a lista de cobranças.
+- `areaFromPath` só aceita segundo segmento em `financeiro/<dígitos>`; qualquer outro continua desconhecido.
+- "Hoje" no fuso da pelada: novo `todayInZone(timeZone)` em `utils/dates.ts`; "Venceu" quando `dueDate` é anterior a hoje (no dia do vencimento ainda é "Vence").
+- Blocos vazios somem: sem pagos não há "✅ Pagos" / "já pagaram"; sem conferência, sem "🔎"; sem participantes ativos, sem bloco de situação. "✅ Todos pagaram!" só quando ninguém deve **e** ninguém está em conferência.
+- Pix sem recebedor: `Pix: {chave}`. Singulares: "1 pessoa ainda não pagou", "1 já pagou", "1 pagamento em conferência".
+- Limite do "Abrir no WhatsApp": a **URL codificada** acima de 2000 caracteres (`WHATSAPP_URL_MAX`), porque emoji e acentos ocupam vários caracteres codificados.
+- O diálogo é montado só enquanto aberto (como `FinanceReceiveAllDialog`), então reabrir sempre gera o texto de novo. O campo cresce com `field-sizing: content` até 50vh; navegadores sem suporte ficam com 10 linhas e rolagem.
+- Snapshot visual `finance-whatsapp.png` (4 projetos): abre `/financeiro/50` direto e troca a visibilidade da fixture para Transparente com um `page.route` no teste, sem fixture nova.

@@ -16,6 +16,10 @@ describe("peladaAreas", () => {
     expect(areaFromPath("/pelada/7/settings")).toBe("settings")
     expect(areaFromPath("/pelada/7/xyz")).toBeNull()
     expect(areaFromPath("/daily/3")).toBeNull()
+    expect(areaFromPath("/pelada/7/financeiro/42")).toBe("finance")
+    expect(areaFromPath("/pelada/7/financeiro/42/")).toBe("finance")
+    expect(areaFromPath("/pelada/7/financeiro/abc")).toBeNull()
+    expect(areaFromPath("/pelada/7/membros/3")).toBeNull()
   })
 
   it("hides admin-only areas from members", () => {
@@ -30,6 +34,7 @@ describe("peladaAreas", () => {
   it("matches the pelada and its descendant routes only", () => {
     expect(isPeladaPath("/pelada/7", 7)).toBe(true)
     expect(isPeladaPath("/pelada/7/ranking", 7)).toBe(true)
+    expect(isPeladaPath("/pelada/7/financeiro/42", 7)).toBe(true)
     expect(isPeladaPath("/pelada/70", 7)).toBe(false)
     expect(isPeladaPath("/home", 7)).toBe(false)
   })

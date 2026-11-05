@@ -53,6 +53,8 @@ function App() {
               <Route path="ranking" element={<ErrorBoundary><PeladaRankingPage /></ErrorBoundary>} />
               <Route path="premios" element={<ErrorBoundary><PeladaAwardsPage /></ErrorBoundary>} />
               <Route path="financeiro" element={<ErrorBoundary><PeladaFinancePage /></ErrorBoundary>} />
+              {/* deep link to one collection (the WhatsApp message links here) */}
+              <Route path="financeiro/:listId" element={<ErrorBoundary><PeladaFinancePage /></ErrorBoundary>} />
               <Route path="convites" element={<ErrorBoundary><PeladaInvitationsPage /></ErrorBoundary>} />
             </Route>
             <Route path="/pelada/:id/settings" element={<ErrorBoundary><PeladaSettingsPage /></ErrorBoundary>} />
