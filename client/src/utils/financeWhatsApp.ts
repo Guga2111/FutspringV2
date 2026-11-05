@@ -58,7 +58,10 @@ export function financeWhatsAppMessage(detail: FinanceDetail, visibility: Financ
         })
       }
       if (reviewing.length > 0) status.push(`🔎 Conferindo (${reviewing.length}): ${names(reviewing)}`)
-      if (paid.length > 0) status.push(`✅ Pagos (${paid.length}): ${names(paid)}`)
+      if (paid.length > 0) {
+        status.push(`✅ Pagos (${paid.length}):`)
+        paid.forEach((c, i) => status.push(`${i + 1}. ${c.name} — ${formatFinanceMoney(c.amountDue)}`))
+      }
     } else {
       if (debtors.length > 0) {
         const open = formatFinanceMoney(sumFinanceAmounts(debtors.map((c) => c.outstanding)))

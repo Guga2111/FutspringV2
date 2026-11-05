@@ -30,7 +30,7 @@ Abordagens descartadas: o backend renderizar o texto (`GET /lists/{id}/share-tex
    - um componente: só `Valor: R$ {valor}`;
    - se algum participante ativo tiver composição/ajuste diferente da lista: a nota `Alguns participantes têm valor diferente.`
 3. Situação dos pagamentos:
-   - **Transparente:** `⏳ Faltam pagar ({n}):` e uma linha numerada por devedor `{n}. {nome} — R$ {outstanding}`, com ` (parcial)` quando `PARTIAL` e ` ⚠️ vencida` quando `overdue`; depois `✅ Pagos ({n}): {nomes separados por vírgula}`. Convidados entram pelo nome.
+   - **Transparente:** `⏳ Faltam pagar ({n}):` e uma linha numerada por devedor `{n}. {nome} — R$ {outstanding}`, com ` (parcial)` quando `PARTIAL` e ` ⚠️ vencida` quando `overdue`; depois `✅ Pagos ({n}):` e uma linha numerada por pago `{n}. {nome} — R$ {valor devido}`. Convidados entram pelo nome.
    - **Individual:** `⏳ {n} pessoas ainda não pagaram · R$ {total em aberto} em aberto` e `✅ {n} já pagaram` (singular quando 1).
    - Ninguém devendo: `✅ Todos pagaram!` no lugar dos blocos acima.
 4. Pix da própria lista (`collection.pixKey` / `pixRecipient`, os que a lista gravou): `Pix: {chave} ({recebedor})`; a linha some sem chave.
