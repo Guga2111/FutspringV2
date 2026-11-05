@@ -156,8 +156,8 @@ class DailyResultsServiceTest {
         when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(dailyRepository.findById(100L)).thenReturn(Optional.of(inCourseDaily));
         when(teamRepository.findByDailyWithPlayers(inCourseDaily)).thenReturn(List.of(team1, team2));
-        // match 999 exists, but in another pelada's daily: the scoped lookup does not find it
-        when(matchRepository.findByIdAndDaily(999L, inCourseDaily)).thenReturn(Optional.empty());
+        // match 999 exists, but in another pelada's daily: it is not among this session's matches
+        when(matchRepository.findByDaily(inCourseDaily)).thenReturn(List.of());
 
         MatchResultDTO result = new MatchResultDTO(999L, 1L, 2L, 5, 0, null);
 
@@ -167,7 +167,7 @@ class DailyResultsServiceTest {
 
         verify(matchRepository, never()).findById(any());
         verify(matchRepository, never()).save(any());
-        verify(playerMatchStatRepository, never()).deleteByMatch(any());
+        verify(playerMatchStatRepository, never()).deleteByMatchIn(any());
         verify(playerMatchStatRepository, never()).saveAll(any());
     }
 
@@ -514,7 +514,6 @@ class DailyResultsServiceTest {
 
         Match kept = Match.builder().id(50L).daily(inCourseDaily).team1(team1).team2(team2).team1Score(0).team2Score(0).build();
         Match removed = Match.builder().id(51L).daily(inCourseDaily).team1(team1).team2(team2).team1Score(3).team2Score(0).build();
-        when(matchRepository.findByIdAndDaily(50L, inCourseDaily)).thenReturn(Optional.of(kept));
         when(matchRepository.save(kept)).thenReturn(kept);
         when(matchRepository.findByDaily(inCourseDaily)).thenReturn(List.of(kept, removed));
         when(leagueTableEntryRepository.findByDailyOrderByPositionAsc(inCourseDaily)).thenReturn(List.of());
@@ -523,7 +522,8 @@ class DailyResultsServiceTest {
 
         resultsService.submitResults(100L, List.of(result), "admin@example.com");
 
-        verify(playerMatchStatRepository).deleteByMatchIn(List.of(removed));
+        // one DELETE for the stats of every saved match: the edited one and the removed one
+        verify(playerMatchStatRepository).deleteByMatchIn(argThat(matches -> Set.copyOf(matches).equals(Set.of(kept, removed))));
         verify(matchRepository).deleteAll(List.of(removed));
         // the league table only counts the kept match
         @SuppressWarnings("unchecked")
@@ -539,8 +539,7 @@ class DailyResultsServiceTest {
         when(dailyRepository.findById(100L)).thenReturn(Optional.of(inCourseDaily));
         when(teamRepository.findByDailyWithPlayers(inCourseDaily)).thenReturn(List.of(team1, team2));
         Match existing = Match.builder().id(50L).daily(inCourseDaily).team1(team1).team2(team2).build();
-        when(matchRepository.findByIdAndDaily(50L, inCourseDaily)).thenReturn(Optional.of(existing));
-        when(matchRepository.save(existing)).thenReturn(existing);
+        when(matchRepository.findByDaily(inCourseDaily)).thenReturn(List.of(existing));
 
         MatchResultDTO result = new MatchResultDTO(50L, 1L, 2L, 1, 0, null);
 
@@ -558,7 +557,6 @@ class DailyResultsServiceTest {
         when(teamRepository.findByDailyWithPlayers(inCourseDaily)).thenReturn(List.of(team1, team2));
 
         Match match = Match.builder().id(50L).daily(inCourseDaily).team1(team1).team2(team2).team1Score(1).team2Score(0).build();
-        when(matchRepository.findByIdAndDaily(50L, inCourseDaily)).thenReturn(Optional.of(match));
         when(matchRepository.save(match)).thenReturn(match);
         when(matchRepository.findByDaily(inCourseDaily)).thenReturn(List.of(match));
         when(playerMatchStatRepository.findByMatchInWithUser(any())).thenReturn(List.of(
