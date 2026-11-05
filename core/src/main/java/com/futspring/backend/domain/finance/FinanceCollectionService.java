@@ -118,7 +118,9 @@ public class FinanceCollectionService {
         return tx.execute(id, email, command, operation, "LIST:" + listId, command, true, ctx -> {
             var list = reads.findList(id, listId); var before = reads.detail(ctx, listId);
             var chargeRows = charges.findByListIdOrderById(listId);
-            boolean pending = chargeRows.stream().anyMatch(c -> notices.existsByChargeIdAndStatus(c.getId(), NoticeStatus.PENDING));
+            var ids = chargeRows.stream().map(FinanceCharge::getId).toList();
+            // One query for the whole list: a pending notice on any charge blocks close/cancel
+            boolean pending = !ids.isEmpty() && !notices.chargeIdsWithStatus(ids, NoticeStatus.PENDING).isEmpty();
             switch (operation) {
                 case "PUBLISH" -> {
                     require(list.getStatus() == ListStatus.DRAFT, "Apenas rascunhos podem ser publicados");
@@ -136,7 +138,7 @@ public class FinanceCollectionService {
                     reason(command); require(list.getStatus() == ListStatus.DRAFT || list.getStatus() == ListStatus.OPEN || list.getStatus() == ListStatus.CLOSED,
                             "A lista já está cancelada");
                     require(!pending, "Resolva os avisos pendentes antes de cancelar");
-                    require(chargeRows.stream().allMatch(c -> reads.paid(c).signum() == 0), "A lista tem recebimentos confirmados");
+                    require(reads.paid(chargeRows).values().stream().allMatch(v -> v.signum() == 0), "A lista tem recebimentos confirmados");
                     // Even a fully refunded receipt is still a confirmed historical receipt unless reversed.
                     require(!hasValidReceipts(chargeRows), "Anule os recebimentos registrados por engano antes de cancelar");
                     list.setStatus(ListStatus.CANCELED);
@@ -179,24 +181,50 @@ public class FinanceCollectionService {
             return new Change(before, reads.detail(ctx, listId), listId);
         });
     }
+    // Batch of new charges with the list's defaults: identities, conflicts and names are read once for the whole batch,
+    // and every check runs before the first write
     private void addParticipants(Context ctx, FinanceList list, FinanceRequests.Participants request) {
         Long id = ctx.pelada().getId();
         Long listId = list.getId();
         require(!request.userIds().isEmpty() || !request.guestNames().isEmpty(), "Selecione participantes");
         require(new HashSet<>(request.userIds()).size() == request.userIds().size(), "Não repita jogadores");
         require(request.userIds().isEmpty() || peladas.findMemberIds(id, request.userIds()).size() == request.userIds().size(), "Selecione membros desta pelada");
-        var componentRequests = list.getComponents().stream().map(c -> new FinanceRequests.Component(c.getName(), text(c.getAmount()))).toList();
-        List<FinanceRequests.Charge> items = new ArrayList<>();
-        request.userIds().forEach(userId -> items.add(new FinanceRequests.Charge(request.command(), userId, null, null, componentRequests, "0.00", list.getDueDate())));
-        request.guestNames().forEach(name -> items.add(new FinanceRequests.Charge(request.command(), null, null, name, componentRequests, "0.00", list.getDueDate())));
-        for (var item : items) {
-            var person = person(ctx, item);
-            require(!charges.existsByListIdAndPersonIdAndCanceledFalse(listId, person.getId()), "Um participante já tem cobrança nesta lista");
+        require(request.guestNames().stream().noneMatch(String::isBlank), "Selecione um membro ou informe um convidado");
+        // A returning member keeps their financial identity
+        Map<Long, FinancePerson> known = new HashMap<>();
+        if (!request.userIds().isEmpty()) people.findByPeladaIdAndUserIdIn(id, request.userIds()).forEach(p -> known.put(p.getUserId(), p));
+        // Only an existing identity can already have a charge here; the first one, in request order, fails the batch
+        if (!known.isEmpty()) {
+            var active = new HashSet<>(charges.findActivePersonIds(listId, known.values().stream().map(FinancePerson::getId).toList()));
+            request.userIds().stream().map(known::get).filter(p -> p != null && active.contains(p.getId())).findFirst()
+                    .ifPresent(p -> { throw new AppException(HttpStatus.CONFLICT, p.getName() + " já tem cobrança nesta lista"); });
+        }
+        var unknown = request.userIds().stream().filter(userId -> !known.containsKey(userId)).toList();
+        Map<Long, String> names = new HashMap<>();
+        if (!unknown.isEmpty()) users.findAllById(unknown).forEach(u -> names.put(u.getId(), u.getUsername()));
+        List<FinancePerson> created = new ArrayList<>(), participants = new ArrayList<>();
+        for (Long userId : request.userIds()) {
+            var p = known.get(userId);
+            if (p == null) {
+                String name = names.get(userId);
+                if (name == null) throw missing("Jogador");
+                p = newPerson(id, userId, name); created.add(p);
+            }
+            participants.add(p);
+        }
+        // Guests always get a new identity, even with equal names
+        for (String name : request.guestNames()) { var p = newPerson(id, null, name.trim()); created.add(p); participants.add(p); }
+        people.saveAll(created);
+        BigDecimal due = check(list.getComponents().stream().map(PriceComponent::getAmount).reduce(ZERO, BigDecimal::add));
+        charges.saveAll(participants.stream().map(person -> {
             var charge = new FinanceCharge(); charge.setPeladaId(id); charge.setListId(listId); charge.setPersonId(person.getId());
             charge.setUserId(person.getUserId()); charge.setPersonName(person.getName()); charge.setDueDate(list.getDueDate());
-            charge.getComponents().addAll(copyComponents(list.getComponents()));
-            charge.setAmountDue(check(list.getComponents().stream().map(PriceComponent::getAmount).reduce(ZERO, BigDecimal::add))); charges.save(charge);
-        }
+            charge.getComponents().addAll(copyComponents(list.getComponents())); charge.setAmountDue(due);
+            return charge;
+        }).toList());
+    }
+    private static FinancePerson newPerson(Long peladaId, Long userId, String name) {
+        var p = new FinancePerson(); p.setPeladaId(peladaId); p.setUserId(userId); p.setName(name); return p;
     }
     public FinanceViews.Result charge(Long id, Long listId, Long chargeId, boolean replace, FinanceRequests.Charge request, String email) {
         return tx.execute(id, email, request.command(), replace ? "CHARGE_REPLACE" : "CHARGE_SAVE", "CHARGE:" + listId + ":" + chargeId, request, true, ctx -> {
