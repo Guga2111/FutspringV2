@@ -36,7 +36,7 @@ const routes: [RegExp, Handler][] = [
   [/^\/peladas\/\d+\/finance\/audit$/, (_, url) => filterHistory(f.financeAudit, url, (a) => a.createdAt.slice(0, 10), (a) => a.operation)],
   // both finance tours already seen, so the screenshots show the page, not the tour
   [/^\/tours$/, () => ({ seen: ["FINANCE_MANAGER", "FINANCE_MEMBER"] })],
-  [/^\/dailies\/(\d+)$/, (m) => ({ [f.SCHEDULED_ID]: f.scheduledDaily, [f.LIVE_ID]: f.liveDaily, [f.FINISHED_ID]: f.finishedDaily })[Number(m[1])]],
+  [/^\/dailies\/(\d+)$/, (m) => ({ [f.SCHEDULED_ID]: f.scheduledDaily, [f.CONFIRMED_ID]: f.confirmedDaily, [f.LIVE_ID]: f.liveDaily, [f.FINISHED_ID]: f.finishedDaily })[Number(m[1])]],
   [/^\/users\/\d+$/, () => f.profile],
   [/^\/users\/\d+\/peladas$/, () => f.myPeladas],
   [/^\/users\/\d+\/stats$/, () => f.stats],

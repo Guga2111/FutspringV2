@@ -1,6 +1,8 @@
 import { useRef, useState } from "react"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { ArrowDataTransferHorizontalIcon, ShuffleIcon } from "@hugeicons/core-free-icons"
+import { Alert01Icon, ArrowDataTransferHorizontalIcon, PencilEdit02Icon, ShuffleIcon, UserEdit01Icon } from "@hugeicons/core-free-icons"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { PlayerAvatar } from "@/components/PlayerAvatar"
@@ -9,6 +11,7 @@ import { TeamCard, TeamPlayerRow } from "@/components/daily/TeamCard"
 import { TeamColorDot } from "@/components/daily/TeamColorDot"
 import { cn } from "@/lib/utils"
 import { canSortTeams, sortTeamsHint } from "@/utils/attendance"
+import { dailyTeamPendencies, MIN_TEAMS, pendencyLines } from "@/utils/teamDraft"
 import { isDailyOpen, type DailyDetail, type TeamDTO } from "@/types/daily"
 
 interface TeamsSectionProps {
@@ -21,9 +24,12 @@ interface TeamsSectionProps {
   currentUserId: number | null
   onTeamNameChange: (teamId: number, name: string) => void
   onTeamColorChange: (teamId: number, color: string) => void
+  // opens the "Montar times" editor (admin, before the start)
+  onEditTeams: () => void
 }
 
-// Teams before the session starts: sort (admin), swap players (admin), rename (team player), color (team player or admin)
+// Teams before the session starts: sort or build by hand (admin), swap players (admin), rename (team player),
+// color (team player or admin), and the pending items (short teams, confirmed players without a team, empty teams)
 export default function TeamsSection({
   daily,
   sortLoading,
@@ -34,6 +40,7 @@ export default function TeamsSection({
   currentUserId,
   onTeamNameChange,
   onTeamColorChange,
+  onEditTeams,
 }: TeamsSectionProps) {
   const [editingTeamId, setEditingTeamId] = useState<number | null>(null)
   const [editingName, setEditingName] = useState("")
@@ -44,6 +51,9 @@ export default function TeamsSection({
   const isAdminOpen = daily.isAdmin && open
   const full = canSortTeams(daily.confirmedPlayers.length, daily.numberOfTeams, daily.playersPerTeam)
   const hasTeams = daily.teams.length > 0
+  const canBuild = daily.confirmedPlayers.length >= MIN_TEAMS
+  const pendencies = pendencyLines(dailyTeamPendencies(daily), daily.playersPerTeam)
+  const outlineButton = "h-[34px] gap-1.5 bg-transparent px-3.5 hover:bg-accent"
 
   const startEditing = (team: TeamDTO) => {
     setEditingTeamId(team.id)
@@ -68,17 +78,37 @@ export default function TeamsSection({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-base font-semibold">Times</h2>
         {isAdminOpen && hasTeams && (
-          <Button
-            variant="outline"
-            disabled={!full || sortLoading || swapLoading}
-            onClick={onSortTeams}
-            className="h-[34px] gap-1.5 bg-transparent px-3.5 hover:bg-accent"
-          >
-            <HugeiconsIcon icon={ShuffleIcon} className="size-3.5" />
-            {sortLoading ? "Sorteando…" : "Sortear de novo"}
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" disabled={sortLoading || swapLoading} onClick={onEditTeams} className={outlineButton}>
+              <HugeiconsIcon icon={PencilEdit02Icon} className="size-3.5" />
+              Editar times
+            </Button>
+            <Button
+              variant="outline"
+              disabled={!full || sortLoading || swapLoading}
+              onClick={onSortTeams}
+              className={outlineButton}
+            >
+              <HugeiconsIcon icon={ShuffleIcon} className="size-3.5" />
+              {sortLoading ? "Sorteando…" : "Sortear de novo"}
+            </Button>
+          </div>
         )}
       </div>
+
+      {open && hasTeams && pendencies.length > 0 && (
+        <Alert>
+          <HugeiconsIcon icon={Alert01Icon} className="size-4" />
+          <AlertTitle>Pendências</AlertTitle>
+          <AlertDescription>
+            <ul className="flex flex-col gap-0.5">
+              {pendencies.map((line) => (
+                <li key={line}>{line}</li>
+              ))}
+            </ul>
+          </AlertDescription>
+        </Alert>
+      )}
 
       {!hasTeams ? (
         <div className="flex flex-col items-center gap-3 rounded-tile border border-dashed border-input px-5 py-7 text-center">
@@ -90,15 +120,26 @@ export default function TeamsSection({
             </span>
           </div>
           {isAdminOpen && (
-            <Button
-              variant={full ? "brand" : "secondary"}
-              disabled={!full || sortLoading}
-              onClick={onSortTeams}
-              className={cn("h-[38px] gap-2 px-[18px] font-semibold", !full && "bg-accent text-faint-foreground disabled:opacity-100")}
-            >
-              <HugeiconsIcon icon={ShuffleIcon} className="size-[15px]" />
-              {sortLoading ? "Sorteando…" : "Sortear times"}
-            </Button>
+            <div className="flex flex-wrap justify-center gap-2">
+              <Button
+                variant="outline"
+                disabled={!canBuild || sortLoading}
+                onClick={onEditTeams}
+                className="h-[38px] gap-2 bg-transparent px-[18px] font-semibold hover:bg-accent"
+              >
+                <HugeiconsIcon icon={UserEdit01Icon} className="size-[15px]" />
+                Montar manualmente
+              </Button>
+              <Button
+                variant={full ? "brand" : "secondary"}
+                disabled={!full || sortLoading}
+                onClick={onSortTeams}
+                className={cn("h-[38px] gap-2 px-[18px] font-semibold", !full && "bg-accent text-faint-foreground disabled:opacity-100")}
+              >
+                <HugeiconsIcon icon={ShuffleIcon} className="size-[15px]" />
+                {sortLoading ? "Sorteando…" : "Sortear times"}
+              </Button>
+            </div>
           )}
         </div>
       ) : (
@@ -120,11 +161,12 @@ export default function TeamsSection({
                     <>
                       {canEditColor ? (
                         // shadcn has no color picker: a label around a visually hidden native color input
-                        <label className="shrink-0 cursor-pointer" title="Alterar cor do time">
+                        // (relative + size-px: Input's w-full would otherwise stretch the hidden input across the page)
+                        <label className="relative shrink-0 cursor-pointer" title="Alterar cor do time">
                           <Input
                             type="color"
                             aria-label={`Cor do ${team.name}`}
-                            className="sr-only"
+                            className="sr-only size-px"
                             defaultValue={team.color ?? "#6b7280"}
                             onChange={(e) => handleColorChange(team.id, e.target.value)}
                           />
@@ -164,7 +206,19 @@ export default function TeamsSection({
                       )}
                     </>
                   }
-                  aside={<span className="shrink-0 text-xs font-semibold text-gold">{team.averageStars.toFixed(2)} ★</span>}
+                  aside={
+                    <span className="flex shrink-0 items-center gap-2">
+                      {open && team.players.length < daily.playersPerTeam && (
+                        <Badge variant="outline" className="whitespace-nowrap border-warning font-medium text-warning">
+                          Desfalcado
+                        </Badge>
+                      )}
+                      <span className="text-xs text-muted-foreground">
+                        {team.players.length}/{daily.playersPerTeam}
+                      </span>
+                      <span className="text-xs font-semibold text-gold">{team.averageStars.toFixed(2)} ★</span>
+                    </span>
+                  }
                 >
                   {team.players.map((player) => {
                     const isSelected = selectedPlayer?.id === player.id

@@ -7,6 +7,7 @@ import com.futspring.backend.domain.daily.dto.CreateDailyRequestDTO;
 import com.futspring.backend.domain.daily.dto.DailyDetailDTO;
 import com.futspring.backend.domain.daily.dto.DailyListItemDTO;
 import com.futspring.backend.domain.daily.entity.Daily;
+import com.futspring.backend.domain.daily.entity.Team;
 import com.futspring.backend.domain.daily.entity.DailyStatus;
 import com.futspring.backend.domain.daily.repository.DailyAttendanceBumpRepository;
 import com.futspring.backend.domain.daily.repository.DailyAttendanceRepository;
@@ -309,7 +310,7 @@ class DailyServiceTest {
     @Test
     void updateStatus_scheduledToConfirmed_succeeds() {
         when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
-        when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
+        when(dailyRepository.findByIdForUpdate(100L)).thenReturn(Optional.of(scheduledDaily));
         when(dailyRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         dailyService.updateStatus(100L, DailyStatus.CONFIRMED, "admin@example.com");
@@ -321,7 +322,7 @@ class DailyServiceTest {
     @Test
     void updateStatus_scheduledToCanceled_succeeds() {
         when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
-        when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
+        when(dailyRepository.findByIdForUpdate(100L)).thenReturn(Optional.of(scheduledDaily));
         when(dailyRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         dailyService.updateStatus(100L, DailyStatus.CANCELED, "admin@example.com");
@@ -334,18 +335,81 @@ class DailyServiceTest {
     void updateStatus_confirmedToInCourse_succeeds() {
         scheduledDaily.setStatus(DailyStatus.CONFIRMED);
         when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
-        when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
+        when(dailyRepository.findByIdForUpdate(100L)).thenReturn(Optional.of(scheduledDaily));
         when(dailyRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        // one team short (1 of 2) and a confirmed player without a team never block the start
+        User extraPlayer = User.builder().id(9L).email("x@example.com").username("x").password("hash").build();
+        attendance.confirm(scheduledDaily, admin, member, extraPlayer);
+        when(teamRepository.findByDailyWithPlayers(scheduledDaily)).thenReturn(List.of(
+                team(1L, "Time 1", admin), team(2L, "Time 2", member)));
 
         dailyService.updateStatus(100L, DailyStatus.IN_COURSE, "admin@example.com");
 
         assertThat(scheduledDaily.getStatus()).isEqualTo(DailyStatus.IN_COURSE);
     }
 
+    private Team team(long id, String name, User... players) {
+        return Team.builder().id(id).daily(scheduledDaily).name(name).players(new HashSet<>(Set.of(players))).build();
+    }
+
+    private void assertStartRefused(String message) {
+        assertThatThrownBy(() -> dailyService.updateStatus(100L, DailyStatus.IN_COURSE, "admin@example.com"))
+                .isInstanceOf(AppException.class)
+                .hasMessage(message)
+                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.CONFLICT));
+        assertThat(scheduledDaily.getStatus()).isEqualTo(DailyStatus.CONFIRMED);
+    }
+
+    @Test
+    void updateStatus_startWithoutTeams_throwsConflict() {
+        scheduledDaily.setStatus(DailyStatus.CONFIRMED);
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
+        when(dailyRepository.findByIdForUpdate(100L)).thenReturn(Optional.of(scheduledDaily));
+        when(teamRepository.findByDailyWithPlayers(scheduledDaily)).thenReturn(List.of());
+
+        assertStartRefused("Monte os times antes de iniciar a sessão");
+    }
+
+    @Test
+    void updateStatus_startWithOneTeam_throwsConflict() {
+        scheduledDaily.setStatus(DailyStatus.CONFIRMED);
+        attendance.confirm(scheduledDaily, admin);
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
+        when(dailyRepository.findByIdForUpdate(100L)).thenReturn(Optional.of(scheduledDaily));
+        when(teamRepository.findByDailyWithPlayers(scheduledDaily)).thenReturn(List.of(team(1L, "Time 1", admin)));
+
+        assertStartRefused("Monte os times antes de iniciar a sessão");
+    }
+
+    @Test
+    void updateStatus_startWithAnEmptyTeam_throwsConflict() {
+        scheduledDaily.setStatus(DailyStatus.CONFIRMED);
+        attendance.confirm(scheduledDaily, admin);
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
+        when(dailyRepository.findByIdForUpdate(100L)).thenReturn(Optional.of(scheduledDaily));
+        when(teamRepository.findByDailyWithPlayers(scheduledDaily)).thenReturn(List.of(
+                team(1L, "Time 1", admin), team(2L, "Time 2")));
+
+        assertStartRefused("O Time 2 está vazio");
+    }
+
+    @Test
+    void updateStatus_startWithAPlayerNoLongerConfirmed_throwsConflict() {
+        scheduledDaily.setStatus(DailyStatus.CONFIRMED);
+        attendance.confirm(scheduledDaily, admin);
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
+        when(dailyRepository.findByIdForUpdate(100L)).thenReturn(Optional.of(scheduledDaily));
+        when(teamRepository.findByDailyWithPlayers(scheduledDaily)).thenReturn(List.of(
+                team(1L, "Time 1", admin), team(2L, "Time 2", member)));
+
+        assertStartRefused("member não está mais confirmada e está no Time 2");
+    }
+
     @Test
     void updateStatus_invalidTransition_throwsBadRequest() {
         when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
-        when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
+        when(dailyRepository.findByIdForUpdate(100L)).thenReturn(Optional.of(scheduledDaily));
 
         assertThatThrownBy(() -> dailyService.updateStatus(100L, DailyStatus.IN_COURSE, "admin@example.com"))
                 .isInstanceOf(AppException.class)
@@ -355,7 +419,7 @@ class DailyServiceTest {
     @Test
     void updateStatus_callerNotAdmin_throwsForbidden() {
         when(userAuthHelper.getAuthenticatedUser("member@example.com")).thenReturn(member);
-        when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
+        when(dailyRepository.findByIdForUpdate(100L)).thenReturn(Optional.of(scheduledDaily));
 
         assertThatThrownBy(() -> dailyService.updateStatus(100L, DailyStatus.CONFIRMED, "member@example.com"))
                 .isInstanceOf(AppException.class)
@@ -374,7 +438,7 @@ class DailyServiceTest {
     @Test
     void updateStatus_dailyNotFound_throwsNotFound() {
         when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
-        when(dailyRepository.findById(999L)).thenReturn(Optional.empty());
+        when(dailyRepository.findByIdForUpdate(999L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> dailyService.updateStatus(999L, DailyStatus.CONFIRMED, "admin@example.com"))
                 .isInstanceOf(AppException.class)
@@ -385,7 +449,7 @@ class DailyServiceTest {
     void updateStatus_finishedToAnyStatus_throwsBadRequest() {
         scheduledDaily.setStatus(DailyStatus.FINISHED);
         when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
-        when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
+        when(dailyRepository.findByIdForUpdate(100L)).thenReturn(Optional.of(scheduledDaily));
 
         assertThatThrownBy(() -> dailyService.updateStatus(100L, DailyStatus.SCHEDULED, "admin@example.com"))
                 .isInstanceOf(AppException.class)

@@ -17,6 +17,9 @@ import com.futspring.backend.shared.helper.UserAuthenticationHelper;
 import com.futspring.backend.support.InMemoryAttendance;
 import com.futspring.backend.support.MembershipStubs;
 import com.futspring.backend.domain.user.User;
+import com.futspring.backend.domain.user.UserRepository;
+import com.futspring.backend.domain.daily.dto.SaveTeamsRequestDTO;
+import com.futspring.backend.domain.daily.dto.SaveTeamsRequestDTO.TeamInput;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -45,6 +48,7 @@ class DailyTeamManagementServiceTest {
     @Mock DailyAttendanceRepository attendanceRepository;
     @Mock TeamRepository teamRepository;
     @Mock DailyDTOMapper dailyDTOMapper;
+    @Mock UserRepository userRepository;
 
     @Mock
     PeladaPlayerStarsRepository playerStarsRepository;
@@ -62,7 +66,7 @@ class DailyTeamManagementServiceTest {
     void setUp() {
         teamManagementService = new DailyTeamManagementService(
                 userAuthHelper, new PeladaAccessHelper(peladaRepository), dailyRepository, attendanceRepository, teamRepository,
-                playerStarsRepository, dailyDTOMapper, eventPublisher);
+                playerStarsRepository, userRepository, dailyDTOMapper, eventPublisher);
 
         admin = User.builder().id(1L).email("admin@example.com").username("admin").password("hash").build();
         member = User.builder().id(2L).email("member@example.com").username("member").password("hash").build();
@@ -327,5 +331,152 @@ class DailyTeamManagementServiceTest {
         assertThatThrownBy(() -> teamManagementService.swapPlayers(100L, 1L, 2L, "ghost@example.com"))
                 .isInstanceOf(AppException.class)
                 .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.NOT_FOUND));
+    }
+
+    // --- saveTeams ---
+
+    private User extra(long id, String name) {
+        User user = User.builder().id(id).email(name + "@example.com").username(name).password("hash").build();
+        pelada.getMembers().add(user);
+        return user;
+    }
+
+    private void stubSave() {
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
+        when(dailyRepository.findByIdForUpdate(100L)).thenReturn(Optional.of(scheduledDaily));
+    }
+
+    private static SaveTeamsRequestDTO request(TeamInput... teams) {
+        return new SaveTeamsRequestDTO(List.of(teams));
+    }
+
+    @Test
+    void saveTeams_differentSizesAndLeftovers_replacesTheTeamsInOrderAndPublishesTheEvent() {
+        User ana = extra(4L, "Ana");
+        User bruno = extra(5L, "Bruno");
+        attendance.confirm(scheduledDaily, admin, member, ana, bruno);
+        stubSave();
+        when(teamRepository.saveAll(anyList())).thenAnswer(inv -> inv.getArgument(0));
+
+        teamManagementService.saveTeams(100L, request(
+                new TeamInput(" Azul ", "#3b82f6", List.of(1L, 2L, 4L)),
+                new TeamInput("Verde", null, List.of(5L))), "admin@example.com");
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<List<Team>> saved = ArgumentCaptor.forClass(List.class);
+        verify(teamRepository).saveAll(saved.capture());
+        assertThat(saved.getValue()).extracting(Team::getName).containsExactly("Azul", "Verde");
+        assertThat(saved.getValue().get(0).getColor()).isEqualTo("#3b82f6");
+        assertThat(saved.getValue().get(0).getPlayers()).containsExactlyInAnyOrder(admin, member, ana);
+        assertThat(saved.getValue().get(1).getPlayers()).containsExactly(bruno);
+        verify(teamRepository).deleteAll(anyList());
+        verify(eventPublisher).publishEvent(new TeamsSortedEvent(scheduledDaily, admin, List.of(admin, member, ana, bruno)));
+    }
+
+    @Test
+    void saveTeams_confirmedPlayerLeftOut_isAllowed() {
+        attendance.confirm(scheduledDaily, admin, member, extra(4L, "Ana"));
+        stubSave();
+        when(teamRepository.saveAll(anyList())).thenAnswer(inv -> inv.getArgument(0));
+
+        assertThatCode(() -> teamManagementService.saveTeams(100L, request(
+                new TeamInput("Time 1", null, List.of(1L)),
+                new TeamInput("Time 2", null, List.of(2L))), "admin@example.com")).doesNotThrowAnyException();
+    }
+
+    @Test
+    void saveTeams_playerTwice_throwsBadRequestNamingThem() {
+        attendance.confirm(scheduledDaily, admin, member);
+        stubSave();
+
+        assertThatThrownBy(() -> teamManagementService.saveTeams(100L, request(
+                new TeamInput("Time 1", null, List.of(1L, 2L)),
+                new TeamInput("Time 2", null, List.of(2L))), "admin@example.com"))
+                .isInstanceOf(AppException.class)
+                .hasMessage("member aparece em mais de um time")
+                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.BAD_REQUEST));
+        verify(teamRepository, never()).saveAll(anyList());
+    }
+
+    @Test
+    void saveTeams_playerNotConfirmed_throwsConflictNamingThem() {
+        User ana = extra(4L, "Ana");
+        attendance.confirm(scheduledDaily, admin, member);
+        stubSave();
+        when(userRepository.findById(4L)).thenReturn(Optional.of(ana));
+
+        assertThatThrownBy(() -> teamManagementService.saveTeams(100L, request(
+                new TeamInput("Time 1", null, List.of(1L, 4L)),
+                new TeamInput("Time 2", null, List.of(2L))), "admin@example.com"))
+                .isInstanceOf(AppException.class)
+                .hasMessage("Ana não está mais confirmada")
+                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.CONFLICT));
+        verify(teamRepository, never()).saveAll(anyList());
+    }
+
+    @Test
+    void saveTeams_emptyTeam_throwsBadRequest() {
+        attendance.confirm(scheduledDaily, admin, member);
+        stubSave();
+
+        assertThatThrownBy(() -> teamManagementService.saveTeams(100L, request(
+                new TeamInput("Time 1", null, List.of(1L, 2L)),
+                new TeamInput("Time 2", null, List.of()),
+                new TeamInput("Time 3", null, List.of())), "admin@example.com"))
+                .isInstanceOf(AppException.class)
+                .hasMessage("O Time 2 está vazio")
+                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.BAD_REQUEST));
+    }
+
+    @Test
+    void saveTeams_lockedSession_throwsBadRequest() {
+        scheduledDaily.setStatus(DailyStatus.IN_COURSE);
+        stubSave();
+
+        assertThatThrownBy(() -> teamManagementService.saveTeams(100L, request(
+                new TeamInput("Time 1", null, List.of(1L)),
+                new TeamInput("Time 2", null, List.of(2L))), "admin@example.com"))
+                .isInstanceOf(AppException.class)
+                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.BAD_REQUEST));
+    }
+
+    @Test
+    void saveTeams_callerNotAdmin_throwsForbidden() {
+        when(userAuthHelper.getAuthenticatedUser("member@example.com")).thenReturn(member);
+        when(dailyRepository.findByIdForUpdate(100L)).thenReturn(Optional.of(scheduledDaily));
+
+        assertThatThrownBy(() -> teamManagementService.saveTeams(100L, request(
+                new TeamInput("Time 1", null, List.of(1L)),
+                new TeamInput("Time 2", null, List.of(2L))), "member@example.com"))
+                .isInstanceOf(AppException.class)
+                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.FORBIDDEN));
+    }
+
+    @Test
+    void saveTeams_dailyNotFound_throwsNotFound() {
+        when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
+        when(dailyRepository.findByIdForUpdate(999L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> teamManagementService.saveTeams(999L, request(
+                new TeamInput("Time 1", null, List.of(1L)),
+                new TeamInput("Time 2", null, List.of(2L))), "admin@example.com"))
+                .isInstanceOf(AppException.class)
+                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.NOT_FOUND));
+    }
+
+    // --- removeFromTeams ---
+
+    @Test
+    void removeFromTeams_takesThePlayerOutAndKeepsTheTeamEvenEmpty() {
+        Team team1 = Team.builder().id(1L).daily(scheduledDaily).name("Time 1").players(new HashSet<>(Set.of(member))).build();
+        Team team2 = Team.builder().id(2L).daily(scheduledDaily).name("Time 2").players(new HashSet<>(Set.of(admin))).build();
+        when(teamRepository.findByDailyInWithPlayers(List.of(scheduledDaily))).thenReturn(List.of(team1, team2));
+
+        teamManagementService.removeFromTeams(scheduledDaily, member);
+
+        assertThat(team1.getPlayers()).isEmpty();
+        assertThat(team2.getPlayers()).containsExactly(admin);
+        verify(teamRepository, never()).delete(any());
+        verify(teamRepository, never()).deleteAll(anyList());
     }
 }

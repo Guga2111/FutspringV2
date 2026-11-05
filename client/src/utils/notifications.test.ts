@@ -33,7 +33,7 @@ const cases: [NotificationType, Partial<NotificationResponse>, string, string | 
   ["SESSION_REMINDER", { actor: null }, "Sessão de sáb, 31/10 às 20:00 na Pelada do Fut e você ainda não confirmou", "/daily/100"],
   ["SESSION_CREATED", {}, "Nova sessão na Pelada do Fut: sáb, 31/10 às 20:00", "/daily/100"],
   ["DIARISTA_WINDOW_OPEN", { actor: null }, "As confirmações abriram na Pelada do Fut: sáb, 31/10 às 20:00", "/daily/100"],
-  ["TEAMS_SORTED", { team: { name: "Time Azul", color: "blue" } }, "Times sorteados para sáb, 31/10: você está no Time Azul", "/daily/100"],
+  ["TEAMS_SORTED", { team: { name: "Time Azul", color: "blue" } }, "Times definidos para sáb, 31/10: você está no Time Azul", "/daily/100"],
   ["SESSION_FINISHED", {}, "Sessão de sáb, 31/10 da Pelada do Fut finalizada: veja o resultado", "/daily/100"],
   ["PELADA_INVITATION", { ...noDaily, invitationId: 42 }, "Leal convidou você para a Pelada do Fut", "/invitations/42"],
   ["MEMBER_JOINED", noDaily, "Leal entrou na Pelada do Fut", "/pelada/10"],
@@ -77,7 +77,7 @@ describe("notificationView", () => {
     expect(notificationPlainText(make("ATTENDANCE_REMOVED_BY_ADMIN", { actor: null }))).toBe(
       "Um admin removeu sua presença na sessão de sáb, 31/10",
     )
-    expect(notificationPlainText(make("TEAMS_SORTED"))).toBe("Times sorteados para sáb, 31/10 na Pelada do Fut")
+    expect(notificationPlainText(make("TEAMS_SORTED"))).toBe("Times definidos para sáb, 31/10 na Pelada do Fut")
     expect(notificationPlainText(make("ADDED_TO_PELADA", { actor: null, daily: null }))).toBe("Você entrou na Pelada do Fut")
   })
 })

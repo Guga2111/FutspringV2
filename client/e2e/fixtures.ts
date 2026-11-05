@@ -16,6 +16,7 @@ export const PELADA_ID = 1
 export const SCHEDULED_ID = 203
 export const LIVE_ID = 202
 export const FINISHED_ID = 201
+export const CONFIRMED_ID = 204
 
 const NAMES = ["Leal", "Bruno", "Caio", "Diego", "Edu", "Fabio", "Gabriel", "Hugo", "Igor", "João", "Kaique", "Lucas"]
 const POSITIONS = ["GOLEIRO", "ZAGUEIRO", "MEIO", "ATACANTE"]
@@ -251,6 +252,28 @@ export const scheduledDaily: DailyDetail = {
   award: null,
   startsAt: "2026-11-06T00:00:00.000Z",
   bumps: [{ user: publicUser(members[10]), bumpedBy: publicUser(members[3]), bumpedAt: "2026-11-04T12:00:00.000Z" }],
+}
+
+// Confirmed session after a withdrawal: Branco is one short (4 of 5) and João confirmed without a team
+export const confirmedDaily: DailyDetail = {
+  ...baseDaily,
+  id: CONFIRMED_ID,
+  dailyDate: "2026-11-05",
+  dailyTime: "21:00",
+  status: "CONFIRMED",
+  isFinished: false,
+  confirmedPlayers: confirmed(10),
+  teams: teams.map((team, i) => {
+    const players = i === 1 ? team.players.slice(0, 4) : team.players
+    const total = players.reduce((sum, p) => sum + p.stars, 0)
+    return { ...team, players, totalStars: total, averageStars: total / players.length }
+  }),
+  matches: [],
+  playerStats: [],
+  leagueTable: [],
+  award: null,
+  startsAt: "2026-11-06T00:00:00.000Z",
+  bumps: [],
 }
 
 const leagueTable = [
