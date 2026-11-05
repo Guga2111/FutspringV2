@@ -15,7 +15,10 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectVa
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import type { DailyListItem } from "@/types/daily"
 import { applyServerErrors } from "@/lib/form-errors"
-import { formatShortDate, formatWeekdayDayMonth } from "@/utils/dates"
+import { formatShortDate, formatWeekdayDayMonth, parseLocalDate } from "@/utils/dates"
+import { format } from "date-fns"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { Calendar03Icon } from "@hugeicons/core-free-icons"
 
 export function FinanceCashForm({ peladaId, finance, kind, dailies, onClose }: { peladaId: number; finance: FinanceController; kind: "EXPENSE" | "INCOME" | "OPENING"; dailies: DailyListItem[]; onClose: () => void }) {
   const [options, setOptions] = useState(false)
@@ -39,7 +42,7 @@ export function FinanceCashForm({ peladaId, finance, kind, dailies, onClose }: {
       <Collapsible open={options} onOpenChange={setOptions}><div className="flex items-center justify-between gap-3"><p className="text-sm">{date ? formatShortDate(date) : "Hoje"} · {financeMethodLabel[method]}</p><CollapsibleTrigger asChild><Button type="button" variant="ghost" size="sm">{options ? "Recolher" : "Mais opções"}</Button></CollapsibleTrigger></div><CollapsibleContent className="pt-4"><FieldGroup>
         <FinanceInput control={form.control} name="effectiveDate" label="Data em que o dinheiro entrou ou saiu" type="date" />
         <FinanceSelect control={form.control} name="method" label="Meio de pagamento" options={financeOptions(financeMethodLabel)} />
-        {kind !== "OPENING" && <><Field><FieldLabel htmlFor="finance-cash-list">Vincular a uma cobrança (opcional)</FieldLabel><Select value={String(listId ?? "none")} onValueChange={value => form.setValue("listId", value === "none" ? null : Number(value))}><SelectTrigger id="finance-cash-list"><SelectValue /></SelectTrigger><SelectContent><SelectGroup><SelectItem value="none">Sem vínculo</SelectItem>{finance.overview?.lists.map(list => <SelectItem key={list.id} value={String(list.id)}>{list.name}</SelectItem>)}</SelectGroup></SelectContent></Select></Field>
+        {kind !== "OPENING" && <><Field><FieldLabel htmlFor="finance-cash-list">Vincular a uma cobrança (opcional)</FieldLabel><Select value={String(listId ?? "none")} onValueChange={value => form.setValue("listId", value === "none" ? null : Number(value))}><SelectTrigger id="finance-cash-list"><SelectValue /></SelectTrigger><SelectContent><SelectGroup><SelectItem value="none">Sem vínculo</SelectItem>{finance.overview?.lists.map(list => <SelectItem key={list.id} value={String(list.id)}>{list.dueDate ? <span className="inline-flex items-center gap-1.5">{list.name} · {format(parseLocalDate(list.dueDate), "dd/MM/yyyy")}<HugeiconsIcon icon={Calendar03Icon} className="size-4 text-muted-foreground" aria-hidden="true" /></span> : list.name}</SelectItem>)}</SelectGroup></SelectContent></Select></Field>
           <Field><FieldLabel htmlFor="finance-cash-daily">Vincular a uma sessão (opcional)</FieldLabel><Select value={String(dailyId ?? "none")} onValueChange={value => form.setValue("dailyId", value === "none" ? null : Number(value))}><SelectTrigger id="finance-cash-daily"><SelectValue /></SelectTrigger><SelectContent><SelectGroup><SelectItem value="none">Sem vínculo</SelectItem>{dailies.map(daily => <SelectItem key={daily.id} value={String(daily.id)}>{formatWeekdayDayMonth(daily.dailyDate)}</SelectItem>)}</SelectGroup></SelectContent></Select></Field></>}
       </FieldGroup></CollapsibleContent></Collapsible>
     </FieldGroup><FinanceFormError message={form.formState.errors.root?.message} /><Button variant="brand" className="mt-auto" type="submit" disabled={busy}>{busy ? "Salvando…" : title}</Button></form>
