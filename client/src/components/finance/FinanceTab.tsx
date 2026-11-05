@@ -123,8 +123,8 @@ export function FinanceTab({ peladaId, userId, members, dailies, timeZone }: { p
               {manage ? "Cobranças" : "Minhas cobranças"}
             </TabsTrigger>
             {overview.permissions.viewCash && <TabsTrigger variant="underline" value="cash" data-tour="cash-tab">Caixa</TabsTrigger>}
-            {manage && <TabsTrigger variant="underline" value="settings" data-tour="settings-tab">Configurações</TabsTrigger>}
             {manage && <TabsTrigger variant="underline" value="history">Histórico</TabsTrigger>}
+            {manage && <TabsTrigger variant="underline" value="settings" data-tour="settings-tab">Configurações</TabsTrigger>}
           </TabsList>
           <div className="flex shrink-0 items-center">
             <FinanceTourButton onPrepare={prepareTour} />
