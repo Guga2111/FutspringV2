@@ -35,6 +35,7 @@ export function useInvitations(peladaId?: number, pending = true, refreshKey = 0
       if (requestId.current === id) setState(previous => previous && ({ ...previous, error: true }))
     } finally { setLoadingMore(false) }
   }
-  const current = state?.key === key && state.version === version ? state : null
+  // a reload keeps the rows on screen until it answers (no skeleton, no badge flicker); another key never shows
+  const current = state?.key === key ? state : null
   return { items: current?.items ?? [], loading: !current, error: current?.error ?? false, hasMore: current?.more ?? false, loadingMore, reload, loadMore }
 }
