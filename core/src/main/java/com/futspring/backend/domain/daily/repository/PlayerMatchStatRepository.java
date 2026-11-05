@@ -16,10 +16,6 @@ public interface PlayerMatchStatRepository extends JpaRepository<PlayerMatchStat
     List<PlayerMatchStat> findByMatchInWithUser(@Param("matches") List<Match> matches);
 
     @Modifying
-    @Query("DELETE FROM PlayerMatchStat p WHERE p.match = :match")
-    void deleteByMatch(@Param("match") Match match);
-
-    @Modifying
     @Query("DELETE FROM PlayerMatchStat p WHERE p.match IN :matches")
     void deleteByMatchIn(@Param("matches") Collection<Match> matches);
 }

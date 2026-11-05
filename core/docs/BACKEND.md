@@ -690,7 +690,7 @@ Reference: `UserController`, `PeladaController.createPelada`.
 
 ### 2. Authorization in the service, before any change
 
-Load the caller, load the resource, check the relationship, then act (see [The pattern](#the-pattern)). Reference: `PeladaService.updatePelada`, `DailyTeamManagementService.updateTeamName` (also scopes the team to the daily), `DailyResultsService.submitResults` (scopes `matchId` with `findByIdAndDaily`).
+Load the caller, load the resource, check the relationship, then act (see [The pattern](#the-pattern)). Reference: `PeladaService.updatePelada`, `DailyTeamManagementService.updateTeamName` (also scopes the team to the daily), `DailyResultsService.submitResults` (scopes `matchId` to the session's matches, loaded once with `findByDaily`).
 
 ### 3. Map to DTO records with static factories
 
@@ -729,7 +729,7 @@ Don't introduce these. Some exist already ("Found in"); fix them when the change
 | # | Don't | Do instead | Found in |
 |---|-------|-----------|----------|
 | 1 | `@RequestBody` without `@Valid` (constraints in the DTO are never enforced: negative scores are accepted) | `@Valid @RequestBody`, constraints on the DTO | — |
-| 2 | Trust a child id from the request without checking it belongs to the route's parent (IDOR) | Scope it: `match.getDaily().getId().equals(dailyId)` or a scoped query (`findByIdAndDaily`) | — |
+| 2 | Trust a child id from the request without checking it belongs to the route's parent (IDOR) | Scope it: `match.getDaily().getId().equals(dailyId)` or a scoped load (the parent's children by id, as `submitResults` does with the session's matches) | — |
 | 3 | Endpoints that read another user's data with no relationship check, or expose email | Check the relationship; return a public DTO without PII (`PublicUserDTO`) | — |
 | 4 | Unauthorized WebSocket subscriptions / anonymous CONNECT | Authorize `SUBSCRIBE` to `/topic/pelada/{id}` for members only; reject CONNECT without a valid token | — |
 | 5 | Secrets in tracked or deployable files (DB password, JWT secret, Supabase URL) | Environment variables / `.env` (gitignored); rotate anything that leaked | `docker-compose.dev.yml` (dev values) |

@@ -78,8 +78,12 @@ public class DailyResultsService {
 
         Map<Long, Team> teamMap = teamRepository.findByDailyWithPlayers(daily).stream()
                 .collect(Collectors.toMap(Team::getId, t -> t));
+        // The session's matches, loaded once: a match id from the body must be one of them (never another pelada's match)
+        Map<Long, Match> existingMatches = matchRepository.findByDaily(daily).stream()
+                .collect(Collectors.toMap(Match::getId, m -> m));
 
-        List<Match> savedMatches = new ArrayList<>();
+        // 1. Validate every result before writing anything
+        List<PlannedMatch> planned = new ArrayList<>();
         Set<Long> submittedMatchIds = new HashSet<>();
 
         for (MatchResultDTO result : results) {
@@ -95,11 +99,10 @@ public class DailyResultsService {
                 throw new AppException(HttpStatus.BAD_REQUEST, "Uma partida precisa de dois times diferentes");
             }
 
-            // The match id comes from the body: it must belong to this daily (never another pelada's match)
-            Match match = result.matchId() == null
-                    ? Match.builder().daily(daily).build()
-                    : matchRepository.findByIdAndDaily(result.matchId(), daily)
-                            .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Partida não encontrada nesta sessão"));
+            Match match = result.matchId() == null ? Match.builder().daily(daily).build() : existingMatches.get(result.matchId());
+            if (match == null) {
+                throw new AppException(HttpStatus.NOT_FOUND, "Partida não encontrada nesta sessão");
+            }
 
             Set<Long> team1Ids = t1.getPlayers().stream().map(User::getId).collect(Collectors.toSet());
             Set<Long> team2Ids = t2.getPlayers().stream().map(User::getId).collect(Collectors.toSet());
@@ -127,25 +130,32 @@ public class DailyResultsService {
                 requireWithinScore(t1, "assistências", team1Assists, result.team1Score());
                 requireWithinScore(t2, "assistências", team2Assists, result.team2Score());
             }
+            planned.add(new PlannedMatch(match, t1, t2, result, statsByUserId));
+        }
 
-            match.setTeam1(t1);
-            match.setTeam2(t2);
-            match.setTeam1Score(result.team1Score());
-            match.setTeam2Score(result.team2Score());
-            match.setWinner(result.team1Score() > result.team2Score() ? t1
-                    : result.team2Score() > result.team1Score() ? t2 : null);
+        // 2. Write. The stats of every saved match are overwritten (edited and removed ones in one DELETE): one row per
+        // player of the two teams, so matchesPlayed counts the matches a player actually played
+        if (!existingMatches.isEmpty()) {
+            playerMatchStatRepository.deleteByMatchIn(existingMatches.values());
+        }
+        List<Match> savedMatches = new ArrayList<>();
+        List<PlayerMatchStat> statsToSave = new ArrayList<>();
+        for (PlannedMatch p : planned) {
+            Match match = p.match();
+            match.setTeam1(p.team1());
+            match.setTeam2(p.team2());
+            match.setTeam1Score(p.result().team1Score());
+            match.setTeam2Score(p.result().team2Score());
+            match.setWinner(p.result().team1Score() > p.result().team2Score() ? p.team1()
+                    : p.result().team2Score() > p.result().team1Score() ? p.team2() : null);
 
             Match savedMatch = matchRepository.save(match);
             savedMatches.add(savedMatch);
 
-            // Overwrite the match stats: one row per player of the two teams (single DELETE + batch INSERT),
-            // so matchesPlayed counts the matches a player actually played
-            playerMatchStatRepository.deleteByMatch(savedMatch);
-            Set<User> matchPlayers = new LinkedHashSet<>(t1.getPlayers());
-            matchPlayers.addAll(t2.getPlayers());
-            List<PlayerMatchStat> statsToSave = new ArrayList<>();
+            Set<User> matchPlayers = new LinkedHashSet<>(p.team1().getPlayers());
+            matchPlayers.addAll(p.team2().getPlayers());
             for (User player : matchPlayers) {
-                MatchResultDTO.PlayerStatInputDTO input = statsByUserId.get(player.getId());
+                MatchResultDTO.PlayerStatInputDTO input = p.statsByUserId().get(player.getId());
                 statsToSave.add(PlayerMatchStat.builder()
                         .match(savedMatch)
                         .user(player)
@@ -153,16 +163,14 @@ public class DailyResultsService {
                         .assists(input != null ? input.assists() : 0)
                         .build());
             }
-            playerMatchStatRepository.saveAll(statsToSave);
         }
+        playerMatchStatRepository.saveAll(statsToSave);
 
         // The submitted list is the session's full set of matches: saved matches left out were removed by the admin
-        Set<Long> savedMatchIds = savedMatches.stream().map(Match::getId).collect(Collectors.toSet());
-        List<Match> removedMatches = matchRepository.findByDaily(daily).stream()
-                .filter(m -> !savedMatchIds.contains(m.getId()))
+        List<Match> removedMatches = existingMatches.values().stream()
+                .filter(m -> !submittedMatchIds.contains(m.getId()))
                 .toList();
         if (!removedMatches.isEmpty()) {
-            playerMatchStatRepository.deleteByMatchIn(removedMatches);
             matchRepository.deleteAll(removedMatches);
         }
 
@@ -627,4 +635,8 @@ public class DailyResultsService {
         return dailyRepository.findById(id)
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Sessão não encontrada"));
     }
+
+    // A validated result waiting to be written
+    private record PlannedMatch(Match match, Team team1, Team team2, MatchResultDTO result,
+                                Map<Long, MatchResultDTO.PlayerStatInputDTO> statsByUserId) {}
 }

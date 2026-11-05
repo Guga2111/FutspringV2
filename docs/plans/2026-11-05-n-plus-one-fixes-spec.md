@@ -124,6 +124,15 @@ Vale para `POST /lists/{listId}/participants` e para a criação guiada (`POST /
 
 ## PR C — Lançar resultados (item 3)
 
+- [x] Concluído (PR #70)
+
+Decisões:
+- O teste de contagem falhou no código antigo ao editar 2 → 8 partidas: de 7 para 13 leituras numa sessão ao vivo e de 16 para 22 numa finalizada. Depois da correção, o número é igual nos dois tamanhos.
+- `save` é chamado também nas partidas existentes. Numa entidade gerenciada o `merge` não gera SQL, e os stubs Mockito de `save` continuam valendo.
+- Uma partida repetida no corpo agora falha antes de qualquer escrita. Antes, a primeira ocorrência já tinha sido salva quando o erro saía. A regra e a mensagem não mudam.
+- `MatchRepository.findByIdAndDaily` e `PlayerMatchStatRepository.deleteByMatch` foram removidos porque ficaram sem uso. As referências no BACKEND.md (Patterns 2 e Antipatterns 2) foram atualizadas.
+- O teste de integração ficou em `DailyResultsQueryCountTest`, chamando o service direto, sem passar pelo HTTP.
+
 ### Novo fluxo de `submitResults`, em duas fases
 
 1. **Carregar:** times com jogadores (`findByDailyWithPlayers`, como hoje) e **as partidas da sessão uma vez** (`matchRepository.findByDaily(daily)`), num mapa `id → Match`.
