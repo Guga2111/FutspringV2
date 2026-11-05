@@ -50,6 +50,7 @@ class FinanceServiceTest extends BaseIntegrationTest {
     @Autowired FinanceNoticeRepository notices;
     @Autowired FinanceMovementRepository movements;
     @Autowired FinanceAuditRepository audits;
+    @Autowired FinancePersonRepository people;
     @Autowired PeladaRepository peladas;
     @Autowired PeladaService peladaService;
     @Autowired UserRepository users;
@@ -216,6 +217,47 @@ class FinanceServiceTest extends BaseIntegrationTest {
         assertThat(lists.findByPeladaId(id())).hasSize(1);
         assertThat(audits.findByPeladaId(id())).hasSize(1);
         assertThat(reads.detail(id(), result.detail().collection().id(), member.getEmail()).charges()).hasSize(1);
+    }
+    // `size` new members, half of them with a financial identity from an earlier list
+    List<Long> membersHalfKnown(int size) {
+        Long earlier = draft(Classification.DAILY);
+        List<Long> ids = new ArrayList<>();
+        for (int i = 0; i < size; i++) {
+            var u = user("Jogador"); pelada.getMembers().add(u); ids.add(u.getId());
+            if (i % 2 == 0) add(earlier, u);
+        }
+        return ids;
+    }
+    List<String> guests(int size) { return java.util.stream.IntStream.range(0, size).mapToObj(i -> "Convidado " + i).toList(); }
+    long participantReads(int size) {
+        var ids = membersHalfKnown(size); Long l = draft(Classification.DAILY);
+        return queryCounter.reads(() -> collections.participants(id(), l, new FinanceRequests.Participants(command(), ids, guests(size)), admin.getEmail()));
+    }
+    long guidedCreationReads(int size) {
+        var ids = membersHalfKnown(size);
+        var request = new FinanceRequests.CreateCollection(new FinanceRequests.Collection(command(), "Mensalidade", Classification.MONTHLY, "", null, null, price(), null, null, null),
+                ids, guests(size), true);
+        return queryCounter.reads(() -> collections.createCollection(id(), request, admin.getEmail()));
+    }
+    @Test void addingParticipantsReadsAConstantNumberOfQueries() {
+        participantReads(2); guidedCreationReads(2); // warm-up: one-off context loads (account, caller) don't count
+        assertThat(participantReads(20)).isEqualTo(participantReads(2));
+        assertThat(guidedCreationReads(20)).isEqualTo(guidedCreationReads(2));
+    }
+    @Test void aParticipantConflictNamesThePersonAndWritesNothing() {
+        Long l = draft(Classification.DAILY); add(l, member);
+        long revision = accounts.findByPeladaId(id()).orElseThrow().getRevision();
+        int peopleBefore = people.findByPeladaId(id()).size(), auditsBefore = audits.findByPeladaId(id()).size();
+        assertThatThrownBy(() -> collections.participants(id(), l,
+                new FinanceRequests.Participants(command(), List.of(other.getId(), member.getId()), List.of("Convidado")), admin.getEmail()))
+                .isInstanceOfSatisfying(AppException.class, e -> {
+                    assertThat(e.getStatus()).isEqualTo(HttpStatus.CONFLICT);
+                    assertThat(e.getMessage()).isEqualTo(member.getUsername() + " já tem cobrança nesta lista");
+                });
+        assertThat(people.findByPeladaId(id())).hasSize(peopleBefore);
+        assertThat(charges.findByListIdOrderById(l)).hasSize(1);
+        assertThat(accounts.findByPeladaId(id()).orElseThrow().getRevision()).isEqualTo(revision);
+        assertThat(audits.findByPeladaId(id())).hasSize(auditsBefore);
     }
     @Test void guidedCreationAllowsAnEmptyDraftButRequiresManagerPermission() {
         var request = new FinanceRequests.CreateCollection(

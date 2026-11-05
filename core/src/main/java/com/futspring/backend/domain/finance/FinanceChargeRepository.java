@@ -10,6 +10,9 @@ public interface FinanceChargeRepository extends JpaRepository<FinanceCharge, Lo
     List<FinanceCharge> findByListIdOrderById(Long listId);
     Optional<FinanceCharge> findByIdAndPeladaIdAndListId(Long id, Long peladaId, Long listId);
     boolean existsByListIdAndPersonIdAndCanceledFalse(Long listId, Long personId);
+    // People of `ids` who already have an active charge in the list
+    @Query("SELECT c.personId FROM FinanceCharge c WHERE c.listId = :listId AND c.personId IN :ids AND c.canceled = false")
+    List<Long> findActivePersonIds(@Param("listId") Long listId, @Param("ids") Collection<Long> ids);
     List<FinanceCharge> findByListIdIn(Collection<Long> listIds);
     List<FinanceCharge> findByIdInAndPeladaIdAndListIdOrderById(Collection<Long> ids, Long peladaId, Long listId);
 }

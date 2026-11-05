@@ -89,6 +89,15 @@ Decisões:
 
 ## PR B — Adicionar participantes (item 1)
 
+- [x] Concluído (PR #69)
+
+Decisões:
+- O teste de contagem falhou no código antigo: 33 → 105 leituras com 2 → 20 membros mais convidados. Depois da correção, o número é igual nos dois tamanhos, tanto em participantes quanto na criação guiada.
+- A checagem de conflito roda antes de qualquer escrita. No teste, as contagens de pessoas, cobranças, revisão e auditoria não mudam.
+- O nome da mensagem é o da pessoa financeira (`FinancePerson.name`), o mesmo que aparece na cobrança.
+- Um convidado com nome em branco continua dando 409 "Selecione um membro ou informe um convidado", como acontecia pelo `person()`. Pela API, o `@NotBlank` do DTO já barra esse caso antes.
+- O BACKEND.md não citava o texto antigo do 409, então não precisou mudar.
+
 Vale para `POST /lists/{listId}/participants` e para a criação guiada (`POST /lists/create`), que chamam o mesmo `addParticipants`.
 
 ### Novo fluxo de `addParticipants`
