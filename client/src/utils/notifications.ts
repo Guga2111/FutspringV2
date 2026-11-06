@@ -87,8 +87,8 @@ const views: Record<NotificationType, ViewBuilder> = {
   TEAMS_SORTED: (n) => ({
     icon: ShuffleIcon,
     parts: n.team
-      ? [t(`Times sorteados para ${sessionDate(n)}: você está no `), b(n.team.name)]
-      : [t(`Times sorteados para ${sessionDate(n)} na `), b(peladaName(n))],
+      ? [t(`Times definidos para ${sessionDate(n)}: você está no `), b(n.team.name)]
+      : [t(`Times definidos para ${sessionDate(n)} na `), b(peladaName(n))],
   }),
   SESSION_FINISHED: (n) => ({
     icon: Flag01Icon,

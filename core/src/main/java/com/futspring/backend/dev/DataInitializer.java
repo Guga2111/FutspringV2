@@ -9,6 +9,7 @@ import com.futspring.backend.domain.daily.entity.Team;
 import com.futspring.backend.domain.daily.repository.DailyAttendanceRepository;
 import com.futspring.backend.domain.daily.repository.DailyRepository;
 import com.futspring.backend.domain.daily.repository.TeamRepository;
+import com.futspring.backend.domain.finance.FinancePreservation;
 import com.futspring.backend.domain.pelada.Pelada;
 import com.futspring.backend.domain.pelada.PeladaPlayerStars;
 import com.futspring.backend.domain.pelada.PeladaPlayerStarsRepository;
@@ -44,6 +45,7 @@ public class DataInitializer implements CommandLineRunner {
 
     private final UserRepository userRepository;
     private final PeladaRepository peladaRepository;
+    private final FinancePreservation financePreservation;
     private final PeladaPlayerStarsRepository playerStarsRepository;
     private final DailyRepository dailyRepository;
     private final DailyAttendanceRepository attendanceRepository;
@@ -112,6 +114,7 @@ public class DataInitializer implements CommandLineRunner {
         pelada.getAdmins().add(admin);
 
         peladaRepository.save(pelada);
+        financePreservation.appointCreator(pelada);
 
         starsByUserId = new HashMap<>();
         for (SeedUser seed : seedUsers) {

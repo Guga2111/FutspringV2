@@ -62,9 +62,9 @@ public record NotificationEmailContent(String subject, String title, String body
                     "Já dá para confirmar presença na sessão de " + dateTime + " da " + pelada + ".",
                     "Confirmar presença", session);
             case TEAMS_SORTED -> new NotificationEmailContent(
-                    "Times sorteados: " + date,
-                    "Times sorteados",
-                    "Os times da sessão de " + dateTime + " da " + pelada + " foram sorteados.",
+                    "Times definidos: " + date,
+                    "Times definidos",
+                    "Os times da sessão de " + dateTime + " da " + pelada + " foram definidos.",
                     "Ver os times", session);
             case SESSION_FINISHED -> new NotificationEmailContent(
                     "Sessão finalizada: " + date,

@@ -61,6 +61,13 @@ public long statements(Runnable block) // every prepared statement, inserts incl
 
 ## PR A — Transições da cobrança (item 2) + `paid()`
 
+- [x] Concluído (PR #68)
+
+Decisões:
+- O teste de contagem falhou no código antigo: 29 → 47 leituras por transição com 2 → 20 participantes, e 31 → 85 no cancelar. Depois da correção, o número é igual nos dois tamanhos.
+- `QueryCounter` fica em `support/` como `@Component`. Os `@SpringBootTest` o encontram pelo component scan, e os `@DataJpaTest` não o carregam.
+- O cancelar medido passa por um recebimento anulado (`receive` + `reverse`), então cobre `paid(rows)` e `hasValidReceipts`.
+
 ### `FinanceReadService`
 
 - `Map<Long, BigDecimal> paid(List<FinanceCharge> rows)`: **uma** consulta (`movements.findByChargeIdIn`), sem carregar avisos. Lista vazia → mapa vazio, sem consulta.
@@ -81,6 +88,15 @@ public long statements(Runnable block) // every prepared statement, inserts incl
 - Novo: "um aviso pendente em qualquer cobrança bloqueia o encerrar". Garante que a troca do `anyMatch` pela consulta em lote manteve a regra.
 
 ## PR B — Adicionar participantes (item 1)
+
+- [x] Concluído (PR #69)
+
+Decisões:
+- O teste de contagem falhou no código antigo: 33 → 105 leituras com 2 → 20 membros mais convidados. Depois da correção, o número é igual nos dois tamanhos, tanto em participantes quanto na criação guiada.
+- A checagem de conflito roda antes de qualquer escrita. No teste, as contagens de pessoas, cobranças, revisão e auditoria não mudam.
+- O nome da mensagem é o da pessoa financeira (`FinancePerson.name`), o mesmo que aparece na cobrança.
+- Um convidado com nome em branco continua dando 409 "Selecione um membro ou informe um convidado", como acontecia pelo `person()`. Pela API, o `@NotBlank` do DTO já barra esse caso antes.
+- O BACKEND.md não citava o texto antigo do 409, então não precisou mudar.
 
 Vale para `POST /lists/{listId}/participants` e para a criação guiada (`POST /lists/create`), que chamam o mesmo `addParticipants`.
 
@@ -107,6 +123,15 @@ Vale para `POST /lists/{listId}/participants` e para a criação guiada (`POST /
 - Novo: o conflito nomeia a pessoa e não grava nada (nem pessoas novas, nem cobranças, nem revisão).
 
 ## PR C — Lançar resultados (item 3)
+
+- [x] Concluído (PR #70)
+
+Decisões:
+- O teste de contagem falhou no código antigo ao editar 2 → 8 partidas: de 7 para 13 leituras numa sessão ao vivo e de 16 para 22 numa finalizada. Depois da correção, o número é igual nos dois tamanhos.
+- `save` é chamado também nas partidas existentes. Numa entidade gerenciada o `merge` não gera SQL, e os stubs Mockito de `save` continuam valendo.
+- Uma partida repetida no corpo agora falha antes de qualquer escrita. Antes, a primeira ocorrência já tinha sido salva quando o erro saía. A regra e a mensagem não mudam.
+- `MatchRepository.findByIdAndDaily` e `PlayerMatchStatRepository.deleteByMatch` foram removidos porque ficaram sem uso. As referências no BACKEND.md (Patterns 2 e Antipatterns 2) foram atualizadas.
+- O teste de integração ficou em `DailyResultsQueryCountTest`, chamando o service direto, sem passar pelo HTTP.
 
 ### Novo fluxo de `submitResults`, em duas fases
 

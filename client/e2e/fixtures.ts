@@ -16,6 +16,7 @@ export const PELADA_ID = 1
 export const SCHEDULED_ID = 203
 export const LIVE_ID = 202
 export const FINISHED_ID = 201
+export const CONFIRMED_ID = 204
 
 const NAMES = ["Leal", "Bruno", "Caio", "Diego", "Edu", "Fabio", "Gabriel", "Hugo", "Igor", "João", "Kaique", "Lucas"]
 const POSITIONS = ["GOLEIRO", "ZAGUEIRO", "MEIO", "ATACANTE"]
@@ -253,6 +254,28 @@ export const scheduledDaily: DailyDetail = {
   bumps: [{ user: publicUser(members[10]), bumpedBy: publicUser(members[3]), bumpedAt: "2026-11-04T12:00:00.000Z" }],
 }
 
+// Confirmed session after a withdrawal: Branco is one short (4 of 5) and João confirmed without a team
+export const confirmedDaily: DailyDetail = {
+  ...baseDaily,
+  id: CONFIRMED_ID,
+  dailyDate: "2026-11-05",
+  dailyTime: "21:00",
+  status: "CONFIRMED",
+  isFinished: false,
+  confirmedPlayers: confirmed(10),
+  teams: teams.map((team, i) => {
+    const players = i === 1 ? team.players.slice(0, 4) : team.players
+    const total = players.reduce((sum, p) => sum + p.stars, 0)
+    return { ...team, players, totalStars: total, averageStars: total / players.length }
+  }),
+  matches: [],
+  playerStats: [],
+  leagueTable: [],
+  award: null,
+  startsAt: "2026-11-06T00:00:00.000Z",
+  bumps: [],
+}
+
 const leagueTable = [
   { teamId: 300, teamName: "Azul", position: 1, wins: 1, draws: 2, losses: 1, goalsFor: 5, goalsAgainst: 6, goalDiff: -1, points: 5 },
   { teamId: 301, teamName: "Branco", position: 2, wins: 1, draws: 2, losses: 1, goalsFor: 6, goalsAgainst: 5, goalDiff: 1, points: 5 },
@@ -457,7 +480,7 @@ const financeList: FinanceOverview["lists"][number] = {
 export const financeOverview: FinanceOverview = {
   revision: 3,
   permissions: { manage: true, appointManagers: true, viewCash: true },
-  settings: { visibility: "INDIVIDUAL", pixKey: "pix@futspring.com", pixRecipient: "Leal", qrId: QR_ID, managerIds: [5] },
+  settings: { visibility: "INDIVIDUAL", pixKey: "pix@futspring.com", pixRecipient: "Leal", qrId: QR_ID, managerIds: [1, 5] },
   balance: "1250.00",
   templates: ([["Mensalidade", "MONTHLY", "100.00"], ["Diária", "DAILY", "20.00"], ["Evento", "OTHER", "0.00"]] as const).map(
     ([name, classification, amount], i): FinanceTemplate => ({

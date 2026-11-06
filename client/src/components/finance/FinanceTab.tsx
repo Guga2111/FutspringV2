@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { ArrowRight01Icon, PlusSignIcon, RefreshIcon } from "@hugeicons/core-free-icons"
+import { ArrowRight01Icon, InformationCircleIcon, PlusSignIcon, RefreshIcon } from "@hugeicons/core-free-icons"
 import { toast } from "sonner"
 import * as api from "@/api/finance"
 import type { PeladaMember } from "@/types/pelada"
@@ -31,6 +31,7 @@ import { FinanceTour, FinanceTourButton } from "@/components/finance/FinanceTour
 import { formatFinanceMoney } from "@/utils/finance"
 import { getErrorMessage } from "@/lib/errors"
 import { Button } from "@/components/ui/button"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
@@ -75,6 +76,8 @@ export function FinanceTab({ peladaId, userId, members, dailies, timeZone }: { p
     catch (error) { toast.error(getErrorMessage(error, "Não foi possível atualizar a cobrança")) }
   }
   const manage = Boolean(overview?.permissions.manage)
+  // admins who aren't responsáveis see the member view; they only reach the settings to appoint responsáveis
+  const appointOnly = Boolean(overview?.permissions.appointManagers) && !manage
   // the tour points at the collections list, so it brings it on screen first
   const prepareTour = () => { setEditor(null); setReason(null); setTab("collections"); finance.select(null) }
   const collectionRow = (list: FinanceList) => (
@@ -124,7 +127,7 @@ export function FinanceTab({ peladaId, userId, members, dailies, timeZone }: { p
             </TabsTrigger>
             {overview.permissions.viewCash && <TabsTrigger variant="underline" value="cash" data-tour="cash-tab">Caixa</TabsTrigger>}
             {manage && <TabsTrigger variant="underline" value="history">Histórico</TabsTrigger>}
-            {manage && <TabsTrigger variant="underline" value="settings" data-tour="settings-tab">Configurações</TabsTrigger>}
+            {(manage || appointOnly) && <TabsTrigger variant="underline" value="settings" data-tour="settings-tab">Configurações</TabsTrigger>}
           </TabsList>
           <div className="flex shrink-0 items-center">
             <FinanceTourButton onPrepare={prepareTour} />
@@ -132,6 +135,16 @@ export function FinanceTab({ peladaId, userId, members, dailies, timeZone }: { p
           </div>
         </div>
         {finance.error && <FinanceFormError message={finance.error} />}
+        {appointOnly && tab !== "settings" && (
+          <Alert className="mb-5">
+            <HugeiconsIcon icon={InformationCircleIcon} />
+            <AlertTitle>Você não é responsável financeiro</AlertTitle>
+            <AlertDescription className="flex flex-col items-start gap-3">
+              Por isso você vê o financeiro como os outros membros. Para criar cobranças, receber e ver o histórico, designe-se como responsável.
+              <Button variant="outline" size="sm" onClick={() => setTab("settings")}>Escolher responsáveis</Button>
+            </AlertDescription>
+          </Alert>
+        )}
         <TabsContent value="collections" className="mt-0 flex flex-col gap-5">
           {finance.selected === null ? <>
             <header className="flex flex-wrap items-start justify-between gap-3">
@@ -162,8 +175,8 @@ export function FinanceTab({ peladaId, userId, members, dailies, timeZone }: { p
           </div>
           {tab === "cash" && <FinanceHistory peladaId={peladaId} kind="cash" finance={finance} timeZone={timeZone} members={members} onReason={askReason} />}
         </TabsContent>}
-        {manage && <TabsContent value="settings" className="mt-0 flex flex-col gap-5">
-          <header><h2 className="text-xl font-semibold">Configurações do financeiro</h2><p className="mt-1 text-sm text-muted-foreground">Pix, visibilidade, responsáveis e modelos de cobrança.</p></header>
+        {(manage || appointOnly) && <TabsContent value="settings" className="mt-0 flex flex-col gap-5">
+          <header><h2 className="text-xl font-semibold">Configurações do financeiro</h2><p className="mt-1 text-sm text-muted-foreground">{manage ? "Pix, visibilidade, responsáveis e modelos de cobrança." : "Escolha quem cuida do dinheiro da pelada."}</p></header>
           {tab === "settings" && <FinanceSettings key={overview.revision} peladaId={peladaId} finance={finance} members={members} onTemplate={template => open({ kind: "list", template })} />}
         </TabsContent>}
         {manage && <TabsContent value="history" className="mt-0 flex flex-col gap-5">

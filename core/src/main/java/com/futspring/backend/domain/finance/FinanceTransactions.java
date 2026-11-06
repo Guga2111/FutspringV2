@@ -58,7 +58,8 @@ public class FinanceTransactions {
         audit.setAfterData(change.after() == null ? null : json.writeValueAsString(change.after()));
         audit.setRequestKey(command.requestKey()); audit.setRequestHash(hash); audit.setResultListId(change.listId());
         audits.save(audit);
-        return result(ctx, change.listId());
+        // the caller may have just appointed or removed themselves: answer with their new permissions
+        return result("MANAGERS".equals(operation) ? access.refresh(ctx) : ctx, change.listId());
     }
     private FinanceViews.Result result(Context ctx, Long listId) {
         return new FinanceViews.Result(reads.overview(ctx, 0, 50), listId == null ? null : reads.detail(ctx, listId));

@@ -50,7 +50,7 @@ export function LegalDocumentPage({ document, other }: LegalDocumentPageProps) {
     <div className="page-enter min-h-screen bg-background text-foreground">
       <header className="mx-auto w-full max-w-[720px] px-4 py-8 md:px-8">
         <Link to="/" className="inline-flex items-center gap-2">
-          <img src="/logo-64.png" alt="" width={32} height={32} className="size-8 rounded-full object-cover" />
+          <img src="/logo-64.webp" alt="" width={32} height={32} className="size-8 rounded-full object-cover" />
           <span className="text-xl font-bold text-brand-text">Futspring</span>
         </Link>
       </header>

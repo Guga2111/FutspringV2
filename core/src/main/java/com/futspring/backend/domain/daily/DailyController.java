@@ -6,6 +6,7 @@ import com.futspring.backend.domain.daily.dto.DailyListItemDTO;
 import com.futspring.backend.domain.daily.dto.FinalizeDailyRequestDTO;
 import com.futspring.backend.domain.daily.dto.MatchResultDTO;
 import com.futspring.backend.domain.daily.dto.PopulateDailyRequestDTO;
+import com.futspring.backend.domain.daily.dto.SaveTeamsRequestDTO;
 import com.futspring.backend.domain.daily.dto.SwapPlayersRequestDTO;
 import com.futspring.backend.domain.daily.dto.UpdateDailyStatusRequestDTO;
 import com.futspring.backend.domain.daily.dto.UpdateTeamColorRequestDTO;
@@ -95,6 +96,13 @@ public class DailyController {
                                                                     @Valid @RequestBody SwapPlayersRequestDTO request,
                                                                     @AuthenticationPrincipal String email) {
         return ResponseEntity.ok(dailyTeamManagementService.swapPlayers(id, request.player1Id(), request.player2Id(), email));
+    }
+
+    @PutMapping("/dailies/{id}/teams")
+    public ResponseEntity<List<DailyDetailDTO.TeamDTO>> saveTeams(@PathVariable Long id,
+                                                                  @Valid @RequestBody SaveTeamsRequestDTO request,
+                                                                  @AuthenticationPrincipal String email) {
+        return ResponseEntity.ok(dailyTeamManagementService.saveTeams(id, request, email));
     }
 
     @PatchMapping("/dailies/{dailyId}/teams/{teamId}/name")

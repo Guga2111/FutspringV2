@@ -21,6 +21,7 @@ import com.futspring.backend.domain.daily.dto.SwapPlayersRequestDTO;
 import com.futspring.backend.domain.daily.dto.UpdateDailyStatusRequestDTO;
 import com.futspring.backend.domain.daily.dto.UpdateTeamColorRequestDTO;
 import com.futspring.backend.domain.daily.dto.UpdateTeamNameRequestDTO;
+import com.futspring.backend.domain.daily.dto.SaveTeamsRequestDTO;
 import com.futspring.backend.domain.notification.dto.NotificationDTO;
 import com.futspring.backend.domain.notification.dto.NotificationPreferenceDTO;
 import com.futspring.backend.domain.notification.dto.NotificationPushDTO;
@@ -116,7 +117,7 @@ class ContractSnapshotTest {
                 BulkRemovePlayersRequestDTO.class, TransferCreatorRequestDTO.class,
                 CreateDailyRequestDTO.class, SwapPlayersRequestDTO.class, UpdateDailyStatusRequestDTO.class,
                 UpdateTeamNameRequestDTO.class, UpdateTeamColorRequestDTO.class, MatchResultDTO.class,
-                FinalizeDailyRequestDTO.class, PopulateDailyRequestDTO.class,
+                FinalizeDailyRequestDTO.class, PopulateDailyRequestDTO.class, SaveTeamsRequestDTO.class,
                 UpdateProfileRequest.class, SendMessageRequest.class,
                 NotificationPreferenceDTO.class, UnsubscribeRequestDTO.class,
                 FinanceRequests.BulkAdjust.class);

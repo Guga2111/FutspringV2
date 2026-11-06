@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test"
 import { mockApi, login } from "./mockApi"
-import { FINISHED_ID, LIVE_ID, NOW, PELADA_ID, SCHEDULED_ID, financeDetail, financeMemberDetail, financeMemberOverview } from "./fixtures"
+import { CONFIRMED_ID, FINISHED_ID, LIVE_ID, NOW, PELADA_ID, SCHEDULED_ID, financeDetail, financeMemberDetail, financeMemberOverview, financeOverview } from "./fixtures"
 
 const PELADA = `/pelada/${PELADA_ID}`
 
@@ -23,6 +23,7 @@ const pages: { name: string; path: string; auth?: boolean; ready?: string }[] = 
   { name: "pelada-settings", path: `${PELADA}/settings` },
   { name: "pelada-invitations", path: `${PELADA}/convites` },
   { name: "daily-scheduled", path: `/daily/${SCHEDULED_ID}` },
+  { name: "daily-confirmed", path: `/daily/${CONFIRMED_ID}` },
   { name: "daily-live", path: `/daily/${LIVE_ID}` },
   { name: "daily-finished", path: `/daily/${FINISHED_ID}` },
   { name: "profile", path: "/profile/1" },
@@ -124,6 +125,23 @@ test("dialog results", async ({ page }) => {
   await expect(page.getByRole("dialog")).toHaveScreenshot("dialog-results.png", DIALOG_SHOT)
 })
 
+// "Montar times" over a confirmed session with a short team and a player without one
+test("teams editor", async ({ page }, testInfo) => {
+  await open(page, `/daily/${CONFIRMED_ID}`)
+  await page.getByRole("button", { name: "Editar times" }).click()
+  const sheet = page.getByRole("dialog", { name: "Montar times" })
+  await expect(sheet).toBeVisible()
+  await settle(page)
+  await expect(sheet).toHaveScreenshot("teams-editor.png", DIALOG_SHOT)
+  if (testInfo.project.name.startsWith("mobile")) {
+    await sheet.getByRole("button", { name: "Mover João" }).click()
+    const drawer = page.getByRole("dialog", { name: /Mover João para/ })
+    await expect(drawer).toBeVisible()
+    await settle(page)
+    await expect(drawer).toHaveScreenshot("teams-editor-move.png", DIALOG_SHOT)
+  }
+})
+
 test("sessions gallery", async ({ page }) => {
   const unmatched = await open(page, `${PELADA}/sessoes`)
   await page.getByRole("radio", { name: "Ver em galeria" }).click()
@@ -217,6 +235,26 @@ test("finance manager: history with filters", async ({ page }, testInfo) => {
     await settle(page)
     await expect(page).toHaveScreenshot("finance-history-period.png", DIALOG_SHOT)
   }
+  expect(unmatched, "requests without a fixture").toEqual([])
+})
+
+test("finance admin who isn't a responsável: member view, notice and the responsáveis card", async ({ page }) => {
+  await page.clock.setFixedTime(NOW)
+  const unmatched = await mockApi(page)
+  const overview = {
+    ...financeMemberOverview,
+    permissions: { manage: false, appointManagers: true, viewCash: false },
+    settings: { ...financeMemberOverview.settings, managerIds: financeOverview.settings.managerIds },
+  }
+  await page.route(/\/finance(\?|$)/, (route) => route.fulfill({ json: overview }))
+  await login(page)
+  await page.goto(FINANCE)
+  await expect(page.getByText("Você não é responsável financeiro")).toBeVisible({ timeout: READY_TIMEOUT })
+  await settle(page)
+  await expect(page).toHaveScreenshot("finance-admin-not-manager.png", { fullPage: true })
+  await page.getByRole("button", { name: "Escolher responsáveis" }).click()
+  await expect(page.getByText("Responsáveis financeiros", { exact: true })).toBeVisible()
+  await expect(page.getByText("Pix para receber")).toHaveCount(0)
   expect(unmatched, "requests without a fixture").toEqual([])
 })
 

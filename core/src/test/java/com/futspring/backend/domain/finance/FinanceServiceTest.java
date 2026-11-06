@@ -2,6 +2,7 @@ package com.futspring.backend.domain.finance;
 
 import com.futspring.backend.domain.finance.dto.*;
 import com.futspring.backend.domain.pelada.*;
+import com.futspring.backend.domain.pelada.dto.CreatePeladaRequestDTO;
 import com.futspring.backend.domain.daily.*;
 import com.futspring.backend.domain.daily.entity.*;
 import com.futspring.backend.domain.daily.repository.*;
@@ -50,12 +51,15 @@ class FinanceServiceTest extends BaseIntegrationTest {
     @Autowired FinanceNoticeRepository notices;
     @Autowired FinanceMovementRepository movements;
     @Autowired FinanceAuditRepository audits;
+    @Autowired FinancePersonRepository people;
+    @Autowired FinanceManagerRepository managerRows;
     @Autowired PeladaRepository peladas;
     @Autowired PeladaService peladaService;
     @Autowired UserRepository users;
     @Autowired DailyRepository dailies;
     @Autowired DailyService dailyService;
     @Autowired jakarta.persistence.EntityManager em;
+    @Autowired com.futspring.backend.support.QueryCounter queryCounter;
     User admin, member, other, outsider;
     Pelada pelada;
     @BeforeEach void setup() {
@@ -63,7 +67,11 @@ class FinanceServiceTest extends BaseIntegrationTest {
         admin = user("Gestor"); member = user("Mensalista"); other = user("Diarista"); outsider = user("Visitante");
         pelada = peladas.save(Pelada.builder().name("Pelada financeira").dayOfWeek("SATURDAY").timeOfDay("19:00").duration(1f)
                 .creator(admin).members(new HashSet<>(Set.of(admin, member, other))).admins(new HashSet<>(Set.of(admin))).build());
+        // only designated responsáveis manage; the creator starts as one, as PeladaService.createPelada does
+        em.flush(); appoint(admin);
     }
+    void appoint(User user) { var m = new FinanceManager(); m.setPeladaId(id()); m.setUserId(user.getId()); managerRows.saveAndFlush(m); }
+    FinanceRequests.Managers managers(User... users) { return new FinanceRequests.Managers(command(), Arrays.stream(users).map(User::getId).toList()); }
     User user(String name) { return users.save(User.builder().username(name + UUID.randomUUID()).email(UUID.randomUUID() + "@finance.test").password("hash").build()); }
     Long id() { return pelada.getId(); }
     FinanceRequests.Command command() { return command("Correção justificada"); }
@@ -216,6 +224,47 @@ class FinanceServiceTest extends BaseIntegrationTest {
         assertThat(audits.findByPeladaId(id())).hasSize(1);
         assertThat(reads.detail(id(), result.detail().collection().id(), member.getEmail()).charges()).hasSize(1);
     }
+    // `size` new members, half of them with a financial identity from an earlier list
+    List<Long> membersHalfKnown(int size) {
+        Long earlier = draft(Classification.DAILY);
+        List<Long> ids = new ArrayList<>();
+        for (int i = 0; i < size; i++) {
+            var u = user("Jogador"); pelada.getMembers().add(u); ids.add(u.getId());
+            if (i % 2 == 0) add(earlier, u);
+        }
+        return ids;
+    }
+    List<String> guests(int size) { return java.util.stream.IntStream.range(0, size).mapToObj(i -> "Convidado " + i).toList(); }
+    long participantReads(int size) {
+        var ids = membersHalfKnown(size); Long l = draft(Classification.DAILY);
+        return queryCounter.reads(() -> collections.participants(id(), l, new FinanceRequests.Participants(command(), ids, guests(size)), admin.getEmail()));
+    }
+    long guidedCreationReads(int size) {
+        var ids = membersHalfKnown(size);
+        var request = new FinanceRequests.CreateCollection(new FinanceRequests.Collection(command(), "Mensalidade", Classification.MONTHLY, "", null, null, price(), null, null, null),
+                ids, guests(size), true);
+        return queryCounter.reads(() -> collections.createCollection(id(), request, admin.getEmail()));
+    }
+    @Test void addingParticipantsReadsAConstantNumberOfQueries() {
+        participantReads(2); guidedCreationReads(2); // warm-up: one-off context loads (account, caller) don't count
+        assertThat(participantReads(20)).isEqualTo(participantReads(2));
+        assertThat(guidedCreationReads(20)).isEqualTo(guidedCreationReads(2));
+    }
+    @Test void aParticipantConflictNamesThePersonAndWritesNothing() {
+        Long l = draft(Classification.DAILY); add(l, member);
+        long revision = accounts.findByPeladaId(id()).orElseThrow().getRevision();
+        int peopleBefore = people.findByPeladaId(id()).size(), auditsBefore = audits.findByPeladaId(id()).size();
+        assertThatThrownBy(() -> collections.participants(id(), l,
+                new FinanceRequests.Participants(command(), List.of(other.getId(), member.getId()), List.of("Convidado")), admin.getEmail()))
+                .isInstanceOfSatisfying(AppException.class, e -> {
+                    assertThat(e.getStatus()).isEqualTo(HttpStatus.CONFLICT);
+                    assertThat(e.getMessage()).isEqualTo(member.getUsername() + " já tem cobrança nesta lista");
+                });
+        assertThat(people.findByPeladaId(id())).hasSize(peopleBefore);
+        assertThat(charges.findByListIdOrderById(l)).hasSize(1);
+        assertThat(accounts.findByPeladaId(id()).orElseThrow().getRevision()).isEqualTo(revision);
+        assertThat(audits.findByPeladaId(id())).hasSize(auditsBefore);
+    }
     @Test void guidedCreationAllowsAnEmptyDraftButRequiresManagerPermission() {
         var request = new FinanceRequests.CreateCollection(
                 new FinanceRequests.Collection(command(), "Rascunho", Classification.OTHER, "", null, null, price(), null, null, null),
@@ -294,10 +343,32 @@ class FinanceServiceTest extends BaseIntegrationTest {
         assertThat(visible.collection().pixKey()).isEqualTo("pix-original");
         assertThat(reads.overview(id(), other.getEmail(), 0, 50).lists()).noneMatch(row -> row.id().equals(hidden));
     }
-    @Test void delegatesCannotAppointManagersAndRemovalRevokesAccessButKeepsIdentity() {
-        Long l = open(); collections.managers(id(), new FinanceRequests.Managers(command(), List.of(member.getId())), admin.getEmail());
-        assertThat(reads.overview(id(), member.getEmail(), 0, 50).permissions().manage()).isTrue();
-        fails(() -> collections.managers(id(), new FinanceRequests.Managers(command(), List.of(other.getId())), member.getEmail()), HttpStatus.FORBIDDEN);
+    @Test void adminsWithoutDesignationOnlyAppointAndResponsaveisAppointToo() {
+        pelada.getAdmins().add(other); peladas.saveAndFlush(pelada);
+        var adminView = reads.overview(id(), other.getEmail(), 0, 50).permissions();
+        assertThat(adminView.manage()).isFalse(); assertThat(adminView.appointManagers()).isTrue(); assertThat(adminView.viewCash()).isFalse();
+        fails(this::draftByOther, HttpStatus.FORBIDDEN);
+        collections.managers(id(), managers(admin, member), other.getEmail());
+        var delegate = reads.overview(id(), member.getEmail(), 0, 50).permissions();
+        assertThat(delegate.manage()).isTrue(); assertThat(delegate.appointManagers()).isTrue();
+        // a responsável who isn't admin appoints too, admins included
+        collections.managers(id(), managers(member, other), member.getEmail());
+        assertThat(reads.overview(id(), other.getEmail(), 0, 50).permissions().manage()).isTrue();
+        assertThat(reads.overview(id(), admin.getEmail(), 0, 50).permissions().manage()).isFalse();
+        assertThat(reads.overview(id(), admin.getEmail(), 0, 50).settings().managerIds()).containsExactly(member.getId(), other.getId());
+        // stepping down answers with the caller's new permissions
+        var stepDown = collections.managers(id(), managers(other), member.getEmail()).overview().permissions();
+        assertThat(stepDown.manage()).isFalse(); assertThat(stepDown.appointManagers()).isFalse();
+        fails(() -> collections.managers(id(), managers(), other.getEmail()), HttpStatus.CONFLICT);
+        assertThat(managerRows.findByPeladaId(id())).extracting(FinanceManager::getUserId).containsExactly(other.getId());
+    }
+    void draftByOther() {
+        collections.collection(id(), null, new FinanceRequests.Collection(command(), "Arrecadação", Classification.DAILY, null, null, null, price(), null, null, null), other.getEmail());
+    }
+    @Test void ordinaryMembersCannotAppointAndRemovalRevokesAccessButKeepsIdentity() {
+        Long l = open(); collections.managers(id(), managers(admin, member), admin.getEmail());
+        assertThat(reads.overview(id(), other.getEmail(), 0, 50).permissions().appointManagers()).isFalse();
+        fails(() -> collections.managers(id(), managers(admin, other), other.getEmail()), HttpStatus.FORBIDDEN);
         Long identity = view(l).personId();
         peladaService.removePlayer(id(), member.getId(), admin.getEmail());
         fails(() -> reads.overview(id(), member.getEmail(), 0, 50), HttpStatus.FORBIDDEN);
@@ -305,6 +376,27 @@ class FinanceServiceTest extends BaseIntegrationTest {
         pelada.getMembers().add(member); peladas.saveAndFlush(pelada);
         assertThat(reads.overview(id(), member.getEmail(), 0, 50).permissions().manage()).isFalse();
         assertThat(reads.detail(id(), l, member.getEmail()).charges().getFirst().personId()).isEqualTo(identity);
+    }
+    @Test void removingEveryResponsavelIsRefusedAndChangesNothing() {
+        collections.managers(id(), managers(member), admin.getEmail());
+        assertThatThrownBy(() -> peladaService.removePlayer(id(), member.getId(), admin.getEmail()))
+                .isInstanceOfSatisfying(AppException.class, e -> {
+                    assertThat(e.getStatus()).isEqualTo(HttpStatus.CONFLICT);
+                    assertThat(e.getMessage()).isEqualTo(member.getUsername() + " é o único responsável financeiro. Designe outro antes de removê-lo.");
+                });
+        collections.managers(id(), managers(member, other), admin.getEmail());
+        assertThatThrownBy(() -> peladaService.removePlayers(id(), List.of(member.getId(), other.getId()), admin.getEmail()))
+                .isInstanceOfSatisfying(AppException.class, e -> assertThat(e.getStatus()).isEqualTo(HttpStatus.CONFLICT));
+        assertThat(peladas.findById(id()).orElseThrow().getMembers()).contains(member, other);
+        assertThat(managerRows.findByPeladaId(id())).extracting(FinanceManager::getUserId).containsExactlyInAnyOrder(member.getId(), other.getId());
+        // one of them may leave while the other stays
+        peladaService.removePlayer(id(), member.getId(), admin.getEmail());
+        assertThat(managerRows.findByPeladaId(id())).extracting(FinanceManager::getUserId).containsExactly(other.getId());
+    }
+    @Test void theCreatorOfANewPeladaIsItsResponsavel() {
+        var created = peladaService.createPelada(new CreatePeladaRequestDTO("Nova", "FRIDAY", "20:00", 1f, null, null, false, 2, 5, null, 0), member.getEmail());
+        var permissions = reads.overview(created.id(), member.getEmail(), 0, 50).permissions();
+        assertThat(permissions.manage()).isTrue(); assertThat(permissions.appointManagers()).isTrue();
     }
     @Test void childrenAreScopedAndGuestsWithEqualNamesRemainDifferent() {
         Long l = open(); Long another = draft(Classification.OTHER);
@@ -344,6 +436,36 @@ class FinanceServiceTest extends BaseIntegrationTest {
         assertThat(reads.ledger(id(), admin.getEmail(), 1, 2, null, null).items()).hasSize(1);
         var audit = reads.audit(id(), admin.getEmail(), 0, 50, null, null, null);
         assertThat(audit.total()).isEqualTo(audit.items().size());
+    }
+    // Reads per transition (publish, close, reopen, cancel) of a list with `size` participants
+    List<Long> transitionReads(int size) {
+        Long l = draft(Classification.DAILY);
+        for (int i = 0; i < size; i++) { var u = user("Jogador"); pelada.getMembers().add(u); add(l, u); }
+        long publish = queryCounter.reads(() -> collections.transition(id(), l, "PUBLISH", command(), admin.getEmail()));
+        // A receipt registered by mistake and reversed: cancel goes through paid() and hasValidReceipts()
+        receive(l, "10.00");
+        Long receipt = movements.findByChargeIdIn(List.of(charge(l))).getFirst().getId();
+        ledger.reverse(id(), receipt, command(), admin.getEmail());
+        long close = queryCounter.reads(() -> collections.transition(id(), l, "CLOSE", command(), admin.getEmail()));
+        long reopen = queryCounter.reads(() -> collections.transition(id(), l, "REOPEN", command(), admin.getEmail()));
+        long cancel = queryCounter.reads(() -> collections.transition(id(), l, "CANCEL", command(), admin.getEmail()));
+        assertThat(lists.findById(l).orElseThrow().getStatus()).isEqualTo(ListStatus.CANCELED);
+        return List.of(publish, close, reopen, cancel);
+    }
+    @Test void transitionsReadAConstantNumberOfQueries() {
+        transitionReads(2); // warm-up: one-off context loads (account, caller) don't count
+        assertThat(transitionReads(20)).isEqualTo(transitionReads(2));
+    }
+    @Test void aPendingNoticeOnAnyChargeBlocksClosing() {
+        Long l = draft(Classification.DAILY); add(l, admin); add(l, member); add(l, other);
+        collections.transition(id(), l, "PUBLISH", command(), admin.getEmail());
+        ledger.report(id(), l, chargeIds(l).getLast(), command(), null, other.getEmail());
+        assertThatThrownBy(() -> collections.transition(id(), l, "CLOSE", command(), admin.getEmail()))
+                .isInstanceOfSatisfying(AppException.class, e -> {
+                    assertThat(e.getStatus()).isEqualTo(HttpStatus.CONFLICT);
+                    assertThat(e.getMessage()).isEqualTo("Resolva todos os avisos pendentes antes de encerrar");
+                });
+        assertThat(lists.findById(l).orElseThrow().getStatus()).isEqualTo(ListStatus.OPEN);
     }
     @Test void closeReopenDuplicateAndReplacementPreserveAllocations() {
         Long l = open(); receive(l, "20.00"); collections.transition(id(), l, "CLOSE", command(), admin.getEmail());
@@ -484,6 +606,7 @@ class FinanceServiceTest extends BaseIntegrationTest {
         assertThat(reads.audit(id(), admin.getEmail(), 0, 50, null, null, Set.of(AuditOperation.RECEIVE)).total()).isZero();
         Pelada otherPelada = peladas.save(Pelada.builder().name("Outra").dayOfWeek("SUNDAY").timeOfDay("10:00").duration(1f)
                 .creator(outsider).members(new HashSet<>(Set.of(outsider))).admins(new HashSet<>(Set.of(outsider))).build());
+        em.flush(); var outsiderManager = new FinanceManager(); outsiderManager.setPeladaId(otherPelada.getId()); outsiderManager.setUserId(outsider.getId()); managerRows.saveAndFlush(outsiderManager);
         assertThat(reads.audit(otherPelada.getId(), outsider.getEmail(), 0, 50, null, null, null).total()).isZero();
         assertThat(reads.ledger(otherPelada.getId(), outsider.getEmail(), 0, 50, null, null).total()).isZero();
         fails(() -> reads.audit(id(), member.getEmail(), 0, 20, LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 31), Set.of(AuditOperation.PUBLISH)), HttpStatus.FORBIDDEN);

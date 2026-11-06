@@ -1,5 +1,21 @@
 # SPEC — Times manuais e bloqueio de início sem times (Sessão)
 
+## Status
+
+- [x] Implementado (branch `feat/daily-manual-teams`, backend + frontend + docs)
+
+Decisões tomadas na implementação:
+
+- **Ordem dos erros do `PUT /teams`:** 404 (sessão não existe) vem antes do 403 (não admin), como em todas as rotas do projeto; o restante segue a ordem do spec (travada → repetido → não confirmado → vazio).
+- **Lock:** `updateStatus`, `saveTeams`, `disconfirmAttendance` e `adminDisconfirmAttendance` passam a carregar a sessão com `findByIdForUpdate` (antes só as confirmações usavam o lock).
+- **Saída do time:** `DailyTeamManagementService.removeFromTeams(daily, user)` reaproveita o `removePlayersFromTeams` que a remoção de membro já usava.
+- **`TeamsReadiness`:** a regra de início (409) e a mensagem de time vazio reutilizada pelo salvamento (400).
+- **Tipos do cliente:** `sortTeams` / `swapPlayers` em `api/dailies.ts` estavam tipados como `DailyDetail`; o backend devolve `TeamDTO[]`, e o tipo foi corrigido.
+- **Dica do início desabilitado:** texto visível ao lado do botão (`aria-describedby`), não um Tooltip (um botão desabilitado não dispara o Tooltip).
+- **Pendências no diálogo de início:** usam as mesmas linhas da seção Times ("Branco desfalcado (4 de 5)", "1 confirmado sem time: João"), e o botão vira "Iniciar mesmo assim".
+- **Teclado no editor:** o `KeyboardSensor` padrão do dnd-kit (espaço pega, setas movem, espaço solta), com instruções e anúncios em pt-BR.
+- **Bug corrigido de passagem:** o input de cor oculto do `TeamCard` (`sr-only` + `w-full` do `Input`) criava rolagem horizontal em sessões abertas com times. Ele agora é `relative` + `size-px`, e o novo fixture visual `daily-confirmed` cobre o caso.
+
 ## Contexto
 
 Na tela da sessão (`/daily/:id`) há dois problemas:

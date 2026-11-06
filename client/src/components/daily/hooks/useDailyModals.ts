@@ -2,7 +2,15 @@ import { useRef, useState } from 'react'
 import type { DailyStatus } from '@/types/daily'
 import type { ResultsMode } from '@/components/daily/hooks/useResultsForm'
 
-export type StatusDialog = { targetStatus: DailyStatus; description: string; title: string; variant?: 'destructive' | 'default' | 'brand' }
+export type StatusDialog = {
+  targetStatus: DailyStatus
+  description: string
+  title: string
+  variant?: 'destructive' | 'default' | 'brand'
+  // pending items listed under the description (starting with short teams), and the confirm label for them
+  details?: string[]
+  confirmLabel?: string
+}
 
 export function useDailyModals() {
   // null: closed; add = new matches (live), edit = every saved match
@@ -11,6 +19,7 @@ export function useDailyModals() {
   const [importOpen, setImportOpen] = useState(false)
   const [statusDialog, setStatusDialog] = useState<StatusDialog | null>(null)
   const [deleteOpen, setDeleteOpen] = useState(false)
+  const [teamsEditorOpen, setTeamsEditorOpen] = useState(false)
   // null: follow the default (open until the teams are sorted)
   const [attendanceOpen, setAttendanceOpen] = useState<boolean | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -29,6 +38,9 @@ export function useDailyModals() {
     setStatusDialog,
     deleteOpen,
     setDeleteOpen,
+    teamsEditorOpen,
+    openTeamsEditor: () => setTeamsEditorOpen(true),
+    closeTeamsEditor: () => setTeamsEditorOpen(false),
     attendanceOpen,
     setAttendanceOpen,
     fileInputRef,

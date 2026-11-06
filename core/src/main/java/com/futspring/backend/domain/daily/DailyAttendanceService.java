@@ -43,6 +43,7 @@ public class DailyAttendanceService {
     private final ApplicationEventPublisher eventPublisher;
     private final Clock clock;
     private final NotificationRepository notificationRepository;
+    private final DailyTeamManagementService teamManagementService;
 
     /**
      * The caller confirms themselves. Mensalistas any time (while the session isn't locked); diaristas only from
@@ -83,12 +84,13 @@ public class DailyAttendanceService {
     @Transactional
     public DailyListItemDTO disconfirmAttendance(Long id, String currentUserEmail) {
         User caller = userAuthHelper.getAuthenticatedUser(currentUserEmail);
-        Daily daily = findDaily(id);
+        Daily daily = findDailyForUpdate(id);
         requireUnlocked(daily);
 
         if (attendanceRepository.deleteByDailyAndUser(daily, caller) == 0) {
             throw new AppException(HttpStatus.BAD_REQUEST, "Você não confirmou presença nesta sessão");
         }
+        teamManagementService.removeFromTeams(daily, caller);
 
         return dailyListItemAssembler.toListItem(daily, caller);
     }
@@ -115,7 +117,7 @@ public class DailyAttendanceService {
     @Transactional
     public DailyListItemDTO adminDisconfirmAttendance(Long dailyId, Long targetUserId, String callerEmail) {
         User caller = userAuthHelper.getAuthenticatedUser(callerEmail);
-        Daily daily = findDaily(dailyId);
+        Daily daily = findDailyForUpdate(dailyId);
         Pelada pelada = daily.getPelada();
         accessHelper.requireAdmin(pelada, caller);
         User target = findMember(pelada, targetUserId);
@@ -124,6 +126,7 @@ public class DailyAttendanceService {
         if (attendanceRepository.deleteByDailyAndUser(daily, target) == 0) {
             throw new AppException(HttpStatus.BAD_REQUEST, "O jogador não está confirmado nesta sessão");
         }
+        teamManagementService.removeFromTeams(daily, target);
         eventPublisher.publishEvent(new AttendanceChangedByAdminEvent(daily, caller, List.of(target), false));
 
         return dailyListItemAssembler.toListItem(daily, caller);
@@ -176,6 +179,8 @@ public class DailyAttendanceService {
     // The diarista loses the spot; the bump is recorded for the in-app alert and the e-mail goes after the commit
     private void bump(DailyAttendance victim, User mensalista, Instant now) {
         attendanceRepository.delete(victim);
+        // The diarista leaves their team; the mensalista comes in without one
+        teamManagementService.removeFromTeams(victim.getDaily(), victim.getUser());
         DailyAttendanceBump bump = bumpRepository.save(DailyAttendanceBump.builder()
                 .daily(victim.getDaily())
                 .user(victim.getUser())

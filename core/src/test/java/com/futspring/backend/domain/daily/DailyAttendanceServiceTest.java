@@ -62,6 +62,7 @@ class DailyAttendanceServiceTest {
     @Mock DailyAttendanceBumpRepository bumpRepository;
     @Mock PeladaMensalistaRepository mensalistaRepository;
     @Mock ApplicationEventPublisher eventPublisher;
+    @Mock DailyTeamManagementService teamManagementService;
 
     DailyAttendanceService attendanceService;
     InMemoryAttendance attendance;
@@ -175,11 +176,12 @@ class DailyAttendanceServiceTest {
     void disconfirmAttendance_success_removesPlayer() {
         attendance.confirm(scheduledDaily, member);
         when(userAuthHelper.getAuthenticatedUser("member@example.com")).thenReturn(member);
-        when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
+        when(dailyRepository.findByIdForUpdate(100L)).thenReturn(Optional.of(scheduledDaily));
 
         attendanceService.disconfirmAttendance(100L, "member@example.com");
 
         assertThat(attendance.users(scheduledDaily)).doesNotContain(member);
+        verify(teamManagementService).removeFromTeams(scheduledDaily, member);
     }
 
     @Test
@@ -195,7 +197,7 @@ class DailyAttendanceServiceTest {
     @Test
     void disconfirmAttendance_dailyNotFound_throwsNotFound() {
         when(userAuthHelper.getAuthenticatedUser("member@example.com")).thenReturn(member);
-        when(dailyRepository.findById(999L)).thenReturn(Optional.empty());
+        when(dailyRepository.findByIdForUpdate(999L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> attendanceService.disconfirmAttendance(999L, "member@example.com"))
                 .isInstanceOf(AppException.class)
@@ -206,7 +208,7 @@ class DailyAttendanceServiceTest {
     void disconfirmAttendance_lockedStatus_throwsBadRequest() {
         scheduledDaily.setStatus(DailyStatus.FINISHED);
         when(userAuthHelper.getAuthenticatedUser("member@example.com")).thenReturn(member);
-        when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
+        when(dailyRepository.findByIdForUpdate(100L)).thenReturn(Optional.of(scheduledDaily));
 
         assertThatThrownBy(() -> attendanceService.disconfirmAttendance(100L, "member@example.com"))
                 .isInstanceOf(AppException.class)
@@ -216,7 +218,7 @@ class DailyAttendanceServiceTest {
     @Test
     void disconfirmAttendance_notConfirmed_throwsBadRequest() {
         when(userAuthHelper.getAuthenticatedUser("member@example.com")).thenReturn(member);
-        when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
+        when(dailyRepository.findByIdForUpdate(100L)).thenReturn(Optional.of(scheduledDaily));
 
         assertThatThrownBy(() -> attendanceService.disconfirmAttendance(100L, "member@example.com"))
                 .isInstanceOf(AppException.class)
@@ -319,12 +321,13 @@ class DailyAttendanceServiceTest {
     void adminDisconfirmAttendance_success_removesPlayer() {
         attendance.confirm(scheduledDaily, member);
         when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
-        when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
+        when(dailyRepository.findByIdForUpdate(100L)).thenReturn(Optional.of(scheduledDaily));
         when(userRepository.findById(2L)).thenReturn(Optional.of(member));
 
         DailyListItemDTO result = attendanceService.adminDisconfirmAttendance(100L, 2L, "admin@example.com");
 
         assertThat(attendance.users(scheduledDaily)).doesNotContain(member);
+        verify(teamManagementService).removeFromTeams(scheduledDaily, member);
         assertThat(result).isNotNull();
         verify(eventPublisher).publishEvent(new AttendanceChangedByAdminEvent(scheduledDaily, admin, List.of(member), false));
     }
@@ -332,7 +335,7 @@ class DailyAttendanceServiceTest {
     @Test
     void adminDisconfirmAttendance_callerNotAdmin_throwsForbidden() {
         when(userAuthHelper.getAuthenticatedUser("member@example.com")).thenReturn(member);
-        when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
+        when(dailyRepository.findByIdForUpdate(100L)).thenReturn(Optional.of(scheduledDaily));
 
         assertThatThrownBy(() -> attendanceService.adminDisconfirmAttendance(100L, 2L, "member@example.com"))
                 .isInstanceOf(AppException.class)
@@ -342,7 +345,7 @@ class DailyAttendanceServiceTest {
     @Test
     void adminDisconfirmAttendance_targetNotMember_throwsBadRequest() {
         when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
-        when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
+        when(dailyRepository.findByIdForUpdate(100L)).thenReturn(Optional.of(scheduledDaily));
         when(userRepository.findById(3L)).thenReturn(Optional.of(outsider));
 
         assertThatThrownBy(() -> attendanceService.adminDisconfirmAttendance(100L, 3L, "admin@example.com"))
@@ -354,7 +357,7 @@ class DailyAttendanceServiceTest {
     void adminDisconfirmAttendance_lockedStatus_throwsBadRequest() {
         scheduledDaily.setStatus(DailyStatus.CANCELED);
         when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
-        when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
+        when(dailyRepository.findByIdForUpdate(100L)).thenReturn(Optional.of(scheduledDaily));
         when(userRepository.findById(2L)).thenReturn(Optional.of(member));
 
         assertThatThrownBy(() -> attendanceService.adminDisconfirmAttendance(100L, 2L, "admin@example.com"))
@@ -365,7 +368,7 @@ class DailyAttendanceServiceTest {
     @Test
     void adminDisconfirmAttendance_notConfirmed_throwsBadRequest() {
         when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
-        when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
+        when(dailyRepository.findByIdForUpdate(100L)).thenReturn(Optional.of(scheduledDaily));
         when(userRepository.findById(2L)).thenReturn(Optional.of(member));
 
         assertThatThrownBy(() -> attendanceService.adminDisconfirmAttendance(100L, 2L, "admin@example.com"))
@@ -504,6 +507,9 @@ class DailyAttendanceServiceTest {
         assertThat(bump.getValue().getBumpedAt()).isEqualTo(NOW);
         assertThat(bump.getValue().getSeenAt()).isNull();
         verify(eventPublisher).publishEvent(new DiaristaBumpedEvent(500L));
+        // the bumped diarista leaves their team; the mensalista comes in without one
+        verify(teamManagementService).removeFromTeams(scheduledDaily, d2);
+        verify(teamManagementService, never()).removeFromTeams(scheduledDaily, member);
     }
 
     @Test
@@ -588,7 +594,6 @@ class DailyAttendanceServiceTest {
         when(userAuthHelper.getAuthenticatedUser("d4@example.com")).thenReturn(d1);
         when(userAuthHelper.getAuthenticatedUser("d5@example.com")).thenReturn(d2);
         when(dailyRepository.findByIdForUpdate(100L)).thenReturn(Optional.of(scheduledDaily));
-        when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
         when(mensalistaRepository.existsByPeladaAndUser(pelada, member)).thenReturn(true);
         when(attendanceRepository.findBumpVictim(scheduledDaily)).thenReturn(Optional.of(lastDiarista));
         stubBumpSave();
@@ -606,7 +611,7 @@ class DailyAttendanceServiceTest {
         return new DailyAttendanceService(userAuthHelper, new PeladaAccessHelper(peladaRepository), dailyRepository,
                 attendanceRepository, bumpRepository, mensalistaRepository, userRepository,
                 new DailyListItemAssembler(attendanceRepository, teamRepository, matchRepository, mensalistaRepository, userDailyStatsRepository), eventPublisher,
-                Clock.fixed(now, ZoneOffset.UTC), notificationRepository);
+                Clock.fixed(now, ZoneOffset.UTC), notificationRepository, teamManagementService);
     }
 
     private User addMember(long id) {

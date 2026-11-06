@@ -67,13 +67,23 @@ export async function adminDisconfirmAttendance(id: number, userId: number): Pro
   return response.data
 }
 
-export async function sortTeams(id: number): Promise<DailyDetail> {
-  const response = await apiClient.post<DailyDetail>(`/api/v1/dailies/${id}/sort-teams`)
+export async function sortTeams(id: number): Promise<TeamDTO[]> {
+  const response = await apiClient.post<TeamDTO[]>(`/api/v1/dailies/${id}/sort-teams`)
   return response.data
 }
 
-export async function swapPlayers(id: number, player1Id: number, player2Id: number): Promise<DailyDetail> {
-  const response = await apiClient.put<DailyDetail>(`/api/v1/dailies/${id}/teams/swap`, { player1Id, player2Id })
+export async function swapPlayers(id: number, player1Id: number, player2Id: number): Promise<TeamDTO[]> {
+  const response = await apiClient.put<TeamDTO[]>(`/api/v1/dailies/${id}/teams/swap`, { player1Id, player2Id })
+  return response.data
+}
+
+// mirrors SaveTeamsRequestDTO: every team of the session, replacing the current ones
+export interface SaveTeamsInput {
+  teams: { name: string; color: string | null; playerIds: number[] }[]
+}
+
+export async function saveTeams(id: number, data: SaveTeamsInput): Promise<TeamDTO[]> {
+  const response = await apiClient.put<TeamDTO[]>(`/api/v1/dailies/${id}/teams`, data)
   return response.data
 }
 

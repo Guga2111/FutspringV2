@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { DailyStatusBadge } from "@/components/daily/DailyStatusBadge"
 import { formatLongDate } from "@/utils/sessions"
+import { dailyTeamPendencies } from "@/utils/teamDraft"
 import type { DailyDetail } from "@/types/daily"
 
 export interface DailyHeaderActions {
@@ -43,6 +44,8 @@ function playersMeta(daily: DailyDetail): string {
 // Back link, date, status, metadata and the admin actions (they used to live in a fixed bottom bar)
 export function DailyHeader({ daily, ...actions }: DailyHeaderProps) {
   const { status } = daily
+  // fewer than two teams or an empty one: the server would refuse the start (short teams only warn)
+  const canStart = !dailyTeamPendencies(daily).blocking
   return (
     <header className="flex flex-wrap items-end justify-between gap-4">
       <div className="flex min-w-0 flex-col gap-2">
@@ -91,10 +94,23 @@ export function DailyHeader({ daily, ...actions }: DailyHeaderProps) {
             </>
           )}
           {status === "CONFIRMED" && (
-            <Button variant="brand" className={`${actionButton} font-semibold`} onClick={actions.onStartSession}>
-              <HugeiconsIcon icon={PlayIcon} />
-              Iniciar sessão
-            </Button>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              {!canStart && (
+                <span id="start-session-hint" className="text-body-sm text-muted-foreground">
+                  Monte os times antes de iniciar
+                </span>
+              )}
+              <Button
+                variant="brand"
+                className={`${actionButton} font-semibold`}
+                disabled={!canStart}
+                aria-describedby={canStart ? undefined : "start-session-hint"}
+                onClick={actions.onStartSession}
+              >
+                <HugeiconsIcon icon={PlayIcon} />
+                Iniciar sessão
+              </Button>
+            </div>
           )}
           {/* IN_COURSE: "Lançar resultados" and "Finalizar sessão" live on LiveSessionCard, only the ⋯ menu stays here */}
           {status === "FINISHED" && (

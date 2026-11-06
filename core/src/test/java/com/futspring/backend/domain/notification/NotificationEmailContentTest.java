@@ -71,6 +71,16 @@ class NotificationEmailContentTest {
     }
 
     @Test
+    void teamsSorted_neutralTextForSortAndManualTeams() {
+        NotificationEmailContent teams = NotificationEmailContent.of(notification(NotificationType.TEAMS_SORTED, null));
+
+        assertThat(teams.subject()).isEqualTo("Times definidos: sáb, 31/10");
+        assertThat(teams.title()).isEqualTo("Times definidos");
+        assertThat(teams.body()).isEqualTo("Os times da sessão de sáb, 31/10 às 20:00 da Pelada do Fut foram definidos.");
+        assertThat(teams.ctaPath()).isEqualTo("/daily/100");
+    }
+
+    @Test
     void membershipTypesLinkToThePelada_removedLinksHome() {
         assertThat(NotificationEmailContent.of(notification(NotificationType.ADDED_TO_PELADA, null)).ctaPath())
                 .isEqualTo("/pelada/10");
