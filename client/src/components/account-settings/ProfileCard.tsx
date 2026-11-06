@@ -32,7 +32,7 @@ export function ProfileCard({ user }: { user: UserResponseDTO }) {
         <div className="flex flex-col gap-1.5">
           <Button type="button" variant="outline" size="sm" asChild disabled={uploading}>
             <label htmlFor="profile-photo" className="cursor-pointer" aria-disabled={uploading}>
-              <HugeiconsIcon icon={Camera01Icon} data-icon="inline-start" />
+              <HugeiconsIcon icon={Camera01Icon} data-icon="inline-start" className="size-4" />
               {uploading ? "Enviando..." : user.image ? "Trocar foto" : "Enviar foto"}
             </label>
           </Button>

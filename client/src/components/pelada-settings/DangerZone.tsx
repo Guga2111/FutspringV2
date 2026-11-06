@@ -35,7 +35,7 @@ export function DangerZone({ pelada, isCreator, onTransferred }: DangerZoneProps
         <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
           <p className="text-sm text-muted-foreground">{transferHint ?? `${admins.length} ${admins.length === 1 ? "admin pode" : "admins podem"} receber a pelada.`}</p>
           <Button variant="outline" disabled={transferHint !== null} onClick={() => setOpen("transfer")}>
-            <HugeiconsIcon icon={ArrowDataTransferHorizontalIcon} data-icon="inline-start" />
+            <HugeiconsIcon icon={ArrowDataTransferHorizontalIcon} data-icon="inline-start" className="size-4" />
             Transferir pelada
           </Button>
         </div>
@@ -52,7 +52,7 @@ export function DangerZone({ pelada, isCreator, onTransferred }: DangerZoneProps
             {isCreator ? "Essa ação não pode ser desfeita." : "Apenas o criador pode excluir a pelada."}
           </p>
           <Button variant="destructive" disabled={!isCreator} onClick={() => setOpen("delete")}>
-            <HugeiconsIcon icon={Delete02Icon} data-icon="inline-start" />
+            <HugeiconsIcon icon={Delete02Icon} data-icon="inline-start" className="size-4" />
             Excluir pelada
           </Button>
         </div>
