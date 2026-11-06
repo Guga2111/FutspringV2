@@ -99,7 +99,7 @@ Só o que o app de fato faz hoje. Linguagem simples, em segunda pessoa ("você")
 
 1. **Quem somos** — o Futspring é um app gratuito para organizar peladas, mantido por `[NOME DO CONTROLADOR]`. Contato: `[E-MAIL DE CONTATO]`.
 2. **Aceite** — ao criar a conta você aceita estes termos e a Política de privacidade.
-3. **Sua conta** — dados verdadeiros, senha pessoal, você responde pelo que for feito com ela. Idade mínima: **18 anos, ou 13 com autorização do responsável** *(confirmar na revisão)*.
+3. **Sua conta** — dados verdadeiros, senha pessoal, você responde pelo que for feito com ela. Idade mínima: **18 anos**.
 4. **Peladas e papéis** — o criador e os admins configuram a pelada, convidam e removem membros, montam times, lançam resultados e dão estrelas; membros confirmam presença, conversam no chat e veem os números da pelada. O criador pode transferir a pelada para um admin.
 5. **Conteúdo que você envia** — fotos de perfil, da pelada e de campeão, mensagens do chat e comprovantes. Você continua dono; nos dá permissão só para guardar e mostrar aos membros da pelada. Não envie conteúdo ilegal, ofensivo ou de terceiros sem autorização.
 6. **Financeiro** — o app só **registra** cobranças e pagamentos combinados entre os membros. Não processa pagamentos, não guarda dinheiro, não é instituição financeira. O Pix é do recebedor indicado pelos responsáveis financeiros; acertos e divergências são entre os membros.
@@ -149,9 +149,9 @@ Só o que o app de fato faz hoje. Linguagem simples, em segunda pessoa ("você")
 - Visual: `/termos` e `/privacidade` em `e2e/visual.spec.ts`, snapshots gerados no Docker e revisados.
 - Manual: criar conta pelo formulário e conferir as colunas no banco; abrir os links do cadastro e do rodapé em 375 px, claro e escuro.
 
-## Pontos para você decidir na revisão
+## Decisões da revisão
 
-1. Idade mínima: 18, ou 13 com autorização do responsável?
-2. Base legal dos e-mails de notificação: legítimo interesse (proposto) ou consentimento?
-3. O que a exclusão de conta mantém (financeiro anonimizado?) — alinhar com o outro agente.
-4. Valores dos placeholders, quando quiser publicar.
+1. Idade mínima: 18 anos.
+2. E-mails de notificação: legítimo interesse, com desativação por categoria em um clique (Presença e Membros já vêm ligadas, o que consentimento não permitiria). Prova do aceite: exercício regular de direitos (art. 7º, VI).
+3. Exclusão de conta: o texto diz que os dados pessoais são apagados e que resultados e lançamentos do financeiro continuam sem os dados pessoais. **Pendente:** conferir com a implementação do outro agente antes do merge.
+4. Placeholders ficam por enquanto (o produto ainda não é comercializado).

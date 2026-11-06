@@ -12,10 +12,12 @@ export interface AuthResponse {
   user: UserResponseDTO
 }
 
+// mirrors RegisterRequestDTO; termsVersion is the LEGAL_VERSION the user accepted
 export interface RegisterRequest {
   username: string
   email: string
   password: string
+  termsVersion: string
 }
 
 export interface LoginRequest {

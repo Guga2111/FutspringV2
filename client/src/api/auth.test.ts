@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 vi.mock("./client", () => ({ default: { post: vi.fn() } }))
 
 import apiClient from "./client"
-import { requestPasswordReset, resetPassword } from "./auth"
+import { registerUser, requestPasswordReset, resetPassword } from "./auth"
 
 const mockPost = vi.mocked(apiClient.post)
 
@@ -25,5 +25,18 @@ describe("resetPassword", () => {
     await resetPassword({ token: "abc", newPassword: "novasenha1" })
 
     expect(mockPost).toHaveBeenCalledWith("/api/v1/auth/reset-password", { token: "abc", newPassword: "novasenha1" })
+  })
+})
+
+describe("registerUser", () => {
+  it("posts the accepted terms version with the account", async () => {
+    await registerUser({ username: "Leal", email: "leal@futspring.com", password: "senha123", termsVersion: "2026-11-06" })
+
+    expect(mockPost).toHaveBeenCalledWith("/api/v1/auth/register", {
+      username: "Leal",
+      email: "leal@futspring.com",
+      password: "senha123",
+      termsVersion: "2026-11-06",
+    })
   })
 })

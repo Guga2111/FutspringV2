@@ -4,6 +4,8 @@ import com.futspring.backend.shared.entity.EntityIdentity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.Instant;
+
 @Entity
 @Table(name = "users")
 @Getter
@@ -38,6 +40,13 @@ public class User {
     @Column(name = "token_version", nullable = false)
     @Builder.Default
     private int tokenVersion = 0;
+
+    // Terms of use / privacy policy accepted at registration (LegalTerms); null for accounts created before V16
+    @Column(name = "terms_version", length = 20)
+    private String termsVersion;
+
+    @Column(name = "terms_accepted_at")
+    private Instant termsAcceptedAt;
 
     @Override
     public boolean equals(Object o) {

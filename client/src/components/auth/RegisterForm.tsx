@@ -1,4 +1,5 @@
 import { Controller } from "react-hook-form"
+import { Link } from "react-router-dom"
 import { AuthTextField } from "@/components/auth/AuthTextField"
 import { useRegisterForm } from "@/components/auth/hooks/useAuthForms"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -41,7 +42,16 @@ export function RegisterForm({ returnTo }: { returnTo: string }) {
                   aria-invalid={fieldState.invalid}
                 />
                 <FieldLabel htmlFor="register-terms" className="font-normal text-muted-foreground">
-                  Li e concordo com os termos de uso
+                  <span>
+                    Li e concordo com os{" "}
+                    <Link to="/termos" target="_blank" rel="noopener" className="font-medium text-brand-text underline underline-offset-2">
+                      Termos de uso
+                    </Link>{" "}
+                    e a{" "}
+                    <Link to="/privacidade" target="_blank" rel="noopener" className="font-medium text-brand-text underline underline-offset-2">
+                      Política de privacidade
+                    </Link>
+                  </span>
                 </FieldLabel>
               </Field>
               <FieldError errors={[fieldState.error]} />

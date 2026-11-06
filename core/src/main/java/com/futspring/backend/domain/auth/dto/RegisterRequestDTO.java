@@ -15,5 +15,10 @@ public record RegisterRequestDTO(
 
         @NotBlank(message = "A senha é obrigatória")
         @Size(min = 8, message = "A senha deve ter pelo menos 8 caracteres")
-        String password) {
+        String password,
+
+        // the version of the terms of use and privacy policy the user accepted (LegalTerms.CURRENT_VERSION)
+        @NotBlank(message = "Aceite os termos de uso para criar a conta")
+        @Size(max = 20, message = "Versão dos termos inválida")
+        String termsVersion) {
 }

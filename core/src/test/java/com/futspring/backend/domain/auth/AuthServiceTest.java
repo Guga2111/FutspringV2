@@ -18,6 +18,9 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.*;
@@ -26,6 +29,8 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class AuthServiceTest {
+
+    static final Clock CLOCK = Clock.fixed(Instant.parse("2026-11-06T12:00:00Z"), ZoneOffset.UTC);
 
     @Mock
     UserRepository userRepository;
@@ -42,14 +47,14 @@ class AuthServiceTest {
                 "test-secret-key-that-is-at-least-32-characters-long");
         ReflectionTestUtils.setField(jwtConfig, "expirationMs", 3600000L);
         jwtService = new JwtService(jwtConfig);
-        authService = new AuthService(userRepository, passwordEncoder, jwtService);
+        authService = new AuthService(userRepository, passwordEncoder, jwtService, CLOCK);
     }
 
     // --- register ---
 
     @Test
     void register_success_returnsTokenAndUserDTO() {
-        RegisterRequestDTO req = new RegisterRequestDTO("alice", "alice@example.com", "password123");
+        RegisterRequestDTO req = new RegisterRequestDTO("alice", "alice@example.com", "password123", LegalTerms.CURRENT_VERSION);
 
         when(userRepository.findByEmail("alice@example.com")).thenReturn(Optional.empty());
         when(userRepository.save(any(User.class))).thenAnswer(inv -> {
@@ -66,8 +71,32 @@ class AuthServiceTest {
     }
 
     @Test
+    void register_recordsTheAcceptedTermsVersionAndInstant() {
+        RegisterRequestDTO req = new RegisterRequestDTO("alice", "alice@example.com", "password123", LegalTerms.CURRENT_VERSION);
+        when(userRepository.findByEmail("alice@example.com")).thenReturn(Optional.empty());
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        authService.register(req);
+
+        ArgumentCaptor<User> saved = ArgumentCaptor.forClass(User.class);
+        verify(userRepository).save(saved.capture());
+        assertThat(saved.getValue().getTermsVersion()).isEqualTo(LegalTerms.CURRENT_VERSION);
+        assertThat(saved.getValue().getTermsAcceptedAt()).isEqualTo(Instant.parse("2026-11-06T12:00:00Z"));
+    }
+
+    @Test
+    void register_outdatedTermsVersion_throwsConflictAndSavesNothing() {
+        RegisterRequestDTO req = new RegisterRequestDTO("alice", "alice@example.com", "password123", "2020-01-01");
+
+        assertThatThrownBy(() -> authService.register(req))
+                .isInstanceOf(AppException.class)
+                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.CONFLICT));
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
     void register_emailAlreadyRegistered_throwsConflict() {
-        RegisterRequestDTO req = new RegisterRequestDTO("alice", "alice@example.com", "password123");
+        RegisterRequestDTO req = new RegisterRequestDTO("alice", "alice@example.com", "password123", LegalTerms.CURRENT_VERSION);
 
         when(userRepository.findByEmail("alice@example.com"))
                 .thenReturn(Optional.of(User.builder().email("alice@example.com").build()));
@@ -79,7 +108,7 @@ class AuthServiceTest {
 
     @Test
     void register_usernameTakenInAnotherCase_throwsConflict() {
-        RegisterRequestDTO req = new RegisterRequestDTO(" Alice ", "new@example.com", "password123");
+        RegisterRequestDTO req = new RegisterRequestDTO(" Alice ", "new@example.com", "password123", LegalTerms.CURRENT_VERSION);
 
         when(userRepository.findByEmail("new@example.com")).thenReturn(Optional.empty());
         when(userRepository.existsByUsernameIgnoreCase("Alice")).thenReturn(true);
@@ -92,7 +121,7 @@ class AuthServiceTest {
 
     @Test
     void register_passwordIsEncoded_beforePersisting() {
-        RegisterRequestDTO req = new RegisterRequestDTO("bob", "bob@example.com", "rawPassword");
+        RegisterRequestDTO req = new RegisterRequestDTO("bob", "bob@example.com", "rawPassword", LegalTerms.CURRENT_VERSION);
 
         when(userRepository.findByEmail(any())).thenReturn(Optional.empty());
         ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
@@ -111,7 +140,7 @@ class AuthServiceTest {
 
     @Test
     void register_savedUser_hasCorrectUsernameAndEmail() {
-        RegisterRequestDTO req = new RegisterRequestDTO("carol", "carol@example.com", "password123");
+        RegisterRequestDTO req = new RegisterRequestDTO("carol", "carol@example.com", "password123", LegalTerms.CURRENT_VERSION);
 
         when(userRepository.findByEmail(any())).thenReturn(Optional.empty());
         ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
@@ -129,7 +158,7 @@ class AuthServiceTest {
 
     @Test
     void register_generatesToken_withSavedUserIdAndEmail() {
-        RegisterRequestDTO req = new RegisterRequestDTO("dave", "dave@example.com", "password123");
+        RegisterRequestDTO req = new RegisterRequestDTO("dave", "dave@example.com", "password123", LegalTerms.CURRENT_VERSION);
 
         when(userRepository.findByEmail(any())).thenReturn(Optional.empty());
         when(userRepository.save(any(User.class))).thenAnswer(inv -> {
