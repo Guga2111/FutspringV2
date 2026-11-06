@@ -6,6 +6,10 @@ import com.futspring.backend.domain.stats.StatsService;
 import com.futspring.backend.domain.stats.dto.StatsDTO;
 import com.futspring.backend.domain.stats.dto.UserMatchHistoryDTO;
 import com.futspring.backend.domain.stats.dto.UserStatsTimelineDTO;
+import com.futspring.backend.domain.auth.dto.AuthResponseDTO;
+import com.futspring.backend.domain.user.dto.ChangePasswordRequestDTO;
+import com.futspring.backend.domain.user.dto.DeleteAccountRequestDTO;
+import com.futspring.backend.domain.user.dto.DeletionBlockerDTO;
 import com.futspring.backend.domain.user.dto.ProfileDTO;
 import com.futspring.backend.domain.user.dto.PublicUserDTO;
 import com.futspring.backend.domain.user.dto.UpdateProfileRequest;
@@ -28,6 +32,27 @@ public class UserController {
     private final PeladaService peladaService;
     private final StatsService statsService;
     private final UserService userService;
+    private final AccountDeletionService accountDeletionService;
+
+    // Rate limited by AuthRateLimitFilter; answers a fresh token, the other sessions get 401
+    @PostMapping("/me/password")
+    public ResponseEntity<AuthResponseDTO> changePassword(@Valid @RequestBody ChangePasswordRequestDTO request,
+                                                          @AuthenticationPrincipal String callerEmail) {
+        return ResponseEntity.ok(userService.changePassword(request, callerEmail));
+    }
+
+    @GetMapping("/me/deletion-blockers")
+    public ResponseEntity<List<DeletionBlockerDTO>> getDeletionBlockers(@AuthenticationPrincipal String callerEmail) {
+        return ResponseEntity.ok(accountDeletionService.blockers(callerEmail));
+    }
+
+    // POST, not DELETE: it carries the password in a body (rate limited by AuthRateLimitFilter)
+    @PostMapping("/me/delete")
+    public ResponseEntity<Void> deleteAccount(@Valid @RequestBody DeleteAccountRequestDTO request,
+                                              @AuthenticationPrincipal String callerEmail) {
+        accountDeletionService.deleteAccount(request.password(), callerEmail);
+        return ResponseEntity.noContent().build();
+    }
 
     @GetMapping("/search")
     public ResponseEntity<List<PublicUserDTO>> searchUsers(@RequestParam String q) {

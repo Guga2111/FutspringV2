@@ -206,6 +206,18 @@ public class PeladaInvitationService {
                 });
     }
 
+    /**
+     * Account deletion, with the user's peladas locked: their open invitations end, the links they created are
+     * revoked and their link blocks go (the account can't come back). Bulk statements, no per-pelada reads.
+     */
+    public void forgetAccount(User user) {
+        Instant now = clock.instant();
+        invitations.cancelPendingForRecipient(user.getId(), now);
+        invitations.expirePendingForRecipient(user.getId());
+        links.revokeCreatedBy(user.getId(), now);
+        blocks.deleteByUserId(user.getId());
+    }
+
     /** Notifications are deleted first, so the invitation reference cannot obstruct deletion on H2 either. */
     public void deletePeladaData(Long peladaId) {
         invitations.deleteByPeladaId(peladaId);

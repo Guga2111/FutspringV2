@@ -3,6 +3,7 @@ package com.futspring.backend.domain.daily.repository;
 import com.futspring.backend.domain.daily.entity.Daily;
 import com.futspring.backend.domain.daily.entity.DailyAttendance;
 import com.futspring.backend.domain.daily.entity.DailyAttendanceId;
+import com.futspring.backend.domain.daily.entity.DailyStatus;
 import com.futspring.backend.domain.user.User;
 import org.springframework.data.domain.Limit;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -65,4 +66,13 @@ public interface DailyAttendanceRepository extends JpaRepository<DailyAttendance
         deleteAll(findByDailyWithUser(daily));
         flush();
     }
+
+    // Account deletion: the user's attendance in every session that hasn't started (statuses: not locked)
+    @Modifying
+    @Query("""
+        DELETE FROM DailyAttendance a
+        WHERE a.user = :user AND a.daily.id IN (SELECT d.id FROM Daily d WHERE d.status IN :statuses)
+        """)
+    void deleteByUserInDailiesWithStatus(@Param("user") User user,
+                                         @Param("statuses") Collection<DailyStatus> statuses);
 }

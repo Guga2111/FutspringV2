@@ -86,7 +86,7 @@ class StatsServiceTest {
                 .sessionsPlayed(6)
                 .build();
 
-        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.of(user));
         when(statsRepository.findByUser(user)).thenReturn(Optional.of(stats));
         when(dailyAwardRepository.countAwardsByUser(1L)).thenReturn(awardRows(3, 1, 0, 2));
 
@@ -101,7 +101,7 @@ class StatsServiceTest {
 
     @Test
     void getStats_noStatsEntity_returnsDefaultFromUser() {
-        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.of(user));
         when(statsRepository.findByUser(user)).thenReturn(Optional.empty());
         when(dailyAwardRepository.countAwardsByUser(1L)).thenReturn(awardRows(0, 0, 0, 0));
 
@@ -113,7 +113,7 @@ class StatsServiceTest {
 
     @Test
     void getStats_awardCountsPopulated() {
-        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.of(user));
         when(statsRepository.findByUser(user)).thenReturn(Optional.empty());
         when(dailyAwardRepository.countAwardsByUser(1L)).thenReturn(awardRows(7, 2, 0, 4));
 
@@ -126,7 +126,7 @@ class StatsServiceTest {
 
     @Test
     void getStats_userNotFound_throwsNotFound() {
-        when(userRepository.findById(99L)).thenReturn(Optional.empty());
+        when(userRepository.findByIdAndDeletedAtIsNull(99L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> statsService.getStats(99L, "caller@example.com"))
                 .isInstanceOf(AppException.class)
@@ -156,7 +156,7 @@ class StatsServiceTest {
         LocalDate from = LocalDate.of(2024, 1, 1);
         LocalDate to = LocalDate.of(2024, 1, 31);
 
-        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.of(user));
         when(userDailyStatsRepository.findByUserAndDateRange(user, from, to)).thenReturn(List.of(uds));
 
         UserStatsTimelineDTO result = statsService.getTimeline(1L, from, to, "caller@example.com");
@@ -171,7 +171,7 @@ class StatsServiceTest {
         LocalDate from = LocalDate.of(2024, 1, 1);
         LocalDate to = LocalDate.of(2024, 1, 31);
 
-        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.of(user));
         when(userDailyStatsRepository.findByUserAndDateRange(user, from, to)).thenReturn(Collections.emptyList());
 
         UserStatsTimelineDTO result = statsService.getTimeline(1L, from, to, "caller@example.com");
@@ -200,7 +200,7 @@ class StatsServiceTest {
         LocalDate from = LocalDate.of(2024, 3, 1);
         LocalDate to = LocalDate.of(2024, 3, 31);
 
-        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.of(user));
         when(userDailyStatsRepository.findByUserAndDateRange(user, from, to)).thenReturn(List.of(uds));
 
         UserStatsTimelineDTO result = statsService.getTimeline(1L, from, to, "caller@example.com");
@@ -214,7 +214,7 @@ class StatsServiceTest {
 
     @Test
     void getTimeline_userNotFound_throwsNotFound() {
-        when(userRepository.findById(99L)).thenReturn(Optional.empty());
+        when(userRepository.findByIdAndDeletedAtIsNull(99L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> statsService.getTimeline(99L,
                 LocalDate.of(2024, 1, 1), LocalDate.of(2024, 1, 31), "caller@example.com"))
@@ -243,7 +243,7 @@ class StatsServiceTest {
                 .wonSession(true)
                 .build();
 
-        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.of(user));
         when(userDailyStatsRepository.findHistoryByUser(user)).thenReturn(List.of(uds));
 
         UserMatchHistoryDTO result = statsService.getMatchHistory(1L, "caller@example.com");
@@ -271,7 +271,7 @@ class StatsServiceTest {
                 .wonSession(false)
                 .build();
 
-        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.of(user));
         when(userDailyStatsRepository.findHistoryByUser(user)).thenReturn(List.of(uds));
 
         UserMatchHistoryDTO result = statsService.getMatchHistory(1L, "caller@example.com");
@@ -298,7 +298,7 @@ class StatsServiceTest {
                 .wonSession(false)
                 .build();
 
-        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.of(user));
         when(userDailyStatsRepository.findHistoryByUser(user)).thenReturn(List.of(uds));
 
         UserMatchHistoryDTO result = statsService.getMatchHistory(1L, "caller@example.com");
@@ -325,7 +325,7 @@ class StatsServiceTest {
                 .wonSession(true)
                 .build();
 
-        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.of(user));
         when(userDailyStatsRepository.findHistoryByUser(user)).thenReturn(List.of(uds));
 
         UserMatchHistoryDTO result = statsService.getMatchHistory(1L, "caller@example.com");
@@ -340,7 +340,7 @@ class StatsServiceTest {
 
     @Test
     void getMatchHistory_userNotFound_throwsNotFound() {
-        when(userRepository.findById(99L)).thenReturn(Optional.empty());
+        when(userRepository.findByIdAndDeletedAtIsNull(99L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> statsService.getMatchHistory(99L, "caller@example.com"))
                 .isInstanceOf(AppException.class)
@@ -351,7 +351,7 @@ class StatsServiceTest {
 
     @Test
     void getStats_strangerWithoutSharedPelada_throwsForbidden() {
-        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.of(user));
 
         assertThatThrownBy(() -> statsService.getStats(1L, "stranger@example.com"))
                 .isInstanceOf(AppException.class)
@@ -361,7 +361,7 @@ class StatsServiceTest {
 
     @Test
     void getMatchHistory_strangerWithoutSharedPelada_throwsForbidden() {
-        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.of(user));
 
         assertThatThrownBy(() -> statsService.getMatchHistory(1L, "stranger@example.com"))
                 .isInstanceOf(AppException.class)
@@ -371,7 +371,7 @@ class StatsServiceTest {
 
     @Test
     void getMatchHistory_teammate_onlySeesSharedPeladas() {
-        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.of(user));
         when(peladaRepository.findIdsByMemberId(2L)).thenReturn(List.of(10L));
         when(userDailyStatsRepository.findHistoryByUserInPeladas(user, List.of(10L))).thenReturn(List.of());
 
@@ -385,7 +385,7 @@ class StatsServiceTest {
     void getTimeline_teammate_onlySeesSharedPeladas() {
         LocalDate from = LocalDate.of(2024, 1, 1);
         LocalDate to = LocalDate.of(2024, 1, 31);
-        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.of(user));
         when(peladaRepository.findIdsByMemberId(2L)).thenReturn(List.of(10L));
         when(userDailyStatsRepository.findByUserAndDateRangeInPeladas(user, from, to, List.of(10L))).thenReturn(List.of());
 

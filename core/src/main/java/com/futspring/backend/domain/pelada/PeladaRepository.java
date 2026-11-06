@@ -4,6 +4,7 @@ import com.futspring.backend.domain.user.User;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -62,4 +63,31 @@ public interface PeladaRepository extends JpaRepository<Pelada, Long> {
 
     @Query("SELECT p.id, SIZE(p.members) FROM Pelada p WHERE p.id IN :ids")
     List<Object[]> countMembersByIds(@Param("ids") Collection<Long> ids);
+
+    /**
+     * Row locks on every pelada the user belongs to, in id order (like the member routes, so two lockers never
+     * deadlock), returning only the ids: the account deletion reads a constant number of rows whatever the count.
+     */
+    @Query(value = """
+        SELECT p.id FROM peladas p
+        WHERE p.id IN (SELECT m.pelada_id FROM pelada_members m WHERE m.user_id = :userId)
+        ORDER BY p.id
+        FOR UPDATE
+        """, nativeQuery = true)
+    List<Long> lockIdsByMemberId(@Param("userId") Long userId);
+
+    @Query("""
+        SELECT new com.futspring.backend.domain.pelada.PeladaRef(p.id, p.name)
+        FROM Pelada p WHERE p.creator.id = :userId ORDER BY p.id
+        """)
+    List<PeladaRef> findCreatedBy(@Param("userId") Long userId);
+
+    // Account deletion: leaves every pelada at once (the join tables have no entity)
+    @Modifying
+    @Query(value = "DELETE FROM pelada_admins WHERE user_id = :userId", nativeQuery = true)
+    void deleteAdminRowsOfUser(@Param("userId") Long userId);
+
+    @Modifying
+    @Query(value = "DELETE FROM pelada_members WHERE user_id = :userId", nativeQuery = true)
+    void deleteMemberRowsOfUser(@Param("userId") Long userId);
 }

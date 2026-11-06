@@ -107,7 +107,7 @@ public class PeladaService {
     @Transactional(readOnly = true)
     public List<PeladaResponseDTO> getSharedPeladas(Long userId, String currentUserEmail) {
         User caller = userAuthHelper.getAuthenticatedUser(currentUserEmail);
-        if (!userRepository.existsById(userId)) {
+        if (!userRepository.existsByIdAndDeletedAtIsNull(userId)) {
             throw new AppException(HttpStatus.NOT_FOUND, "Usuário não encontrado");
         }
         return toSummaries(peladaRepository.findSharedPeladas(caller.getId(), userId), caller);
@@ -201,6 +201,22 @@ public class PeladaService {
         dailyService.removeFromUpcomingSessions(pelada, targets);
         peladaRepository.save(pelada);
         eventPublisher.publishEvent(new MembersRemovedEvent(pelada, caller, targets));
+    }
+
+    /**
+     * Account deletion, with the user's peladas already locked and no pelada created by them: the user leaves
+     * every pelada as a removed member would (admin, stars, mensalista, attendance and teams of the sessions that
+     * haven't started, invitations, finance delegation) but nobody is notified and no link block is recorded.
+     * Bulk statements, so the reads don't grow with the number of peladas.
+     */
+    public void removeAccountFromPeladas(User user, String anonymousName) {
+        financePreservation.forgetAccount(user, anonymousName);
+        invitationService.forgetAccount(user);
+        playerStarsRepository.deleteByUser(user);
+        mensalistaRepository.deleteByUser(user);
+        dailyService.removeAccountFromUpcomingSessions(user);
+        peladaRepository.deleteAdminRowsOfUser(user.getId());
+        peladaRepository.deleteMemberRowsOfUser(user.getId());
     }
 
     @Transactional

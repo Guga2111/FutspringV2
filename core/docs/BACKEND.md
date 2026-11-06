@@ -112,8 +112,9 @@ com.futspring.backend
 │   │   │                           PasswordResetEmail (fills resources/email/password-reset.html), PasswordResetTokenCleanup (daily purge)
 │   │   └── dto/                    LoginRequestDTO, RegisterRequestDTO, AuthResponseDTO, UserResponseDTO,
 │   │                               ForgotPasswordRequestDTO, ResetPasswordRequestDTO
-│   ├── user/                       UserController, UserService (profile get/update, avatar, background image), User, UserRepository
-│   │   └── dto/                    ProfileDTO, PublicUserDTO, UpdateProfileRequest
+│   ├── user/                       UserController, UserService (profile get/update, avatar, background image, change password), User, UserRepository,
+│   │   │                           AccountDeletionService (deletion blockers, account deletion by anonymization), DeletionBlockerType
+│   │   └── dto/                    ProfileDTO, PublicUserDTO, UpdateProfileRequest, ChangePasswordRequestDTO, DeleteAccountRequestDTO, DeletionBlockerDTO
 │   ├── pelada/                     PeladaController, PeladaService (pelada CRUD, effective members, admins, member stars, mensalistas, user search, image, creator transfer; each member action works on a list of members and the single routes call it with one id), Pelada, PeladaRepository,
 │   │                               PeladaPlayerStars + PeladaPlayerStarsRepository (stars per member, profile average),
 │   │                               PeladaMensalista + PeladaMensalistaRepository (members marked as mensalistas)
@@ -185,7 +186,7 @@ All entities use IDENTITY ids and **LAZY** fetching, Lombok `@Getter @Setter` (n
 
 | Entity | Table | Fields / relations |
 |--------|-------|--------------------|
-| `User` | `users` | `email` (unique), `username` (unique case-insensitively in `AuthService`/`UserService`, not in the DB: production has legacy duplicates, so check with `existsByUsernameIgnoreCase…`, never a single-result find), `password` (BCrypt), `image`, `backgroundImage`, `position`, `tokenVersion` (default 0, incremented by a password reset to revoke every JWT issued before), `termsVersion` / `termsAcceptedAt` (the terms of use and privacy policy version accepted at registration and when; null for accounts created before V16). The legacy `users.stars` column is no longer mapped (default 3 since V8) and will be dropped by a later migration |
+| `User` | `users` | `email` (unique), `username` (unique case-insensitively in `AuthService`/`UserService`, not in the DB: production has legacy duplicates, so check with `existsByUsernameIgnoreCase…`, never a single-result find), `password` (BCrypt), `image`, `backgroundImage`, `position`, `tokenVersion` (default 0, incremented by a password reset, a password change or the account deletion to revoke every JWT issued before), `termsVersion` / `termsAcceptedAt` (the terms of use and privacy policy version accepted at registration and when; null for accounts created before V16; kept by the account deletion as the record of the acceptance), `deletedAt` (`Instant`, null; set by the account deletion, `isDeleted()`; see [Account deletion](#account-deletion)). The legacy `users.stars` column is no longer mapped (default 3 since V8) and will be dropped by a later migration |
 | `Pelada` | `peladas` | `name`, `dayOfWeek` (a `java.time.DayOfWeek` name, `MONDAY`..`SUNDAY`, validated on create/update), `timeOfDay`, `duration`, `address`, `reference`, `image`, `autoCreateDailyEnabled`, `numberOfTeams` (2), `playersPerTeam` (5), `timeZone` (IANA region id, default `America/Sao_Paulo`, validated against `ZoneId.getAvailableZoneIds()`), `maxMensalistas` (0; `0 ≤ max ≤ numberOfTeams × playersPerTeam`, `capacity()`), `createdAt`; `creator` → User; `members` M:N (`pelada_members`); `admins` M:N (`pelada_admins`) |
 | `Daily` | `dailies` | `dailyDate`, `dailyTime`, `status` (`DailyStatus`, default `SCHEDULED`), `isFinished`, `championImage`, `createdAt`; `pelada`. Attendance is the `DailyAttendance` entity (no collection on `Daily`) |
 | `DailyAttendance` | `daily_confirmed_players` (PK `daily_id`+`user_id`) | `@EmbeddedId DailyAttendanceId (dailyId, userId)` with `@MapsId` `daily` and `user`; `confirmedAt` (`Instant`, `TIMESTAMPTZ`, set by the server clock). Read through `DailyAttendanceRepository` (confirmed users in confirmation order, grouped counts, the bump victim). Removed through the persistence context (`deleteAllOfDaily`), never a bulk delete: a managed row left in the transaction keeps Hibernate from deleting its daily |
@@ -264,6 +265,7 @@ New status-like fields must be Java enums stored with `@Enumerated(EnumType.STRI
 | V14 | Indexes `finance_audit(pelada_id, created_at DESC)` and `finance_movements(pelada_id, effective_date DESC)` for the date filters of `/finance/audit` and `/finance/movements`; non-destructive |
 | V15 | Designates every current admin and creator (members only) as responsável financeiro in `finance_managers` (`ON CONFLICT DO NOTHING`), since only responsáveis manage the finance from now on; non-destructive |
 | V16 | Adds nullable `users.terms_version` (`VARCHAR(20)`) and `terms_accepted_at` (`TIMESTAMPTZ`): the accepted terms/privacy version, recorded at registration; no backfill (older accounts stay null); non-destructive |
+| V17 | Adds `users.deleted_at` (`TIMESTAMPTZ NULL`): when the account was deleted (anonymized). Additive, non-destructive. |
 
 ### Migration rules
 
@@ -303,7 +305,7 @@ New status-like fields must be Java enums stored with `@Enumerated(EnumType.STRI
 
 Invitation quotas and public preview limits are documented in [Membership invitations](#membership-invitations-peladainvitationcontroller).
 
-`AuthRateLimitFilter` (in the security chain): 10 requests per minute per client IP on each of `POST /api/v1/auth/login`, `/register`, `/forgot-password`, `/reset-password` and the e-mail link routes `/api/v1/notifications/unsubscribe` and `/resubscribe`, answering 429 with the usual error body. Buckets live in a Caffeine cache (max 100k entries, evicted 10 min after the last access). The IP is `getRemoteAddr()`, which reflects `X-Forwarded-For` because of `server.forward-headers-strategy=framework`. In memory: one API instance only. New rate limits go into a filter like this one.
+`AuthRateLimitFilter` (in the security chain): 10 requests per minute per client IP on each of `POST /api/v1/auth/login`, `/register`, `/forgot-password`, `/reset-password`, the logged-in password checks `POST /api/v1/users/me/password` and `/users/me/delete`, and the e-mail link routes `/api/v1/notifications/unsubscribe` and `/resubscribe`, answering 429 with the usual error body. Buckets live in a Caffeine cache (max 100k entries, evicted 10 min after the last access). The IP is `getRemoteAddr()`, which reflects `X-Forwarded-For` because of `server.forward-headers-strategy=framework`. In memory: one API instance only. New rate limits go into a filter like this one.
 
 ### WebSocket (`S/domain/auth/JwtChannelInterceptor.java`)
 
@@ -373,7 +375,8 @@ Relationships: **creator** (`pelada.creator`), **admin** (`pelada.admins`), **me
 | Rename team | member **and** player on that team (team must belong to the daily) |
 | Change team color | member and (team player or admin) |
 | Update profile, avatar, background | self |
-| View a profile (`/users/{id}`) | any authenticated user; `email` only for self |
+| Change password, read deletion blockers, delete the account (`/users/me/*`) | self only: the caller comes from the token, the routes take no `{id}`; the current password is re-checked for the change and the deletion |
+| View a profile (`/users/{id}`) | any authenticated user; `email` only for self; a deleted account → 404 (also on `/stats*` and `/peladas`) |
 | User stats, timeline, match history (`/users/{id}/stats…`) | self, or a user who shares a pelada (403 otherwise); non-self viewers only get sessions of the peladas they share |
 | Peladas in common (`/users/{id}/peladas`) | any; returns only peladas both users belong to |
 | Search users | any; public fields only (`PublicUserDTO`), query ≥ 3 characters |
@@ -468,7 +471,7 @@ V12 is additive and creates no historical debts. Rollback means rolling back app
 | `MaxUploadSizeExceededException` | 413 | `ErrorResponse` |
 | `DataIntegrityViolationException` | 409 | `ErrorResponse` (logged as warning) |
 | `HttpRequestMethodNotSupportedException` / `NoResourceFoundException` | 405 / 404 | `ErrorResponse` |
-| `AppException` | its status | `ErrorResponse {status, message, timestamp}` |
+| `AppException` | its status | `ErrorResponse {status, message, timestamp}`; `AppException.field(field, message)` answers the validation 400 body with that one field (a wrong current password) |
 | any other `Exception` | 500 | `ErrorResponse` "Ocorreu um erro inesperado", logged with `log.error("Unhandled", ex)` |
 
 The 401s from the security entry point and `JwtAuthFilter`, and the 429 from `AuthRateLimitFilter`, are hand-built maps with the same `{status, message, timestamp}` keys. The frontend reads `message` (and `errors` for validation). All messages are in Portuguese.
@@ -599,7 +602,10 @@ The caller's guided tours of the web app (today the finance page, one tour per r
 ### Users (`UserController`, `/users`)
 | Method | Path | Body | Auth | Response |
 |--------|------|------|------|----------|
-| GET | `/users/search?q=` | — | any | `List<PublicUserDTO {id, username, image, position}>` (max 10); matches username or email; `q` needs ≥ 3 characters (400) |
+| POST | `/users/me/password` | `ChangePasswordRequestDTO {currentPassword @NotBlank, newPassword @NotBlank ≥ 8}` | self | `AuthResponseDTO {token, user}`: new BCrypt hash, `tokenVersion++` and a token of the new version (the other sessions get 401 on their next request; an open STOMP connection survives until it reconnects). Wrong current password → 400 `{errors: {currentPassword: "Senha atual incorreta"}}` (`AppException.field`); rate limited |
+| GET | `/users/me/deletion-blockers` | — | self | `List<DeletionBlockerDTO {type: CREATOR \| SOLE_FINANCE_MANAGER, peladaId, peladaName}>`: peladas the caller created, then peladas where they are the only responsável financeiro (`FinancePreservation.soleManagedPeladas`); two queries |
+| POST | `/users/me/delete` | `DeleteAccountRequestDTO {password @NotBlank}` (POST: a DELETE with a body is poorly supported) | self | 204; wrong password → 400 on `password`; a blocker → 409 with the first one ("Transfira ou exclua a Pelada do Fut antes de excluir a conta"); rate limited. See [Account deletion](#account-deletion) |
+| GET | `/users/search?q=` | — | any | `List<PublicUserDTO {id, username, image, position, isDeleted}>` (max 10); matches username or email, never a deleted account; `q` needs ≥ 3 characters (400) |
 | GET | `/users/{id}` | — | any | `ProfileDTO` (`email` only for self; `stars` = the rounded average of the user's stars in every pelada they belong to, members without a row counting 3, omitted when they belong to none) |
 | GET | `/users/{id}/peladas` | — | any | `List<PeladaResponseDTO>`: peladas the caller and `{id}` both belong to (`isAdmin`/`nextDaily.isConfirmed` refer to the caller) |
 | PUT | `/users/{id}` | `UpdateProfileRequest {username 3–30, position}` (stars are set per pelada by admins) | self | `ProfileDTO` |
@@ -609,6 +615,22 @@ The caller's guided tours of the web app (today the finance page, one tour per r
 | GET | `/users/{id}/stats/matches` | — | self or shares a pelada | `UserMatchHistoryDTO` (other viewers: shared peladas only) |
 
 When an endpoint or DTO changes, update this table, the frontend `src/api/*` + `src/types/*`, and `client/docs/FRONTEND.md` in the same change.
+
+### Account deletion
+
+`AccountDeletionService.deleteAccount` (`domain/user`) **anonymizes**, it never deletes the `users` row: past matches, awards, rankings, chat and other people's finance point at it. One transaction: it checks the password, locks every pelada the user belongs to in id order (`PeladaRepository.lockIdsByMemberId`, a native `FOR UPDATE` returning ids only), recomputes the blockers under those locks (409) and then each domain does its part with bulk statements, so the reads don't grow with the number of peladas (`AccountSettingsTest` compares 1 and 5 peladas with `QueryCounter`):
+
+| Target | Action |
+|---|---|
+| `users` | Row kept: `email = "deleted-{id}@invalid"` (the e-mail can register again), `password` = BCrypt of a random value, `username = "Ex-jogador"` (`AccountDeletionService.DELETED_USERNAME`), `image`, `backgroundImage`, `position` = null, `tokenVersion++`, `deletedAt = now` |
+| Peladas (`PeladaService.removeAccountFromPeladas`) | Leaves every pelada as member and admin, with their stars and mensalista rows, and the attendance and teams of `SCHEDULED`/`CONFIRMED` sessions (`DailyService.removeAccountFromUpcomingSessions`; the teams stay); no `REMOVED_FROM_PELADA` notification, no `PeladaLinkBlock` |
+| Finance (`FinancePreservation.forgetAccount`) | Stops being a responsável (a `MANAGERS_REVOKED` audit entry and a revision per pelada); `FinancePerson.name = "Ex-jogador"`. Charges, receipts, notices, cash and audit stay |
+| Invitations (`PeladaInvitationService.forgetAccount`) | Pending received → `CANCELED` (`EXPIRED` when past due); links they created → revoked; their link blocks deleted |
+| Deleted | Notifications received, `notification_preferences`, `password_reset_tokens`, `user_tours`, `daily_attendance_bumps` where they were bumped |
+| Kept | `player_match_stats`, `user_daily_stats`, past `team_players`, `daily_award_*`, `rankings`, `stats`, `messages`, notifications of others where they are the `actor` |
+| Files | Avatar and background: `deleteImageAfterCommit` |
+
+Reads: `/users/{id}`, `/stats*` and `/peladas` of a deleted account → 404, search skips it, and `PublicUserDTO`, `DailyDetailDTO.PlayerDTO` and `MessageDTO.SenderDTO` carry `isDeleted`. The ranking and the attendance ranking only list current members, so the deleted user drops out of them while everyone else's numbers stay. No e-mail goes to `@invalid`: they belong to no pelada any more and `ScheduledNotificationJob` only picks members.
 
 ## Performance
 
@@ -653,6 +675,7 @@ Tests live in `src/test/java/com/futspring/backend`, in the same domain packages
 - **Repository tests** — `@DataJpaTest` on H2 (`UserRepositoryTest`, `DailyRepositoryTest`, `UserDailyStatsRepositoryTest`, `DailyAwardRepositoryTest` for the native award queries).
 - **Attendance** — `DailyAttendanceServiceTest` uses `Clock.fixed` and `support/InMemoryAttendance` (lenient stubs that back `DailyAttendanceRepository` with an in-memory list); `AttendanceWindowTest` covers zones and the Canadian DST change; `DailyAttendanceRepositoryTest` the victim query; `AttendanceConcurrencyTest` (Testcontainers Postgres, no test transaction, skipped without Docker) starts eight virtual-thread diaristas behind one latch for the last spot and expects one confirmation and seven conflicts.
 - **Notifications** — `NotificationServiceTest` (recipients per type, actor excluded, collapse, awards only on the first finalize, delivery only after commit, through `TransactionSynchronizationManager`); `NotificationPushServiceTest` (each recipient's e-mail and unread count, the team on `TEAMS_SORTED`, one failed send doesn't stop the others, failures only logged); `NotificationControllerTest` (REST, the bump `seenAt` ↔ `readAt` sync both ways, one event per path end to end, deleting a daily / pelada with notifications on H2, preferences GET/PUT and validation, public unsubscribe / resubscribe with no session, a stale session header, the one-click form POST, invalid tokens and the rate limit); `NotificationEmailContentTest` (every type renders subject, title, body and CTA; escaping and one-pass placeholders); `NotificationEmailDispatcherTest` (send matrix type × preference × default, headers, pacing per send, failures only logged, nothing queued without a real sender); `EmailPacerTest` (fake clock: never more than 2 sends in a second); `UnsubscribeTokensTest` (tampered, swapped category or user, another secret); `NotificationRepositoryTest` (scheduled recipients: mensalista vs diarista, creator and admins as diaristas, confirmed and already-notified left out, scoped to the session); `ScheduledNotificationJobTest` (`@DataJpaTest` on H2 with `Clock.fixed`: recipients, full session, locked / canceled / started sessions, the window edge, idempotent runs through `NOT EXISTS` alone, the Toronto DST change, a session created inside its window, a failing pelada not stopping the others, nothing delivered without a commit); `NotificationRetentionJobTest` (the 90 / 180-day boundaries); `DailySchedulerTransactionTest` (`@DataJpaTest` with no test transaction: a failing pelada rolls back alone, the other commits its daily and `SESSION_CREATED`, delivered after the commit). The publishing services' tests verify the events they publish.
+- **Account settings** — `AccountSettingsTest` (H2 integration: password change (wrong current password on the field, short new one, the new token works and the old one gets 401, 429), deletion blockers, deletion (wrong password, creator / sole responsável 409, the full anonymization, reads, ranking and cash balance unchanged, the e-mail registers again, constant reads for 1 vs 5 peladas, the avatar deleted only after a commit and a rollback changing nothing)); `AccountDeletionConcurrencyTest` (Postgres 17: the native locks and bulk statements, a deletion racing a transfer of the pelada to the leaving admin never leaves a deleted creator).
 - **Tours** — `TourControllerTest`: empty state, idempotent mark, per-user isolation, enum order, unknown key 400, no token 401.
 - **WebSocket** — `JwtChannelInterceptorTest` covers CONNECT/SUBSCRIBE/SEND rules (the notification queue included).
 - **Contract** — `contract/ContractSnapshotTest` (`@JsonTest`, the application's `JsonMapper`) guards the JSON the web app reads. Every top-level response DTO, filled by `ContractFixtures` (every field set from its name and type, so a class turned into a record gets the same values), must serialize to `src/test/resources/contract/<Dto>.json`, compared as trees (property order doesn't matter); every request body the client sends (`contract/requests/<Dto>.json`, taken from `client/src/api`) must deserialize and keep every value. A new response field fails the test: regenerate with `-Dcontract.update=true` only for an intended change and review the diff against `client/src/types`. PR4 removes only the unused duplicate boolean aliases `admin`, `finished`, `confirmed`, and `mensalista` where the corresponding `is…` property remains. Snapshots now enforce the retained `isAdmin`, `isFinished`, `isConfirmed`, and `isMensalista` names. `contract/RecordContractTest` covers omitted creation defaults, explicit invalid settings, nullable partial updates, nested validation, and response null-inclusion rules.

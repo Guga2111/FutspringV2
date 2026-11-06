@@ -152,6 +152,17 @@ public class DailyService {
     }
 
     /**
+     * Account deletion: the same as {@link #removeFromUpcomingSessions} for one user across every pelada, in two
+     * statements whatever the number of peladas and sessions; the bumps where they lost a spot go too.
+     */
+    public void removeAccountFromUpcomingSessions(User user) {
+        Set<DailyStatus> upcoming = EnumSet.complementOf(EnumSet.copyOf(DailyStatus.LOCKED));
+        attendanceRepository.deleteByUserInDailiesWithStatus(user, upcoming);
+        teamRepository.deletePlayerFromTeamsOfDailiesWithStatus(user.getId(), upcoming.stream().map(Enum::name).toList());
+        bumpRepository.deleteByUser(user);
+    }
+
+    /**
      * Deletes a daily and everything that hangs from it (results, teams, attendance, bumps, notifications,
      * champion image).
      * Returns the players whose Ranking/Stats must be rebuilt; the caller rebuilds them once.

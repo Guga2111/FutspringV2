@@ -37,4 +37,8 @@ public interface PeladaMensalistaRepository extends JpaRepository<PeladaMensalis
     @Modifying
     @Query("DELETE FROM PeladaMensalista m WHERE m.pelada = :pelada")
     void deleteByPelada(@Param("pelada") Pelada pelada);
+
+    @Modifying
+    @Query("DELETE FROM PeladaMensalista m WHERE m.user = :user")
+    void deleteByUser(@Param("user") User user);
 }

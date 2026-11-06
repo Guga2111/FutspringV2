@@ -25,7 +25,8 @@ import java.util.stream.Stream;
 
 /**
  * 10 requests per minute per client IP on each POST /api/v1/auth/ route (login, register, forgot-password,
- * reset-password) and on the public e-mail link routes (notifications unsubscribe / resubscribe).
+ * reset-password), the logged-in password checks (POST /api/v1/users/me/password and /me/delete) and on the
+ * public e-mail link routes (notifications unsubscribe / resubscribe).
  * Buckets live in a bounded, expiring Caffeine cache. The client IP comes from getRemoteAddr(), which
  * reflects X-Forwarded-For because server.forward-headers-strategy=framework (the API only listens on
  * 127.0.0.1 behind nginx). In-memory: one API instance only. Every 429 counts in futspring.ratelimit.rejected
@@ -37,7 +38,8 @@ public class AuthRateLimitFilter extends OncePerRequestFilter {
     static final int REQUESTS_PER_MINUTE = 10;
     private static final Set<String> LIMITED_PATHS = Stream.concat(
             Stream.of("/api/v1/auth/login", "/api/v1/auth/register",
-                    "/api/v1/auth/forgot-password", "/api/v1/auth/reset-password"),
+                    "/api/v1/auth/forgot-password", "/api/v1/auth/reset-password",
+                    "/api/v1/users/me/password", "/api/v1/users/me/delete"),
             SecurityConfig.EMAIL_LINK_PATHS.stream()).collect(Collectors.toUnmodifiableSet());
 
     private final JsonMapper objectMapper;

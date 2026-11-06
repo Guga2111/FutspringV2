@@ -118,7 +118,7 @@ public class StatsService {
     }
 
     private User findUser(Long id) {
-        return userRepository.findById(id)
+        return userRepository.findByIdAndDeletedAtIsNull(id)
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Usuário não encontrado"));
     }
 }

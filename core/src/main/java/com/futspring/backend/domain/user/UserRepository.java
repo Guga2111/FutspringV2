@@ -22,11 +22,17 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     boolean existsByUsernameIgnoreCaseAndIdNot(String username, Long id);
 
-    // Matches username or email, but callers must only return public fields (PublicUserDTO)
+    // A deleted account answers 404 on every profile route
+    Optional<User> findByIdAndDeletedAtIsNull(Long id);
+
+    boolean existsByIdAndDeletedAtIsNull(Long id);
+
+    // Matches username or email, but callers must only return public fields (PublicUserDTO); deleted accounts never match
     @Query("""
         SELECT u FROM User u
-        WHERE LOWER(u.username) LIKE LOWER(CONCAT('%', :q, '%'))
-           OR LOWER(u.email) LIKE LOWER(CONCAT('%', :q, '%'))
+        WHERE u.deletedAt IS NULL
+          AND (LOWER(u.username) LIKE LOWER(CONCAT('%', :q, '%'))
+           OR LOWER(u.email) LIKE LOWER(CONCAT('%', :q, '%')))
         ORDER BY u.username
         """)
     List<User> searchByUsernameOrEmail(@Param("q") String q, Pageable pageable);
