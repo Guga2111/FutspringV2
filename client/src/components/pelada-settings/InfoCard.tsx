@@ -94,7 +94,7 @@ export function InfoCard({ pelada, onSaved }: InfoCardProps) {
               disabled={imagePending !== null}
               onClick={() => fileInput.current?.click()}
             >
-              <HugeiconsIcon icon={ImageUpload01Icon} data-icon="inline-start" />
+              <HugeiconsIcon icon={ImageUpload01Icon} data-icon="inline-start" className="size-4" />
               {imagePending === "upload" ? "Enviando..." : "Trocar imagem"}
             </Button>
             {pelada.image && (
@@ -106,7 +106,7 @@ export function InfoCard({ pelada, onSaved }: InfoCardProps) {
                 disabled={imagePending !== null}
                 onClick={() => setConfirmRemove(true)}
               >
-                <HugeiconsIcon icon={Delete02Icon} data-icon="inline-start" />
+                <HugeiconsIcon icon={Delete02Icon} data-icon="inline-start" className="size-4" />
                 Remover
               </Button>
             )}

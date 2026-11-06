@@ -59,7 +59,7 @@ export function DeleteAccountCard() {
           {blockers && blockers.length > 0 ? "Resolva as pendências acima para excluir a conta." : "A sua senha é pedida para confirmar."}
         </p>
         <Button variant="destructive" disabled={loading || blocked} onClick={() => setOpen(true)}>
-          <HugeiconsIcon icon={Delete02Icon} data-icon="inline-start" />
+          <HugeiconsIcon icon={Delete02Icon} data-icon="inline-start" className="size-4" />
           Excluir conta
         </Button>
       </div>

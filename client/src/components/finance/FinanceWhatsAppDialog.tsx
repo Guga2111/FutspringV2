@@ -69,10 +69,10 @@ export function FinanceWhatsAppDialog({ peladaId, detail, timeZone, onClose }: {
             </Button>
           )}
           <Button variant="outline" disabled={empty} onClick={() => { void copy() }}>
-            <HugeiconsIcon icon={Copy01Icon} data-icon="inline-start" />Copiar
+            <HugeiconsIcon icon={Copy01Icon} data-icon="inline-start" className="size-4" />Copiar
           </Button>
           <Button variant="brand" disabled={empty || tooLong} onClick={() => window.open(url, "_blank", "noopener,noreferrer")}>
-            <HugeiconsIcon icon={WhatsappIcon} data-icon="inline-start" />Abrir no WhatsApp
+            <HugeiconsIcon icon={WhatsappIcon} data-icon="inline-start" className="size-4" />Abrir no WhatsApp
           </Button>
         </DialogFooter>
       </DialogContent>
