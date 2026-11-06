@@ -92,7 +92,9 @@ public class PeladaService {
         pelada.getMembers().add(user);
         pelada.getAdmins().add(user);
 
-        return PeladaResponseDTO.forAdmin(peladaRepository.save(pelada));
+        Pelada saved = peladaRepository.save(pelada);
+        financePreservation.appointCreator(saved);
+        return PeladaResponseDTO.forAdmin(saved);
     }
 
     @Transactional(readOnly = true)

@@ -42,9 +42,10 @@ public class FinanceCollectionService {
         });
     }
     public FinanceViews.Result managers(Long id, FinanceRequests.Managers request, String email) {
-        return tx.execute(id, email, request.command(), "MANAGERS", "MANAGERS", request, true, ctx -> {
-            if (!ctx.appoint()) throw new AppException(HttpStatus.FORBIDDEN, "Apenas administradores podem designar responsáveis");
+        return tx.execute(id, email, request.command(), "MANAGERS", "MANAGERS", request, false, ctx -> {
+            if (!ctx.appoint()) throw new AppException(HttpStatus.FORBIDDEN, "Apenas administradores ou responsáveis podem designar responsáveis");
             Set<Long> ids = new LinkedHashSet<>(request.userIds());
+            require(!ids.isEmpty(), "A pelada precisa de pelo menos um responsável financeiro");
             require(ids.size() == request.userIds().size(), "Não repita responsáveis");
             require(ids.isEmpty() || peladas.findMemberIds(id, ids).size() == ids.size(), "Responsáveis precisam ser membros da pelada");
             var before = managers.findByPeladaId(id).stream().map(FinanceManager::getUserId).toList();

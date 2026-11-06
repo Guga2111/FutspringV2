@@ -22,7 +22,7 @@ public class FinanceAccess {
     record Context(Pelada pelada, User caller, FinanceAccount account, boolean manage, boolean appoint) {
         boolean viewCash() { return manage || account.getVisibility() == FinanceTypes.Visibility.TRANSPARENT; }
         void requireManager() {
-            if (!manage) throw new AppException(HttpStatus.FORBIDDEN, "Apenas gestores financeiros podem fazer isso");
+            if (!manage) throw new AppException(HttpStatus.FORBIDDEN, "Apenas responsáveis financeiros podem fazer isso");
         }
     }
     Context read(Long id, String email) { return load(id, email, false); }
@@ -32,14 +32,20 @@ public class FinanceAccess {
         Pelada pelada = (lock ? peladas.findByIdForUpdate(id) : peladas.findById(id))
                 .orElseThrow(() -> missing("Pelada"));
         access.requireMember(pelada, caller);
-        boolean appoint = access.isCreator(pelada, caller) || access.isAdmin(pelada, caller);
+        // only designated responsáveis manage the money; admins and the creator may appoint them, and so may the responsáveis
+        boolean manage = managers.existsByPeladaIdAndUserId(id, caller.getId());
+        boolean appoint = manage || access.isCreator(pelada, caller) || access.isAdmin(pelada, caller);
         FinanceAccount account = accounts.findByPeladaId(id).orElseGet(() -> {
             FinanceAccount initial = new FinanceAccount();
             initial.setPeladaId(id);
             return initial;
         });
-        return new Context(pelada, caller, account,
-                appoint || managers.existsByPeladaIdAndUserId(id, caller.getId()), appoint);
+        return new Context(pelada, caller, account, manage, appoint);
+    }
+    Context refresh(Context c) {
+        boolean manage = managers.existsByPeladaIdAndUserId(c.pelada().getId(), c.caller().getId());
+        return new Context(c.pelada(), c.caller(), c.account(), manage,
+                manage || access.isCreator(c.pelada(), c.caller()) || access.isAdmin(c.pelada(), c.caller()));
     }
     LocalDate today(Context context) { return LocalDate.ofInstant(clock.instant(), ZoneId.of(context.pelada().getTimeZone())); }
     Instant now() { return clock.instant(); }

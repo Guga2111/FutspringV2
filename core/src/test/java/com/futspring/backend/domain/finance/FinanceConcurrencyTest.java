@@ -44,6 +44,7 @@ class FinanceConcurrencyTest {
     @Autowired FinancePersonRepository people;
     @MockitoSpyBean FinanceAuditRepository audits;
     @Autowired FinanceFiles files;
+    @Autowired FinancePreservation preservation;
     @Autowired PeladaRepository peladas;
     @Autowired UserRepository users;
     record Fixture(User admin, User player, Long pelada, Long list, Long charge) {}
@@ -53,6 +54,7 @@ class FinanceConcurrencyTest {
         User player = users.save(User.builder().email(key + "p@finance.test").username("Jogador" + key).password("hash").build());
         Pelada p = peladas.save(Pelada.builder().name("Concorrência financeira").dayOfWeek("SUNDAY").timeOfDay("18:00").duration(1f)
                 .creator(admin).members(new HashSet<>(Set.of(admin, player))).admins(new HashSet<>(Set.of(admin))).build());
+        preservation.appointCreator(p);
         Long list = collections.collection(p.getId(), null, new FinanceRequests.Collection(new FinanceRequests.Command(0L, UUID.randomUUID(), null), "Diária", Classification.DAILY, "", null, null,
                 List.of(new FinanceRequests.Component("Campo", "45.00")), null, null, null), admin.getEmail()).detail().collection().id();
         Long charge = collections.participants(p.getId(), list, new FinanceRequests.Participants(command(p.getId(), admin), List.of(player.getId()), List.of()), admin.getEmail()).detail().charges().getFirst().id();

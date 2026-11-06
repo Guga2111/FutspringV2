@@ -480,7 +480,7 @@ const financeList: FinanceOverview["lists"][number] = {
 export const financeOverview: FinanceOverview = {
   revision: 3,
   permissions: { manage: true, appointManagers: true, viewCash: true },
-  settings: { visibility: "INDIVIDUAL", pixKey: "pix@futspring.com", pixRecipient: "Leal", qrId: QR_ID, managerIds: [5] },
+  settings: { visibility: "INDIVIDUAL", pixKey: "pix@futspring.com", pixRecipient: "Leal", qrId: QR_ID, managerIds: [1, 5] },
   balance: "1250.00",
   templates: ([["Mensalidade", "MONTHLY", "100.00"], ["Diária", "DAILY", "20.00"], ["Evento", "OTHER", "0.00"]] as const).map(
     ([name, classification, amount], i): FinanceTemplate => ({
