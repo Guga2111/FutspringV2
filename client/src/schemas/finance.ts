@@ -42,7 +42,8 @@ export const financeCashSchema = z.object({ kind: z.enum(["OPENING", "INCOME", "
 })
 // FinanceRequests.Settings / Managers.
 export const financeSettingsSchema = z.object({ visibility: z.enum(["INDIVIDUAL", "TRANSPARENT"]), pixKey: z.string().max(200), pixRecipient: z.string().max(200), qrId: id.nullable() })
-export const financeManagersSchema = z.object({ userIds: z.array(id).max(100) })
+// mirrors FinanceRequests.Managers; the service also refuses an empty list (a pelada always has a responsável)
+export const financeManagersSchema = z.object({ userIds: z.array(id).min(1, "Escolha pelo menos um responsável").max(100) })
 // the settings page saves the Pix and the visibility in separate cards; each sends the other fields as saved
 export const financePixSchema = financeSettingsSchema.pick({ pixKey: true, pixRecipient: true })
 export const financeVisibilitySchema = financeSettingsSchema.pick({ visibility: true })

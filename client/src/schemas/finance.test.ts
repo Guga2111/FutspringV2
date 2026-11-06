@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { financeMoneySchema, financeSignedMoneySchema, financeListSchema, financeCashSchema, financeReplacementSchema, financeImageSchema, makeFinanceBulkAdjustSchema } from "@/schemas/finance"
+import { financeManagersSchema, financeMoneySchema, financeSignedMoneySchema, financeListSchema, financeCashSchema, financeReplacementSchema, financeImageSchema, makeFinanceBulkAdjustSchema } from "@/schemas/finance"
 
 describe("finance contracts", () => {
   it("keeps exact decimal strings and rejects precision/coercion", () => {
@@ -66,5 +66,12 @@ describe("makeFinanceBulkAdjustSchema", () => {
   it("rejects negative components and an empty composition", () => {
     expect(makeFinanceBulkAdjustSchema(false).safeParse({ ...values, components: [{ name: "Juiz", amount: "-5" }] }).success).toBe(false)
     expect(makeFinanceBulkAdjustSchema(false).safeParse({ ...values, components: [] }).success).toBe(false)
+  })
+})
+
+describe("financeManagersSchema", () => {
+  it("requires at least one responsável", () => {
+    expect(financeManagersSchema.safeParse({ userIds: [] }).success).toBe(false)
+    expect(financeManagersSchema.safeParse({ userIds: [5] }).success).toBe(true)
   })
 })

@@ -38,7 +38,7 @@ class MigrationDataTest {
         execute("INSERT INTO peladas(id,name,day_of_week,time_of_day,duration,auto_create_daily_enabled,number_of_teams,players_per_team,created_at,creator_id) VALUES(1,'Legada','SATURDAY','19:00',1,false,2,5,now(),1)");
         execute("INSERT INTO pelada_members(pelada_id,user_id) VALUES(1,1)");
         execute("INSERT INTO dailies(id,pelada_id,daily_date,daily_time,status,is_finished,created_at) VALUES(1,1,'2026-10-31','19:00','SCHEDULED',false,now())");
-        flyway(null).migrate();
+        flyway("14").migrate();
         try (Connection c = connect(); Statement statement = c.createStatement()) {
             try (ResultSet rows = statement.executeQuery("SELECT (SELECT count(*) FROM finance_lists),(SELECT count(*) FROM finance_movements),(SELECT count(*) FROM pelada_members)")) {
                 rows.next(); assertThat(rows.getInt(1)).isZero(); assertThat(rows.getInt(2)).isZero(); assertThat(rows.getInt(3)).isEqualTo(1);
@@ -199,6 +199,22 @@ class MigrationDataTest {
         }
         try (Connection c = connect(); Statement st = c.createStatement(); ResultSet rs = st.executeQuery("SELECT count(*) FROM pelada_link_blocks")) {
             rs.next(); assertThat(rs.getInt(1)).isZero();
+        }
+    }
+
+    @Test
+    void v15_makesCurrentAdminsAndCreatorsResponsaveis() throws SQLException {
+        flyway("14").migrate();
+        execute("INSERT INTO users(id,email,username,password) VALUES(1,'criador@migration.test','Criador','hash'),(2,'admin@migration.test','Admin','hash'),(3,'resp@migration.test','Resp','hash'),(4,'membro@migration.test','Membro','hash'),(5,'ex@migration.test','ExAdmin','hash')");
+        execute("INSERT INTO peladas(id,name,day_of_week,time_of_day,duration,auto_create_daily_enabled,number_of_teams,players_per_team,created_at,creator_id) VALUES(1,'Legada','SATURDAY','19:00',1,false,2,5,now(),1)");
+        execute("INSERT INTO pelada_members(pelada_id,user_id) VALUES(1,1),(1,2),(1,3),(1,4)");
+        // an admin row without membership (legacy leftover) is skipped: finance_managers references the membership
+        execute("INSERT INTO pelada_admins(pelada_id,user_id) VALUES(1,1),(1,2),(1,5)");
+        execute("INSERT INTO finance_managers(pelada_id,user_id) VALUES(1,1),(1,3)");
+        flyway(null).migrate();
+        try (Connection c = connect(); Statement st = c.createStatement();
+             ResultSet rs = st.executeQuery("SELECT string_agg(user_id::text, ',' ORDER BY user_id) FROM finance_managers WHERE pelada_id=1")) {
+            rs.next(); assertThat(rs.getString(1)).isEqualTo("1,2,3");
         }
     }
 

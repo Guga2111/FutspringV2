@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test"
 import { mockApi, login } from "./mockApi"
-import { CONFIRMED_ID, FINISHED_ID, LIVE_ID, NOW, PELADA_ID, SCHEDULED_ID, financeDetail, financeMemberDetail, financeMemberOverview } from "./fixtures"
+import { CONFIRMED_ID, FINISHED_ID, LIVE_ID, NOW, PELADA_ID, SCHEDULED_ID, financeDetail, financeMemberDetail, financeMemberOverview, financeOverview } from "./fixtures"
 
 const PELADA = `/pelada/${PELADA_ID}`
 
@@ -233,6 +233,26 @@ test("finance manager: history with filters", async ({ page }, testInfo) => {
     await settle(page)
     await expect(page).toHaveScreenshot("finance-history-period.png", DIALOG_SHOT)
   }
+  expect(unmatched, "requests without a fixture").toEqual([])
+})
+
+test("finance admin who isn't a responsável: member view, notice and the responsáveis card", async ({ page }) => {
+  await page.clock.setFixedTime(NOW)
+  const unmatched = await mockApi(page)
+  const overview = {
+    ...financeMemberOverview,
+    permissions: { manage: false, appointManagers: true, viewCash: false },
+    settings: { ...financeMemberOverview.settings, managerIds: financeOverview.settings.managerIds },
+  }
+  await page.route(/\/finance(\?|$)/, (route) => route.fulfill({ json: overview }))
+  await login(page)
+  await page.goto(FINANCE)
+  await expect(page.getByText("Você não é responsável financeiro")).toBeVisible({ timeout: READY_TIMEOUT })
+  await settle(page)
+  await expect(page).toHaveScreenshot("finance-admin-not-manager.png", { fullPage: true })
+  await page.getByRole("button", { name: "Escolher responsáveis" }).click()
+  await expect(page.getByText("Responsáveis financeiros", { exact: true })).toBeVisible()
+  await expect(page.getByText("Pix para receber")).toHaveCount(0)
   expect(unmatched, "requests without a fixture").toEqual([])
 })
 

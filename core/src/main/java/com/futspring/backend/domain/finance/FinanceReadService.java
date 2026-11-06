@@ -52,7 +52,7 @@ public class FinanceReadService {
         return new FinanceViews.Overview(ctx.account().getRevision(),
                 new FinanceViews.Permissions(ctx.manage(), ctx.appoint(), ctx.viewCash()),
                 new FinanceViews.Settings(ctx.account().getVisibility(), ctx.account().getPixKey(),
-                        ctx.account().getPixRecipient(), ctx.account().getQrId(), ctx.manage()
+                        ctx.account().getPixRecipient(), ctx.account().getQrId(), ctx.appoint()
                         ? managers.findByPeladaId(ctx.pelada().getId()).stream().map(FinanceManager::getUserId).toList() : List.of()),
                 ctx.viewCash() ? text(movements.balance(ctx.pelada().getId())) : null,
                 ctx.manage() ? templateViews(ctx) : List.of(),
