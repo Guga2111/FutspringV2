@@ -320,7 +320,8 @@ class AccountSettingsTest extends BaseIntegrationTest {
         mockMvc.perform(post("/api/v1/auth/register").with(r -> { r.setRemoteAddr(nextIp()); return r; })
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json(Map.of("username", "Novo" + UUID.randomUUID().toString().substring(0, 8),
-                                "email", oldEmail, "password", "outra-senha-123"))))
+                                "email", oldEmail, "password", "outra-senha-123",
+                                "termsVersion", com.futspring.backend.domain.auth.LegalTerms.CURRENT_VERSION))))
                 .andExpect(status().isCreated());
     }
 
