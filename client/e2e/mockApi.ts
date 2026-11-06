@@ -48,6 +48,7 @@ const routes: [RegExp, Handler][] = [
   [/^\/notifications$/, () => f.notifications],
   [/^\/notifications\/unread-count$/, () => ({ count: 1 })],
   [/^\/notifications\/preferences$/, () => f.notificationPreferences],
+  [/^\/users\/me\/deletion-blockers$/, () => f.deletionBlockers],
 ]
 
 export async function mockApi(page: Page): Promise<string[]> {

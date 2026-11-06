@@ -16,6 +16,8 @@ export interface PublicUser {
   username: string
   image: string | null
   position: string | null
+  // a deleted account ("Ex-jogador"): neutral avatar, no profile link
+  isDeleted: boolean
 }
 
 // UpdateProfileRequest accepts these values (English and Portuguese, kept for older profiles)
@@ -40,4 +42,13 @@ export const EDITABLE_POSITIONS = ["GOLEIRO", "ZAGUEIRO", "MEIO", "ATACANTE"] as
 export function getPositionLabel(position: string | null | undefined): string | null {
   if (!position) return null
   return positionLabel[position as Position] ?? position
+}
+
+// mirrors DeletionBlockerDTO: what blocks deleting the account, one per pelada
+export type DeletionBlockerType = "CREATOR" | "SOLE_FINANCE_MANAGER"
+
+export interface DeletionBlocker {
+  type: DeletionBlockerType
+  peladaId: number
+  peladaName: string
 }

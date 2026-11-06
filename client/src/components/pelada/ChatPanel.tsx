@@ -88,7 +88,7 @@ export function ChatPanel({ peladaId, currentUserId, size = "panel" }: ChatPanel
             return (
               <div key={msg.id} className={cn("flex items-end gap-2", isOwn ? "flex-row-reverse" : "flex-row")}>
                 {!isOwn && (
-                  <PlayerAvatar userId={msg.sender.id} username={msg.sender.username} image={msg.sender.image} className="text-xs" />
+                  <PlayerAvatar userId={msg.sender.id} username={msg.sender.username} image={msg.sender.image} deleted={msg.sender.isDeleted} className="text-xs" />
                 )}
                 <div className={cn("flex max-w-[75%] flex-col", isOwn ? "items-end" : "items-start")}>
                   {!isOwn && <span className="mb-0.5 text-xs text-muted-foreground">{msg.sender.username}</span>}

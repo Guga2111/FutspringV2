@@ -160,7 +160,7 @@ function TeamHeader({ editor, index, playersPerTeam }: { editor: Editor; index: 
 function PlayerLine({ player }: { player: PlayerDTO }) {
   return (
     <>
-      <PlayerAvatar userId={player.id} username={player.username} image={player.image} />
+      <PlayerAvatar userId={player.id} username={player.username} image={player.image} deleted={player.isDeleted} />
       <span className="min-w-0 flex-1 truncate text-left text-sm font-medium">{player.username}</span>
       <StarRow stars={player.stars} />
     </>

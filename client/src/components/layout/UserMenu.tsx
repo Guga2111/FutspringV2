@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom"
 import { PlayerAvatar } from "@/components/PlayerAvatar"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { Logout01Icon, Moon02Icon, Notification01Icon, Sun03Icon, UnfoldMoreIcon, UserIcon } from "@hugeicons/core-free-icons"
+import { Logout01Icon, Moon02Icon, Settings01Icon, Sun03Icon, UnfoldMoreIcon, UserIcon } from "@hugeicons/core-free-icons"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -37,9 +37,9 @@ export function UserMenu() {
     navigate(`/profile/${user.id}`)
   }
 
-  function goToNotificationSettings() {
+  function goToSettings() {
     setOpenMobile(false)
-    navigate("/settings/notifications")
+    navigate("/settings")
   }
 
   function handleLogout() {
@@ -82,9 +82,9 @@ export function UserMenu() {
               <HugeiconsIcon icon={UserIcon} />
               Perfil
             </DropdownMenuItem>
-            <DropdownMenuItem className={itemClass} onSelect={goToNotificationSettings}>
-              <HugeiconsIcon icon={Notification01Icon} />
-              Notificações
+            <DropdownMenuItem className={itemClass} onSelect={goToSettings}>
+              <HugeiconsIcon icon={Settings01Icon} />
+              Configurações
             </DropdownMenuItem>
             <DropdownMenuItem className={itemClass} onSelect={toggleTheme}>
               {isDark ? <HugeiconsIcon icon={Sun03Icon} /> : <HugeiconsIcon icon={Moon02Icon} />}

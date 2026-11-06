@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test"
 import { mockApi, login } from "./mockApi"
-import { CONFIRMED_ID, FINISHED_ID, LIVE_ID, NOW, PELADA_ID, SCHEDULED_ID, financeDetail, financeMemberDetail, financeMemberOverview, financeOverview } from "./fixtures"
+import { CONFIRMED_ID, FINISHED_ID, LIVE_ID, NOW, PELADA_ID, SCHEDULED_ID, pendingDeletionBlockers, financeDetail, financeMemberDetail, financeMemberOverview, financeOverview } from "./fixtures"
 
 const PELADA = `/pelada/${PELADA_ID}`
 
@@ -29,7 +29,7 @@ const pages: { name: string; path: string; auth?: boolean; ready?: string }[] = 
   { name: "profile", path: "/profile/1" },
   { name: "profile-history", path: "/profile/1?aba=historico" },
   { name: "profile-peladas", path: "/profile/1?aba=peladas" },
-  { name: "notification-settings", path: "/settings/notifications" },
+  { name: "account-settings", path: "/settings" },
   { name: "invitation", path: "/invitations/900" },
 ]
 
@@ -149,6 +149,26 @@ test("sessions gallery", async ({ page }) => {
   await expectNoHorizontalScroll(page)
   await expect(page).toHaveScreenshot("pelada-sessions-gallery.png", { fullPage: true })
   expect(unmatched, "requests without a fixture").toEqual([])
+})
+
+test("account settings: pending items block the deletion", async ({ page }) => {
+  const unmatched = await open(page, "/settings", true, "h1, h2", (p) =>
+    p.route(/\/users\/me\/deletion-blockers$/, (route) => route.fulfill({ json: pendingDeletionBlockers })))
+  await expect(page.locator("#excluir-conta").getByRole("button", { name: "Excluir conta" })).toBeDisabled()
+  await expectNoHorizontalScroll(page)
+  await expect(page.locator("#excluir-conta")).toHaveScreenshot("account-settings-blockers.png")
+  expect(unmatched, "requests without a fixture").toEqual([])
+})
+
+test("account settings: delete account dialog", async ({ page }) => {
+  await open(page, "/settings")
+  await page.locator("#excluir-conta").getByRole("button", { name: "Excluir conta" }).click()
+  await expect(page.getByRole("alertdialog")).toHaveScreenshot("dialog-delete-account.png", DIALOG_SHOT)
+})
+
+test("old notification settings link opens the account settings", async ({ page }) => {
+  await open(page, "/settings/notifications")
+  await expect(page).toHaveURL(/\/settings#notificacoes$/)
 })
 
 test("invitations: history, no active link", async ({ page }) => {

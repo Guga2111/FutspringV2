@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest"
 import { attendanceHint, canSortTeams, getSelfConfirmState, sortByConfirmation, sortTeamsHint, splitAttendance } from "./attendance"
 import type { PlayerDTO } from "@/types/daily"
 
-const p = (id: number, username: string): PlayerDTO => ({ id, username, image: null, stars: 3, position: null })
+const p = (id: number, username: string): PlayerDTO => ({ id, username, image: null, stars: 3, position: null, isDeleted: false })
 
 describe("splitAttendance", () => {
   it("splits members into confirmed and pending, sorted by name", () => {
@@ -64,7 +64,7 @@ describe("getSelfConfirmState", () => {
 describe("sortByConfirmation", () => {
   it("orders by confirmedAt, then id; players without it go last by name", () => {
     const p = (id: number, username: string, confirmedAt?: string) =>
-      ({ id, username, image: null, stars: 3, position: null, confirmedAt })
+      ({ id, username, image: null, stars: 3, position: null, isDeleted: false, confirmedAt })
     const sorted = sortByConfirmation([
       p(3, "Caio"),
       p(2, "Bia", "2026-10-30T12:00:00Z"),

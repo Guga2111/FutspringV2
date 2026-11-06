@@ -1,6 +1,7 @@
 import { StarRow } from "@/components/StarRow"
 import { PlayerAvatar } from "@/components/PlayerAvatar"
 import { PositionBadge } from "@/components/PositionBadge"
+import { Link } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import type { ProfileDTO } from "@/types/user"
 
@@ -9,11 +10,10 @@ interface ProfileHeaderProps {
   isOwnProfile: boolean
   // null while the peladas are loading
   peladaCount: number | null
-  onEdit: () => void
 }
 
 // The avatar, the name and one line of facts
-export function ProfileHeader({ profile, isOwnProfile, peladaCount, onEdit }: ProfileHeaderProps) {
+export function ProfileHeader({ profile, isOwnProfile, peladaCount }: ProfileHeaderProps) {
   return (
     <header className="flex flex-col">
       <div className="flex flex-col gap-3 md:flex-row md:items-end md:gap-5">
@@ -45,8 +45,8 @@ export function ProfileHeader({ profile, isOwnProfile, peladaCount, onEdit }: Pr
         </div>
 
         {isOwnProfile && (
-          <Button variant="outline" onClick={onEdit} className="w-full md:mb-1 md:w-auto">
-            Editar perfil
+          <Button variant="outline" asChild className="w-full md:mb-1 md:w-auto">
+            <Link to="/settings#perfil">Editar perfil</Link>
           </Button>
         )}
       </div>

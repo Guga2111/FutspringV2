@@ -1,5 +1,5 @@
 import { lazy, Suspense } from "react"
-import { Routes, Route } from "react-router-dom"
+import { Navigate, Routes, Route } from "react-router-dom"
 import PrivateRoute from "@/components/PrivateRoute"
 import ErrorBoundary from "@/components/ErrorBoundary"
 import ScrollToTop from "@/components/ScrollToTop"
@@ -21,7 +21,7 @@ const PeladaInvitationsPage = lazy(() => import("@/pages/PeladaInvitationsPage")
 const PeladaSettingsPage = lazy(() => import("@/pages/PeladaSettingsPage"))
 const DailyDetailPage = lazy(() => import("@/pages/DailyDetailPage"))
 const ProfilePage = lazy(() => import("@/pages/ProfilePage"))
-const NotificationSettingsPage = lazy(() => import("@/pages/NotificationSettingsPage"))
+const AccountSettingsPage = lazy(() => import("@/pages/AccountSettingsPage"))
 const NotificationUnsubscribePage = lazy(() => import("@/pages/NotificationUnsubscribePage"))
 const InvitationPage = lazy(() => import("@/pages/InvitationPage"))
 const JoinPeladaPage = lazy(() => import("@/pages/JoinPeladaPage"))
@@ -64,7 +64,9 @@ function App() {
             <Route path="/pelada/:id/settings" element={<ErrorBoundary><PeladaSettingsPage /></ErrorBoundary>} />
             <Route path="/daily/:id" element={<ErrorBoundary><DailyDetailPage /></ErrorBoundary>} />
             <Route path="/profile/:id" element={<ErrorBoundary><ProfilePage /></ErrorBoundary>} />
-            <Route path="/settings/notifications" element={<ErrorBoundary><NotificationSettingsPage /></ErrorBoundary>} />
+            <Route path="/settings" element={<ErrorBoundary><AccountSettingsPage /></ErrorBoundary>} />
+            {/* old links and e-mails already sent */}
+            <Route path="/settings/notifications" element={<Navigate to="/settings#notificacoes" replace />} />
           </Route>
           <Route path="*" element={<ErrorBoundary><NotFoundPage /></ErrorBoundary>} />
         </Routes>

@@ -1,7 +1,7 @@
 // Typed API fixtures for the visual tests. Types come from src/types, so a DTO change breaks `tsc`
 // here instead of silently rendering a stale screen. Dates are relative to NOW (the frozen clock).
 import type { UserResponseDTO } from "../src/types/auth"
-import type { ProfileDTO, PublicUser } from "../src/types/user"
+import type { DeletionBlocker, ProfileDTO, PublicUser } from "../src/types/user"
 import type { PeladaAwards, PeladaAttendanceDTO, PeladaDetail, PeladaMember, PeladaResponse } from "../src/types/pelada"
 import type { DailyDetail, DailyListItem, PlayerDTO, RankingDTO, TeamDTO } from "../src/types/daily"
 import type { StatsDTO, UserMatchHistoryDTO, UserStatsTimelineDTO } from "../src/types/stats"
@@ -46,8 +46,9 @@ const player = (m: PeladaMember): PlayerDTO => ({
   image: null,
   stars: m.stars,
   position: m.position,
+  isDeleted: false,
 })
-const publicUser = (m: PeladaMember): PublicUser => ({ id: m.id, username: m.username, image: null, position: m.position })
+const publicUser = (m: PeladaMember): PublicUser => ({ id: m.id, username: m.username, image: null, position: m.position, isDeleted: false })
 
 const nextDaily = {
   id: SCHEDULED_ID,
@@ -394,7 +395,7 @@ export const invitations: Invitation[] = [
 ]
 
 // the Convites page of the pelada: invited accounts that aren't members, sent by the admins
-const guest = (id: number, username: string): PublicUser => ({ id, username, image: null, position: "MEIO" })
+const guest = (id: number, username: string): PublicUser => ({ id, username, image: null, position: "MEIO", isDeleted: false })
 const peladaInvitation = (
   id: number,
   recipient: PublicUser,
@@ -591,3 +592,10 @@ export const financeAudit: FinancePage<FinanceAudit> = {
   hasMore: false,
   total: 5,
 }
+
+// /settings: nothing blocks deleting the account; the "pending items" test answers these instead
+export const deletionBlockers: DeletionBlocker[] = []
+export const pendingDeletionBlockers: DeletionBlocker[] = [
+  { type: "CREATOR", peladaId: PELADA_ID, peladaName: "Pelada do Fut" },
+  { type: "SOLE_FINANCE_MANAGER", peladaId: 2, peladaName: "Racha de Quarta" },
+]

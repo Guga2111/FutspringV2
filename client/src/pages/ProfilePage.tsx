@@ -1,11 +1,9 @@
-import { useState } from "react"
 import { PageContainer } from "@/components/layout/PageContainer"
 import { Link, useParams, useSearchParams } from "react-router-dom"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { AwardsCard } from "@/components/profile/AwardsCard"
-import EditProfileModal from "@/components/profile/EditProfileModal"
 import { EvolutionChart } from "@/components/profile/EvolutionChart"
 import { MatchHistoryTable } from "@/components/profile/MatchHistoryTable"
 import { PerformanceCard } from "@/components/profile/PerformanceCard"
@@ -32,9 +30,8 @@ export default function ProfilePage() {
   const { id } = useParams<{ id: string }>()
   const { user: currentUser } = useAuth()
   const [searchParams, setSearchParams] = useSearchParams()
-  const [editOpen, setEditOpen] = useState(false)
   const {
-    status, profile, stats, setProfile,
+    status, profile, stats,
     peladas, peladasLoading,
     timelinePoints, timelineLoading,
     matchHistory, matchHistoryLoading,
@@ -83,7 +80,6 @@ export default function ProfilePage() {
         profile={profile}
         isOwnProfile={isOwnProfile}
         peladaCount={peladasLoading ? null : peladas.length}
-        onEdit={() => setEditOpen(true)}
       />
 
       <ProfileKpiStrip stats={stats} />
@@ -118,10 +114,6 @@ export default function ProfilePage() {
           <ProfilePeladasList peladas={peladas} loading={peladasLoading} isOwnProfile={isOwnProfile} />
         </TabsContent>
       </Tabs>
-
-      {editOpen && (
-        <EditProfileModal profile={profile} onClose={() => setEditOpen(false)} onProfileUpdated={setProfile} />
-      )}
     </PageContainer>
   )
 }

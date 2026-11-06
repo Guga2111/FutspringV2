@@ -37,7 +37,7 @@ export function NotificationBell({ compact = false, className }: NotificationBel
 
   function openPreferences() {
     setOpen(false)
-    navigate("/settings/notifications")
+    navigate("/settings#notificacoes")
   }
 
   function handleSelect(notification: NotificationResponse, href: string | null) {
