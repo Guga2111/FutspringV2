@@ -13,7 +13,7 @@ import {
   type DraftTeam,
 } from "./teamDraft"
 
-const player = (id: number, username = `P${id}`): PlayerDTO => ({ id, username, image: null, stars: 3, position: null })
+const player = (id: number, username = `P${id}`): PlayerDTO => ({ id, username, image: null, stars: 3, position: null, isDeleted: false })
 const team = (id: number, name: string, players: PlayerDTO[], color: string | null = null): TeamDTO => ({
   id,
   name,

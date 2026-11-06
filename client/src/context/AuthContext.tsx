@@ -31,6 +31,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(USER_KEY, JSON.stringify(newUser))
   }, [])
 
+  const updateUser = useCallback((patch: Partial<UserResponseDTO>) => {
+    setUser((current) => {
+      if (!current) return current
+      const next = { ...current, ...patch }
+      localStorage.setItem(USER_KEY, JSON.stringify(next))
+      return next
+    })
+  }, [])
+
   const logout = useCallback(() => {
     setToken(null)
     setUser(null)
@@ -59,7 +68,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [logout])
 
-  const value = useMemo(() => ({ user, token, login, logout }), [user, token, login, logout])
+  const value = useMemo(() => ({ user, token, login, logout, updateUser }), [user, token, login, logout, updateUser])
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

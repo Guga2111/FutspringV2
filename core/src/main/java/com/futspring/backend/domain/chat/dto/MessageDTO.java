@@ -1,6 +1,7 @@
 package com.futspring.backend.domain.chat.dto;
 
 import com.futspring.backend.domain.chat.Message;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Builder;
 
 @Builder
@@ -14,7 +15,10 @@ public record MessageDTO(
     public record SenderDTO(
             Long id,
             String username,
-            String image) {
+            String image,
+            // a deleted account: the message stays, signed "Ex-jogador"
+            @JsonProperty("isDeleted")
+            boolean isDeleted) {
     }
 
     public static MessageDTO from(Message message) {
@@ -26,6 +30,7 @@ public record MessageDTO(
                         .id(message.getSender().getId())
                         .username(message.getSender().getUsername())
                         .image(message.getSender().getImage())
+                        .isDeleted(message.getSender().isDeleted())
                         .build())
                 .build();
     }

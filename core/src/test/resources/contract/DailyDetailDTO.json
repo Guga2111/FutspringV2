@@ -3,6 +3,7 @@
   "dailyDate" : "2026-10-31",
   "dailyTime" : "dailyTime",
   "status" : "SCHEDULED",
+  "isFinished" : true,
   "championImage" : "championImage",
   "confirmedPlayers" : [ {
     "id" : 356,
@@ -10,8 +11,9 @@
     "image" : "image",
     "stars" : 538,
     "position" : "position",
-    "confirmedAt" : "2026-10-31T23:00:00Z",
-    "isMensalista" : true
+    "isDeleted" : true,
+    "isMensalista" : true,
+    "confirmedAt" : "2026-10-31T23:00:00Z"
   } ],
   "teams" : [ {
     "id" : 356,
@@ -25,8 +27,9 @@
       "image" : "image",
       "stars" : 538,
       "position" : "position",
-      "confirmedAt" : "2026-10-31T23:00:00Z",
-      "isMensalista" : true
+      "isDeleted" : true,
+      "isMensalista" : true,
+      "confirmedAt" : "2026-10-31T23:00:00Z"
     } ]
   } ],
   "matches" : [ {
@@ -78,14 +81,16 @@
   "peladaName" : "peladaName",
   "numberOfTeams" : 495,
   "playersPerTeam" : 905,
+  "isAdmin" : true,
   "peladaMembers" : [ {
     "id" : 356,
     "username" : "username",
     "image" : "image",
     "stars" : 538,
     "position" : "position",
-    "confirmedAt" : "2026-10-31T23:00:00Z",
-    "isMensalista" : true
+    "isDeleted" : true,
+    "isMensalista" : true,
+    "confirmedAt" : "2026-10-31T23:00:00Z"
   } ],
   "capacity" : 547,
   "timeZone" : "timeZone",
@@ -96,13 +101,15 @@
       "id" : 356,
       "username" : "username",
       "image" : "image",
-      "position" : "position"
+      "position" : "position",
+      "isDeleted" : true
     },
     "bumpedBy" : {
       "id" : 356,
       "username" : "username",
       "image" : "image",
-      "position" : "position"
+      "position" : "position",
+      "isDeleted" : true
     },
     "bumpedAt" : "2026-10-31T23:00:00Z"
   },
@@ -111,16 +118,16 @@
       "id" : 356,
       "username" : "username",
       "image" : "image",
-      "position" : "position"
+      "position" : "position",
+      "isDeleted" : true
     },
     "bumpedBy" : {
       "id" : 356,
       "username" : "username",
       "image" : "image",
-      "position" : "position"
+      "position" : "position",
+      "isDeleted" : true
     },
     "bumpedAt" : "2026-10-31T23:00:00Z"
-  } ],
-  "isFinished" : true,
-  "isAdmin" : true
+  } ]
 }

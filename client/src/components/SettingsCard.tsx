@@ -76,3 +76,13 @@ export function SettingsRootError({ message }: { message: string | undefined }) 
     </Alert>
   )
 }
+
+// A labelled group of cards on a settings page ("Conta", "Zona de perigo")
+export function SettingsGroup({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <section className="flex flex-col gap-3">
+      <h2 className="text-caption font-semibold text-muted-foreground">{label}</h2>
+      <div className="flex flex-col gap-4">{children}</div>
+    </section>
+  )
+}

@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 vi.mock('./client', () => ({ default: { post: vi.fn(), get: vi.fn() } }))
 
 import apiClient from './client'
-import { uploadUserImage, getUserPeladas } from './users'
+import { changePassword, deleteAccount, getDeletionBlockers, getUserPeladas, uploadUserImage } from './users'
 
 const mockPost = vi.mocked(apiClient.post)
 
@@ -42,5 +42,26 @@ describe('getUserPeladas', () => {
 
     expect(mockGet).toHaveBeenCalledWith('/api/v1/users/7/peladas')
     expect(result).toEqual([{ id: 1 }])
+  })
+})
+
+describe('account settings', () => {
+  it('changes the password and returns the new session', async () => {
+    mockPost.mockResolvedValue({ data: { token: 't', user: { id: 1 } } })
+    const result = await changePassword({ currentPassword: 'velha', newPassword: 'nova-senha' })
+    expect(mockPost).toHaveBeenCalledWith('/api/v1/users/me/password', { currentPassword: 'velha', newPassword: 'nova-senha' })
+    expect(result.token).toBe('t')
+  })
+
+  it('reads the deletion blockers', async () => {
+    const mockGet = vi.mocked(apiClient.get)
+    mockGet.mockResolvedValue({ data: [{ type: 'CREATOR', peladaId: 3, peladaName: 'Pelada' }] })
+    expect(await getDeletionBlockers()).toHaveLength(1)
+    expect(mockGet).toHaveBeenCalledWith('/api/v1/users/me/deletion-blockers')
+  })
+
+  it('deletes the account with a POST carrying the password', async () => {
+    await deleteAccount('senha')
+    expect(mockPost).toHaveBeenCalledWith('/api/v1/users/me/delete', { password: 'senha' })
   })
 })

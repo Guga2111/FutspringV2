@@ -16,7 +16,7 @@ function make(type: NotificationType, overrides: Partial<NotificationResponse> =
     pelada: { id: 10, name: "Pelada do Fut", image: null },
     // 2026-10-31 is a Saturday
     daily: { id: 100, date: "2026-10-31", time: "20:00" },
-    actor: { id: 1, username: "Leal", image: null, position: null },
+    actor: { id: 1, username: "Leal", image: null, position: null, isDeleted: false },
     team: null,
     ...overrides,
   }

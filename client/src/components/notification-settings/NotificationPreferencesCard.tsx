@@ -7,14 +7,14 @@ import { Switch } from "@/components/ui/switch"
 import { useNotificationPreferences } from "@/components/notification-settings/hooks/useNotificationPreferences"
 import { NOTIFICATION_CATEGORIES, notificationPreferenceText } from "@/types/notification"
 
-// One Switch per category, saved as soon as it changes
-export function NotificationPreferencesCard() {
+// One Switch per category, saved as soon as it changes. `id`: the anchor on the account settings page
+export function NotificationPreferencesCard({ id }: { id?: string }) {
   const { emailEnabled, saving, loading, error, retry, toggle } = useNotificationPreferences()
 
   return (
-    <Card className="overflow-hidden rounded-tile shadow-none">
+    <Card id={id} className="scroll-mt-20 overflow-hidden rounded-tile shadow-none md:scroll-mt-6">
       <CardHeader className="p-5 md:p-6">
-        <CardTitle className="text-base font-semibold">E-mail</CardTitle>
+        <CardTitle className="text-base font-semibold">Notificações por e-mail</CardTitle>
         <CardDescription>Escolha o que chega no seu e-mail. As mudanças são salvas na hora.</CardDescription>
       </CardHeader>
       <CardContent className="p-5 pt-0 md:p-6 md:pt-0">

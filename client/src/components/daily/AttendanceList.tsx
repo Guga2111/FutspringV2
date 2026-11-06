@@ -167,6 +167,7 @@ function AttendanceRow({ player, muted = false, overCapacity = false, children }
         userId={player.id}
         username={player.username}
         image={player.image}
+        deleted={player.isDeleted}
         className="size-[30px]"
       />
       <span className={cn("min-w-0 truncate text-sm", muted ? "text-secondary-foreground" : "font-medium")}>{player.username}</span>

@@ -26,6 +26,7 @@ public class DailyDTOMapper {
                 .image(user.getImage())
                 .stars(starsByUserId.getOrDefault(user.getId(), PeladaPlayerStars.DEFAULT_STARS))
                 .position(user.getPosition())
+                .isDeleted(user.isDeleted())
                 .build();
     }
 
@@ -37,6 +38,7 @@ public class DailyDTOMapper {
                 .image(user.getImage())
                 .stars(starsByUserId.getOrDefault(user.getId(), PeladaPlayerStars.DEFAULT_STARS))
                 .position(user.getPosition())
+                .isDeleted(user.isDeleted())
                 .isMensalista(isMensalista)
                 .confirmedAt(confirmedAt)
                 .build();

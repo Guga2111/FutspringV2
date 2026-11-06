@@ -50,6 +50,9 @@ public record DailyDetailDTO(
             String image,
             int stars,
             String position,
+            // a deleted account ("Ex-jogador") in a past session
+            @JsonProperty("isDeleted")
+            boolean isDeleted,
             // only on confirmedPlayers and peladaMembers
             @JsonInclude(JsonInclude.Include.NON_NULL)
             @JsonProperty("isMensalista")

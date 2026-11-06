@@ -43,4 +43,8 @@ public interface PeladaPlayerStarsRepository extends JpaRepository<PeladaPlayerS
     @Modifying
     @Query("DELETE FROM PeladaPlayerStars s WHERE s.pelada = :pelada")
     void deleteByPelada(@Param("pelada") Pelada pelada);
+
+    @Modifying
+    @Query("DELETE FROM PeladaPlayerStars s WHERE s.user = :user")
+    void deleteByUser(@Param("user") User user);
 }

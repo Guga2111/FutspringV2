@@ -9,15 +9,17 @@ interface PlayerAvatarProps {
   image: string | null
   // size and initials font size come from the caller (e.g. "size-7 text-[11px]")
   className?: string
+  // a deleted account ("Ex-jogador"): the neutral avatar, like a guest
+  deleted?: boolean
 }
 
 // Round player avatar: photo, or initials on the player's own color
-export function PlayerAvatar({ userId, username, image, className }: PlayerAvatarProps) {
+export function PlayerAvatar({ userId, username, image, className, deleted = false }: PlayerAvatarProps) {
   return (
     <Avatar className={cn("size-7 shrink-0 text-[11px]", className)}>
       {image && <AvatarImage src={getFileUrl(image)} alt="" loading="lazy" className="object-cover" />}
       <AvatarFallback
-        className={userId != null ? cn(getAvatarColor(userId), "font-bold text-white") : "bg-avatar-fallback font-semibold"}
+        className={userId != null && !deleted ? cn(getAvatarColor(userId), "font-bold text-white") : "bg-avatar-fallback font-semibold"}
       >
         {getInitials(username)}
       </AvatarFallback>

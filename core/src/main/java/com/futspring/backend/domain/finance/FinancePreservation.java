@@ -2,6 +2,7 @@ package com.futspring.backend.domain.finance;
 
 import com.futspring.backend.domain.daily.entity.Daily;
 import com.futspring.backend.domain.pelada.Pelada;
+import com.futspring.backend.domain.pelada.PeladaRef;
 import com.futspring.backend.domain.user.User;
 import com.futspring.backend.shared.exception.AppException;
 import lombok.RequiredArgsConstructor;
@@ -52,6 +53,29 @@ public class FinancePreservation {
         }
         managers.deleteAll(removed);
         record(pelada.getId(), actor, "MANAGERS_REVOKED", "Remoção de membro: " + removed.stream().map(FinanceManager::getUserId).toList());
+    }
+    /** Peladas where the user is the only responsável financeiro: their account deletion is blocked there. */
+    public List<PeladaRef> soleManagedPeladas(Long userId) {
+        return managers.findSoleManagedBy(userId);
+    }
+    /**
+     * Account deletion, with the user's peladas already locked and {@link #soleManagedPeladas} empty: they stop being
+     * a responsável everywhere (audited per pelada) and their financial identity is renamed. Charges, receipts,
+     * notices, cash and audit stay. A constant number of reads whatever the number of peladas.
+     */
+    public void forgetAccount(User user, String anonymousName) {
+        var managed = managers.findPeladaIdsByUserId(user.getId());
+        if (!managed.isEmpty()) {
+            managers.deleteByUserId(user.getId());
+            accounts.incrementRevisions(managed);
+            var now = access.now();
+            for (Long peladaId : managed) {
+                var audit = new FinanceAudit(); audit.setPeladaId(peladaId); audit.setActorId(user.getId()); audit.setActorName(anonymousName);
+                audit.setCreatedAt(now); audit.setOperation(FinanceTypes.AuditOperation.MANAGERS_REVOKED); audit.setTarget("MANAGERS_REVOKED");
+                audit.setReason("Conta excluída: deixou de ser responsável financeiro"); audits.save(audit);
+            }
+        }
+        people.renameUser(user.getId(), anonymousName);
     }
     public void detachDaily(Daily daily, User actor) {
         var linkedLists = lists.findByDailyId(daily.getId()); var linkedCash = movements.findByDailyId(daily.getId());

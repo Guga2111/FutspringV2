@@ -3,7 +3,7 @@ import type { Invitation } from "@/types/invitation"
 import { invitationTimeLabel, relativeToNow } from "@/utils/invitations"
 
 const NOW = new Date("2026-11-04T18:00:00.000Z")
-const user = { id: 1, username: "Leal", image: null, position: null }
+const user = { id: 1, username: "Leal", image: null, position: null, isDeleted: false }
 function invitation(patch: Partial<Invitation>): Invitation {
   return {
     id: 1, peladaId: 3, pelada: { id: 3, name: "Pelada", image: null, dayOfWeek: "TUESDAY", timeOfDay: "19:30" },

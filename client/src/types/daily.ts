@@ -31,6 +31,8 @@ export interface PlayerDTO {
   image: string | null
   stars: number
   position: string | null
+  // a deleted account ("Ex-jogador") in a past session: neutral avatar, no profile link
+  isDeleted: boolean
   // only on confirmedPlayers and peladaMembers
   isMensalista?: boolean
   // ISO instant; only on confirmedPlayers

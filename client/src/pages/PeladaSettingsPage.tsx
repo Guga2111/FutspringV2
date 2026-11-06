@@ -10,10 +10,12 @@ import { LocationCard } from "@/components/pelada-settings/LocationCard"
 import { ScheduleCard } from "@/components/pelada-settings/ScheduleCard"
 import { SettingsNav, type SettingsSection } from "@/components/pelada-settings/SettingsNav"
 import { SlotsCard } from "@/components/pelada-settings/SlotsCard"
+import { SettingsGroup } from "@/components/SettingsCard"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useAuth } from "@/hooks/useAuth"
+import { useScrollToHash } from "@/hooks/useScrollToHash"
 import { areaPath } from "@/utils/peladaAreas"
 
 const SECTIONS: SettingsSection[] = [
@@ -33,6 +35,8 @@ export default function PeladaSettingsPage() {
 
   const isAdmin = pelada?.members.find((m) => m.id === user?.id)?.isAdmin ?? false
   const isCreator = pelada != null && user != null && pelada.creatorId === user.id
+  // e.g. #transferir from the account deletion's pending items
+  useScrollToHash(!loading && pelada !== null)
 
   let content: ReactNode
   if (loading) {
@@ -103,15 +107,6 @@ export default function PeladaSettingsPage() {
         {content}
       </PageContainer>
     </div>
-  )
-}
-
-function SettingsGroup({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <section className="flex flex-col gap-3">
-      <h2 className="text-caption font-semibold text-muted-foreground">{label}</h2>
-      <div className="flex flex-col gap-4">{children}</div>
-    </section>
   )
 }
 

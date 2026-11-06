@@ -46,4 +46,9 @@ public interface DailyAttendanceBumpRepository extends JpaRepository<DailyAttend
     @Modifying
     @Query("DELETE FROM DailyAttendanceBump b WHERE b.daily = :daily")
     void deleteByDaily(@Param("daily") Daily daily);
+
+    // Account deletion: the bumps where the user lost the spot (the ones they caused keep pointing at "Ex-jogador")
+    @Modifying
+    @Query("DELETE FROM DailyAttendanceBump b WHERE b.user = :user")
+    void deleteByUser(@Param("user") User user);
 }

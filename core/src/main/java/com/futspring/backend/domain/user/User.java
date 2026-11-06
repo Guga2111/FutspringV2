@@ -48,6 +48,14 @@ public class User {
     @Column(name = "terms_accepted_at")
     private Instant termsAcceptedAt;
 
+    // Set when the account is deleted: the row is anonymized ("Ex-jogador") and kept for other people's history
+    @Column(name = "deleted_at")
+    private Instant deletedAt;
+
+    public boolean isDeleted() {
+        return deletedAt != null;
+    }
+
     @Override
     public boolean equals(Object o) {
         return o instanceof User other && EntityIdentity.sameEntity(this, o, getId(), other.getId());

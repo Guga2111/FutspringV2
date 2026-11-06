@@ -3,8 +3,8 @@ import { bestStatLabel, championSummary, matchStatNames, sortPlayerStats } from 
 import type { DailyDetail, MatchDTO, TeamDTO, UserDailyStatsDTO } from "@/types/daily"
 
 const teams: TeamDTO[] = [
-  { id: 1, name: "Vermelho", totalStars: 0, averageStars: 0, color: "#ef4444", players: [{ id: 10, username: "Leal", image: null, stars: 3, position: null }] },
-  { id: 2, name: "Azul", totalStars: 0, averageStars: 0, color: null, players: [{ id: 20, username: "Gone", image: null, stars: 3, position: null }] },
+  { id: 1, name: "Vermelho", totalStars: 0, averageStars: 0, color: "#ef4444", players: [{ id: 10, username: "Leal", image: null, stars: 3, position: null, isDeleted: false }] },
+  { id: 2, name: "Azul", totalStars: 0, averageStars: 0, color: null, players: [{ id: 20, username: "Gone", image: null, stars: 3, position: null, isDeleted: false }] },
 ]
 
 const stat = (userId: number, username: string, goals: number, assists: number, matchesPlayed = 6, wins = 3): UserDailyStatsDTO => ({
