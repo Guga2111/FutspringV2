@@ -12,6 +12,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.time.Clock;
+import java.time.Instant;
+
 @Service
 @RequiredArgsConstructor
 public class AuthService {
@@ -19,8 +22,14 @@ public class AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final Clock clock;
 
     public AuthResponseDTO register(RegisterRequestDTO request) {
+        // A tab opened before the terms changed sends the old version: the user must read the new one first
+        if (!LegalTerms.CURRENT_VERSION.equals(request.termsVersion())) {
+            throw new AppException(HttpStatus.CONFLICT,
+                    "Os termos foram atualizados. Recarregue a página para ler a nova versão.");
+        }
         if (userRepository.findByEmail(request.email()).isPresent()) {
             throw new AppException(HttpStatus.CONFLICT, "Este e-mail já está cadastrado");
         }
@@ -33,6 +42,8 @@ public class AuthService {
                 .username(request.username().trim())
                 .email(request.email())
                 .password(passwordEncoder.encode(request.password()))
+                .termsVersion(LegalTerms.CURRENT_VERSION)
+                .termsAcceptedAt(Instant.now(clock))
                 .build();
 
         User saved = userRepository.save(user);

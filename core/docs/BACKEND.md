@@ -106,6 +106,7 @@ com.futspring.backend
 │   │   │                           JwtAuthFilter (Bearer → email principal), AccessTokenVerifier (signature + user's current tokenVersion),
 │   │   │                           AuthRateLimitFilter (10/min per IP on every POST /auth route,
 │   │   │                           Bucket4j + Caffeine), JwtChannelInterceptor (authenticates STOMP CONNECT/SUBSCRIBE/SEND),
+│   │   │                           LegalTerms (CURRENT_VERSION of the terms/privacy pages; client/src/lib/legal.ts mirrors it),
 │   │   │                           PasswordResetService (forgot / reset password), PasswordResetToken + repository, ResetTokens
 │   │   │                           (random token + SHA-256), PasswordResetEmailListener (sends the e-mail after commit, @Async),
 │   │   │                           PasswordResetEmail (fills resources/email/password-reset.html), PasswordResetTokenCleanup (daily purge)
@@ -184,7 +185,7 @@ All entities use IDENTITY ids and **LAZY** fetching, Lombok `@Getter @Setter` (n
 
 | Entity | Table | Fields / relations |
 |--------|-------|--------------------|
-| `User` | `users` | `email` (unique), `username` (unique case-insensitively in `AuthService`/`UserService`, not in the DB: production has legacy duplicates, so check with `existsByUsernameIgnoreCase…`, never a single-result find), `password` (BCrypt), `image`, `backgroundImage`, `position`, `tokenVersion` (default 0, incremented by a password reset to revoke every JWT issued before). The legacy `users.stars` column is no longer mapped (default 3 since V8) and will be dropped by a later migration |
+| `User` | `users` | `email` (unique), `username` (unique case-insensitively in `AuthService`/`UserService`, not in the DB: production has legacy duplicates, so check with `existsByUsernameIgnoreCase…`, never a single-result find), `password` (BCrypt), `image`, `backgroundImage`, `position`, `tokenVersion` (default 0, incremented by a password reset to revoke every JWT issued before), `termsVersion` / `termsAcceptedAt` (the terms of use and privacy policy version accepted at registration and when; null for accounts created before V16). The legacy `users.stars` column is no longer mapped (default 3 since V8) and will be dropped by a later migration |
 | `Pelada` | `peladas` | `name`, `dayOfWeek` (a `java.time.DayOfWeek` name, `MONDAY`..`SUNDAY`, validated on create/update), `timeOfDay`, `duration`, `address`, `reference`, `image`, `autoCreateDailyEnabled`, `numberOfTeams` (2), `playersPerTeam` (5), `timeZone` (IANA region id, default `America/Sao_Paulo`, validated against `ZoneId.getAvailableZoneIds()`), `maxMensalistas` (0; `0 ≤ max ≤ numberOfTeams × playersPerTeam`, `capacity()`), `createdAt`; `creator` → User; `members` M:N (`pelada_members`); `admins` M:N (`pelada_admins`) |
 | `Daily` | `dailies` | `dailyDate`, `dailyTime`, `status` (`DailyStatus`, default `SCHEDULED`), `isFinished`, `championImage`, `createdAt`; `pelada`. Attendance is the `DailyAttendance` entity (no collection on `Daily`) |
 | `DailyAttendance` | `daily_confirmed_players` (PK `daily_id`+`user_id`) | `@EmbeddedId DailyAttendanceId (dailyId, userId)` with `@MapsId` `daily` and `user`; `confirmedAt` (`Instant`, `TIMESTAMPTZ`, set by the server clock). Read through `DailyAttendanceRepository` (confirmed users in confirmation order, grouped counts, the bump victim). Removed through the persistence context (`deleteAllOfDaily`), never a bulk delete: a managed row left in the transaction keeps Hibernate from deleting its daily |
@@ -262,6 +263,7 @@ New status-like fields must be Java enums stored with `@Enumerated(EnumType.STRI
 | V13 | Creates `user_tours` (PK `(user_id, tour)`, CHECK on `tour`, FK `ON DELETE CASCADE`): guided tours each user has seen; non-destructive |
 | V14 | Indexes `finance_audit(pelada_id, created_at DESC)` and `finance_movements(pelada_id, effective_date DESC)` for the date filters of `/finance/audit` and `/finance/movements`; non-destructive |
 | V15 | Designates every current admin and creator (members only) as responsável financeiro in `finance_managers` (`ON CONFLICT DO NOTHING`), since only responsáveis manage the finance from now on; non-destructive |
+| V16 | Adds nullable `users.terms_version` (`VARCHAR(20)`) and `terms_accepted_at` (`TIMESTAMPTZ`): the accepted terms/privacy version, recorded at registration; no backfill (older accounts stay null); non-destructive |
 
 ### Migration rules
 
@@ -482,7 +484,7 @@ All routes are under `/api/v1`. "Auth" is the relationship checked (see the matr
 ### Auth (`AuthController`)
 | Method | Path | Body | Response |
 |--------|------|------|----------|
-| POST | `/auth/register` | `RegisterRequestDTO` | 201 `AuthResponseDTO {token, user}` |
+| POST | `/auth/register` | `RegisterRequestDTO {username, email, password, termsVersion}` (`termsVersion` `@NotBlank`, max 20) | 201 `AuthResponseDTO {token, user}`; 409 "Os termos foram atualizados…" when `termsVersion` ≠ `LegalTerms.CURRENT_VERSION` (checked first); records `termsVersion` + `termsAcceptedAt` (server clock) |
 | POST | `/auth/login` | `LoginRequestDTO` | 200 `AuthResponseDTO`; 429 after 10/min per IP |
 | POST | `/auth/forgot-password` | `ForgotPasswordRequestDTO {email}` | 204 always (also for unknown e-mails); sends the reset e-mail when the account exists |
 | POST | `/auth/reset-password` | `ResetPasswordRequestDTO {token, newPassword ≥ 8}` | 204; 400 when the token is unknown, used or expired |

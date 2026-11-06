@@ -25,6 +25,8 @@ const NotificationSettingsPage = lazy(() => import("@/pages/NotificationSettings
 const NotificationUnsubscribePage = lazy(() => import("@/pages/NotificationUnsubscribePage"))
 const InvitationPage = lazy(() => import("@/pages/InvitationPage"))
 const JoinPeladaPage = lazy(() => import("@/pages/JoinPeladaPage"))
+const TermsPage = lazy(() => import("@/pages/TermsPage"))
+const PrivacyPage = lazy(() => import("@/pages/PrivacyPage"))
 const NotFoundPage = lazy(() => import("@/pages/NotFoundPage"))
 
 const fallback = <div className="flex items-center justify-center min-h-screen">Carregando…</div>
@@ -40,6 +42,8 @@ function App() {
           <Route path="/forgot-password" element={<ErrorBoundary><ForgotPasswordPage /></ErrorBoundary>} />
           <Route path="/reset-password" element={<ErrorBoundary><ResetPasswordPage /></ErrorBoundary>} />
           <Route path="/notifications/unsubscribe" element={<ErrorBoundary><NotificationUnsubscribePage /></ErrorBoundary>} />
+          <Route path="/termos" element={<ErrorBoundary><TermsPage /></ErrorBoundary>} />
+          <Route path="/privacidade" element={<ErrorBoundary><PrivacyPage /></ErrorBoundary>} />
           <Route path="/join/:token" element={<ErrorBoundary><JoinPeladaPage /></ErrorBoundary>} />
           {/* Private pages share the sidebar shell */}
           <Route element={<ErrorBoundary><PrivateRoute><AppLayout /></PrivateRoute></ErrorBoundary>}>

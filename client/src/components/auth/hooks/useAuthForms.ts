@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom"
 import { loginUser, registerUser } from "@/api/auth"
 import { useAuth } from "@/hooks/useAuth"
 import { applyServerErrors } from "@/lib/form-errors"
+import { LEGAL_VERSION } from "@/lib/legal"
 import { loginSchema, registerSchema, type LoginValues, type RegisterValues } from "@/schemas/auth"
 
 // Login: a wrong password (401) lands on root, shown above the button
@@ -39,7 +40,13 @@ export function useRegisterForm(returnTo: string) {
 
   async function onSubmit(values: RegisterValues) {
     try {
-      const response = await registerUser({ username: values.username, email: values.email, password: values.password })
+      // the checkbox is required by the schema; the server records the version the user accepted (409 if outdated)
+      const response = await registerUser({
+        username: values.username,
+        email: values.email,
+        password: values.password,
+        termsVersion: LEGAL_VERSION,
+      })
       login(response.token, response.user)
       navigate(returnTo, { replace: true })
     } catch (error) {

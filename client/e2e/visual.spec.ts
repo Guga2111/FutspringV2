@@ -11,6 +11,8 @@ const pages: { name: string; path: string; auth?: boolean; ready?: string }[] = 
   { name: "auth-register", path: "/auth?tab=register", auth: false, ready: "form" },
   { name: "join-link", path: "/join/Mw.8f3a9c2e7b1d4f60a5c8e2b7d9f1a3c5", auth: false },
   { name: "not-found", path: "/pagina-que-nao-existe", auth: false },
+  { name: "terms", path: "/termos", auth: false, ready: "h1" },
+  { name: "privacy", path: "/privacidade", auth: false, ready: "h1" },
   { name: "home", path: "/home" },
   { name: "pelada-overview", path: PELADA },
   { name: "pelada-members", path: `${PELADA}/membros` },

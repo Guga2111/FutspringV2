@@ -28,13 +28,40 @@ class AuthControllerTest extends BaseIntegrationTest {
 
     @Test
     void register_success() throws Exception {
-        RegisterRequestDTO req = new RegisterRequestDTO("newuser", "newuser@example.com", "password123");
+        RegisterRequestDTO req = new RegisterRequestDTO("newuser", "newuser@example.com", "password123", LegalTerms.CURRENT_VERSION);
 
         mockMvc.perform(post("/api/v1/auth/register")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(req)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.token").exists());
+
+        User saved = userRepository.findByEmail("newuser@example.com").orElseThrow();
+        assertThat(saved.getTermsVersion()).isEqualTo(LegalTerms.CURRENT_VERSION);
+        assertThat(saved.getTermsAcceptedAt()).isNotNull();
+    }
+
+    @Test
+    void register_withoutTermsVersion_isRejected() throws Exception {
+        mockMvc.perform(post("/api/v1/auth/register")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"username": "newuser", "email": "newuser@example.com", "password": "password123"}
+                        """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.termsVersion").value("Aceite os termos de uso para criar a conta"));
+        assertThat(userRepository.findByEmail("newuser@example.com")).isEmpty();
+    }
+
+    @Test
+    void register_outdatedTermsVersion_isConflict() throws Exception {
+        RegisterRequestDTO req = new RegisterRequestDTO("newuser", "newuser@example.com", "password123", "2020-01-01");
+
+        mockMvc.perform(post("/api/v1/auth/register")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("Os termos foram atualizados. Recarregue a página para ler a nova versão."));
     }
 
     @Test
@@ -45,7 +72,7 @@ class AuthControllerTest extends BaseIntegrationTest {
                 .password(passwordEncoder.encode("password123"))
                 .build());
 
-        RegisterRequestDTO req = new RegisterRequestDTO("another", "dup@example.com", "password123");
+        RegisterRequestDTO req = new RegisterRequestDTO("another", "dup@example.com", "password123", LegalTerms.CURRENT_VERSION);
 
         mockMvc.perform(post("/api/v1/auth/register")
                 .contentType(MediaType.APPLICATION_JSON)
