@@ -66,10 +66,10 @@ describe("read", () => {
 
 describe("notification preferences", () => {
   const all = [
-    { category: "ATTENDANCE", emailEnabled: false },
-    { category: "SESSION", emailEnabled: false },
-    { category: "MEMBERSHIP", emailEnabled: true },
-    { category: "AWARDS", emailEnabled: false },
+    { category: "ATTENDANCE", emailEnabled: false, pushEnabled: true },
+    { category: "SESSION", emailEnabled: false, pushEnabled: true },
+    { category: "MEMBERSHIP", emailEnabled: true, pushEnabled: true },
+    { category: "AWARDS", emailEnabled: false, pushEnabled: true },
   ]
 
   it("gets the four categories", async () => {
@@ -83,6 +83,8 @@ describe("notification preferences", () => {
     mockPut.mockResolvedValue({ data: all })
 
     await expect(updateNotificationPreferences([{ category: "ATTENDANCE", emailEnabled: false }])).resolves.toEqual(all)
+    await updateNotificationPreferences([{ category: "SESSION", pushEnabled: false }])
+    expect(mockPut).toHaveBeenLastCalledWith("/api/v1/notifications/preferences", [{ category: "SESSION", pushEnabled: false }])
     expect(mockPut).toHaveBeenCalledWith("/api/v1/notifications/preferences", [
       { category: "ATTENDANCE", emailEnabled: false },
     ])
@@ -91,16 +93,16 @@ describe("notification preferences", () => {
 
 describe("unsubscribe links", () => {
   it("posts the token to unsubscribe", async () => {
-    mockPost.mockResolvedValue({ data: { category: "ATTENDANCE", emailEnabled: false } })
+    mockPost.mockResolvedValue({ data: { category: "ATTENDANCE", emailEnabled: false, pushEnabled: true } })
 
-    await expect(unsubscribeFromEmails("a.b")).resolves.toEqual({ category: "ATTENDANCE", emailEnabled: false })
+    await expect(unsubscribeFromEmails("a.b")).resolves.toEqual({ category: "ATTENDANCE", emailEnabled: false, pushEnabled: true })
     expect(mockPost).toHaveBeenCalledWith("/api/v1/notifications/unsubscribe", { token: "a.b" })
   })
 
   it("posts the token to resubscribe", async () => {
-    mockPost.mockResolvedValue({ data: { category: "ATTENDANCE", emailEnabled: true } })
+    mockPost.mockResolvedValue({ data: { category: "ATTENDANCE", emailEnabled: true, pushEnabled: true } })
 
-    await expect(resubscribeToEmails("a.b")).resolves.toEqual({ category: "ATTENDANCE", emailEnabled: true })
+    await expect(resubscribeToEmails("a.b")).resolves.toEqual({ category: "ATTENDANCE", emailEnabled: true, pushEnabled: true })
     expect(mockPost).toHaveBeenCalledWith("/api/v1/notifications/resubscribe", { token: "a.b" })
   })
 })

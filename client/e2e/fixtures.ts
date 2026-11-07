@@ -453,10 +453,10 @@ export const notifications: NotificationResponse[] = [
 ]
 
 export const notificationPreferences: NotificationPreference[] = [
-  { category: "ATTENDANCE", emailEnabled: true },
-  { category: "SESSION", emailEnabled: false },
-  { category: "MEMBERSHIP", emailEnabled: true },
-  { category: "AWARDS", emailEnabled: false },
+  { category: "ATTENDANCE", emailEnabled: true, pushEnabled: true },
+  { category: "SESSION", emailEnabled: false, pushEnabled: true },
+  { category: "MEMBERSHIP", emailEnabled: true, pushEnabled: true },
+  { category: "AWARDS", emailEnabled: false, pushEnabled: true },
 ]
 
 export const QR_ID = 77
