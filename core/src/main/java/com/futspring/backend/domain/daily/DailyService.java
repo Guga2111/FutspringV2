@@ -106,7 +106,10 @@ public class DailyService {
         Daily daily = dailyRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Sessão não encontrada"));
         accessHelper.requireAdmin(daily.getPelada(), caller);
-        subscriptionGuard.requireWritable(daily.getPelada());
+        // cancelling is free in a read-only pelada: an upcoming session that can't happen can still be called off
+        if (newStatus != DailyStatus.CANCELED) {
+            subscriptionGuard.requireWritable(daily.getPelada());
+        }
 
         if (!daily.getStatus().canTransitionTo(newStatus)) {
             throw new AppException(HttpStatus.BAD_REQUEST,
@@ -132,10 +135,11 @@ public class DailyService {
         Daily daily = findDaily(id);
         Pelada pelada = daily.getPelada();
         accessHelper.requireAdmin(pelada, caller);
-        subscriptionGuard.requireWritable(pelada);
 
         peladaRepository.findByIdForUpdate(pelada.getId())
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Pelada não encontrada"));
+        // under the pelada lock, which subscription changes take too
+        subscriptionGuard.requireWritable(pelada);
         financePreservation.detachDaily(daily, caller);
         Set<User> affected = deleteDailyData(daily);
         aggregateRebuildService.rebuild(pelada, affected);

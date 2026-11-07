@@ -68,6 +68,7 @@ public class FinanceLedgerService {
         });
     }
     public FinanceViews.Result report(Long id, Long listId, Long chargeId, FinanceRequests.Command command, MultipartFile file, String email) {
+        if (file != null) tx.requireWritableUpload(id, email, command);
         FinanceFiles.Verified image = file == null ? null : files.verify(file);
         Object payload = List.of(command, image == null ? "" : image.hash());
         return tx.execute(id, email, command, "REPORT", "CHARGE:" + listId + ":" + chargeId, payload, false, ctx -> {

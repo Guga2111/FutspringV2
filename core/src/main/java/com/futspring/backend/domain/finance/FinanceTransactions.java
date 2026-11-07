@@ -31,14 +31,15 @@ public class FinanceTransactions {
                                Object payload, boolean manager, Function<Context, Change> action) {
         Context ctx = access.write(id, email);
         if (manager) ctx.requireManager();
-        // every finance write, the player's own payment report and the image uploads included
-        subscriptionGuard.requireWritable(ctx.pelada());
         String hash = hash(json.writeValueAsString(List.of(ctx.caller().getId(), operation, target, payload)));
         var previous = audits.findByPeladaIdAndRequestKey(id, command.requestKey());
         if (previous.isPresent()) {
             require(hash.equals(previous.get().getRequestHash()), "A chave de reenvio já foi usada em outra operação");
             return result(ctx, previous.get().getResultListId());
         }
+        // after the replay, which only reads: a command that committed before the pelada turned read-only still
+        // answers its stored result. Every finance write, the payment report and the image uploads included
+        subscriptionGuard.requireWritable(ctx.pelada());
         require(ctx.account().getRevision() == command.revision(), "O financeiro mudou. Atualize a tela e tente novamente");
         if (ctx.account().getId() == null) {
             accounts.save(ctx.account());
@@ -64,6 +65,16 @@ public class FinanceTransactions {
         audits.save(audit);
         // the caller may have just appointed or removed themselves: answer with their new permissions
         return result("MANAGERS".equals(operation) ? access.refresh(ctx) : ctx, change.listId());
+    }
+    /**
+     * Before decoding an upload: a read-only pelada refuses it without the decode (403 still comes first). A retry
+     * of a command already done goes on to {@link #execute}, which answers its stored result.
+     */
+    void requireWritableUpload(Long id, String email, Command command) {
+        Context ctx = access.read(id, email);
+        if (audits.findByPeladaIdAndRequestKey(id, command.requestKey()).isEmpty()) {
+            subscriptionGuard.requireWritable(ctx.pelada());
+        }
     }
     private FinanceViews.Result result(Context ctx, Long listId) {
         return new FinanceViews.Result(reads.overview(ctx, 0, 50), listId == null ? null : reads.detail(ctx, listId));

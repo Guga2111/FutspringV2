@@ -59,9 +59,6 @@ public class DailySchedulerService {
     }
 
     private void createNextDailyIfDue(Pelada pelada, Instant instant) {
-        if (!subscriptionGuard.isWritable(pelada)) {
-            return;
-        }
         LocalDateTime now = LocalDateTime.ofInstant(instant, ZoneId.of(pelada.getTimeZone()));
         DayOfWeek target = DayOfWeek.valueOf(pelada.getDayOfWeek().toUpperCase(Locale.ROOT));
         LocalDate nextOccurrence = now.toLocalDate().with(TemporalAdjusters.nextOrSame(target));
@@ -71,6 +68,10 @@ public class DailySchedulerService {
             return;
         }
         if (dailyRepository.existsByPeladaAndDailyDate(pelada, nextOccurrence)) {
+            return;
+        }
+        // last, so only a pelada with a session due pays the subscription query
+        if (!subscriptionGuard.isWritable(pelada)) {
             return;
         }
         Daily daily = dailyRepository.save(Daily.builder()

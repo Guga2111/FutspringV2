@@ -88,7 +88,7 @@ public class DailyAttendanceService {
     public DailyListItemDTO disconfirmAttendance(Long id, String currentUserEmail) {
         User caller = userAuthHelper.getAuthenticatedUser(currentUserEmail);
         Daily daily = findDailyForUpdate(id);
-        subscriptionGuard.requireWritable(daily.getPelada());
+        // a withdrawal only shrinks the session: free in a read-only pelada, so its list can still be fixed
         requireUnlocked(daily);
 
         if (attendanceRepository.deleteByDailyAndUser(daily, caller) == 0) {
@@ -125,7 +125,7 @@ public class DailyAttendanceService {
         Daily daily = findDailyForUpdate(dailyId);
         Pelada pelada = daily.getPelada();
         accessHelper.requireAdmin(pelada, caller);
-        subscriptionGuard.requireWritable(pelada);
+        // free in a read-only pelada, like the player's own withdrawal
         User target = findMember(pelada, targetUserId);
         requireUnlocked(daily);
 

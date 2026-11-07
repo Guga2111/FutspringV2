@@ -94,7 +94,7 @@ class SubscriptionReadOnlyTest extends BaseIntegrationTest {
                 locked("criar sessão", t -> t.asAdmin(post("/api/v1/peladas/" + t.pelada.getId() + "/dailies")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"dailyDate\":\"" + LocalDate.now().plusDays(14) + "\",\"dailyTime\":\"20:00\"}"))),
-                locked("mudar status", t -> t.asAdmin(json(put(t.dailyPath("/status")), "{\"status\":\"CANCELED\"}"))),
+                locked("mudar status", t -> t.asAdmin(json(put(t.dailyPath("/status")), "{\"status\":\"CONFIRMED\"}"))),
                 locked("apagar sessão", t -> t.asAdmin(delete(t.dailyPath("")))),
                 locked("importar da mensagem", t -> t.asAdmin(json(post(t.dailyPath("/populate")),
                         "{\"teams\":[{\"colorName\":\"Azul\",\"players\":[{\"userId\":" + t.admin.getId() + "}]}]}"))),
@@ -102,9 +102,7 @@ class SubscriptionReadOnlyTest extends BaseIntegrationTest {
                         .file(new MockMultipartFile("file", "c.png", "image/png", new byte[]{1}))
                         .with(request -> { request.setMethod("PUT"); return request; }))),
                 locked("confirmar presença", t -> t.asMember(post(t.dailyPath("/confirm")))),
-                locked("desconfirmar presença", t -> t.asMember(delete(t.dailyPath("/confirm")))),
                 locked("admin confirma", t -> t.asAdmin(post(t.dailyPath("/confirm/" + t.admin.getId())))),
-                locked("admin desconfirma", t -> t.asAdmin(delete(t.dailyPath("/confirm/" + t.member.getId())))),
                 locked("confirmar todos", t -> t.asAdmin(post(t.dailyPath("/confirm/all")))),
                 locked("sortear times", t -> t.asAdmin(post(t.dailyPath("/sort-teams")))),
                 locked("trocar jogadores", t -> t.asAdmin(json(put(t.dailyPath("/teams/swap")),
@@ -124,7 +122,16 @@ class SubscriptionReadOnlyTest extends BaseIntegrationTest {
                         "{\"command\":" + command() + ",\"visibility\":\"INDIVIDUAL\"}"))),
                 locked("informar pagamento", t -> t.asMember(multipart(t.financePath("/lists/1/charges/1/report"))
                         .file(new MockMultipartFile("command", "", MediaType.APPLICATION_JSON_VALUE,
-                                command().getBytes())))));
+                                command().getBytes())))),
+                // not an image: answered 402 before the upload is decoded (else 400)
+                locked("comprovante", t -> t.asMember(multipart(t.financePath("/lists/1/charges/1/report"))
+                        .file(new MockMultipartFile("command", "", MediaType.APPLICATION_JSON_VALUE,
+                                command().getBytes()))
+                        .file(new MockMultipartFile("file", "r.png", "image/png", new byte[]{1})))),
+                locked("QR do financeiro", t -> t.asAdmin(multipart(t.financePath("/qr"))
+                        .file(new MockMultipartFile("command", "", MediaType.APPLICATION_JSON_VALUE,
+                                command().getBytes()))
+                        .file(new MockMultipartFile("file", "q.png", "image/png", new byte[]{1})))));
     }
 
     @ParameterizedTest(name = "{0}")
@@ -140,6 +147,18 @@ class SubscriptionReadOnlyTest extends BaseIntegrationTest {
 
         assertThat(dailyRepository.count()).isEqualTo(dailies);
         assertThat(attendanceRepository.findUsersByDaily(daily)).containsExactly(member);
+    }
+
+    @Test
+    void financeRetryOfACommandDoneBeforeTheLock_answersItsResult() throws Exception {
+        subscription.setKind(SubscriptionKind.EXEMPT);
+        String body = "{\"command\":" + command() + ",\"visibility\":\"TRANSPARENT\"}";
+        mockMvc.perform(asAdmin(json(put(financePath("/settings")), body))).andExpect(status().isOk());
+
+        subscription.setKind(SubscriptionKind.PENDING);
+        mockMvc.perform(asAdmin(json(put(financePath("/settings")), body)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.overview.settings.visibility").value("TRANSPARENT"));
     }
 
     @Test
@@ -184,6 +203,18 @@ class SubscriptionReadOnlyTest extends BaseIntegrationTest {
                         "{\"isAdmin\":true}")))
                 .andExpect(status().isOk());
         mockMvc.perform(asMember(post(dailyPath("/bumps/seen")))).andExpect(status().isNoContent());
+    }
+
+    @Test
+    void readOnlyPelada_stillLetsPlayersLeaveAndTheSessionBeCanceled() throws Exception {
+        attendanceRepository.save(new DailyAttendance(daily, admin, Instant.now()));
+
+        mockMvc.perform(asMember(delete(dailyPath("/confirm")))).andExpect(status().isOk());
+        mockMvc.perform(asAdmin(delete(dailyPath("/confirm/" + admin.getId())))).andExpect(status().isOk());
+        mockMvc.perform(asAdmin(json(put(dailyPath("/status")), "{\"status\":\"CANCELED\"}")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("CANCELED"));
+        assertThat(attendanceRepository.findUsersByDaily(daily)).isEmpty();
     }
 
     @Test
