@@ -219,7 +219,7 @@ Para planejar um PR, rode o prompt dele numa sessão limpa (`/clear` antes). Ao 
 - `SubscriptionPayment.peladaId` e `SubscriptionEvent.peladaId` são ids simples (o pagamento sobrevive à pelada). `deletePelada` chama `SubscriptionService.deletePeladaData` (apaga assinatura e eventos e desvincula pagamentos) porque o H2 dos testes não tem as ações de FK.
 - `users.platform_admin` já é mapeado (`User.platformAdmin`), mas só é lido a partir do PR 5.
 
-### [ ] PR 2 — Trava no backend (`feat/subscriptions-guard`)
+### [x] PR 2 — Trava no backend (`feat/subscriptions-guard`)
 
 - **Entrega:**
   - `SubscriptionGuard.requireWritable(Pelada)` → 402.
@@ -237,6 +237,16 @@ Para planejar um PR, rode o prompt dele numa sessão limpa (`/clear` antes). Ao 
 ```
 /plan-task docs/plans/2026-11-07-subscriptions-platform-admin-spec.md "PR 2 — Trava no backend"
 ```
+
+**Decisões (PR 2):**
+- `SubscriptionGuard` fica em `domain/subscription` (junto do repositório e do `SubscriptionState`), não em `shared/helper`: a seção "Trava" e a seção "Admin" divergiam.
+- Pelada sem linha em `pelada_subscriptions` escreve (fail-open, com `log.warn`). Em produção não existe (backfill da V19 + criação); os testes que salvam pelada direto no repositório continuam como estão.
+- Sem handler novo: `AppException(HttpStatus.PAYMENT_REQUIRED, …)` já sai como `{status: 402, message, timestamp}` pelo `GlobalExceptionHandler`. A mensagem é `SubscriptionGuard.READ_ONLY_MESSAGE`.
+- O guard roda logo depois do check de permissão: quem não é membro/admin continua recebendo 403, e uma pelada travada responde 402 antes de 404 de filhos (time, lista, cobrança) e de 400/409 de regra.
+- Financeiro: uma chamada em `FinanceTransactions.execute`, depois de `requireManager`. Inclui `PUT /managers` (designar responsáveis) e o reenvio idempotente de um comando já feito. `FinancePreservation` (remoção de membro, exclusão de conta/pelada) não passa por ali e segue liberado.
+- `disconfirmAttendance` não tinha check de relação; o guard roda logo depois de carregar a sessão.
+- Jobs: `DailySchedulerService` checa dentro da transação de cada pelada; `ScheduledNotificationJob` checa só quando a pelada tem sessão devida (uma query a mais por pelada nesse caso).
+- Testes: `SubscriptionGuardTest` (unitário, bordas por `kind`) e `SubscriptionReadOnlyTest` (integração: um caso parametrizado de 402 por comando travado, trial vencido, `EXEMPT` escrevendo, liberados). Os testes unitários dos serviços recebem um `SubscriptionGuard` mockado; os dos jobs, um guard real.
 
 ### [ ] PR 3 — Teto do trial (`feat/subscriptions-member-cap`)
 

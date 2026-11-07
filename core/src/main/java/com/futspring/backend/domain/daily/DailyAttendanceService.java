@@ -9,6 +9,7 @@ import com.futspring.backend.domain.daily.repository.DailyAttendanceRepository;
 import com.futspring.backend.domain.daily.repository.DailyRepository;
 import com.futspring.backend.domain.pelada.Pelada;
 import com.futspring.backend.domain.notification.NotificationRepository;
+import com.futspring.backend.domain.subscription.SubscriptionGuard;
 import com.futspring.backend.domain.notification.NotificationType;
 import com.futspring.backend.domain.pelada.PeladaMensalistaRepository;
 import com.futspring.backend.shared.exception.AppException;
@@ -44,6 +45,7 @@ public class DailyAttendanceService {
     private final Clock clock;
     private final NotificationRepository notificationRepository;
     private final DailyTeamManagementService teamManagementService;
+    private final SubscriptionGuard subscriptionGuard;
 
     /**
      * The caller confirms themselves. Mensalistas any time (while the session isn't locked); diaristas only from
@@ -57,6 +59,7 @@ public class DailyAttendanceService {
         Daily daily = findDailyForUpdate(id);
         Pelada pelada = daily.getPelada();
         accessHelper.requireMember(pelada, caller);
+        subscriptionGuard.requireWritable(pelada);
         requireUnlocked(daily);
 
         if (attendanceRepository.existsByDailyAndUser(daily, caller)) {
@@ -85,6 +88,7 @@ public class DailyAttendanceService {
     public DailyListItemDTO disconfirmAttendance(Long id, String currentUserEmail) {
         User caller = userAuthHelper.getAuthenticatedUser(currentUserEmail);
         Daily daily = findDailyForUpdate(id);
+        subscriptionGuard.requireWritable(daily.getPelada());
         requireUnlocked(daily);
 
         if (attendanceRepository.deleteByDailyAndUser(daily, caller) == 0) {
@@ -101,6 +105,7 @@ public class DailyAttendanceService {
         Daily daily = findDailyForUpdate(dailyId);
         Pelada pelada = daily.getPelada();
         accessHelper.requireAdmin(pelada, caller);
+        subscriptionGuard.requireWritable(pelada);
         User target = findMember(pelada, targetUserId);
         requireUnlocked(daily);
 
@@ -120,6 +125,7 @@ public class DailyAttendanceService {
         Daily daily = findDailyForUpdate(dailyId);
         Pelada pelada = daily.getPelada();
         accessHelper.requireAdmin(pelada, caller);
+        subscriptionGuard.requireWritable(pelada);
         User target = findMember(pelada, targetUserId);
         requireUnlocked(daily);
 
@@ -139,6 +145,7 @@ public class DailyAttendanceService {
         Daily daily = findDailyForUpdate(dailyId);
         Pelada pelada = daily.getPelada();
         accessHelper.requireAdmin(pelada, caller);
+        subscriptionGuard.requireWritable(pelada);
         requireUnlocked(daily);
 
         Set<User> confirmed = Set.copyOf(attendanceRepository.findUsersByDaily(daily));

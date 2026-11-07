@@ -11,6 +11,10 @@ import com.futspring.backend.domain.notification.NotificationService;
 import com.futspring.backend.domain.notification.NotificationType;
 import com.futspring.backend.domain.pelada.Pelada;
 import com.futspring.backend.domain.pelada.PeladaRepository;
+import com.futspring.backend.domain.subscription.PeladaSubscription;
+import com.futspring.backend.domain.subscription.PeladaSubscriptionRepository;
+import com.futspring.backend.domain.subscription.SubscriptionGuard;
+import com.futspring.backend.domain.subscription.SubscriptionKind;
 import com.futspring.backend.domain.user.User;
 import com.futspring.backend.domain.user.UserRepository;
 import org.junit.jupiter.api.AfterEach;
@@ -53,12 +57,14 @@ class DailySchedulerTransactionTest {
     @Autowired private NotificationRepository notificationRepository;
     @Autowired private UserRepository userRepository;
     @Autowired private PlatformTransactionManager transactionManager;
+    @Autowired private PeladaSubscriptionRepository subscriptionRepository;
 
     private final NotificationDelivery delivery = mock(NotificationDelivery.class);
 
     @AfterEach
     void cleanUp() {
         notificationRepository.deleteAll();
+        subscriptionRepository.deleteAll();
         dailyRepository.deleteAll();
         peladaRepository.deleteAll();
         userRepository.deleteAll();
@@ -82,8 +88,8 @@ class DailySchedulerTransactionTest {
             notificationService.onDailyCreated(created);
         };
 
-        new DailySchedulerService(peladaRepository, dailyRepository, publisher, transactionManager, clock)
-                .autoCreateDailies();
+        new DailySchedulerService(peladaRepository, dailyRepository, publisher, transactionManager, clock,
+                new SubscriptionGuard(subscriptionRepository, clock)).autoCreateDailies();
 
         List<Daily> dailies = dailyRepository.findAll();
         assertThat(dailies).singleElement().satisfies(d -> {
@@ -96,6 +102,23 @@ class DailySchedulerTransactionTest {
                 .allMatch(n -> n.getDaily().getId().equals(dailies.get(0).getId()));
         // delivered once, after the commit of the pelada that worked
         verify(delivery).deliver(anyList());
+    }
+
+    @Test
+    void readOnlyPelada_getsNoSession() {
+        User ana = user("ana");
+        User bia = user("bia");
+        Pelada expired = pelada("Vencida", ana, bia);
+        subscriptionRepository.save(new PeladaSubscription(expired, SubscriptionKind.TRIAL, NOW.minusSeconds(1), NOW));
+        Pelada trial = pelada("Teste", ana, bia);
+        subscriptionRepository.save(new PeladaSubscription(trial, SubscriptionKind.TRIAL, NOW.plusSeconds(60), NOW));
+        Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
+
+        new DailySchedulerService(peladaRepository, dailyRepository, event -> { }, transactionManager, clock,
+                new SubscriptionGuard(subscriptionRepository, clock)).autoCreateDailies();
+
+        assertThat(dailyRepository.findAll()).singleElement()
+                .satisfies(d -> assertThat(d.getPelada().getId()).isEqualTo(trial.getId()));
     }
 
     private User user(String name) {

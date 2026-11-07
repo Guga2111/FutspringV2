@@ -8,6 +8,7 @@ import com.futspring.backend.domain.daily.repository.DailyAttendanceRepository;
 import com.futspring.backend.domain.daily.repository.DailyRepository;
 import com.futspring.backend.domain.daily.repository.TeamRepository;
 import com.futspring.backend.domain.pelada.Pelada;
+import com.futspring.backend.domain.subscription.SubscriptionGuard;
 import com.futspring.backend.domain.pelada.PeladaPlayerStars;
 import com.futspring.backend.domain.pelada.PeladaPlayerStarsRepository;
 import com.futspring.backend.shared.exception.AppException;
@@ -45,6 +46,7 @@ public class DailyTeamManagementService {
     private final UserRepository userRepository;
     private final DailyDTOMapper dailyDTOMapper;
     private final ApplicationEventPublisher eventPublisher;
+    private final SubscriptionGuard subscriptionGuard;
 
     @Transactional
     public List<DailyDetailDTO.TeamDTO> sortTeams(Long id, String currentUserEmail) {
@@ -52,6 +54,7 @@ public class DailyTeamManagementService {
         Daily daily = findDaily(id);
         Pelada pelada = daily.getPelada();
         accessHelper.requireAdmin(pelada, caller);
+        subscriptionGuard.requireWritable(pelada);
         requireUnlocked(daily);
 
         // Each player's stars in this pelada
@@ -114,6 +117,7 @@ public class DailyTeamManagementService {
         User caller = userAuthHelper.getAuthenticatedUser(currentUserEmail);
         Daily daily = findDaily(id);
         accessHelper.requireAdmin(daily.getPelada(), caller);
+        subscriptionGuard.requireWritable(daily.getPelada());
         requireUnlocked(daily);
 
         List<Team> teams = teamRepository.findByDailyWithPlayers(daily);
@@ -158,6 +162,7 @@ public class DailyTeamManagementService {
         User caller = userAuthHelper.getAuthenticatedUser(callerEmail);
         Daily daily = findDaily(dailyId);
         accessHelper.requireMember(daily.getPelada(), caller);
+        subscriptionGuard.requireWritable(daily.getPelada());
         Team team = findTeamInDaily(teamId, dailyId);
 
         if (!team.getPlayers().contains(caller)) {
@@ -175,6 +180,7 @@ public class DailyTeamManagementService {
         Daily daily = findDaily(dailyId);
         Pelada pelada = daily.getPelada();
         accessHelper.requireMember(pelada, caller);
+        subscriptionGuard.requireWritable(pelada);
         Team team = findTeamInDaily(teamId, dailyId);
 
         if (!team.getPlayers().contains(caller) && !accessHelper.isAdmin(pelada, caller)) {
@@ -198,6 +204,7 @@ public class DailyTeamManagementService {
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Sessão não encontrada"));
         Pelada pelada = daily.getPelada();
         accessHelper.requireAdmin(pelada, caller);
+        subscriptionGuard.requireWritable(pelada);
         requireUnlocked(daily);
 
         Map<Long, User> confirmed = attendanceRepository.findUsersByDaily(daily).stream()

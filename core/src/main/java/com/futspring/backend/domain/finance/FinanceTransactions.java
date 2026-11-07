@@ -2,6 +2,7 @@ package com.futspring.backend.domain.finance;
 
 import com.futspring.backend.domain.finance.dto.FinanceRequests.Command;
 import com.futspring.backend.domain.finance.dto.FinanceViews;
+import com.futspring.backend.domain.subscription.SubscriptionGuard;
 import com.futspring.backend.shared.exception.AppException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -23,12 +24,15 @@ public class FinanceTransactions {
     private final FinanceAuditRepository audits;
     private final FinanceReadService reads;
     private final JsonMapper json;
+    private final SubscriptionGuard subscriptionGuard;
 
     record Change(Object before, Object after, Long listId) {}
     FinanceViews.Result execute(Long id, String email, Command command, String operation, String target,
                                Object payload, boolean manager, Function<Context, Change> action) {
         Context ctx = access.write(id, email);
         if (manager) ctx.requireManager();
+        // every finance write, the player's own payment report and the image uploads included
+        subscriptionGuard.requireWritable(ctx.pelada());
         String hash = hash(json.writeValueAsString(List.of(ctx.caller().getId(), operation, target, payload)));
         var previous = audits.findByPeladaIdAndRequestKey(id, command.requestKey());
         if (previous.isPresent()) {
