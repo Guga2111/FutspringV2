@@ -106,7 +106,7 @@ Ver e-mail no painel é tratamento pelo operador: adicionar uma linha na políti
 
 ### Notificações
 
-- Categoria nova `BILLING` ("Assinatura"), e-mail e push ligados por padrão; CHECK atualizado na V19.
+- Categoria nova `BILLING` ("Assinatura"), e-mail e push ligados por padrão; CHECK atualizado numa V20 (PR 8).
 - Tipos novos:
   - `SUBSCRIPTION_ENDING` (criador, 5 dias antes do fim do trial ou do pago).
   - `SUBSCRIPTION_PAST_DUE` (criador, ao entrar na carência).
@@ -181,13 +181,172 @@ Rotas privadas filhas do layout. O item "Admin" fica no `UserMenu` só com `user
 
 ## Plano de PRs
 
-Branch de integração `feat/subscriptions`, saindo de `dev`.
+Nove PRs pequenos. Cada um é revisável sozinho, entra com os seus testes e atualiza a parte do BACKEND.md / FRONTEND.md que mudou, como pede o CLAUDE.md.
 
-1. **Núcleo backend:** V19, entidades, `SubscriptionState`, `SubscriptionGuard` nos serviços e jobs, criação/trial, teto de membros, `subscription` nos DTOs de pelada/daily, `isPlatformAdmin`.
-2. **API da plataforma + área do criador:** `/platform/**`, `GET /peladas/{id}/subscription`, BR Code, `pix-claim`, notificações e `SubscriptionNoticeJob`, env de Pix no deploy.
-3. **Front do criador e membros:** tipos/api, banner, `writable` nos botões, área Assinatura, categoria nova nas preferências.
-4. **Front do painel:** `/admin/*`.
-5. **Docs e política de privacidade:** FRONTEND.md, BACKEND.md, `content.ts` + `LEGAL_VERSION`.
+- **Branches:** integração `feat/subscriptions`, saindo de `dev`. Cada PR sai de `feat/subscriptions` (`feat/subscriptions-<nome>`) e volta contra ela.
+- **Ordem de merge:** 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9. O 3 e o 5 só dependem do 1 e podem andar em paralelo.
+- **Para o `main`:** a `feat/subscriptions` só vai para o `main` com o 2 e o 4 juntos, para nenhum botão aparecer ativo e dar 402 ao clicar. No deploy, as peladas existentes ganham 30 dias de trial; o 7 (Pix) e o 8 (avisos) precisam ir ao ar antes desse prazo vencer.
+
+Para planejar um PR, rode o prompt dele numa sessão limpa (`/clear` antes). Ao terminar, o `/plan-task` marca o `[x]` e anota as decisões abaixo do item.
+
+### [ ] PR 1 — Modelo e estado (`feat/subscriptions-model`)
+
+- **Entrega:**
+  - Migration V19 da seção 1 (colunas em `users`, `pelada_subscriptions`, `subscription_payments`, `subscription_events`, backfill das peladas existentes).
+  - Entidades e repositórios em `domain/subscription`.
+  - `SubscriptionState.of(subscription, now)` + enum `SubscriptionStatus`.
+  - `SubscriptionPlans` (preços).
+  - Criação de pelada com `TRIAL` ou `PENDING` (inclui o seed de dev).
+- **Fora:** nada trava ainda, e nada aparece na API.
+- **Testes:**
+  - `SubscriptionStateTest` (todas as bordas).
+  - Criação: primeiro trial, segunda pelada `PENDING`, transferência não reinicia.
+  - `MigrationDataTest` (V19).
+  - `FlywayMigrationTest` verde.
+- **Docs:** BACKEND.md (Domain model, tabela de migrations, package layout).
+
+```
+/plan-task docs/plans/2026-11-07-subscriptions-platform-admin-spec.md "PR 1 — Modelo e estado"
+```
+
+### [ ] PR 2 — Trava no backend (`feat/subscriptions-guard`)
+
+- **Entrega:**
+  - `SubscriptionGuard.requireWritable(Pelada)` → 402.
+  - Chamada nos comandos listados em "Trava" (daily, presença, times, resultados) e uma vez no `FinanceTransactions`.
+  - `DailySchedulerService` e `ScheduledNotificationJob` pulam peladas não-escrevíveis.
+  - Handler do 402 no `GlobalExceptionHandler`, se o `AppException` não bastar.
+- **Fora:** o front ainda não sabe do estado (é o PR 4).
+- **Testes:**
+  - Um teste de 402 por comando travado.
+  - Um teste de "liberado" para chat, configurações, convites e exclusão.
+  - Jobs pulando pelada travada.
+  - Uma pelada `EXEMPT` não trava nada.
+- **Docs:** BACKEND.md (permission matrix, Rules for new code, Error handling).
+
+```
+/plan-task docs/plans/2026-11-07-subscriptions-platform-admin-spec.md "PR 2 — Trava no backend"
+```
+
+### [ ] PR 3 — Teto do trial (`feat/subscriptions-member-cap`)
+
+- **Entrega:** 409 ao aceitar convite ou entrar por link com a pelada em `TRIAL`/`PENDING` já com 30 membros, sob a trava da pelada que o fluxo de convite já pega.
+- **Fora:** tetos de uploads e e-mails.
+- **Testes:**
+  - O 31º membro por convite e por link dá 409.
+  - Em `ACTIVE` passa.
+  - Concorrência: dois aceites no 30º lugar (`InvitationConcurrencyTest`).
+- **Docs:** BACKEND.md (Membership invitations).
+
+```
+/plan-task docs/plans/2026-11-07-subscriptions-platform-admin-spec.md "PR 3 — Teto do trial"
+```
+
+### [ ] PR 4 — Estado nos DTOs + front de leitura (`feat/subscriptions-readonly-ui`)
+
+- **Entrega:**
+  - `subscription {status, validUntil, writable}` em `PeladaDetailResponseDTO`, `PeladaResponseDTO` (`/peladas/my`, lido em lote) e `DailyDetailDTO`.
+  - Front: tipos, `utils/subscription.ts` (texto do banner por estado e papel), banner no layout da pelada, `writable` em `usePeladaWorkspace`, e botões desabilitados com a dica (sessões, presença, times, resultados, financeiro, card da Home).
+  - Link "Assinar" aponta para `/pelada/:id/assinatura`, que fica como "Em breve" até o PR 7.
+- **Testes:**
+  - Snapshots de contrato.
+  - Contagem de queries constante no `/peladas/my`.
+  - Vitest do `utils/subscription.ts`.
+  - Testes visuais dos banners (somente leitura, em atraso).
+- **Docs:** BACKEND.md (API reference), FRONTEND.md (types, hooks, Routing).
+
+```
+/plan-task docs/plans/2026-11-07-subscriptions-platform-admin-spec.md "PR 4 — Estado nos DTOs + front de leitura"
+```
+
+### [ ] PR 5 — API do admin da plataforma (`feat/subscriptions-platform-api`)
+
+- **Entrega:**
+  - `isPlatformAdmin` em `UserResponseDTO` e `ProfileDTO` (próprio).
+  - `PlatformAccess.requirePlatformAdmin` (404 para quem não é admin).
+  - Domínio `domain/platform` com todas as rotas `/platform/**` da seção 2 (overview, peladas, detalhe, pagamentos, ações, estorno, lista de pagamentos, usuários), eventos gravados e a trava de linha da pelada.
+- **Fora:** telas (PR 6) e notificação de Pix informado (PR 8).
+- **Testes:**
+  - 404 para não-admin em toda rota.
+  - Pagamento estende a partir de `max(now, valid_until)`.
+  - Estorno sai dos totais.
+  - Filtro por estado efetivo.
+  - `QueryCounter` constante em `/overview` e `/peladas` (2 vs 20).
+  - Snapshots de contrato.
+- **Docs:** BACKEND.md (API reference, permission matrix, package layout).
+
+```
+/plan-task docs/plans/2026-11-07-subscriptions-platform-admin-spec.md "PR 5 — API do admin da plataforma"
+```
+
+### [ ] PR 6 — Painel do admin, front (`feat/subscriptions-platform-ui`)
+
+- **Entrega:**
+  - `api/platform.ts`, tipos e schemas.
+  - Item "Admin" no `UserMenu`.
+  - Rotas `/admin`, `/admin/peladas`, `/admin/peladas/:id`, `/admin/pagamentos`, `/admin/usuarios` como na seção 3 (Sheet de pagamento com react-hook-form + zod, dialogs de ação com nota, estorno, gráfico de receita).
+- **Testes:**
+  - Vitest dos schemas e helpers.
+  - Testes visuais das cinco telas (fixtures novas), 375 px e claro/escuro.
+- **Docs:** FRONTEND.md (Routing, API modules, hooks, folder structure).
+
+```
+/plan-task docs/plans/2026-11-07-subscriptions-platform-admin-spec.md "PR 6 — Painel do admin, front"
+```
+
+### [ ] PR 7 — Pix e área Assinatura do criador (`feat/subscriptions-pix`)
+
+- **Entrega:**
+  - `PixBrCode` (EMV + CRC16, normalização da chave e do nome, falha na inicialização se passar do limite).
+  - Envs `BILLING_PIX_*` no `deploy.yml`, `docker-compose.*.yml` e `core/.env.example`. Os secrets já existem no GitHub.
+  - `GET /peladas/{id}/subscription` (criador) e `POST /peladas/{id}/subscription/pix-claim`.
+  - Front: área "Assinatura" (`creatorOnly` em `PELADA_AREAS`) com planos, QR, copia e cola, "Já fiz o Pix" e pagamentos anteriores.
+- **Fora:** a notificação ao admin do Pix informado (PR 8). Por enquanto, o Pix informado aparece no painel.
+- **Testes:**
+  - `PixBrCodeTest` contra um exemplo do Bacen.
+  - 403 para quem não é criador.
+  - Claim idempotente.
+  - Teste visual da área.
+- **Docs:** BACKEND.md (Configuration, CI/CD, API reference), FRONTEND.md (Routing, Pelada navigation).
+
+```
+/plan-task docs/plans/2026-11-07-subscriptions-platform-admin-spec.md "PR 7 — Pix e área Assinatura do criador"
+```
+
+### [ ] PR 8 — Avisos de assinatura (`feat/subscriptions-notices`)
+
+- **Entrega:**
+  - Migration V20 (CHECK de `type` e `category` das notificações).
+  - Categoria `BILLING` ("Assinatura", e-mail e push ligados).
+  - Tipos `SUBSCRIPTION_ENDING`, `SUBSCRIPTION_PAST_DUE` e `SUBSCRIPTION_PIX_CLAIMED` em `NotificationContent`.
+  - `SubscriptionNoticeJob` (09:00 America/Sao_Paulo, guard `NOT EXISTS`).
+  - Evento do pix-claim.
+  - Front: `Record`s de notificação e a linha nova em `/settings#notificacoes`.
+- **Testes:**
+  - Borda dos 5 dias.
+  - Entrada na carência.
+  - Idempotência.
+  - Uma pelada com falha não para as outras.
+  - Destinatários (criador / admins da plataforma).
+  - Matriz e-mail e push.
+  - `MigrationDataTest` (V20).
+- **Docs:** BACKEND.md (Notifications, migrations), FRONTEND.md (notification types, preferências).
+
+```
+/plan-task docs/plans/2026-11-07-subscriptions-platform-admin-spec.md "PR 8 — Avisos de assinatura"
+```
+
+### [ ] PR 9 — Política de privacidade (`feat/subscriptions-privacy`)
+
+- **Entrega:**
+  - Linha em `components/legal/content.ts` sobre o operador ver nome, e-mail e dados de assinatura no painel, e sobre os pagamentos guardados.
+  - `LEGAL_VERSION` e `LegalTerms.CURRENT_VERSION` sobem juntos.
+- **Testes:** `bun run test` e `./mvnw test` verdes (o cadastro exige a versão nova).
+- **Docs:** FRONTEND.md (`/termos`, `/privacidade`).
+
+```
+/plan-task docs/plans/2026-11-07-subscriptions-platform-admin-spec.md "PR 9 — Política de privacidade"
+```
 
 ## Rollout
 
