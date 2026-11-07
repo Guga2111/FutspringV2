@@ -97,6 +97,11 @@ Ver e-mail no painel é tratamento pelo operador: adicionar uma linha na políti
 - `PeladaDetailResponseDTO`, `PeladaResponseDTO` (`/peladas/my`) e `DailyDetailDTO` ganham `subscription: {status, validUntil, writable}`. Lido em lote no `/peladas/my` (uma query a mais, constante).
 - `GET /peladas/{id}/subscription` (criador; outros 403): `{status, validUntil, plan, founder, pixClaimedAt, claimedPlan, plans: [{plan, amount}] (faixa conforme membros), pix: {copyPaste, recipient} | null, payments: [{paidOn, amount, plan, periodEnd}]}`.
 - O Pix é um BR Code estático (EMV + CRC16, gerado no backend) com valor e txid `FUT{peladaId}`, um por plano. Configuração em env `BILLING_PIX_KEY`, `BILLING_PIX_NAME`, `BILLING_PIX_CITY` (secrets/variables no deploy, `core/.env.example`). Sem a chave, `pix` vem null e a tela mostra "Fale com o suporte".
+  - Os valores ficam só nos secrets e no `core/.env`, nunca em arquivo versionado.
+  - Formato exigido pelo BR Code:
+    - Chave de telefone em E.164 (`+55` + DDD + número). O backend normaliza: aceita a chave só com dígitos e acrescenta o `+55`.
+    - Nome do recebedor com no máximo 25 caracteres e cidade com no máximo 15, sem acento e em maiúsculas. O backend remove os acentos, e a inicialização falha se o nome ou a cidade passar do limite, em vez de truncar sem avisar.
+  - A tela mostra o nome completo do recebedor (`BILLING_PIX_NAME`). O nome abreviado vai só dentro do código Pix (`BILLING_PIX_MERCHANT_NAME`, opcional; sem ele, usa `BILLING_PIX_NAME`).
 - `POST /peladas/{id}/subscription/pix-claim {plan}` (criador): grava `pix_claimed_at`/`claimed_plan`, evento, notifica os admins da plataforma. Idempotente: um segundo clique só atualiza o plano e não notifica de novo.
 
 ### Notificações
