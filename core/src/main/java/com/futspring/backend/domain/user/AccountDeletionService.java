@@ -5,6 +5,7 @@ import com.futspring.backend.domain.file.FileUploadService;
 import com.futspring.backend.domain.finance.FinancePreservation;
 import com.futspring.backend.domain.notification.NotificationPreferenceRepository;
 import com.futspring.backend.domain.notification.NotificationRepository;
+import com.futspring.backend.domain.notification.PushSubscriptionRepository;
 import com.futspring.backend.domain.pelada.PeladaRef;
 import com.futspring.backend.domain.pelada.PeladaRepository;
 import com.futspring.backend.domain.pelada.PeladaService;
@@ -47,6 +48,7 @@ public class AccountDeletionService {
     private final NotificationPreferenceRepository notificationPreferenceRepository;
     private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final UserTourRepository userTourRepository;
+    private final PushSubscriptionRepository pushSubscriptionRepository;
     private final FileUploadService fileUploadService;
     private final Clock clock;
 
@@ -73,6 +75,7 @@ public class AccountDeletionService {
         notificationPreferenceRepository.deleteByUserId(user.getId());
         passwordResetTokenRepository.deleteByUser(user);
         userTourRepository.deleteByUserId(user.getId());
+        pushSubscriptionRepository.deleteAllByUserId(user.getId());
 
         fileUploadService.deleteImageAfterCommit(user.getImage());
         fileUploadService.deleteImageAfterCommit(user.getBackgroundImage());

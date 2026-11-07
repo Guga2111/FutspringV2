@@ -1253,6 +1253,60 @@
           "legendFormat": "limit"
         }
       ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Web Push",
+      "id": 25,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 0,
+        "y": 69
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "stacking": {
+              "mode": "none"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "refId": "A",
+          "expr": "sum by (result) (increase(futspring_webpush_sent_total{application=\"futspring\"}[$__rate_interval]))",
+          "legendFormat": "{{result}}"
+        }
+      ],
+      "description": "Web Push messages handed to the push services per result: ok (201), gone (404/410, the subscription was deleted), failed (anything else, logged)"
     }
   ],
   "templating": {

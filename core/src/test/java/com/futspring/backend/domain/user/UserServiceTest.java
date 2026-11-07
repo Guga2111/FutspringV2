@@ -36,7 +36,7 @@ class UserServiceTest {
 
     @BeforeEach
     void setUp() {
-        userService = new UserService(userRepository, fileUploadService, playerStarsRepository, null, null, null);
+        userService = new UserService(userRepository, fileUploadService, playerStarsRepository, null, null, null, null);
 
         user = User.builder()
                 .id(1L)

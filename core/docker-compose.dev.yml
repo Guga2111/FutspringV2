@@ -13,6 +13,9 @@ services:
       # From core/.env (gitignored), next to this file; empty key = e-mails are only logged (NoopEmailSender)
       RESEND_API_KEY: ${RESEND_API_KEY:-}
       MAIL_FROM: ${MAIL_FROM:-Futspring <no-reply@futspring.luisgosampaio.com>}
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+      VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:contato@futspring.luisgosampaio.com}
       APP_URL: ${APP_URL:-http://localhost:5173}
       API_URL: ${API_URL:-http://localhost:8080}
       # OpenAPI docs + Swagger UI (http://localhost:8080/swagger-ui.html); off in production

@@ -22,6 +22,8 @@ import com.futspring.backend.domain.finance.FinanceTypes.PaymentMethod;
 import com.futspring.backend.domain.notification.Notification;
 import com.futspring.backend.domain.notification.NotificationRepository;
 import com.futspring.backend.domain.notification.NotificationType;
+import com.futspring.backend.domain.notification.PushSubscription;
+import com.futspring.backend.domain.notification.PushSubscriptionRepository;
 import com.futspring.backend.domain.pelada.InvitationStatus;
 import com.futspring.backend.domain.pelada.Pelada;
 import com.futspring.backend.domain.pelada.PeladaInvitation;
@@ -94,6 +96,7 @@ class AccountSettingsTest extends BaseIntegrationTest {
     @Autowired NotificationRepository notifications;
     @Autowired FileUploadService fileUploadService;
     @Autowired QueryCounter queryCounter;
+    @Autowired PushSubscriptionRepository pushSubscriptions;
     @Autowired EntityManager em;
     @Value("${app.uploads.dir}") String uploadsDir;
 
@@ -144,6 +147,35 @@ class AccountSettingsTest extends BaseIntegrationTest {
         User saved = users.findById(player.getId()).orElseThrow();
         assertThat(passwordEncoder.matches("nova-senha-123", saved.getPassword())).isTrue();
         assertThat(saved.getTokenVersion()).isEqualTo(1);
+    }
+
+    // The sessions are revoked, so the old devices stop receiving Web Push too (this one subscribes again on open)
+    @Test
+    void changePassword_dropsEveryPushSubscriptionOfTheCaller() throws Exception {
+        subscribe(player, "player-phone");
+        subscribe(creator, "creator-phone");
+
+        mockMvc.perform(as(post("/api/v1/users/me/password"), player)
+                        .content(json(Map.of("currentPassword", PASSWORD, "newPassword", "nova-senha-123"))))
+                .andExpect(status().isOk());
+
+        assertThat(pushSubscriptions.findByUserIdIn(List.of(player.getId()))).isEmpty();
+        assertThat(pushSubscriptions.findByUserIdIn(List.of(creator.getId()))).hasSize(1);
+    }
+
+    @Test
+    void delete_dropsEveryPushSubscription() throws Exception {
+        subscribe(player, "deleted-phone");
+
+        mockMvc.perform(as(post("/api/v1/users/me/delete"), player).content(json(Map.of("password", PASSWORD))))
+                .andExpect(status().isNoContent());
+
+        assertThat(pushSubscriptions.findByUserIdIn(List.of(player.getId()))).isEmpty();
+    }
+
+    private void subscribe(User user, String device) {
+        pushSubscriptions.save(new PushSubscription(user, "https://fcm.googleapis.com/fcm/send/" + device,
+                "BAAA", "AAAA", java.time.Instant.now()));
     }
 
     @Test

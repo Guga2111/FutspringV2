@@ -45,10 +45,11 @@ export const notificationPreferenceText: Record<NotificationCategory, { label: s
 
 export const NOTIFICATION_CATEGORIES = Object.keys(notificationPreferenceText) as NotificationCategory[]
 
-// mirrors NotificationPreferenceDTO: GET always returns the four categories with the defaults applied
+// mirrors NotificationPreferenceDTO: GET always returns the four categories with both channels and the defaults applied
 export interface NotificationPreference {
   category: NotificationCategory
   emailEnabled: boolean
+  pushEnabled: boolean
 }
 
 // same mapping as NotificationType.category() in the backend

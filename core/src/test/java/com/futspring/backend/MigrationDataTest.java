@@ -218,6 +218,25 @@ class MigrationDataTest {
         }
     }
 
+    @Test
+    void v18_keepsTheMeaningOfExistingPreferences_andAddsPushSubscriptions() throws SQLException {
+        flyway("17").migrate();
+        execute("INSERT INTO users(id,email,username,password) VALUES(1,'pref@migration.test','Pref','hash')");
+        execute("INSERT INTO notification_preferences(user_id,category,email_enabled) VALUES(1,'ATTENDANCE',false),(1,'AWARDS',true)");
+        flyway(null).migrate();
+        try (Connection c = connect(); Statement st = c.createStatement();
+             ResultSet rs = st.executeQuery("SELECT category, email_enabled, push_enabled FROM notification_preferences ORDER BY category")) {
+            // the e-mail choice is the same and push stays at the category's default (null)
+            rs.next(); assertThat(rs.getString(1)).isEqualTo("ATTENDANCE"); assertThat(rs.getBoolean(2)).isFalse();
+            rs.getBoolean(3); assertThat(rs.wasNull()).isTrue();
+            rs.next(); assertThat(rs.getString(1)).isEqualTo("AWARDS"); assertThat(rs.getBoolean(2)).isTrue();
+            rs.getBoolean(3); assertThat(rs.wasNull()).isTrue();
+        }
+        execute("INSERT INTO push_subscriptions(user_id,endpoint,p256dh,auth,created_at) VALUES(1,'https://fcm.googleapis.com/fcm/send/a','k','a',now())");
+        assertThatThrownBy(() -> execute("INSERT INTO push_subscriptions(user_id,endpoint,p256dh,auth,created_at) VALUES(1,'https://fcm.googleapis.com/fcm/send/a','k2','a2',now())"))
+                .isInstanceOf(SQLException.class).hasMessageContaining("uq_push_subscriptions_endpoint");
+    }
+
     private static Flyway flyway(String target) {
         var config = Flyway.configure()
                 .dataSource(POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword())

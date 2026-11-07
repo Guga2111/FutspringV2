@@ -87,6 +87,9 @@ jobs:
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
           PG_DUMP_URL: ${{ secrets.PG_DUMP_URL }}
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          VAPID_PUBLIC_KEY: ${{ secrets.VAPID_PUBLIC_KEY }}
+          VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
+          VAPID_SUBJECT: ${{ vars.VAPID_SUBJECT || 'mailto:contato@futspring.luisgosampaio.com' }}
           MAIL_FROM: ${{ vars.MAIL_FROM || 'Futspring <no-reply@futspring.luisgosampaio.com>' }}
           JWT_EXPIRATION_MS: ${{ vars.JWT_EXPIRATION_MS || '604800000' }}
           ALLOWED_ORIGINS: ${{ vars.ALLOWED_ORIGINS || vars.APP_URL }}
@@ -111,6 +114,10 @@ jobs:
             echo "::warning::RESEND_API_KEY not set: the API will not send e-mails (password reset)."
           fi
 
+          if [[ -z "${VAPID_PRIVATE_KEY}" || -z "${VAPID_PUBLIC_KEY}" ]]; then
+            echo "::warning::VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY not set: Web Push is off."
+          fi
+
           # DDL_AUTO is intentionally not written: the schema is owned by Flyway and Hibernate runs with validate
           {
             printf 'DB_URL=%s\n' "$DB_URL"
@@ -126,6 +133,9 @@ jobs:
             printf 'API_URL=%s\n' "$VITE_API_URL"
             printf 'RESEND_API_KEY=%s\n' "$RESEND_API_KEY"
             printf 'MAIL_FROM=%s\n' "$MAIL_FROM"
+            printf 'VAPID_PUBLIC_KEY=%s\n' "$VAPID_PUBLIC_KEY"
+            printf 'VAPID_PRIVATE_KEY=%s\n' "$VAPID_PRIVATE_KEY"
+            printf 'VAPID_SUBJECT=%s\n' "$VAPID_SUBJECT"
           } > .env
 
       - name: Run deploy.sh

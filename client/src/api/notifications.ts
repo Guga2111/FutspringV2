@@ -1,5 +1,10 @@
 import apiClient from "./client"
-import type { NotificationPreference, NotificationResponse, UnreadCountResponse } from "@/types/notification"
+import type {
+  NotificationCategory,
+  NotificationPreference,
+  NotificationResponse,
+  UnreadCountResponse,
+} from "@/types/notification"
 
 export const NOTIFICATIONS_PAGE_SIZE = 20
 
@@ -39,7 +44,16 @@ export async function getNotificationPreferences(): Promise<NotificationPreferen
 }
 
 // Partial: only the categories sent change; returns all four
-export async function updateNotificationPreferences(changes: NotificationPreference[]): Promise<NotificationPreference[]> {
+// A PUT item: only the channels sent change (at least one per item); mirrors NotificationPreferenceDTO
+export interface NotificationPreferenceChange {
+  category: NotificationCategory
+  emailEnabled?: boolean
+  pushEnabled?: boolean
+}
+
+export async function updateNotificationPreferences(
+  changes: NotificationPreferenceChange[],
+): Promise<NotificationPreference[]> {
   const response = await apiClient.put<NotificationPreference[]>("/api/v1/notifications/preferences", changes)
   return response.data
 }

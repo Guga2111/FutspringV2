@@ -1,5 +1,6 @@
 package com.futspring.backend.domain.auth;
 
+import com.futspring.backend.domain.notification.PushSubscriptionRepository;
 import com.futspring.backend.domain.user.User;
 import com.futspring.backend.domain.user.UserRepository;
 import com.futspring.backend.shared.exception.AppException;
@@ -33,6 +34,9 @@ class PasswordResetServiceTest {
     @Mock
     ApplicationEventPublisher eventPublisher;
 
+    @Mock
+    PushSubscriptionRepository pushSubscriptionRepository;
+
     PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     PasswordResetService service;
@@ -40,7 +44,8 @@ class PasswordResetServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new PasswordResetService(userRepository, tokenRepository, passwordEncoder, eventPublisher);
+        service = new PasswordResetService(userRepository, tokenRepository, passwordEncoder, eventPublisher,
+                pushSubscriptionRepository);
         user = User.builder().id(1L).username("alice").email("alice@example.com")
                 .password(passwordEncoder.encode("oldpassword")).build();
     }
@@ -92,7 +97,7 @@ class PasswordResetServiceTest {
     // --- resetPassword ---
 
     @Test
-    void resetPassword_validToken_changesPasswordAndInvalidatesTokens() {
+    void resetPassword_validToken_changesPasswordInvalidatesTokensAndDropsPushSubscriptions() {
         PasswordResetToken token = PasswordResetToken.builder().id(5L).user(user)
                 .tokenHash(ResetTokens.hash("raw")).expiresAt(LocalDateTime.now().plusMinutes(10)).build();
         when(tokenRepository.findUsableForUpdate(eq(ResetTokens.hash("raw")), any())).thenReturn(Optional.of(token));
@@ -102,6 +107,7 @@ class PasswordResetServiceTest {
         assertThat(passwordEncoder.matches("newpassword", user.getPassword())).isTrue();
         assertThat(user.getTokenVersion()).isEqualTo(1);
         verify(tokenRepository).invalidateActiveTokens(eq(user), any());
+        verify(pushSubscriptionRepository).deleteAllByUserId(1L);
     }
 
     @Test
@@ -115,5 +121,6 @@ class PasswordResetServiceTest {
         assertThat(user.getPassword()).isEqualTo(oldHash);
         assertThat(user.getTokenVersion()).isZero();
         verify(tokenRepository, never()).invalidateActiveTokens(any(), any());
+        verifyNoInteractions(pushSubscriptionRepository);
     }
 }

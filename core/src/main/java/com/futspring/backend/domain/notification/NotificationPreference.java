@@ -4,7 +4,8 @@ import com.futspring.backend.domain.user.User;
 import jakarta.persistence.*;
 import lombok.*;
 
-// A user's e-mail choice for one category. A row exists only when it differs from NotificationCategory.defaultEmail
+// A user's e-mail and push choices for one category. A row exists only when one of them differs from the
+// category's default: emailEnabled from defaultEmail, or pushEnabled non-null (null = defaultPush)
 @Entity
 @Table(name = "notification_preferences")
 @Getter
@@ -25,10 +26,19 @@ public class NotificationPreference {
     @Column(name = "email_enabled", nullable = false)
     private boolean emailEnabled;
 
-    public NotificationPreference(User user, NotificationCategory category, boolean emailEnabled) {
+    // Null = NotificationCategory.defaultPush; only a value different from the default is stored
+    @Column(name = "push_enabled")
+    private Boolean pushEnabled;
+
+    public NotificationPreference(User user, NotificationCategory category, boolean emailEnabled, Boolean pushEnabled) {
         this.id = new NotificationPreferenceId(user.getId(), category);
         this.user = user;
         this.emailEnabled = emailEnabled;
+        this.pushEnabled = pushEnabled;
+    }
+
+    public boolean pushEnabledOrDefault() {
+        return pushEnabled != null ? pushEnabled : getCategory().defaultPush();
     }
 
     public NotificationCategory getCategory() {

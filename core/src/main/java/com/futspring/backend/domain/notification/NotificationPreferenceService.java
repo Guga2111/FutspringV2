@@ -16,10 +16,13 @@ import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.function.Predicate;
 
 /**
- * E-mail preferences per category. Only the choices that differ from NotificationCategory.defaultEmail are stored,
- * so changing a default later reaches everyone who never touched it. In-app notifications are always on.
+ * E-mail and push preferences per category. Only the choices that differ from the category's defaults
+ * (NotificationCategory.defaultEmail / defaultPush) are stored, so changing a default later reaches everyone who never
+ * touched it. In-app notifications are always on. The e-mail's unsubscribe token only changes the e-mail.
  */
 @Service
 @RequiredArgsConstructor
@@ -43,7 +46,10 @@ public class NotificationPreferenceService {
         if (changes.stream().map(NotificationPreferenceDTO::category).distinct().count() != changes.size()) {
             throw new AppException(HttpStatus.BAD_REQUEST, "Categorias repetidas");
         }
-        changes.forEach(change -> set(caller, change.category(), change.emailEnabled()));
+        if (changes.stream().anyMatch(c -> c.emailEnabled() == null && c.pushEnabled() == null)) {
+            throw new AppException(HttpStatus.BAD_REQUEST, "Informe e-mail ou push");
+        }
+        changes.forEach(change -> set(caller, change.category(), change.emailEnabled(), change.pushEnabled()));
         return toDTOs(preferenceRepository.findByIdUserId(caller.getId()));
     }
 
@@ -51,9 +57,19 @@ public class NotificationPreferenceService {
     @Transactional(readOnly = true)
     public Map<Long, Map<NotificationCategory, Boolean>> emailEnabled(Collection<Long> userIds) {
         Map<Long, Map<NotificationCategory, Boolean>> result = new HashMap<>();
-        userIds.forEach(id -> result.put(id, defaults()));
+        userIds.forEach(id -> result.put(id, defaults(NotificationCategory::defaultEmail)));
         preferenceRepository.findByIdUserIdIn(userIds).forEach(p ->
                 result.get(p.getId().getUserId()).put(p.getCategory(), p.isEmailEnabled()));
+        return result;
+    }
+
+    // userId → category → push on, defaults applied, for every user given (one query)
+    @Transactional(readOnly = true)
+    public Map<Long, Map<NotificationCategory, Boolean>> pushEnabled(Collection<Long> userIds) {
+        Map<Long, Map<NotificationCategory, Boolean>> result = new HashMap<>();
+        userIds.forEach(id -> result.put(id, defaults(NotificationCategory::defaultPush)));
+        preferenceRepository.findByIdUserIdIn(userIds).forEach(p ->
+                result.get(p.getId().getUserId()).put(p.getCategory(), p.pushEnabledOrDefault()));
         return result;
     }
 
@@ -71,36 +87,54 @@ public class NotificationPreferenceService {
     private NotificationPreferenceDTO setByToken(String token, boolean emailEnabled) {
         UnsubscribeTokens.Target target = unsubscribeTokens.verify(token).orElseThrow(NotificationPreferenceService::invalidLink);
         User user = userRepository.findById(target.userId()).orElseThrow(NotificationPreferenceService::invalidLink);
-        set(user, target.category(), emailEnabled);
-        return new NotificationPreferenceDTO(target.category(), emailEnabled);
+        NotificationPreference row = set(user, target.category(), emailEnabled, null);
+        return new NotificationPreferenceDTO(target.category(), emailEnabled,
+                row != null ? row.pushEnabledOrDefault() : target.category().defaultPush());
     }
 
     private static AppException invalidLink() {
         return new AppException(HttpStatus.BAD_REQUEST, "Link inválido");
     }
 
-    void set(User user, NotificationCategory category, boolean emailEnabled) {
+    /**
+     * Applies the channels given (null = unchanged). A push equal to the default is stored as null, and the row is
+     * deleted when the e-mail is back to its default and the push is null. Returns the row, or null when there is none.
+     */
+    NotificationPreference set(User user, NotificationCategory category, Boolean emailEnabled, Boolean pushEnabled) {
         NotificationPreferenceId id = new NotificationPreferenceId(user.getId(), category);
-        if (emailEnabled == category.defaultEmail()) {
-            preferenceRepository.findById(id).ifPresent(preferenceRepository::delete);
-            return;
+        Optional<NotificationPreference> current = preferenceRepository.findById(id);
+        boolean email = emailEnabled != null ? emailEnabled
+                : current.map(NotificationPreference::isEmailEnabled).orElse(category.defaultEmail());
+        Boolean push = pushEnabled != null ? (pushEnabled == category.defaultPush() ? null : pushEnabled)
+                : current.map(NotificationPreference::getPushEnabled).orElse(null);
+        if (email == category.defaultEmail() && push == null) {
+            current.ifPresent(preferenceRepository::delete);
+            return null;
         }
-        preferenceRepository.findById(id).ifPresentOrElse(
-                p -> p.setEmailEnabled(emailEnabled),
-                () -> preferenceRepository.save(new NotificationPreference(user, category, emailEnabled)));
+        if (current.isPresent()) {
+            current.get().setEmailEnabled(email);
+            current.get().setPushEnabled(push);
+            return current.get();
+        }
+        return preferenceRepository.save(new NotificationPreference(user, category, email, push));
     }
 
-    private static Map<NotificationCategory, Boolean> defaults() {
+    private static Map<NotificationCategory, Boolean> defaults(Predicate<NotificationCategory> channelDefault) {
         Map<NotificationCategory, Boolean> map = new EnumMap<>(NotificationCategory.class);
-        Arrays.stream(NotificationCategory.values()).forEach(c -> map.put(c, c.defaultEmail()));
+        Arrays.stream(NotificationCategory.values()).forEach(c -> map.put(c, channelDefault.test(c)));
         return map;
     }
 
     private static List<NotificationPreferenceDTO> toDTOs(List<NotificationPreference> rows) {
-        Map<NotificationCategory, Boolean> values = defaults();
-        rows.forEach(p -> values.put(p.getCategory(), p.isEmailEnabled()));
-        return values.entrySet().stream()
-                .map(e -> new NotificationPreferenceDTO(e.getKey(), e.getValue()))
+        Map<NotificationCategory, NotificationPreference> byCategory = new EnumMap<>(NotificationCategory.class);
+        rows.forEach(p -> byCategory.put(p.getCategory(), p));
+        return Arrays.stream(NotificationCategory.values())
+                .map(c -> {
+                    NotificationPreference p = byCategory.get(c);
+                    return p == null
+                            ? new NotificationPreferenceDTO(c, c.defaultEmail(), c.defaultPush())
+                            : new NotificationPreferenceDTO(c, p.isEmailEnabled(), p.pushEnabledOrDefault());
+                })
                 .toList();
     }
 }
