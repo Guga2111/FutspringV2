@@ -210,7 +210,16 @@ Novos secrets no GitHub (`VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`) escritos no `.
 
 Branch de integração `feat/pwa-push` (a partir de `dev`), três PRs para ela e depois um PR dela para `dev`:
 
-1. **`feat/pwa-shell`** — manifest, ícones, `src/sw.ts` (precache + navegação), `PwaUpdater`, `useOnline`, `utils/pwaPlatform`, `usePwaInstall`, `/instalar`, `InstallAppCard`, QR do `/auth`, nota de nginx. Já entrega valor sozinho: o app instala.
+1. [x] **`feat/pwa-shell`** — manifest, ícones, `src/sw.ts` (precache + navegação), `PwaUpdater`, `useOnline`, `utils/pwaPlatform`, `usePwaInstall`, `/instalar`, `InstallAppCard`, QR do `/auth`, nota de nginx. Já entrega valor sozinho: o app instala.
+
+   Decisões da implementação:
+   - **Ícones:** não há logo em alta resolução (o maior é `public/gerrard.webp`, 192 px); os PNGs foram gerados ampliando ele com `sips` (borda de 2 px cortada, fundo `#9E9C96` do próprio desenho). O 512 fica menos nítido; regerar quando houver um logo vetorial (comando no FRONTEND.md, seção PWA).
+   - **Nota do nginx:** a spec citava um "README de deploy" que não existe; foi para a seção CI/CD do `core/docs/BACKEND.md`, com o bloco de configuração.
+   - **Precache:** além de `landing/**`, ficam fora os ícones de 512 (lidos só na instalação) e os subsets do Inter que não são Latin (só baixados por `unicode-range`). 133 entradas, ~2,4 MB sem compressão.
+   - **`android-prompt` só no Android:** o Chrome do desktop também dispara `beforeinstallprompt`; sem a restrição o card da Home apareceria no computador. O desktop fica com o QR Code.
+   - **`installPrompt` em `lib/`:** o evento capturado em `main.tsx` fica num store de módulo (`lib/installPrompt.ts`) lido por `usePwaInstall` com `useSyncExternalStore`.
+   - **`src/sw.ts`** tem `tsconfig.sw.json` (lib WebWorker) e sai do `tsconfig.app.json`; o ESLint usa os globals de service worker nele. O SW trata a mensagem `SKIP_WAITING` (exigida pelo `updateServiceWorker(true)` no modo prompt).
+   - **Testes visuais:** `serviceWorkers: "block"` no Playwright (o SW responderia navegações pelo precache, fora do `page.route`); `/instalar` em quatro contextos por `userAgent` e o card da Home com UA de iPhone.
 2. **`feat/web-push-backend`** — spike da biblioteca, V18, `PushSubscription`, `PushController`, `PushEndpointPolicy`, `WebPushDispatcher`/`WebPushSender`, preferências com `pushEnabled`, renomeação para `NotificationContent`, limpeza nas mudanças de senha e na exclusão, envs, métrica e testes.
 3. **`feat/web-push-client`** — `api/push`, `usePushSubscription`, handlers `push`/`notificationclick` no SW, `?notificacao=`, badge, logout, `EnablePushCard`, configurações com a coluna Push e testes visuais.
 
