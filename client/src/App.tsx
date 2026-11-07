@@ -25,6 +25,7 @@ const AccountSettingsPage = lazy(() => import("@/pages/AccountSettingsPage"))
 const NotificationUnsubscribePage = lazy(() => import("@/pages/NotificationUnsubscribePage"))
 const InvitationPage = lazy(() => import("@/pages/InvitationPage"))
 const JoinPeladaPage = lazy(() => import("@/pages/JoinPeladaPage"))
+const InstallPage = lazy(() => import("@/pages/InstallPage"))
 const TermsPage = lazy(() => import("@/pages/TermsPage"))
 const PrivacyPage = lazy(() => import("@/pages/PrivacyPage"))
 const NotFoundPage = lazy(() => import("@/pages/NotFoundPage"))
@@ -45,6 +46,7 @@ function App() {
           <Route path="/termos" element={<ErrorBoundary><TermsPage /></ErrorBoundary>} />
           <Route path="/privacidade" element={<ErrorBoundary><PrivacyPage /></ErrorBoundary>} />
           <Route path="/join/:token" element={<ErrorBoundary><JoinPeladaPage /></ErrorBoundary>} />
+          <Route path="/instalar" element={<ErrorBoundary><InstallPage /></ErrorBoundary>} />
           {/* Private pages share the sidebar shell */}
           <Route element={<ErrorBoundary><PrivateRoute><AppLayout /></PrivateRoute></ErrorBoundary>}>
             <Route path="/invitations/:id" element={<ErrorBoundary><InvitationPage /></ErrorBoundary>} />

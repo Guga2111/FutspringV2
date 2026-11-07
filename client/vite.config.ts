@@ -1,5 +1,6 @@
 import { defineConfig, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
+import { VitePWA } from 'vite-plugin-pwa'
 import path from 'path'
 
 // Preloads the Latin Inter file (the text font of the first paint), so it starts downloading
@@ -18,7 +19,49 @@ function preloadInter(): Plugin {
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), preloadInter()],
+  plugins: [
+    react(),
+    preloadInter(),
+    // Installable app: our own service worker (src/sw.ts) with the build in precache; registered by
+    // PwaUpdater, which asks before activating a new version (no reload in the middle of a form)
+    VitePWA({
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.ts',
+      registerType: 'prompt',
+      injectRegister: false,
+      manifest: {
+        id: '/',
+        scope: '/',
+        // logged out, PrivateRoute sends it to /auth
+        start_url: '/home',
+        name: 'Futspring',
+        short_name: 'Futspring',
+        description: 'Sua pelada organizada: presença, times, resultados, ranking e financeiro.',
+        display: 'standalone',
+        lang: 'pt-BR',
+        // the light page background (--p-offwhite-50); the theme-color meta follows the theme live
+        background_color: '#F7F7F9',
+        theme_color: '#F7F7F9',
+        icons: [
+          { src: '/pwa-192.png', sizes: '192x192', type: 'image/png' },
+          { src: '/pwa-512.png', sizes: '512x512', type: 'image/png' },
+          { src: '/pwa-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+        ],
+      },
+      injectManifest: {
+        globPatterns: ['**/*.{js,css,html,woff2,webp,png,svg}'],
+        // the landing photos are large and only used there; the 512 icons are only read at install time;
+        // the Inter subsets other than Latin are only fetched (unicode-range) for characters pt-BR doesn't use
+        globIgnores: [
+          'landing/**',
+          'pwa-512.png',
+          'pwa-maskable-512.png',
+          'assets/inter-{cyrillic,cyrillic-ext,greek,greek-ext,vietnamese,latin-ext}-*.woff2',
+        ],
+      },
+    }),
+  ],
   define: {
     global: 'globalThis',
   },

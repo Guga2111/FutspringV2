@@ -40,6 +40,14 @@ CI (`.github/workflows/ci-backend.yml`) runs `./mvnw -B verify` (every test, inc
 - `.github/workflows/deploy.yml` runs on every push to `main` (and manually): it calls both CI workflows, writes `.env` from the GitHub secrets, runs `scripts/deploy.sh`, then smoke-tests `APP_URL` (200) and `<API_URL>/readyz` (200 through nginx, so a wrong `API_URL` prefix fails too).
 - `scripts/deploy.sh` (tracked, no secrets) builds the frontend with bun and an amd64 Docker image, rsyncs `client/dist` to `/var/www/futspring`, copies the image, `core/docker-compose.prod.yml` and `.env` to `~/projects/futspring` on the VPS, backs up the database with `pg_dump` (when `PG_DUMP_URL` is set, last 10 kept in `backups/`), creates the shared `observability` network (idempotent), `chown`s `/opt/futspring-uploads` to uid 10001 (the image's user), starts the stack with `docker compose` (API on `127.0.0.1:${API_PORT:-8081}`, `mem_limit: 1g`, on its own network and `observability`) and waits up to 2 min for the container's `healthy` state (the image's `HEALTHCHECK` is readiness on the management port, so Flyway migrated and `validate` passed); otherwise it prints the logs and fails. It refuses a `.env` containing `DDL_AUTO`.
 - `.github/workflows/deploy-observability.yml` deploys the shared Prometheus + Grafana stack (`ops/observability/`, see its README) on pushes to `main` that touch it, independently from the API.
+- **nginx (manual, on the VPS; `deploy.sh` doesn't touch it):** the web app is a PWA whose service worker updates only when the browser sees a new `sw.js`, so `sw.js`, `manifest.webmanifest` and `index.html` (the SPA fallback included) are served with `Cache-Control: no-cache`; the hashed files in `/assets/` keep a long cache. Required before the PWA reaches `main`, or a phone can stay on an old version for days:
+  ```nginx
+  location = /sw.js { add_header Cache-Control "no-cache"; try_files $uri =404; }
+  location = /manifest.webmanifest { add_header Cache-Control "no-cache"; try_files $uri =404; }
+  location = /index.html { add_header Cache-Control "no-cache"; }
+  location /assets/ { add_header Cache-Control "public, max-age=31536000, immutable"; try_files $uri =404; }
+  location / { try_files $uri $uri/ /index.html; }
+  ```
 - Locally: put the production values in `.env` at the repo root (gitignored, keys in `core/.env.example`) and run `VPS_IP=… VITE_API_URL=… ./scripts/deploy.sh`.
 
 | GitHub | Name | Notes |
