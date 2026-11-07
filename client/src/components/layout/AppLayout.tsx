@@ -1,4 +1,4 @@
-import { Suspense, useCallback, useMemo, useState } from "react"
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react"
 import { Outlet } from "react-router-dom"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { WifiDisconnected01Icon } from "@hugeicons/core-free-icons"
@@ -10,7 +10,9 @@ import { NotificationsContext } from "@/context/notifications-context-value"
 import { useMyInvitations } from "@/hooks/useMyInvitations"
 import { useMyPeladas } from "@/hooks/useMyPeladas"
 import { useNotifications } from "@/hooks/useNotifications"
+import { useAuth } from "@/hooks/useAuth"
 import { useOnline } from "@/hooks/useOnline"
+import { syncPushSubscription } from "@/hooks/usePushSubscription"
 import CreatePeladaModal from "@/components/CreatePeladaModal"
 import { AppSidebar } from "@/components/layout/AppSidebar"
 import { MobileTopBar } from "@/components/layout/MobileTopBar"
@@ -63,6 +65,13 @@ function AppShell() {
   const notifications = useNotifications(clearBumps)
   const invitations = useMyInvitations()
   const online = useOnline()
+  const { user } = useAuth()
+  const userId = user?.id
+
+  // the app opened for this user: this device's push subscription goes to the server again (best effort)
+  useEffect(() => {
+    if (userId !== undefined) syncPushSubscription().catch(() => undefined)
+  }, [userId])
 
   const contextValue = useMemo<MyPeladasContextValue>(
     () => ({ peladas, loading, error, reload, updateNextDaily, openCreatePelada: () => setCreateOpen(true) }),

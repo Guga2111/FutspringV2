@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { useLocation, useNavigate } from "react-router-dom"
 import { toast } from "sonner"
 import {
   NOTIFICATIONS_PAGE_SIZE,
@@ -12,6 +12,7 @@ import type { NotificationFilter, NotificationsContextValue } from "@/context/no
 import { useRealtime } from "@/hooks/useRealtime"
 import type { NotificationPush, NotificationResponse } from "@/types/notification"
 import { getErrorMessage } from "@/lib/errors"
+import { setAppBadge } from "@/lib/push"
 import {
   mergeNotifications,
   notificationPlainText,
@@ -37,6 +38,8 @@ const initialList: ListState = { filter: "all", items: [], page: 0, hasMore: fal
 // Called once by AppLayout, inside RealtimeProvider, and shared through NotificationsContext.
 // `onBumpsRead` mirrors the server, where reading a "perdeu a vaga" notification also dismisses the bump alert
 // (null = every session, after "Marcar todas como lidas").
+// A system notification (Web Push) opens its link with ?notificacao={id}: that one is marked read, as a click in the
+// bell would, and the parameter leaves the URL. The installed app's icon badge follows the counter.
 export function useNotifications(onBumpsRead: (dailyId: number | null) => void): NotificationsContextValue {
   const [unreadCount, setUnreadCount] = useState<number | null>(null)
   const [list, setList] = useState<ListState>(initialList)
@@ -44,6 +47,7 @@ export function useNotifications(onBumpsRead: (dailyId: number | null) => void):
   const requestRef = useRef(0)
   const { subscribe, connectionId } = useRealtime()
   const navigate = useNavigate()
+  const location = useLocation()
 
   const fetchCount = useCallback(() => {
     getUnreadNotificationCount()
@@ -153,6 +157,30 @@ export function useNotifications(onBumpsRead: (dailyId: number | null) => void):
     },
     [setReadAt, fetchCount],
   )
+
+  useEffect(() => {
+    if (unreadCount !== null) setAppBadge(unreadCount)
+  }, [unreadCount])
+
+  // the id arrives in the URL, not the notification: mark it on the server, then recount
+  useEffect(() => {
+    const params = new URLSearchParams(location.search)
+    const raw = params.get("notificacao")
+    if (raw === null) return
+    params.delete("notificacao")
+    const search = params.toString()
+    navigate({ pathname: location.pathname, search: search ? `?${search}` : "", hash: location.hash }, { replace: true })
+    const id = Number(raw)
+    if (!Number.isInteger(id) || id <= 0) return
+    markNotificationRead(id)
+      .then(() => {
+        setReadAt((n) => n.id === id && n.readAt === null, new Date().toISOString())
+        fetchCount()
+      })
+      .catch(() => {
+        // it stays unread in the bell
+      })
+  }, [location.search, location.pathname, location.hash, navigate, setReadAt, fetchCount])
 
   // Read through a ref so the subscription isn't remade whenever markRead changes
   const onPushRef = useRef<(push: NotificationPush) => void>(() => {})

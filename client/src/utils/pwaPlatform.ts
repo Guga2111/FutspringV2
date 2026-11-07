@@ -48,8 +48,9 @@ export function installPlatform(context: InstallContext, userAgent: string): Ins
   }
 }
 
-// The Home card's ✕ stores the day it was dismissed; the card comes back 30 days later
+// The Home cards' ✕ stores the day it was dismissed; the card comes back 30 days later
 export const INSTALL_CARD_DISMISSED_KEY = "install_card_dismissed"
+export const PUSH_CARD_DISMISSED_KEY = "push_card_dismissed"
 const INSTALL_CARD_PAUSE_MS = 30 * 24 * 60 * 60 * 1000
 
 export function installCardVisible(dismissedAt: string | null, now: Date): boolean {

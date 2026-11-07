@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test"
-import { mockApi, login } from "./mockApi"
+import { mockApi, login, type PushState } from "./mockApi"
 import { CONFIRMED_ID, FINISHED_ID, LIVE_ID, NOW, PELADA_ID, SCHEDULED_ID, pendingDeletionBlockers, financeDetail, financeMemberDetail, financeMemberOverview, financeOverview } from "./fixtures"
 
 const PELADA = `/pelada/${PELADA_ID}`
@@ -200,6 +200,55 @@ test("account settings: delete account dialog", async ({ page }) => {
   await open(page, "/settings")
   await page.locator("#excluir-conta").getByRole("button", { name: "Excluir conta" }).click()
   await expect(page.getByRole("alertdialog")).toHaveScreenshot("dialog-delete-account.png", DIALOG_SHOT)
+})
+
+// The "Notificações" card per Web Push state of this device. The Push switches show the saved value but only
+// change on a device that is active
+const PUSH_STATES: Record<string, PushState> = {
+  inactive: {},
+  active: { permission: "granted", subscribed: true },
+  denied: { permission: "denied" },
+}
+
+async function setPushState(page: Page, state: PushState) {
+  await page.addInitScript((s) => {
+    (window as { __pushState?: PushState }).__pushState = s
+  }, state)
+  // an active device sends its subscription again when the app opens
+  await page.route(/\/api\/v1\/push\/subscriptions$/, (route) => route.fulfill({ status: 204 }))
+}
+
+for (const [name, state] of Object.entries(PUSH_STATES)) {
+  test(`account settings: push ${name}`, async ({ page }) => {
+    const unmatched = await open(page, "/settings#notificacoes", true, "h1, h2", (p) => setPushState(p, state))
+    const card = page.locator("#notificacoes")
+    const pushSwitch = card.getByRole("switch", { name: "Push de Presença e vaga" })
+    await expect(pushSwitch).toBeVisible()
+    if (name === "active") await expect(pushSwitch).toBeEnabled()
+    else await expect(pushSwitch).toBeDisabled()
+    await expect(card.getByRole("switch", { name: "E-mail de Presença e vaga" })).toBeEnabled()
+    await expectNoHorizontalScroll(page)
+    await expect(card).toHaveScreenshot(`account-settings-push-${name}.png`)
+    expect(unmatched, "requests without a fixture").toEqual([])
+  })
+}
+
+// An iPhone outside the home screen app has no PushManager: it is pointed at the install steps
+test.describe("account settings on an iPhone's browser", () => {
+  test.use({ userAgent: USER_AGENTS.ios })
+
+  test("account settings: push needsInstall", async ({ page }) => {
+    const unmatched = await open(page, "/settings#notificacoes", true, "h1, h2", (p) =>
+      p.addInitScript(() => {
+        delete (window as { PushManager?: unknown }).PushManager
+      }),
+    )
+    const card = page.locator("#notificacoes")
+    await expect(card.getByRole("link", { name: "Como instalar" })).toHaveAttribute("href", "/instalar")
+    await expect(card.getByRole("switch", { name: "Push de Presença e vaga" })).toBeDisabled()
+    await expect(card).toHaveScreenshot("account-settings-push-needsInstall.png")
+    expect(unmatched, "requests without a fixture").toEqual([])
+  })
 })
 
 test("old notification settings link opens the account settings", async ({ page }) => {
