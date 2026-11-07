@@ -20,6 +20,7 @@
     <properties>
         <java.version>25</java.version>
         <jjwt.version>0.13.0</jjwt.version>
+        <zerodep-web-push.version>2.1.5</zerodep-web-push.version>
         <bucket4j.version>8.21.0</bucket4j.version>
         <springdoc.version>3.2.0</springdoc.version>
         <!-- overridden by the maven-dependency-plugin "properties" goal; empty so Surefire's @{argLine} resolves -->
@@ -110,6 +111,13 @@
         <dependency>
             <groupId>com.github.ben-manes.caffeine</groupId>
             <artifactId>caffeine</artifactId>
+        </dependency>
+
+        <!-- Web Push (VAPID + RFC 8291 aes128gcm) on the JDK's crypto; we send its HttpRequest with java.net.http -->
+        <dependency>
+            <groupId>com.zerodeplibs</groupId>
+            <artifactId>zerodep-web-push-java</artifactId>
+            <version>${zerodep-web-push.version}</version>
         </dependency>
 
         <!-- RestClient.Builder for the Resend e-mail sender (its own module since Boot 4) -->

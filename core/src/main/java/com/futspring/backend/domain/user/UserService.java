@@ -4,6 +4,7 @@ import com.futspring.backend.domain.auth.JwtService;
 import com.futspring.backend.domain.auth.dto.AuthResponseDTO;
 import com.futspring.backend.domain.auth.dto.UserResponseDTO;
 import com.futspring.backend.domain.file.FileUploadService;
+import com.futspring.backend.domain.notification.PushSubscriptionRepository;
 import com.futspring.backend.domain.pelada.PeladaPlayerStarsRepository;
 import com.futspring.backend.shared.exception.AppException;
 import com.futspring.backend.shared.helper.UserAuthenticationHelper;
@@ -27,6 +28,7 @@ public class UserService {
     private final UserAuthenticationHelper userAuthHelper;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final PushSubscriptionRepository pushSubscriptionRepository;
 
     // Public profile; the email is only included for the owner
     @Transactional(readOnly = true)
@@ -77,7 +79,8 @@ public class UserService {
 
     /**
      * Changes the caller's password and revokes every session opened before (tokenVersion), answering a token of the
-     * new version so this device stays logged in.
+     * new version so this device stays logged in. Every Web Push subscription goes too: this device subscribes again
+     * when the app opens (the permission is still granted).
      */
     @Transactional
     public AuthResponseDTO changePassword(ChangePasswordRequestDTO request, String callerEmail) {
@@ -88,6 +91,7 @@ public class UserService {
         user.setPassword(passwordEncoder.encode(request.newPassword()));
         user.setTokenVersion(user.getTokenVersion() + 1);
         userRepository.save(user);
+        pushSubscriptionRepository.deleteAllByUserId(user.getId());
         String token = jwtService.generateToken(user.getId(), user.getEmail(), user.getTokenVersion());
         return new AuthResponseDTO(token, UserResponseDTO.from(user));
     }

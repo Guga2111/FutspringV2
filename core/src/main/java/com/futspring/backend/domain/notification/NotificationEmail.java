@@ -27,7 +27,7 @@ final class NotificationEmail {
      * Every value is HTML-escaped and replaced in a single pass, so text typed by users (pelada and user names)
      * can never fill another placeholder.
      */
-    static String html(NotificationEmailContent content, NotificationCategory category, String appUrl, String ctaUrl,
+    static String html(NotificationContent content, NotificationCategory category, String appUrl, String ctaUrl,
                        String preferencesUrl, String unsubscribeUrl) {
         Map<String, String> values = Map.of(
                 "appUrl", appUrl,
