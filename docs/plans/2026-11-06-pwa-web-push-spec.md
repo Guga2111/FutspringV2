@@ -232,7 +232,16 @@ Branch de integração `feat/pwa-push` (a partir de `dev`), três PRs para ela e
    - **Corpo do push** cortado em 180 com "…" sem partir emoji (`NotificationContent.pushBody()`).
    - **Client:** só o contrato: `pushEnabled` em `NotificationPreference`, `NotificationPreferenceChange` (canais opcionais) no `updateNotificationPreferences`, fixtures do e2e e o teste da api. A coluna Push e o resto ficam para o PR 3.
    - **Grafana:** painel "Web Push" (`futspring_webpush_sent_total` por `result`) no dashboard Futspring.
-3. **`feat/web-push-client`** — `api/push`, `usePushSubscription`, handlers `push`/`notificationclick` no SW, `?notificacao=`, badge, logout, `EnablePushCard`, configurações com a coluna Push e testes visuais.
+3. [x] **`feat/web-push-client`** — `api/push`, `usePushSubscription`, handlers `push`/`notificationclick` no SW, `?notificacao=`, badge, logout, `EnablePushCard`, configurações com a coluna Push e testes visuais.
+
+   Decisões da implementação:
+   - **Troca de conta:** a spec dizia que o reenvio ao abrir o app cobria a troca de conta, mas o logout já faz `unsubscribe()` local, então não sobra inscrição para reenviar. Decidido: a conta nova toca "Ativar notificações" (a permissão do sistema já está concedida, sem prompt). Ninguém recebe push sem ter optado na própria conta.
+   - **Reenvio ao abrir:** `syncPushSubscription()` roda no `AppLayout`, uma vez por usuário, e não dentro do `usePushSubscription` (usado pela Home e pelas configurações; reenviaria duas vezes). Também se reinscreve quando a chave VAPID do servidor mudou (compara `subscription.options.applicationServerKey`).
+   - **Logout:** não segura a saída. Limpa a sessão na hora e manda o `POST /push/subscriptions/remove` com o token da sessão que está fechando (o guardado já sumiu), com timeout de 2 s, depois o `unsubscribe()` local. Um 401 nessa remoção (reset de senha ou exclusão já revogaram o token) é ignorado pelo interceptor, senão mandaria para `/auth?expired=1`. No logout pelo 401 só o `unsubscribe()` local.
+   - **`?notificacao=`:** tratado a cada mudança de URL (não só ao montar): o `navigate()` do SW recarrega a página, mas assim também cobre um link aberto com o app já montado. Uma notificação `DIARISTA_BUMPED` lida por esse caminho não limpa o alerta da Home até o próximo carregamento (a Home e a marcação correm em paralelo); aceito.
+   - **`pwa-badge-96.png`:** a spec citava o arquivo, mas o PR 1 não o criou. Gerado (bola branca sobre transparência, 1,2 KB, script Node com `zlib`): o Android exige uma silhueta monocromática na barra de status.
+   - **`status` nulo** enquanto lê (chave VAPID + inscrição); a leitura repete ao voltar para a aba, com o status anterior na tela. Falha ao ler a chave mostra `inactive` ("Ativar" tenta de novo).
+   - **Testes visuais:** um init script em `mockApi` (`mockPushDevice`) simula `Notification.permission` e um registro de SW falso para todas as páginas (o SW real está bloqueado no Playwright), controlado por `window.__pushState`; o card de `#notificacoes` nos quatro estados confere também o `aria-label` e o disabled dos switches de Push.
 
 Docs no mesmo PR de cada parte: FRONTEND.md (stack, rotas, hooks, SW, PWA), BACKEND.md (domínio, endpoints, V18, envs, segurança, métricas).
 
