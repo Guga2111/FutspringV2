@@ -84,7 +84,16 @@ There is a single `src/main/resources/application.properties`; there are no `app
 | `SPRING_PROFILES_ACTIVE` | `dev` runs the seed (`docker-compose.dev.yml`), `prod` in production | — |
 | `API_DOCS_ENABLED` | serves the OpenAPI document (`/v3/api-docs`) and Swagger UI (`/swagger-ui.html`) and makes them public (`springdoc.api-docs.enabled` / `springdoc.swagger-ui.enabled`); `true` in `docker-compose.dev.yml`, unset in production (the web app is the only client) | `false` |
 
-Locally, `docker-compose.dev.yml` passes `RESEND_API_KEY`, `MAIL_FROM`, `APP_URL`, `API_URL` and the `VAPID_*` keys from `core/.env` (gitignored, next to the compose file). Compose only uses `.env` to fill `${…}` in the file, so a new variable reaches the container only when it is listed under `environment`.
+Locally, `docker-compose.dev.yml` passes `RESEND_API_KEY`, `MAIL_FROM`, `APP_URL`, `API_URL`, `ALLOWED_ORIGINS` (default `http://localhost:5173`) and the `VAPID_*` keys from `core/.env` (gitignored, next to the compose file). Compose only uses `.env` to fill `${…}` in the file, so a new variable reaches the container only when it is listed under `environment`.
+
+**Testing the installed app and Web Push on a phone (dev).** A phone needs real HTTPS (iOS also only pushes to the app installed from that URL), so `localhost` doesn't work there. With two account-less Cloudflare tunnels (`brew install cloudflared`), each in its own terminal:
+
+1. `cloudflared tunnel --url http://localhost:8080` (API) and `cloudflared tunnel --url http://localhost:5173` (app); note both URLs.
+2. In `core/.env`: the `VAPID_*` pair (`npx web-push generate-vapid-keys`; a dev-only pair, never the production one) and `ALLOWED_ORIGINS=https://<app-tunnel>` (comma-separate `http://localhost:5173` to keep using it on the computer); restart the compose stack.
+3. In `client/` (stop `bun run dev`: it has no service worker and Vite blocks the tunnel's host): `VITE_API_URL=https://<api-tunnel> bun run build`, then `__VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS=.trycloudflare.com bun run preview --port 5173 --strictPort` (`/ws` goes through the preview's proxy).
+4. Open the app tunnel on the phone and on the computer (an origin missing from `ALLOWED_ORIGINS` gets 403 "Invalid CORS request"), install, turn notifications on and trigger events from another account (the actor is never notified).
+
+A quick tunnel gets a new URL on every restart: repeat steps 2–3 and reinstall the app on the iPhone (an installed app is bound to its URL). Remove `ALLOWED_ORIGINS` from `core/.env` afterwards.
 
 - `spring.threads.virtual.enabled=true`: Tomcat handles each HTTP request on a virtual thread. Boot's `applicationTaskExecutor` (`SimpleAsyncTaskExecutor`) runs `@Async` on virtual threads without a concurrency limit. `spring.task.execution.mode=force` is required because STOMP declares `Executor` beans that otherwise suppress this auto-configuration; do not expose the notification e-mail executor as a bean.
 - `TaskSchedulingConfig` imports Boot 4.1's `DefaultTaskSchedulerConfiguration` **after** `TaskSchedulingAutoConfiguration`: STOMP's `messageBrokerTaskScheduler` otherwise suppresses the default scheduler. `@Scheduled` resolves the named `taskScheduler` (`SimpleAsyncTaskScheduler`) and runs cron/one-shot jobs on virtual threads; the STOMP/SockJS scheduler remains separate. Fixed-delay jobs run on the scheduler thread; current production jobs use cron.

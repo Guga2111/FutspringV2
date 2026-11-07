@@ -17,6 +17,7 @@ services:
       VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
       VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:contato@futspring.luisgosampaio.com}
       APP_URL: ${APP_URL:-http://localhost:5173}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:5173}
       API_URL: ${API_URL:-http://localhost:8080}
       # OpenAPI docs + Swagger UI (http://localhost:8080/swagger-ui.html); off in production
       API_DOCS_ENABLED: "true"
