@@ -37,7 +37,7 @@ export async function markAllNotificationsRead(): Promise<void> {
   await apiClient.post("/api/v1/notifications/read-all")
 }
 
-// E-mail per category (in-app is always on); always the four categories
+// E-mail and push per category (in-app is always on); always the four categories
 export async function getNotificationPreferences(): Promise<NotificationPreference[]> {
   const response = await apiClient.get<NotificationPreference[]>("/api/v1/notifications/preferences")
   return response.data

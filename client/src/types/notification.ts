@@ -22,7 +22,7 @@ export type NotificationType =
   | "PELADA_TRANSFERRED"
   | "AWARD_WON"
 
-// mirrors NotificationCategory (drives the e-mail preference)
+// mirrors NotificationCategory (drives the e-mail and push preferences)
 export type NotificationCategory = "SESSION" | "ATTENDANCE" | "MEMBERSHIP" | "AWARDS"
 
 // mirrors NotificationAward
@@ -35,7 +35,7 @@ export const notificationCategoryLabel: Record<NotificationCategory, string> = {
   AWARDS: "Prêmios",
 }
 
-// rows of the e-mail preferences page, in this order
+// rows of the notification preferences card, in this order
 export const notificationPreferenceText: Record<NotificationCategory, { label: string; description: string }> = {
   ATTENDANCE: { label: "Presença e vaga", description: "Perdeu a vaga, sessão cancelada, lembrete de confirmação" },
   SESSION: { label: "Sessões", description: "Nova sessão, confirmações abertas, sessão finalizada" },
@@ -44,6 +44,9 @@ export const notificationPreferenceText: Record<NotificationCategory, { label: s
 }
 
 export const NOTIFICATION_CATEGORIES = Object.keys(notificationPreferenceText) as NotificationCategory[]
+
+// where a category's notifications go besides the bell (in-app is always on)
+export type NotificationChannel = "push" | "email"
 
 // mirrors NotificationPreferenceDTO: GET always returns the four categories with both channels and the defaults applied
 export interface NotificationPreference {

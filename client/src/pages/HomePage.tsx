@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { BumpAlert } from "@/components/BumpAlert"
 import { PendingInvitations } from "@/components/invitations/PendingInvitations"
 import { HomeBanner } from "@/components/home/HomeBanner"
+import { EnablePushCard } from "@/components/home/EnablePushCard"
 import { InstallAppCard } from "@/components/home/InstallAppCard"
 import { UpcomingSessionCard } from "@/components/home/UpcomingSessionCard"
 import { CreatePeladaCard, MyPeladaCard } from "@/components/home/MyPeladaCard"
@@ -66,6 +67,7 @@ export default function HomePage() {
         )}
 
         <InstallAppCard />
+        <EnablePushCard />
 
         {error && (
           <Alert variant="destructive" className="flex items-center justify-between gap-4">
