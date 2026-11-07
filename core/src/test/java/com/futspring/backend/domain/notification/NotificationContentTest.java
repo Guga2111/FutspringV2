@@ -13,7 +13,7 @@ import java.util.Arrays;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-class NotificationEmailContentTest {
+class NotificationContentTest {
 
     private final User leal = User.builder().id(1L).email("leal@example.com").username("Leal").password("hash").build();
     private final User member = User.builder().id(2L).email("m@example.com").username("member").password("hash").build();
@@ -34,7 +34,7 @@ class NotificationEmailContentTest {
     void everyTypeRendersSubjectTitleBodyAndCta(NotificationType type) {
         NotificationAward award = type == NotificationType.AWARD_WON ? NotificationAward.ARTILHEIRO : null;
 
-        NotificationEmailContent content = NotificationEmailContent.of(notification(type, award));
+        NotificationContent content = NotificationContent.of(notification(type, award));
 
         assertThat(content.subject()).isNotBlank().doesNotContain("null");
         assertThat(content.title()).isNotBlank().doesNotContain("null");
@@ -47,14 +47,14 @@ class NotificationEmailContentTest {
     void invitationLinksToTheDedicatedScreen() {
         Notification n = notification(NotificationType.PELADA_INVITATION, null);
         n.setInvitationId(42L);
-        assertThat(NotificationEmailContent.of(n).ctaPath()).isEqualTo("/invitations/42");
-        assertThat(NotificationEmailContent.of(n).body()).contains("7 dias");
+        assertThat(NotificationContent.of(n).ctaPath()).isEqualTo("/invitations/42");
+        assertThat(NotificationContent.of(n).body()).contains("7 dias");
     }
 
     @Test
     void everyAwardHasItsOwnName() {
         Arrays.stream(NotificationAward.values()).forEach(award -> {
-            NotificationEmailContent content = NotificationEmailContent.of(notification(NotificationType.AWARD_WON, award));
+            NotificationContent content = NotificationContent.of(notification(NotificationType.AWARD_WON, award));
             assertThat(content.subject()).startsWith(award.label()).contains("sáb, 31/10");
             assertThat(content.body()).contains(award.label());
         });
@@ -63,7 +63,7 @@ class NotificationEmailContentTest {
 
     @Test
     void sessionTypesUseTheSessionDateAndLinkToIt() {
-        NotificationEmailContent bumped = NotificationEmailContent.of(notification(NotificationType.DIARISTA_BUMPED, null));
+        NotificationContent bumped = NotificationContent.of(notification(NotificationType.DIARISTA_BUMPED, null));
 
         assertThat(bumped.subject()).isEqualTo("Você perdeu a vaga na Pelada do Fut");
         assertThat(bumped.body()).contains("Leal").contains("sáb, 31/10 às 20:00");
@@ -72,7 +72,7 @@ class NotificationEmailContentTest {
 
     @Test
     void teamsSorted_neutralTextForSortAndManualTeams() {
-        NotificationEmailContent teams = NotificationEmailContent.of(notification(NotificationType.TEAMS_SORTED, null));
+        NotificationContent teams = NotificationContent.of(notification(NotificationType.TEAMS_SORTED, null));
 
         assertThat(teams.subject()).isEqualTo("Times definidos: sáb, 31/10");
         assertThat(teams.title()).isEqualTo("Times definidos");
@@ -82,9 +82,9 @@ class NotificationEmailContentTest {
 
     @Test
     void membershipTypesLinkToThePelada_removedLinksHome() {
-        assertThat(NotificationEmailContent.of(notification(NotificationType.ADDED_TO_PELADA, null)).ctaPath())
+        assertThat(NotificationContent.of(notification(NotificationType.ADDED_TO_PELADA, null)).ctaPath())
                 .isEqualTo("/pelada/10");
-        assertThat(NotificationEmailContent.of(notification(NotificationType.REMOVED_FROM_PELADA, null)).ctaPath())
+        assertThat(NotificationContent.of(notification(NotificationType.REMOVED_FROM_PELADA, null)).ctaPath())
                 .isEqualTo("/home");
     }
 
@@ -93,13 +93,13 @@ class NotificationEmailContentTest {
         Notification n = notification(NotificationType.ADDED_TO_PELADA, null);
         n.setActor(null);
 
-        assertThat(NotificationEmailContent.of(n).body()).isEqualTo("Você entrou na Pelada do Fut.");
+        assertThat(NotificationContent.of(n).body()).isEqualTo("Você entrou na Pelada do Fut.");
     }
 
     @Test
     void html_fillsEveryPlaceholderAndEscapesUserText() {
         pelada.setName("<b>Fut</b> {{unsubscribeUrl}}");
-        NotificationEmailContent content = NotificationEmailContent.of(notification(NotificationType.DIARISTA_BUMPED, null));
+        NotificationContent content = NotificationContent.of(notification(NotificationType.DIARISTA_BUMPED, null));
 
         String html = NotificationEmail.html(content, NotificationCategory.ATTENDANCE, "https://app.example.com",
                 "https://app.example.com/daily/100", "https://app.example.com/settings/notifications",
@@ -112,5 +112,29 @@ class NotificationEmailContentTest {
                 .contains("href=\"https://app.example.com/daily/100\"")
                 .contains("href=\"https://app.example.com/notifications/unsubscribe?token=a.b\"")
                 .contains("os e-mails de <strong style=\"color:#0F2E1A\">Presença</strong> estão ligados");
+    }
+
+    @Test
+    void pushBody_keepsAShortBody_andCutsALongOneAt180WithAnEllipsis() {
+        NotificationContent shortOne = new NotificationContent("s", "t", "Curto.", "c", "/home");
+        assertThat(shortOne.pushBody()).isEqualTo("Curto.");
+
+        String exact = "a".repeat(NotificationContent.PUSH_BODY_MAX);
+        assertThat(new NotificationContent("s", "t", exact, "c", "/home").pushBody()).isEqualTo(exact);
+
+        String cut = new NotificationContent("s", "t", "b".repeat(400), "c", "/home").pushBody();
+        assertThat(cut).hasSize(NotificationContent.PUSH_BODY_MAX).endsWith("…").startsWith("bbb");
+    }
+
+    @Test
+    void pushBody_neverSplitsAnEmoji() {
+        String body = "a".repeat(NotificationContent.PUSH_BODY_MAX - 2) + "🏆🏆🏆";
+        String cut = new NotificationContent("s", "t", body, "c", "/home").pushBody();
+
+        assertThat(cut).endsWith("…");
+        // a lone surrogate doesn't survive UTF-8 (it becomes "?")
+        assertThat(new String(cut.getBytes(java.nio.charset.StandardCharsets.UTF_8),
+                java.nio.charset.StandardCharsets.UTF_8)).isEqualTo(cut);
+        assertThat(cut.length()).isLessThanOrEqualTo(NotificationContent.PUSH_BODY_MAX);
     }
 }

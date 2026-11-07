@@ -5,7 +5,7 @@
     "useDefineForClassFields": true,
     "lib": ["ES2023", "DOM", "DOM.Iterable"],
     "module": "ESNext",
-    "types": ["vite/client"],
+    "types": ["vite/client", "vite-plugin-pwa/react"],
     "skipLibCheck": true,
 
     /* Bundler mode */
@@ -28,5 +28,7 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": ["src"]
+  "include": ["src"],
+  // the service worker has its own tsconfig (WebWorker lib, no DOM)
+  "exclude": ["src/sw.ts"]
 }

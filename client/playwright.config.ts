@@ -29,6 +29,8 @@ export default defineConfig({
     launchOptions: { args: ["--lang=pt-BR"], env: { ...process.env, LANG: "pt_BR.UTF-8", LANGUAGE: "pt_BR" } },
     timezoneId: "America/Sao_Paulo",
     reducedMotion: "reduce",
+    // the PWA's service worker would answer navigations from its precache and fetch outside page.route
+    serviceWorkers: "block",
   },
   // the theme comes from the OS preference (nothing saved in localStorage.theme)
   projects: (["light", "dark"] as const).flatMap((colorScheme) =>

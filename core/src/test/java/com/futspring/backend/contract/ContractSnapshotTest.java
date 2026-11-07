@@ -25,7 +25,10 @@ import com.futspring.backend.domain.daily.dto.SaveTeamsRequestDTO;
 import com.futspring.backend.domain.notification.dto.NotificationDTO;
 import com.futspring.backend.domain.notification.dto.NotificationPreferenceDTO;
 import com.futspring.backend.domain.notification.dto.NotificationPushDTO;
+import com.futspring.backend.domain.notification.dto.PushSubscriptionRequestDTO;
+import com.futspring.backend.domain.notification.dto.RemovePushSubscriptionRequestDTO;
 import com.futspring.backend.domain.notification.dto.UnreadCountDTO;
+import com.futspring.backend.domain.notification.dto.VapidPublicKeyDTO;
 import com.futspring.backend.domain.tour.dto.TourStateDTO;
 import com.futspring.backend.domain.notification.dto.UnsubscribeRequestDTO;
 import com.futspring.backend.domain.pelada.dto.InvitePlayerRequestDTO;
@@ -103,6 +106,7 @@ class ContractSnapshotTest {
                 MessageDTO.class,
                 TourStateDTO.class,
                 NotificationDTO.class, NotificationPushDTO.class, NotificationPreferenceDTO.class, UnreadCountDTO.class,
+                VapidPublicKeyDTO.class,
                 ErrorResponse.class);
     }
 
@@ -120,6 +124,7 @@ class ContractSnapshotTest {
                 FinalizeDailyRequestDTO.class, PopulateDailyRequestDTO.class, SaveTeamsRequestDTO.class,
                 UpdateProfileRequest.class, SendMessageRequest.class,
                 NotificationPreferenceDTO.class, UnsubscribeRequestDTO.class,
+                PushSubscriptionRequestDTO.class, RemovePushSubscriptionRequestDTO.class,
                 FinanceRequests.BulkAdjust.class);
     }
 

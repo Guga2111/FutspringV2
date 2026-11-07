@@ -6,6 +6,7 @@ import type { PeladaAwards, PeladaAttendanceDTO, PeladaDetail, PeladaMember, Pel
 import type { DailyDetail, DailyListItem, PlayerDTO, RankingDTO, TeamDTO } from "../src/types/daily"
 import type { StatsDTO, UserMatchHistoryDTO, UserStatsTimelineDTO } from "../src/types/stats"
 import type { NotificationPreference, NotificationResponse } from "../src/types/notification"
+import type { VapidPublicKey } from "../src/types/push"
 import type { Invitation, InvitationStatus, InviteLink } from "../src/types/invitation"
 import type { FinanceAudit, FinanceDetail, FinanceMovement, FinanceOverview, FinancePage, FinanceSettings, FinanceTemplate } from "../src/types/finance"
 
@@ -453,11 +454,16 @@ export const notifications: NotificationResponse[] = [
 ]
 
 export const notificationPreferences: NotificationPreference[] = [
-  { category: "ATTENDANCE", emailEnabled: true },
-  { category: "SESSION", emailEnabled: false },
-  { category: "MEMBERSHIP", emailEnabled: true },
-  { category: "AWARDS", emailEnabled: false },
+  { category: "ATTENDANCE", emailEnabled: true, pushEnabled: true },
+  { category: "SESSION", emailEnabled: false, pushEnabled: true },
+  { category: "MEMBERSHIP", emailEnabled: true, pushEnabled: true },
+  { category: "AWARDS", emailEnabled: false, pushEnabled: false },
 ]
+
+// a P-256 public key's shape (65 bytes, base64url); the browser is mocked, so it is never used to encrypt
+export const vapidPublicKey: VapidPublicKey = {
+  publicKey: "BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U",
+}
 
 export const QR_ID = 77
 

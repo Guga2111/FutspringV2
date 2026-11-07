@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test"
-import { mockApi, login } from "./mockApi"
+import { mockApi, login, type PushState } from "./mockApi"
 import { CONFIRMED_ID, FINISHED_ID, LIVE_ID, NOW, PELADA_ID, SCHEDULED_ID, pendingDeletionBlockers, financeDetail, financeMemberDetail, financeMemberOverview, financeOverview } from "./fixtures"
 
 const PELADA = `/pelada/${PELADA_ID}`
@@ -13,6 +13,8 @@ const pages: { name: string; path: string; auth?: boolean; ready?: string }[] = 
   { name: "not-found", path: "/pagina-que-nao-existe", auth: false },
   { name: "terms", path: "/termos", auth: false, ready: "h1" },
   { name: "privacy", path: "/privacidade", auth: false, ready: "h1" },
+  // the desktop context: a QR Code to open the page on the phone
+  { name: "install", path: "/instalar", auth: false, ready: "h1" },
   { name: "home", path: "/home" },
   { name: "pelada-overview", path: PELADA },
   { name: "pelada-members", path: `${PELADA}/membros` },
@@ -86,6 +88,40 @@ for (const { name, path, auth, ready } of pages) {
     expect(unmatched, "requests without a fixture").toEqual([])
   })
 }
+
+// /instalar shows the steps of the platform detected from the user agent
+const USER_AGENTS = {
+  ios: "Mozilla/5.0 (iPhone; CPU iPhone OS 18_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.1 Mobile/15E148 Safari/604.1",
+  android: "Mozilla/5.0 (Linux; Android 14; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36",
+  "in-app":
+    "Mozilla/5.0 (Linux; Android 14; SM-S918B Build/UP1A.231005.007; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/131.0.6778.81 Mobile Safari/537.36 WhatsApp/2.24",
+}
+
+for (const [context, userAgent] of Object.entries(USER_AGENTS)) {
+  test.describe(`install steps ${context}`, () => {
+    test.use({ userAgent })
+
+    test(`page install-${context}`, async ({ page }) => {
+      const unmatched = await open(page, "/instalar", false, "h1")
+      await expectNoHorizontalScroll(page)
+      await expect(page).toHaveScreenshot(`install-${context}.png`, { fullPage: true })
+      expect(unmatched, "requests without a fixture").toEqual([])
+    })
+  })
+}
+
+// On a phone's browser, Home offers the install (the default user agent is a desktop, so the card is hidden there)
+test.describe("home on an iPhone", () => {
+  test.use({ userAgent: USER_AGENTS.ios })
+
+  test("home install card", async ({ page }, testInfo) => {
+    test.skip(!testInfo.project.name.startsWith("mobile"), "the card is for phones")
+    await open(page, "/home")
+    const card = page.getByRole("region", { name: "Instalar o app" })
+    await expect(card).toBeVisible()
+    await expect(card).toHaveScreenshot("home-install-card.png")
+  })
+})
 
 // Collapsed sidebar: every row is one 40 px square at the same x (icons and avatars on one axis)
 test("sidebar collapsed", async ({ page }, testInfo) => {
@@ -164,6 +200,55 @@ test("account settings: delete account dialog", async ({ page }) => {
   await open(page, "/settings")
   await page.locator("#excluir-conta").getByRole("button", { name: "Excluir conta" }).click()
   await expect(page.getByRole("alertdialog")).toHaveScreenshot("dialog-delete-account.png", DIALOG_SHOT)
+})
+
+// The "Notificações" card per Web Push state of this device. The Push switches show the saved value but only
+// change on a device that is active
+const PUSH_STATES: Record<string, PushState> = {
+  inactive: {},
+  active: { permission: "granted", subscribed: true },
+  denied: { permission: "denied" },
+}
+
+async function setPushState(page: Page, state: PushState) {
+  await page.addInitScript((s) => {
+    (window as { __pushState?: PushState }).__pushState = s
+  }, state)
+  // an active device sends its subscription again when the app opens
+  await page.route(/\/api\/v1\/push\/subscriptions$/, (route) => route.fulfill({ status: 204 }))
+}
+
+for (const [name, state] of Object.entries(PUSH_STATES)) {
+  test(`account settings: push ${name}`, async ({ page }) => {
+    const unmatched = await open(page, "/settings#notificacoes", true, "h1, h2", (p) => setPushState(p, state))
+    const card = page.locator("#notificacoes")
+    const pushSwitch = card.getByRole("switch", { name: "Push de Presença e vaga" })
+    await expect(pushSwitch).toBeVisible()
+    if (name === "active") await expect(pushSwitch).toBeEnabled()
+    else await expect(pushSwitch).toBeDisabled()
+    await expect(card.getByRole("switch", { name: "E-mail de Presença e vaga" })).toBeEnabled()
+    await expectNoHorizontalScroll(page)
+    await expect(card).toHaveScreenshot(`account-settings-push-${name}.png`)
+    expect(unmatched, "requests without a fixture").toEqual([])
+  })
+}
+
+// An iPhone outside the home screen app has no PushManager: it is pointed at the install steps
+test.describe("account settings on an iPhone's browser", () => {
+  test.use({ userAgent: USER_AGENTS.ios })
+
+  test("account settings: push needsInstall", async ({ page }) => {
+    const unmatched = await open(page, "/settings#notificacoes", true, "h1, h2", (p) =>
+      p.addInitScript(() => {
+        delete (window as { PushManager?: unknown }).PushManager
+      }),
+    )
+    const card = page.locator("#notificacoes")
+    await expect(card.getByRole("link", { name: "Como instalar" })).toHaveAttribute("href", "/instalar")
+    await expect(card.getByRole("switch", { name: "Push de Presença e vaga" })).toBeDisabled()
+    await expect(card).toHaveScreenshot("account-settings-push-needsInstall.png")
+    expect(unmatched, "requests without a fixture").toEqual([])
+  })
 })
 
 test("old notification settings link opens the account settings", async ({ page }) => {
