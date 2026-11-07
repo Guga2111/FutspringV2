@@ -1,5 +1,8 @@
 import { Suspense, useCallback, useMemo, useState } from "react"
 import { Outlet } from "react-router-dom"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { WifiDisconnected01Icon } from "@hugeicons/core-free-icons"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import { MyPeladasContext, type MyPeladasContextValue } from "@/context/my-peladas-context-value"
 import { MyInvitationsContext } from "@/context/my-invitations-context-value"
@@ -7,6 +10,7 @@ import { NotificationsContext } from "@/context/notifications-context-value"
 import { useMyInvitations } from "@/hooks/useMyInvitations"
 import { useMyPeladas } from "@/hooks/useMyPeladas"
 import { useNotifications } from "@/hooks/useNotifications"
+import { useOnline } from "@/hooks/useOnline"
 import CreatePeladaModal from "@/components/CreatePeladaModal"
 import { AppSidebar } from "@/components/layout/AppSidebar"
 import { MobileTopBar } from "@/components/layout/MobileTopBar"
@@ -58,6 +62,7 @@ function AppShell() {
   )
   const notifications = useNotifications(clearBumps)
   const invitations = useMyInvitations()
+  const online = useOnline()
 
   const contextValue = useMemo<MyPeladasContextValue>(
     () => ({ peladas, loading, error, reload, updateNextDaily, openCreatePelada: () => setCreateOpen(true) }),
@@ -77,6 +82,13 @@ function AppShell() {
         <AppSidebar />
         <SidebarInset className="min-w-0">
           <MobileTopBar />
+          {!online && (
+            // the screens keep their own error states; this only says why they appear
+            <Alert role="status" className="rounded-none border-x-0 border-t-0 px-4 py-2 [&>svg]:top-2.5">
+              <HugeiconsIcon icon={WifiDisconnected01Icon} className="size-4" />
+              <AlertDescription>Sem conexão. Algumas informações podem não carregar.</AlertDescription>
+            </Alert>
+          )}
           <Suspense fallback={pageFallback}>
             <Outlet />
           </Suspense>
