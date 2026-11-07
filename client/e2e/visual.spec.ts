@@ -13,6 +13,8 @@ const pages: { name: string; path: string; auth?: boolean; ready?: string }[] = 
   { name: "not-found", path: "/pagina-que-nao-existe", auth: false },
   { name: "terms", path: "/termos", auth: false, ready: "h1" },
   { name: "privacy", path: "/privacidade", auth: false, ready: "h1" },
+  // the desktop context: a QR Code to open the page on the phone
+  { name: "install", path: "/instalar", auth: false, ready: "h1" },
   { name: "home", path: "/home" },
   { name: "pelada-overview", path: PELADA },
   { name: "pelada-members", path: `${PELADA}/membros` },
@@ -86,6 +88,40 @@ for (const { name, path, auth, ready } of pages) {
     expect(unmatched, "requests without a fixture").toEqual([])
   })
 }
+
+// /instalar shows the steps of the platform detected from the user agent
+const USER_AGENTS = {
+  ios: "Mozilla/5.0 (iPhone; CPU iPhone OS 18_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.1 Mobile/15E148 Safari/604.1",
+  android: "Mozilla/5.0 (Linux; Android 14; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36",
+  "in-app":
+    "Mozilla/5.0 (Linux; Android 14; SM-S918B Build/UP1A.231005.007; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/131.0.6778.81 Mobile Safari/537.36 WhatsApp/2.24",
+}
+
+for (const [context, userAgent] of Object.entries(USER_AGENTS)) {
+  test.describe(`install steps ${context}`, () => {
+    test.use({ userAgent })
+
+    test(`page install-${context}`, async ({ page }) => {
+      const unmatched = await open(page, "/instalar", false, "h1")
+      await expectNoHorizontalScroll(page)
+      await expect(page).toHaveScreenshot(`install-${context}.png`, { fullPage: true })
+      expect(unmatched, "requests without a fixture").toEqual([])
+    })
+  })
+}
+
+// On a phone's browser, Home offers the install (the default user agent is a desktop, so the card is hidden there)
+test.describe("home on an iPhone", () => {
+  test.use({ userAgent: USER_AGENTS.ios })
+
+  test("home install card", async ({ page }, testInfo) => {
+    test.skip(!testInfo.project.name.startsWith("mobile"), "the card is for phones")
+    await open(page, "/home")
+    const card = page.getByRole("region", { name: "Instalar o app" })
+    await expect(card).toBeVisible()
+    await expect(card).toHaveScreenshot("home-install-card.png")
+  })
+})
 
 // Collapsed sidebar: every row is one 40 px square at the same x (icons and avatars on one axis)
 test("sidebar collapsed", async ({ page }, testInfo) => {
