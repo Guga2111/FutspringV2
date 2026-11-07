@@ -189,7 +189,7 @@ Nove PRs pequenos. Cada um é revisável sozinho, entra com os seus testes e atu
 
 Para planejar um PR, rode o prompt dele numa sessão limpa (`/clear` antes). Ao terminar, o `/plan-task` marca o `[x]` e anota as decisões abaixo do item.
 
-### [ ] PR 1 — Modelo e estado (`feat/subscriptions-model`)
+### [x] PR 1 — Modelo e estado (`feat/subscriptions-model`)
 
 - **Entrega:**
   - Migration V19 da seção 1 (colunas em `users`, `pelada_subscriptions`, `subscription_payments`, `subscription_events`, backfill das peladas existentes).
@@ -208,6 +208,16 @@ Para planejar um PR, rode o prompt dele numa sessão limpa (`/clear` antes). Ao 
 ```
 /plan-task docs/plans/2026-11-07-subscriptions-platform-admin-spec.md "PR 1 — Modelo e estado"
 ```
+
+**Decisões (PR 1):**
+- `subscription_events.type` já nasce com todos os tipos previstos (`CREATED`, `PAYMENT_RECORDED`, `PAYMENT_VOIDED`, `VALID_UNTIL_SET`, `DAYS_EXTENDED`, `EXEMPTED`, `CANCELED`, `FOUNDER_CHANGED`, `PIX_CLAIMED`), para os PRs 5 e 7 não precisarem de migration.
+- O backfill também grava um evento `CREATED` (sem ator) por pelada; a criação pelo app grava `CREATED` com o criador como ator.
+- CHECK extra `ck_pelada_subscriptions_valid_until`: `TRIAL` e `PAID` sempre têm `valid_until`. `SubscriptionState` trata um `valid_until` nulo como vencido.
+- O trial é tomado por um `UPDATE users SET trial_used_at = now WHERE id = ? AND trial_used_at IS NULL` (`UserRepository.markTrialUsed`): duas peladas criadas ao mesmo tempo pela mesma conta não ganham dois trials.
+- O trial vale 30 dias exatos a partir da criação (instante, não fim do dia).
+- `SubscriptionStatus.writable()` fica no enum; `SubscriptionState.of` tem uma sobrecarga `(kind, validUntil, now)` para o PR 5 reutilizar.
+- `SubscriptionPayment.peladaId` e `SubscriptionEvent.peladaId` são ids simples (o pagamento sobrevive à pelada). `deletePelada` chama `SubscriptionService.deletePeladaData` (apaga assinatura e eventos e desvincula pagamentos) porque o H2 dos testes não tem as ações de FK.
+- `users.platform_admin` já é mapeado (`User.platformAdmin`), mas só é lido a partir do PR 5.
 
 ### [ ] PR 2 — Trava no backend (`feat/subscriptions-guard`)
 

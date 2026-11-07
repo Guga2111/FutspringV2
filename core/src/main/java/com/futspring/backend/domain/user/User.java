@@ -52,6 +52,15 @@ public class User {
     @Column(name = "deleted_at")
     private Instant deletedAt;
 
+    // Operator of the platform (subscriptions panel); turned on by SQL only, no route writes it
+    @Column(name = "platform_admin", nullable = false)
+    @Builder.Default
+    private boolean platformAdmin = false;
+
+    // When this account's one trial was used, by the first pelada it created (SubscriptionService.start)
+    @Column(name = "trial_used_at")
+    private Instant trialUsedAt;
+
     public boolean isDeleted() {
         return deletedAt != null;
     }

@@ -237,6 +237,46 @@ class MigrationDataTest {
                 .isInstanceOf(SQLException.class).hasMessageContaining("uq_push_subscriptions_endpoint");
     }
 
+    @Test
+    void v19_givesEveryExistingPeladaA30DayTrial_andMarksTheirCreators() throws SQLException {
+        flyway("18").migrate();
+        execute("INSERT INTO users(id,email,username,password) VALUES(1,'criador@migration.test','Criador','hash'),(2,'membro@migration.test','Membro','hash')");
+        execute("INSERT INTO peladas(id,name,day_of_week,time_of_day,duration,auto_create_daily_enabled,number_of_teams,players_per_team,created_at,creator_id) VALUES(1,'A','SATURDAY','19:00',1,false,2,5,now(),1),(2,'B','SUNDAY','19:00',1,false,2,5,now(),1)");
+        execute("INSERT INTO pelada_members(pelada_id,user_id) VALUES(1,1),(1,2),(2,1)");
+        flyway(null).migrate();
+        try (Connection c = connect(); Statement st = c.createStatement()) {
+            try (ResultSet rs = st.executeQuery("SELECT pelada_id, kind, valid_until BETWEEN now() + INTERVAL '30 days' - INTERVAL '1 minute' AND now() + INTERVAL '30 days', founder FROM pelada_subscriptions ORDER BY pelada_id")) {
+                for (int id = 1; id <= 2; id++) {
+                    rs.next(); assertThat(rs.getLong(1)).isEqualTo(id); assertThat(rs.getString(2)).isEqualTo("TRIAL");
+                    assertThat(rs.getBoolean(3)).isTrue(); assertThat(rs.getBoolean(4)).isFalse();
+                }
+                assertThat(rs.next()).isFalse();
+            }
+            try (ResultSet rs = st.executeQuery("SELECT count(*) FROM subscription_events WHERE type = 'CREATED' AND actor_id IS NULL AND kind_after = 'TRIAL'")) {
+                rs.next(); assertThat(rs.getInt(1)).isEqualTo(2);
+            }
+            // only creators used their trial; nobody is platform admin
+            try (ResultSet rs = st.executeQuery("SELECT id, trial_used_at IS NOT NULL, platform_admin FROM users ORDER BY id")) {
+                rs.next(); assertThat(rs.getBoolean(2)).isTrue(); assertThat(rs.getBoolean(3)).isFalse();
+                rs.next(); assertThat(rs.getBoolean(2)).isFalse(); assertThat(rs.getBoolean(3)).isFalse();
+            }
+        }
+        // one subscription per pelada, and a trial must end
+        assertThatThrownBy(() -> execute("INSERT INTO pelada_subscriptions(pelada_id,kind,valid_until,created_at,updated_at) VALUES(1,'EXEMPT',null,now(),now())"))
+                .isInstanceOf(SQLException.class).hasMessageContaining("uq_pelada_subscriptions_pelada");
+        execute("DELETE FROM pelada_subscriptions WHERE pelada_id = 2");
+        assertThatThrownBy(() -> execute("INSERT INTO pelada_subscriptions(pelada_id,kind,valid_until,created_at,updated_at) VALUES(2,'TRIAL',null,now(),now())"))
+                .isInstanceOf(SQLException.class).hasMessageContaining("ck_pelada_subscriptions_valid_until");
+        // a payment outlives its pelada; the subscription and the history go with it
+        execute("INSERT INTO subscription_payments(pelada_id,pelada_name,payer_id,payer_name,amount,paid_on,plan,period_start,period_end,recorded_by_id,created_at) VALUES(1,'A',1,'Criador',19.90,'2026-11-07','MONTHLY',now(),now() + INTERVAL '1 month',1,now())");
+        execute("DELETE FROM pelada_members WHERE pelada_id = 1");
+        execute("DELETE FROM peladas WHERE id = 1");
+        try (Connection c = connect(); Statement st = c.createStatement();
+             ResultSet rs = st.executeQuery("SELECT (SELECT count(*) FROM pelada_subscriptions WHERE pelada_id = 1), (SELECT count(*) FROM subscription_events WHERE pelada_id = 1), (SELECT count(*) FROM subscription_payments WHERE pelada_id IS NULL AND pelada_name = 'A')")) {
+            rs.next(); assertThat(rs.getInt(1)).isZero(); assertThat(rs.getInt(2)).isZero(); assertThat(rs.getInt(3)).isEqualTo(1);
+        }
+    }
+
     private static Flyway flyway(String target) {
         var config = Flyway.configure()
                 .dataSource(POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword())

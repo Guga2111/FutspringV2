@@ -60,6 +60,7 @@ class PeladaServiceTest {
     @Mock DailyService dailyService;
     @Mock PeladaInvitationService invitationService;
     @Mock AggregateRebuildService aggregateRebuildService;
+    @Mock com.futspring.backend.domain.subscription.SubscriptionService subscriptionService;
     @Mock
     PeladaRepository peladaRepository;
 
@@ -86,7 +87,7 @@ class PeladaServiceTest {
     void setUp() {
         peladaService = new PeladaService(mock(com.futspring.backend.domain.finance.FinancePreservation.class), peladaRepository, playerStarsRepository, mensalistaRepository, userRepository, dailyRepository, attendanceRepository, bumpRepository, rankingRepository, messageRepository,
                 fileUploadService, userAuthHelper, new PeladaAccessHelper(peladaRepository), dailyService, aggregateRebuildService,
-                notificationRepository, eventPublisher, invitationService);
+                notificationRepository, eventPublisher, invitationService, subscriptionService);
 
         admin = User.builder().id(1L).email("admin@example.com").username("admin").password("hash").build();
         member = User.builder().id(2L).email("member@example.com").username("member").password("hash").build();

@@ -22,6 +22,7 @@ import com.futspring.backend.shared.helper.PeladaAccessHelper;
 import com.futspring.backend.shared.helper.UserAuthenticationHelper;
 import com.futspring.backend.domain.stats.AggregateRebuildService;
 import com.futspring.backend.domain.stats.repository.RankingRepository;
+import com.futspring.backend.domain.subscription.SubscriptionService;
 import com.futspring.backend.domain.user.User;
 import com.futspring.backend.domain.user.UserRepository;
 import com.futspring.backend.domain.user.dto.PublicUserDTO;
@@ -68,6 +69,7 @@ public class PeladaService {
     private final NotificationRepository notificationRepository;
     private final ApplicationEventPublisher eventPublisher;
     private final PeladaInvitationService invitationService;
+    private final SubscriptionService subscriptionService;
 
     @Transactional
     public PeladaResponseDTO createPelada(CreatePeladaRequestDTO request, String currentUserEmail) {
@@ -94,6 +96,7 @@ public class PeladaService {
 
         Pelada saved = peladaRepository.save(pelada);
         financePreservation.appointCreator(saved);
+        subscriptionService.start(saved, user);
         return PeladaResponseDTO.forAdmin(saved);
     }
 
@@ -393,6 +396,7 @@ public class PeladaService {
         rankingRepository.deleteByPelada(pelada);
         playerStarsRepository.deleteByPelada(pelada);
         mensalistaRepository.deleteByPelada(pelada);
+        subscriptionService.deletePeladaData(peladaId);
 
         pelada.getMembers().clear();
         pelada.getAdmins().clear();
