@@ -611,7 +611,8 @@ class DailyAttendanceServiceTest {
         return new DailyAttendanceService(userAuthHelper, new PeladaAccessHelper(peladaRepository), dailyRepository,
                 attendanceRepository, bumpRepository, mensalistaRepository, userRepository,
                 new DailyListItemAssembler(attendanceRepository, teamRepository, matchRepository, mensalistaRepository, userDailyStatsRepository), eventPublisher,
-                Clock.fixed(now, ZoneOffset.UTC), notificationRepository, teamManagementService);
+                Clock.fixed(now, ZoneOffset.UTC), notificationRepository, teamManagementService,
+                org.mockito.Mockito.mock(com.futspring.backend.domain.subscription.SubscriptionGuard.class));
     }
 
     private User addMember(long id) {

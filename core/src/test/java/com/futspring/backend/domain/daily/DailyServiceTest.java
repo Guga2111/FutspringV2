@@ -93,7 +93,7 @@ class DailyServiceTest {
                 matchRepository, playerMatchStatRepository, userDailyStatsRepository,
                 leagueTableEntryRepository, dailyAwardRepository,
                 new DailyListItemAssembler(attendanceRepository, teamRepository, matchRepository, mensalistaRepository, userDailyStatsRepository),
-                notificationRepository, eventPublisher);
+                notificationRepository, eventPublisher, org.mockito.Mockito.mock(com.futspring.backend.domain.subscription.SubscriptionGuard.class));
 
         admin = User.builder().id(1L).email("admin@example.com").username("admin").password("hash").build();
         member = User.builder().id(2L).email("member@example.com").username("member").password("hash").build();

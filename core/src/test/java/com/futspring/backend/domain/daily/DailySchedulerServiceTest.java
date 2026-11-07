@@ -6,6 +6,8 @@ import com.futspring.backend.domain.daily.entity.DailyStatus;
 import com.futspring.backend.domain.daily.repository.DailyRepository;
 import com.futspring.backend.domain.pelada.Pelada;
 import com.futspring.backend.domain.pelada.PeladaRepository;
+import com.futspring.backend.domain.subscription.PeladaSubscriptionRepository;
+import com.futspring.backend.domain.subscription.SubscriptionGuard;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -46,7 +48,7 @@ class DailySchedulerServiceTest {
     @BeforeEach
     void setUp() {
         schedulerService = new DailySchedulerService(peladaRepository, dailyRepository, eventPublisher,
-                transactionManager, Clock.fixed(NOW, ZoneOffset.UTC));
+                transactionManager, Clock.fixed(NOW, ZoneOffset.UTC), writableGuard());
         lenient().when(transactionManager.getTransaction(any())).thenReturn(new SimpleTransactionStatus());
     }
 
@@ -193,7 +195,7 @@ class DailySchedulerServiceTest {
     @Test
     void autoCreateDailies_usesEachPeladasTimeZone() {
         schedulerService = new DailySchedulerService(peladaRepository, dailyRepository, eventPublisher,
-                transactionManager, Clock.fixed(Instant.parse("2026-10-30T02:30:00Z"), ZoneOffset.UTC));
+                transactionManager, Clock.fixed(Instant.parse("2026-10-30T02:30:00Z"), ZoneOffset.UTC), writableGuard());
         Pelada saoPaulo = peladaForDay(DayOfWeek.FRIDAY);
         Pelada tokyo = Pelada.builder().id(2L).name("Tokyo").dayOfWeek("SATURDAY").timeOfDay("10:00")
                 .duration(1f).autoCreateDailyEnabled(true).timeZone("Asia/Tokyo").build();
@@ -237,5 +239,10 @@ class DailySchedulerServiceTest {
                 && created.daily().getPelada().equals(ok)));
         verify(transactionManager).rollback(any());
         verify(transactionManager).commit(any());
+    }
+
+    // No subscription row: the guard lets every pelada write
+    private static SubscriptionGuard writableGuard() {
+        return new SubscriptionGuard(mock(PeladaSubscriptionRepository.class), Clock.fixed(NOW, ZoneOffset.UTC));
     }
 }
