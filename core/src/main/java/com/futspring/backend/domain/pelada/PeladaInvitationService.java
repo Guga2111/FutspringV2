@@ -1,6 +1,7 @@
 package com.futspring.backend.domain.pelada;
 
 import com.futspring.backend.domain.pelada.dto.*;
+import com.futspring.backend.domain.subscription.SubscriptionGuard;
 import com.futspring.backend.domain.user.User;
 import com.futspring.backend.domain.user.UserRepository;
 import com.futspring.backend.domain.user.dto.PublicUserDTO;
@@ -36,6 +37,7 @@ public class PeladaInvitationService {
     private final PeladaAccessHelper access;
     private final InviteLinkTokens tokens;
     private final InvitationRateLimiter limiter;
+    private final SubscriptionGuard subscriptionGuard;
     private final ApplicationEventPublisher events;
     private final Clock clock;
 
@@ -227,6 +229,8 @@ public class PeladaInvitationService {
 
     private void join(Pelada pelada, User actor) {
         if (access.isMember(pelada, actor)) return;
+        // Under the pelada lock taken by accept/joinLink; a failure rolls back the invitation's ACCEPTED too
+        subscriptionGuard.requireRoomForMember(pelada);
         pelada.getMembers().add(actor);
         peladas.save(pelada);
         events.publishEvent(new MemberJoinedEvent(pelada, actor));

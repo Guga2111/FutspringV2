@@ -249,7 +249,7 @@ Para planejar um PR, rode o prompt dele numa sessão limpa (`/clear` antes). Ao 
 - Jobs: `DailySchedulerService` checa dentro da transação de cada pelada, só quando há sessão a criar; `ScheduledNotificationJob` checa só quando a pelada tem sessão devida (uma query a mais por pelada nesse caso).
 - Testes: `SubscriptionGuardTest` (unitário, bordas por `kind`) e `SubscriptionReadOnlyTest` (integração: um caso parametrizado de 402 por comando travado, trial vencido, `EXEMPT` escrevendo, liberados). Os testes unitários dos serviços recebem um `SubscriptionGuard` mockado; os dos jobs, um guard real.
 
-### [ ] PR 3 — Teto do trial (`feat/subscriptions-member-cap`)
+### [x] PR 3 — Teto do trial (`feat/subscriptions-member-cap`)
 
 - **Entrega:** 409 ao aceitar convite ou entrar por link com a pelada em `TRIAL`/`PENDING` já com 30 membros, sob a trava da pelada que o fluxo de convite já pega.
 - **Fora:** tetos de uploads e e-mails.
@@ -262,6 +262,13 @@ Para planejar um PR, rode o prompt dele numa sessão limpa (`/clear` antes). Ao 
 ```
 /plan-task docs/plans/2026-11-07-subscriptions-platform-admin-spec.md "PR 3 — Teto do trial"
 ```
+
+**Decisões (PR 3):**
+- Além do spec: uma pelada em `READ_ONLY` (trial vencido, pago depois da carência, cancelada) não aceita ninguém novo, com qualquer número de membros. Responde **402** com a mensagem de somente leitura do `SubscriptionGuard`. Quem já é membro continua. `TRIAL`/`PENDING` com 30 ou mais membros respondem 409 com a mensagem do spec, que fala em "período de teste" também para `PENDING`.
+- A regra fica em `SubscriptionGuard.requireRoomForMember` (`TRIAL_MEMBER_CAP = 30`), chamada uma vez em `PeladaInvitationService.join`, que é o ponto comum do aceite e do link. Ela roda depois do retorno idempotente de quem já é membro, então reaceitar ou reentrar numa pelada cheia continua dando 200. No link, o 403 de removido vem antes.
+- A contagem é `pelada.getMembers().size()`, da coleção carregada depois do `findByIdForUpdate` (o `add` já a carregava). Não precisa de query nova, e a contagem é consistente sob a trava. `InvitationConcurrencyTest` cobre dois aceites na 30ª vaga: um entra, o outro recebe 409, e o convite do perdedor volta para `PENDING` no rollback.
+- Pelada sem linha de assinatura não tem teto (fail-open, como o `isWritable`). Convidar e gerar link continuam liberados.
+- Front sem mudança: o 409/402 aparece no erro inline de `useInvitationResponse` e da página do link.
 
 ### [ ] PR 4 — Estado nos DTOs + front de leitura (`feat/subscriptions-readonly-ui`)
 

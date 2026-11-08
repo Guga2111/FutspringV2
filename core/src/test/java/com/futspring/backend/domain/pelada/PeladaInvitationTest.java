@@ -1,6 +1,7 @@
 package com.futspring.backend.domain.pelada;
 
 import com.futspring.backend.domain.notification.*;
+import com.futspring.backend.domain.subscription.*;
 import com.futspring.backend.domain.user.*;
 import com.futspring.backend.shared.exception.AppException;
 import com.futspring.backend.support.BaseIntegrationTest;
@@ -32,6 +33,7 @@ class PeladaInvitationTest extends BaseIntegrationTest {
     @Autowired com.futspring.backend.domain.daily.repository.DailyRepository dailies;
     @Autowired com.futspring.backend.domain.daily.repository.DailyAttendanceRepository attendance;
     @Autowired PeladaMensalistaRepository mensalistas;
+    @Autowired PeladaSubscriptionRepository subscriptions;
     User admin, recipient, other;
     Pelada pelada;
     @BeforeEach void setUp() {
@@ -194,5 +196,48 @@ class PeladaInvitationTest extends BaseIntegrationTest {
         mockMvc.perform(post("/api/v1/peladas/" + pelada.getId() + "/invitations").header("Authorization", auth).contentType(MediaType.APPLICATION_JSON).content("{\"userId\":null}")).andExpect(status().isBadRequest());
         mockMvc.perform(get("/api/v1/invitations/999999").header("Authorization", auth)).andExpect(status().isNotFound());
         mockMvc.perform(post("/api/v1/peladas/" + pelada.getId() + "/players").header("Authorization", auth).contentType(MediaType.APPLICATION_JSON).content("{\"userId\":" + recipient.getId() + "}")).andExpect(status().isNotFound());
+    }
+    // Trial cap: the pelada gets a subscription and `members` members in total (admin included)
+    void subscribed(SubscriptionKind kind, Instant validUntil, int members) {
+        subscriptions.save(new PeladaSubscription(pelada, kind, validUntil, NOW));
+        for (int i = pelada.getMembers().size(); i < members; i++) pelada.getMembers().add(user("member" + i));
+        peladas.saveAndFlush(pelada);
+    }
+    void notMember(User user) { assertThat(peladas.existsByIdAndMembers_Id(pelada.getId(), user.getId())).isFalse(); }
+    @Test void trialTakesTheThirtiethMemberButNotTheThirtyFirstByInvitationOrLink() {
+        subscribed(SubscriptionKind.TRIAL, NOW.plus(Duration.ofDays(10)), 29);
+        Long id = invite(); String token = link();
+        service.accept(id, recipient.getEmail());
+        assertThat(pelada.getMembers()).hasSize(30);
+        long joined = joinedNotices();
+        assertThat(service.invite(pelada.getId(), other.getId(), admin.getEmail()).status()).isEqualTo(PENDING);
+        assertThatThrownBy(() -> service.joinLink(token, other.getEmail())).isInstanceOfSatisfying(AppException.class, e -> {
+            assertThat(e.getStatus()).isEqualTo(HttpStatus.CONFLICT); assertThat(e.getMessage()).isEqualTo(SubscriptionGuard.TRIAL_CAP_MESSAGE);
+        });
+        notMember(other);
+        assertThat(joinedNotices()).isEqualTo(joined);
+        // existing members stay idempotent in a full pelada
+        service.accept(id, recipient.getEmail()); service.joinLink(token, recipient.getEmail());
+    }
+    @Test void pendingIsCappedLikeATrial() {
+        subscribed(SubscriptionKind.PENDING, null, 30);
+        Long id = invite();
+        fails(() -> service.accept(id, recipient.getEmail()), HttpStatus.CONFLICT);
+        fails(() -> service.joinLink(link(), other.getEmail()), HttpStatus.CONFLICT);
+        notMember(recipient); notMember(other);
+    }
+    @Test void readOnlyTakesNobodyNewWhateverTheCount() {
+        subscribed(SubscriptionKind.TRIAL, NOW, 1);
+        Long id = invite();
+        assertThatThrownBy(() -> service.accept(id, recipient.getEmail())).isInstanceOfSatisfying(AppException.class, e -> {
+            assertThat(e.getStatus()).isEqualTo(HttpStatus.PAYMENT_REQUIRED); assertThat(e.getMessage()).isEqualTo(SubscriptionGuard.READ_ONLY_MESSAGE);
+        });
+        fails(() -> service.joinLink(link(), other.getEmail()), HttpStatus.PAYMENT_REQUIRED);
+        notMember(recipient); notMember(other);
+    }
+    @Test void paidPeladaHasNoCap() {
+        subscribed(SubscriptionKind.PAID, NOW.plus(Duration.ofDays(30)), 30);
+        service.accept(invite(), recipient.getEmail()); service.joinLink(link(), other.getEmail());
+        assertThat(pelada.getMembers()).hasSize(32);
     }
 }
