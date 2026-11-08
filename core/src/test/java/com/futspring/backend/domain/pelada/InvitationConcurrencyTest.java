@@ -1,5 +1,6 @@
 package com.futspring.backend.domain.pelada;
 
+import com.futspring.backend.domain.subscription.*;
 import com.futspring.backend.domain.user.*;
 import com.futspring.backend.shared.exception.AppException;
 import org.junit.jupiter.api.Test;
@@ -32,6 +33,7 @@ class InvitationConcurrencyTest {
     @Autowired PeladaInvitationRepository invitations;
     @Autowired UserRepository users;
     @Autowired JdbcTemplate jdbc;
+    @Autowired PeladaSubscriptionRepository subscriptions;
     record Fixture(User admin, User player, Long peladaId) { }
     Fixture fixture() {
         String key = UUID.randomUUID().toString();
@@ -99,6 +101,28 @@ class InvitationConcurrencyTest {
         assertThat(result.get(0)).isEqualTo(HttpStatus.OK); assertThat(result.get(1)).isIn(HttpStatus.OK, HttpStatus.NOT_FOUND);
         assertThat(peladas.existsByIdAndMembers_Id(f.peladaId(), f.player().getId())).isEqualTo(result.get(1) == HttpStatus.NOT_FOUND);
         assertThat(jdbc.queryForObject("select count(*) from pelada_link_blocks where pelada_id=?", Long.class, f.peladaId())).isEqualTo(result.get(1) == HttpStatus.OK ? 1 : 0);
+    }
+    @Test void twoAcceptsForTheLastTrialSpotAdmitOne() throws Exception {
+        var f = fixture();
+        Pelada pelada = peladas.findById(f.peladaId()).orElseThrow();
+        subscriptions.save(new PeladaSubscription(pelada, SubscriptionKind.TRIAL, java.time.Instant.now().plusSeconds(86400), java.time.Instant.now()));
+        String key = UUID.randomUUID().toString();
+        List<User> fillers = new ArrayList<>();
+        for (int i = 0; i < SubscriptionGuard.TRIAL_MEMBER_CAP - 2; i++)
+            fillers.add(users.save(User.builder().email(key + i + "@test.com").username("Filler" + i).password("hash").build()));
+        jdbc.batchUpdate("insert into pelada_members (pelada_id, user_id) values (?, ?)",
+                fillers.stream().map(u -> new Object[]{f.peladaId(), u.getId()}).toList());
+        User second = users.save(User.builder().email(key + "s@test.com").username("Second").password("hash").build());
+        Long first = service.invite(f.peladaId(), f.player().getId(), f.admin().getEmail()).id();
+        Long other = service.invite(f.peladaId(), second.getId(), f.admin().getEmail()).id();
+        assertThat(race(() -> service.accept(first, f.player().getEmail()), () -> service.accept(other, second.getEmail())))
+                .containsExactlyInAnyOrder(HttpStatus.OK, HttpStatus.CONFLICT);
+        assertThat(jdbc.queryForObject("select count(*) from pelada_members where pelada_id=?", Long.class, f.peladaId()))
+                .isEqualTo(SubscriptionGuard.TRIAL_MEMBER_CAP);
+        assertThat(joined(f)).isEqualTo(1);
+        // the loser's invitation rolled back to pending: it can be accepted once the pelada pays
+        assertThat(List.of(first, other).stream().map(id -> invitations.findById(id).orElseThrow().getStatus()))
+                .containsExactlyInAnyOrder(InvitationStatus.ACCEPTED, InvitationStatus.PENDING);
     }
     @Test void pendingInvitationAndActiveLinkUniquenessAreEnforcedByPostgres() {
         var f = fixture(); Long id = service.invite(f.peladaId(), f.player().getId(), f.admin().getEmail()).id(); service.replaceLink(f.peladaId(), f.admin().getEmail());

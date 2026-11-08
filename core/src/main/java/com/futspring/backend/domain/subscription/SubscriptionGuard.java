@@ -9,6 +9,7 @@ import org.springframework.stereotype.Component;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.util.Optional;
 
 /**
  * Whether a pelada's sporting and financial data can be written, from its subscription's effective state. Every
@@ -25,14 +26,14 @@ public class SubscriptionGuard {
     private final PeladaSubscriptionRepository subscriptionRepository;
     private final Clock clock;
 
+    /** Members a pelada can have while it doesn't pay (TRIAL or PENDING). */
+    public static final int TRIAL_MEMBER_CAP = 30;
+
+    public static final String TRIAL_CAP_MESSAGE =
+            "Esta pelada está no período de teste, que vai até 30 membros. Peça ao criador para assinar.";
+
     public boolean isWritable(Pelada pelada) {
-        return subscriptionRepository.findByPeladaId(pelada.getId())
-                .map(subscription -> SubscriptionState.of(subscription, Instant.now(clock)).writable())
-                // Every pelada has a row (V19 backfill, creation); a missing one is a bug, never a reason to lock
-                .orElseGet(() -> {
-                    log.warn("Pelada {} has no subscription row; treated as writable", pelada.getId());
-                    return true;
-                });
+        return status(pelada).map(SubscriptionStatus::writable).orElse(true);
     }
 
     /** 402: its own status, so the client can offer to renew instead of a generic error. */
@@ -40,5 +41,28 @@ public class SubscriptionGuard {
         if (!isWritable(pelada)) {
             throw new AppException(HttpStatus.PAYMENT_REQUIRED, READ_ONLY_MESSAGE);
         }
+    }
+
+    /**
+     * Before someone new joins (invitation or link), with the pelada row locked so the member count can't race: a
+     * read-only pelada takes nobody (402), a TRIAL or PENDING one up to {@link #TRIAL_MEMBER_CAP} members (409).
+     */
+    public void requireRoomForMember(Pelada pelada) {
+        SubscriptionStatus status = status(pelada).orElse(null);
+        if (status == SubscriptionStatus.READ_ONLY) {
+            throw new AppException(HttpStatus.PAYMENT_REQUIRED, READ_ONLY_MESSAGE);
+        }
+        if ((status == SubscriptionStatus.TRIAL || status == SubscriptionStatus.PENDING)
+                && pelada.getMembers().size() >= TRIAL_MEMBER_CAP) {
+            throw new AppException(HttpStatus.CONFLICT, TRIAL_CAP_MESSAGE);
+        }
+    }
+
+    private Optional<SubscriptionStatus> status(Pelada pelada) {
+        Optional<SubscriptionStatus> status = subscriptionRepository.findByPeladaId(pelada.getId())
+                .map(subscription -> SubscriptionState.of(subscription, Instant.now(clock)));
+        // Every pelada has a row (V19 backfill, creation); a missing one is a bug, never a reason to lock
+        if (status.isEmpty()) log.warn("Pelada {} has no subscription row; treated as writable", pelada.getId());
+        return status;
     }
 }
