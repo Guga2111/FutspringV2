@@ -13,6 +13,8 @@ import { cn } from "@/lib/utils"
 import { canSortTeams, sortTeamsHint } from "@/utils/attendance"
 import { dailyTeamPendencies, MIN_TEAMS, pendencyLines } from "@/utils/teamDraft"
 import { isDailyOpen, type DailyDetail, type TeamDTO } from "@/types/daily"
+import { isWritable } from "@/utils/subscription"
+import { SUBSCRIPTION_NOTICE_ID } from "@/components/pelada/SubscriptionNotice"
 
 interface TeamsSectionProps {
   daily: DailyDetail
@@ -49,6 +51,9 @@ export default function TeamsSection({
 
   const open = isDailyOpen(daily.status)
   const isAdminOpen = daily.isAdmin && open
+  // a read-only pelada (subscription): the buttons stay, disabled; rename and color go back to plain text
+  const writable = isWritable(daily.subscription)
+  const notice = writable ? undefined : SUBSCRIPTION_NOTICE_ID
   const full = canSortTeams(daily.confirmedPlayers.length, daily.numberOfTeams, daily.playersPerTeam)
   const hasTeams = daily.teams.length > 0
   const canBuild = daily.confirmedPlayers.length >= MIN_TEAMS
@@ -79,13 +84,20 @@ export default function TeamsSection({
         <h2 className="text-base font-semibold">Times</h2>
         {isAdminOpen && hasTeams && (
           <div className="flex flex-wrap gap-2">
-            <Button variant="outline" disabled={sortLoading || swapLoading} onClick={onEditTeams} className={outlineButton}>
+            <Button
+              variant="outline"
+              disabled={sortLoading || swapLoading || !writable}
+              aria-describedby={notice}
+              onClick={onEditTeams}
+              className={outlineButton}
+            >
               <HugeiconsIcon icon={PencilEdit02Icon} className="size-3.5" />
               Editar times
             </Button>
             <Button
               variant="outline"
-              disabled={!full || sortLoading || swapLoading}
+              disabled={!full || sortLoading || swapLoading || !writable}
+              aria-describedby={notice}
               onClick={onSortTeams}
               className={outlineButton}
             >
@@ -123,7 +135,8 @@ export default function TeamsSection({
             <div className="flex flex-wrap justify-center gap-2">
               <Button
                 variant="outline"
-                disabled={!canBuild || sortLoading}
+                disabled={!canBuild || sortLoading || !writable}
+                aria-describedby={notice}
                 onClick={onEditTeams}
                 className="h-[38px] gap-2 bg-transparent px-[18px] font-semibold hover:bg-accent"
               >
@@ -132,7 +145,8 @@ export default function TeamsSection({
               </Button>
               <Button
                 variant={full ? "brand" : "secondary"}
-                disabled={!full || sortLoading}
+                disabled={!full || sortLoading || !writable}
+                aria-describedby={notice}
                 onClick={onSortTeams}
                 className={cn("h-[38px] gap-2 px-[18px] font-semibold", !full && "bg-accent text-faint-foreground disabled:opacity-100")}
               >
@@ -152,7 +166,7 @@ export default function TeamsSection({
           <div className="grid grid-cols-[repeat(auto-fill,minmax(min(260px,100%),1fr))] gap-3">
             {daily.teams.map((team) => {
               const isOnTeam = currentUserId != null && team.players.some((p) => p.id === currentUserId)
-              const canEditColor = open && (isOnTeam || daily.isAdmin)
+              const canEditColor = open && writable && (isOnTeam || daily.isAdmin)
               const isEditing = editingTeamId === team.id
               return (
                 <TeamCard
@@ -192,7 +206,7 @@ export default function TeamsSection({
                             }
                           }}
                         />
-                      ) : isOnTeam && open ? (
+                      ) : isOnTeam && open && writable ? (
                         <button
                           type="button"
                           title="Renomear time"
@@ -231,7 +245,8 @@ export default function TeamsSection({
                           <Button
                             variant="outline"
                             size="icon"
-                            disabled={swapLoading}
+                            disabled={swapLoading || !writable}
+                            aria-describedby={notice}
                             onClick={() => onPlayerClick(player.id, team.id)}
                             aria-label={isSelected ? "Cancelar troca" : `Trocar ${player.username}`}
                             className={cn(

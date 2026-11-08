@@ -1,4 +1,5 @@
 import type { AttendanceBump, DailyStatus } from "@/types/daily"
+import type { SubscriptionSummary } from "@/types/subscription"
 
 export interface PeladaMember {
   id: number
@@ -31,6 +32,8 @@ export interface PeladaResponse {
   isAdmin: boolean
   // next SCHEDULED/CONFIRMED session from today; only filled by /peladas/my and /users/{id}/peladas
   nextDaily: NextDaily | null
+  // only filled by /peladas/my and /users/{id}/peladas (null in command responses and without a row: writable)
+  subscription: SubscriptionSummary | null
 }
 
 // mirrors PeladaResponseDTO.NextDailyDTO

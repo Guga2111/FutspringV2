@@ -1,3 +1,4 @@
+import type { SubscriptionSummary } from "@/types/subscription"
 import type { PublicUser } from "@/types/user"
 
 // mirrors the backend DailyStatus enum
@@ -148,6 +149,8 @@ export interface DailyDetail {
   award: AwardDTO | null
   peladaId: number
   peladaName: string
+  // who created the pelada (the subscription notice differs for them)
+  creatorId: number | null
   numberOfTeams: number
   playersPerTeam: number
   isAdmin: boolean
@@ -162,4 +165,6 @@ export interface DailyDetail {
   myBump: AttendanceBump | null
   // every bump of the session, newest first
   bumps: AttendanceBump[]
+  // the pelada's subscription; null without a row (read as writable)
+  subscription: SubscriptionSummary | null
 }

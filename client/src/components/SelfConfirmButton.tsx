@@ -2,6 +2,7 @@ import type { ReactNode } from "react"
 import { Button } from "@/components/ui/button"
 import { useSelfConfirm } from "@/hooks/useSelfConfirm"
 import { cn } from "@/lib/utils"
+import { READ_ONLY_HINT } from "@/utils/subscription"
 
 interface SelfConfirmButtonProps {
   confirmOpensAt: string | null
@@ -10,12 +11,14 @@ interface SelfConfirmButtonProps {
   timeZone: string
   pending: boolean
   onConfirm: () => void
+  // the pelada is read-only (subscription): confirming is locked, withdrawing isn't
+  readOnly?: boolean
   className?: string
   children?: ReactNode
 }
 
 // "Confirmar presença" for a caller who hasn't confirmed: disabled with the reason before the diarista window
-// opens or when the session is full, with a hint when a mensalista enters a full session
+// opens, when the session is full or the pelada is read-only, with a hint when a mensalista enters a full session
 export function SelfConfirmButton({
   confirmOpensAt,
   confirmedCount,
@@ -23,10 +26,13 @@ export function SelfConfirmButton({
   timeZone,
   pending,
   onConfirm,
+  readOnly = false,
   className,
   children = "Confirmar presença",
 }: SelfConfirmButtonProps) {
-  const { closedLabel, hint } = useSelfConfirm({ isConfirmed: false, confirmOpensAt, confirmedCount, capacity }, timeZone)
+  const confirm = useSelfConfirm({ isConfirmed: false, confirmOpensAt, confirmedCount, capacity }, timeZone)
+  const closedLabel = readOnly ? READ_ONLY_HINT : confirm.closedLabel
+  const { hint } = confirm
 
   if (closedLabel) {
     return (

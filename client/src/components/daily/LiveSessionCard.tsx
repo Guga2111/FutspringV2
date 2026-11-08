@@ -3,6 +3,8 @@ import { PlusSignIcon } from "@hugeicons/core-free-icons"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import type { DailyDetail } from "@/types/daily"
+import { isWritable } from "@/utils/subscription"
+import { SUBSCRIPTION_NOTICE_ID } from "@/components/pelada/SubscriptionNotice"
 
 interface LiveSessionCardProps {
   daily: DailyDetail
@@ -17,6 +19,7 @@ function matchesTitle(count: number): string {
 
 export default function LiveSessionCard({ daily, onEnterResults, onFinalize }: LiveSessionCardProps) {
   const count = daily.matches.length
+  const writable = isWritable(daily.subscription)
   return (
     <section className="bg-gradient-live flex flex-wrap items-center gap-5 rounded-tile border border-live-border p-5">
       <div className="flex min-w-[240px] flex-1 flex-col gap-1.5">
@@ -33,13 +36,19 @@ export default function LiveSessionCard({ daily, onEnterResults, onFinalize }: L
         <div className="flex flex-wrap gap-2">
           <Button
             variant="outline"
-            disabled={count === 0}
+            disabled={count === 0 || !writable}
+            aria-describedby={writable ? undefined : SUBSCRIPTION_NOTICE_ID}
             onClick={onFinalize}
             className={cn("h-10 border-live-border bg-transparent px-4 hover:bg-highlight-muted", count === 0 && "text-live-foreground/60")}
           >
             Finalizar sessão
           </Button>
-          <Button variant="brand" onClick={onEnterResults} className="h-10 gap-2 px-[18px] font-semibold">
+          <Button
+            variant="brand"
+            disabled={!writable}
+            aria-describedby={writable ? undefined : SUBSCRIPTION_NOTICE_ID}
+            onClick={onEnterResults}
+            className="h-10 gap-2 px-[18px] font-semibold">
             <HugeiconsIcon icon={PlusSignIcon} className="size-[15px]" strokeWidth={2.2} />
             Lançar resultados
           </Button>

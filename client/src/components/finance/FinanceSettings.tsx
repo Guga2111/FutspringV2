@@ -71,13 +71,13 @@ export function FinanceSettings({ peladaId, finance, members, onTemplate }: Fina
                   {formatFinanceMoney(sumFinanceAmounts(template.components.map((component) => component.amount)))} por pessoa
                 </p>
               </div>
-              <Button variant="ghost" size="sm" onClick={() => onTemplate(template)}>
+              <Button variant="ghost" size="sm" disabled={!finance.writable} onClick={() => onTemplate(template)}>
                 Editar
               </Button>
             </li>
           ))}
         </ul>
-        <Button variant="outline" className="self-start" onClick={() => onTemplate()}>
+        <Button variant="outline" className="self-start" disabled={!finance.writable} onClick={() => onTemplate()}>
           <HugeiconsIcon icon={PlusSignIcon} className="size-[15px]" />
           Novo modelo
         </Button>
@@ -147,6 +147,7 @@ function PixCard({ peladaId, finance, settings }: CardProps) {
           dirty={form.formState.isDirty}
           submitting={form.formState.isSubmitting}
           onCancel={() => form.reset(defaults)}
+          locked={!finance.writable}
         />
       }
     >
@@ -154,7 +155,7 @@ function PixCard({ peladaId, finance, settings }: CardProps) {
         <FinanceInput control={form.control} name="pixKey" label="Chave Pix" placeholder="E-mail, telefone, CPF ou chave aleatória" />
         <FinanceInput control={form.control} name="pixRecipient" label="Nome de quem recebe" placeholder="Como aparece no app do banco" />
       </FieldGroup>
-      <FinanceQrField peladaId={peladaId} qrId={settings.qrId} busy={finance.pending} onUpload={upload} onRemove={removeQr} />
+      <FinanceQrField peladaId={peladaId} qrId={settings.qrId} busy={finance.locked} onUpload={upload} onRemove={removeQr} />
       <SettingsRootError message={form.formState.errors.root?.message} />
     </SettingsCard>
   )
@@ -183,6 +184,7 @@ function VisibilityCard({ peladaId, finance, settings }: CardProps) {
           dirty={form.formState.isDirty}
           submitting={form.formState.isSubmitting}
           onCancel={() => form.reset(defaults)}
+          locked={!finance.writable}
         />
       }
     >
@@ -241,6 +243,7 @@ function ManagersCard({ peladaId, finance, settings, members }: CardProps & { me
           dirty={form.formState.isDirty}
           submitting={form.formState.isSubmitting}
           onCancel={() => form.reset(defaults)}
+          locked={!finance.writable}
         />
       }
     >

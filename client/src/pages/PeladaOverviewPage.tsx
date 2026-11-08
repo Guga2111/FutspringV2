@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { areaPath, PELADA_AREAS, visibleAreas, type PeladaArea } from "@/utils/peladaAreas"
 import { pickNextSession, pickRecentSessions } from "@/utils/sessions"
+import { SUBSCRIPTION_NOTICE_ID } from "@/components/pelada/SubscriptionNotice"
 
 const RECENT_LIMIT = 3
 
@@ -46,6 +47,7 @@ export default function PeladaOverviewPage() {
           daily={nextSession}
           timeZone={w.pelada.timeZone}
           isAdmin={w.isAdmin}
+          readOnly={!w.writable}
           attendancePending={w.attendancePending}
           onToggleAttendance={w.toggleAttendance}
         />
@@ -67,7 +69,13 @@ export default function PeladaOverviewPage() {
             <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-input p-8 text-center text-sm text-subtle-foreground">
               <span>Nenhuma sessão realizada ainda. Os resultados das sessões aparecem aqui.</span>
               {w.isAdmin && (
-                <Button variant="outline" onClick={w.openCreateSession} className="h-[34px] gap-1.5 px-3.5">
+                <Button
+                  variant="outline"
+                  disabled={!w.writable}
+                  aria-describedby={w.writable ? undefined : SUBSCRIPTION_NOTICE_ID}
+                  onClick={w.openCreateSession}
+                  className="h-[34px] gap-1.5 px-3.5"
+                >
                   <HugeiconsIcon icon={PlusSignIcon} className="size-3.5" strokeWidth={2.2} />
                   Nova sessão
                 </Button>

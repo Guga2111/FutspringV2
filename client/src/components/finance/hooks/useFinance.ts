@@ -5,8 +5,9 @@ import type { FinanceOverview, FinanceDetail, FinanceResult, FinanceListScope } 
 import { clampFinancePage } from "@/utils/finance"
 import { getErrorMessage, getErrorStatus } from "@/lib/errors"
 
-// selected: the open collection, read from the URL (/financeiro/:listId); select navigates there
-export function useFinance(peladaId: number, selected: number | null, select: (id: number | null) => void) {
+// selected: the open collection, read from the URL (/financeiro/:listId); select navigates there.
+// writable: false while the pelada is read-only (subscription); `locked` disables every write control
+export function useFinance(peladaId: number, selected: number | null, select: (id: number | null) => void, writable = true) {
   const [attempt, setAttempt] = useState(0)
   // the list section (open / closed) and its numbered page
   const [scope, setScopeState] = useState<FinanceListScope>("ACTIVE")
@@ -80,6 +81,7 @@ export function useFinance(peladaId: number, selected: number | null, select: (i
     } finally { busy.current = false; setPending(false) }
   }
   const setScope = (next: FinanceListScope) => { setScopeState(next); setPage(0) }
-  return { overview, detail, selected, error, detailError, pending, scope, setScope, page, setPage, refresh, select, mutate }
+  const locked = pending || !writable
+  return { overview, detail, selected, error, detailError, pending, writable, locked, scope, setScope, page, setPage, refresh, select, mutate }
 }
 export type FinanceController = ReturnType<typeof useFinance>

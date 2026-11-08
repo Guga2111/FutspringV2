@@ -10,6 +10,8 @@ export type PeladaWorkspace = Omit<ReturnType<typeof usePeladaDetail>, "pelada">
   ReturnType<typeof usePeladaActions> & {
     pelada: PeladaDetail
     isAdmin: boolean
+    // false while the pelada is read-only (subscription): its sporting and finance writes are disabled
+    writable: boolean
     currentUserId: number | null
     // goes up after an invitation is sent, so the Convites page reloads its list
     invitationVersion: number

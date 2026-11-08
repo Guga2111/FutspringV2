@@ -22,6 +22,7 @@ import { DailyHeader } from '@/components/daily/DailyHeader'
 import { AttendanceSummaryCard } from '@/components/daily/AttendanceSummaryCard'
 import { AttendanceList } from '@/components/daily/AttendanceList'
 import { BumpAlert } from '@/components/BumpAlert'
+import { SubscriptionNotice } from '@/components/pelada/SubscriptionNotice'
 import { useDailyDetail } from '@/components/daily/hooks/useDailyDetail'
 import { useDailyModals } from '@/components/daily/hooks/useDailyModals'
 import { useDailyActions } from '@/components/daily/hooks/useDailyActions'
@@ -121,6 +122,12 @@ export default function DailyDetailPage() {
           onFinalizeDaily={openFinalize}
           onChangeChampionPhoto={() => fileInputRef.current?.click()}
           onDeleteDaily={() => setDeleteOpen(true)}
+        />
+
+        <SubscriptionNotice
+          subscription={daily.subscription}
+          isCreator={user != null && daily.creatorId === user.id}
+          timeZone={daily.timeZone}
         />
 
         {daily.myBump && (

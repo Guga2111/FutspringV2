@@ -1,6 +1,7 @@
 package com.futspring.backend.domain.subscription;
 
 import com.futspring.backend.domain.pelada.Pelada;
+import com.futspring.backend.domain.subscription.dto.SubscriptionSummaryDTO;
 import com.futspring.backend.shared.exception.AppException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -9,7 +10,10 @@ import org.springframework.stereotype.Component;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.util.Collection;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 /**
  * Whether a pelada's sporting and financial data can be written, from its subscription's effective state. Every
@@ -56,6 +60,22 @@ public class SubscriptionGuard {
                 && pelada.getMembers().size() >= TRIAL_MEMBER_CAP) {
             throw new AppException(HttpStatus.CONFLICT, TRIAL_CAP_MESSAGE);
         }
+    }
+
+    /** What the client reads (detail pages); null without a row, which the client reads as writable like here. */
+    public SubscriptionSummaryDTO summary(Pelada pelada) {
+        return subscriptionRepository.findByPeladaId(pelada.getId()).map(this::summaryOf).orElse(null);
+    }
+
+    /** {@link #summary} of many peladas in one query (pelada lists); peladas without a row are left out. */
+    public Map<Long, SubscriptionSummaryDTO> summaries(Collection<Long> peladaIds) {
+        if (peladaIds.isEmpty()) return Map.of();
+        return subscriptionRepository.findByPeladaIdIn(peladaIds).stream()
+                .collect(Collectors.toMap(s -> s.getPelada().getId(), this::summaryOf));
+    }
+
+    private SubscriptionSummaryDTO summaryOf(PeladaSubscription subscription) {
+        return SubscriptionSummaryDTO.of(SubscriptionState.of(subscription, Instant.now(clock)), subscription.getValidUntil());
     }
 
     private Optional<SubscriptionStatus> status(Pelada pelada) {

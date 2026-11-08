@@ -12,6 +12,8 @@ import { sortByConfirmation, splitAttendance } from "@/utils/attendance"
 import { formatInZone } from "@/utils/dates"
 import { PositionBadge } from "@/components/PositionBadge"
 import type { DailyDetail, PlayerDTO } from "@/types/daily"
+import { isWritable } from "@/utils/subscription"
+import { SUBSCRIPTION_NOTICE_ID } from "@/components/pelada/SubscriptionNotice"
 
 interface AttendanceListProps {
   daily: DailyDetail
@@ -37,6 +39,8 @@ export function AttendanceList({
   onUnconfirm,
   onConfirmAll,
 }: AttendanceListProps) {
+  // a read-only pelada (subscription) can't confirm anyone; removing someone stays possible
+  const writable = isWritable(daily.subscription)
   // Confirmed in confirmation order: the ones past the capacity are the last to arrive
   const { confirmed, pending } = useMemo(() => {
     const split = splitAttendance(daily.peladaMembers, daily.confirmedPlayers)
@@ -93,7 +97,8 @@ export function AttendanceList({
             {canManage && pending.length > 0 && (
               <Button
                 variant="outline"
-                disabled={confirmAllPending}
+                disabled={confirmAllPending || !writable}
+                aria-describedby={writable ? undefined : SUBSCRIPTION_NOTICE_ID}
                 onClick={onConfirmAll}
                 className="ml-auto h-[30px] bg-transparent px-3 text-[13px] hover:bg-accent"
               >
@@ -112,7 +117,8 @@ export function AttendanceList({
                       variant="ghost"
                       size="icon"
                       aria-label={`Confirmar ${player.username}`}
-                      disabled={togglingId === player.id}
+                      disabled={togglingId === player.id || !writable}
+                      aria-describedby={writable ? undefined : SUBSCRIPTION_NOTICE_ID}
                       onClick={() => onConfirm(player.id)}
                       className="size-7 text-subtle-foreground hover:bg-success-muted hover:text-success"
                     >

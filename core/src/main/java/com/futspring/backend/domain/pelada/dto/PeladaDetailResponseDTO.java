@@ -2,6 +2,7 @@ package com.futspring.backend.domain.pelada.dto;
 
 import com.futspring.backend.domain.pelada.Pelada;
 import com.futspring.backend.domain.pelada.PeladaPlayerStars;
+import com.futspring.backend.domain.subscription.dto.SubscriptionSummaryDTO;
 import lombok.Builder;
 
 import java.util.List;
@@ -26,11 +27,14 @@ public record PeladaDetailResponseDTO(
         int playersPerTeam,
         String timeZone,
         int maxMensalistas,
-        List<PeladaMemberDTO> members) {
+        List<PeladaMemberDTO> members,
+        // null when the pelada has no subscription row (read as writable)
+        SubscriptionSummaryDTO subscription) {
 
     // starsByUserId: PeladaPlayerStarsRepository.findStarsByPelada; members missing from it have the default.
     // mensalistaIds: PeladaMensalistaRepository.findUserIdsByPelada
-    public static PeladaDetailResponseDTO from(Pelada pelada, Map<Long, Integer> starsByUserId, Set<Long> mensalistaIds) {
+    public static PeladaDetailResponseDTO from(Pelada pelada, Map<Long, Integer> starsByUserId, Set<Long> mensalistaIds,
+                                               SubscriptionSummaryDTO subscription) {
         List<PeladaMemberDTO> memberDTOs = pelada.getMembers().stream()
                 .map(user -> PeladaMemberDTO.from(user, pelada.getAdmins().contains(user),
                         starsByUserId.getOrDefault(user.getId(), PeladaPlayerStars.DEFAULT_STARS),
@@ -54,6 +58,7 @@ public record PeladaDetailResponseDTO(
                 .timeZone(pelada.getTimeZone())
                 .maxMensalistas(pelada.getMaxMensalistas())
                 .members(memberDTOs)
+                .subscription(subscription)
                 .build();
     }
 }
