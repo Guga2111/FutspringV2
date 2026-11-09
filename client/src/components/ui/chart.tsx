@@ -76,8 +76,10 @@ const ChartTooltipContent = React.forwardRef<
     Partial<TooltipContentProps> & {
       hideLabel?: boolean
       nameKey?: string
+      // the shown value of an item (money kept as an exact string); default: the number with locale separators
+      formatValue?: (item: NonNullable<TooltipContentProps["payload"]>[number]) => React.ReactNode
     }
->(({ active, payload, label, className, hideLabel = false, nameKey }, ref) => {
+>(({ active, payload, label, className, hideLabel = false, nameKey, formatValue }, ref) => {
   const { config } = useChart()
 
   if (!active || !payload?.length) {
@@ -116,9 +118,11 @@ const ChartTooltipContent = React.forwardRef<
                 </span>
                 {item.value !== undefined && (
                   <span className="font-mono font-medium tabular-nums text-foreground ml-2">
-                    {typeof item.value === "number"
-                      ? item.value.toLocaleString()
-                      : String(item.value)}
+                    {formatValue
+                      ? formatValue(item)
+                      : typeof item.value === "number"
+                        ? item.value.toLocaleString()
+                        : String(item.value)}
                   </span>
                 )}
               </div>

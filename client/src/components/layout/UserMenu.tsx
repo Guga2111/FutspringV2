@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom"
 import { PlayerAvatar } from "@/components/PlayerAvatar"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { Logout01Icon, Moon02Icon, Settings01Icon, Sun03Icon, UnfoldMoreIcon, UserIcon } from "@hugeicons/core-free-icons"
+import { DashboardSquare01Icon, Logout01Icon, Moon02Icon, Settings01Icon, Sun03Icon, UnfoldMoreIcon, UserIcon } from "@hugeicons/core-free-icons"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -40,6 +40,11 @@ export function UserMenu() {
   function goToSettings() {
     setOpenMobile(false)
     navigate("/settings")
+  }
+
+  function goToAdmin() {
+    setOpenMobile(false)
+    navigate("/admin")
   }
 
   function handleLogout() {
@@ -82,6 +87,13 @@ export function UserMenu() {
               <HugeiconsIcon icon={UserIcon} />
               Perfil
             </DropdownMenuItem>
+            {/* the platform operator's panel; the API is the authority (404 to anyone else) */}
+            {user.isPlatformAdmin && (
+              <DropdownMenuItem className={itemClass} onSelect={goToAdmin}>
+                <HugeiconsIcon icon={DashboardSquare01Icon} />
+                Admin
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem className={itemClass} onSelect={goToSettings}>
               <HugeiconsIcon icon={Settings01Icon} />
               Configurações

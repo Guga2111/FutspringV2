@@ -9,3 +9,42 @@ export interface SubscriptionSummary {
   // whether sporting and financial data can be written (the server re-checks every command, 402)
   writable: boolean
 }
+
+// mirrors SubscriptionKind: what was recorded (the status above is computed from it and the validity)
+export type SubscriptionKind = "TRIAL" | "PENDING" | "PAID" | "EXEMPT" | "CANCELED"
+
+// mirrors SubscriptionPlan
+export type SubscriptionPlan = "MONTHLY" | "ANNUAL"
+
+export const subscriptionStatusLabel: Record<SubscriptionStatus, string> = {
+  TRIAL: "Teste grátis",
+  ACTIVE: "Ativa",
+  PAST_DUE: "Em atraso",
+  READ_ONLY: "Somente leitura",
+  PENDING: "Pendente",
+  EXEMPT: "Isenta",
+}
+
+// Badge colors (Badge variant="status")
+export const subscriptionStatusStyle: Record<SubscriptionStatus, string> = {
+  TRIAL: "bg-brand-muted text-brand-text",
+  ACTIVE: "bg-success-muted text-success-soft",
+  // its own card fill: warning text only reaches 4.5:1 on card
+  PAST_DUE: "border-border bg-card text-warning",
+  READ_ONLY: "bg-destructive-muted text-destructive-soft",
+  PENDING: "border-border bg-transparent text-muted-foreground",
+  EXEMPT: "bg-secondary text-secondary-foreground",
+}
+
+export const subscriptionKindLabel: Record<SubscriptionKind, string> = {
+  TRIAL: "Teste grátis",
+  PENDING: "Pendente",
+  PAID: "Paga",
+  EXEMPT: "Isenta",
+  CANCELED: "Cancelada",
+}
+
+export const subscriptionPlanLabel: Record<SubscriptionPlan, string> = {
+  MONTHLY: "Mensal",
+  ANNUAL: "Anual",
+}

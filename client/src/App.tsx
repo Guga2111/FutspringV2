@@ -28,6 +28,11 @@ const JoinPeladaPage = lazy(() => import("@/pages/JoinPeladaPage"))
 const InstallPage = lazy(() => import("@/pages/InstallPage"))
 const TermsPage = lazy(() => import("@/pages/TermsPage"))
 const PrivacyPage = lazy(() => import("@/pages/PrivacyPage"))
+const AdminOverviewPage = lazy(() => import("@/pages/AdminOverviewPage"))
+const AdminPeladasPage = lazy(() => import("@/pages/AdminPeladasPage"))
+const AdminPeladaPage = lazy(() => import("@/pages/AdminPeladaPage"))
+const AdminPaymentsPage = lazy(() => import("@/pages/AdminPaymentsPage"))
+const AdminUsersPage = lazy(() => import("@/pages/AdminUsersPage"))
 const NotFoundPage = lazy(() => import("@/pages/NotFoundPage"))
 
 const fallback = <div className="flex items-center justify-center min-h-screen">Carregando…</div>
@@ -67,6 +72,12 @@ function App() {
             <Route path="/daily/:id" element={<ErrorBoundary><DailyDetailPage /></ErrorBoundary>} />
             <Route path="/profile/:id" element={<ErrorBoundary><ProfilePage /></ErrorBoundary>} />
             <Route path="/settings" element={<ErrorBoundary><AccountSettingsPage /></ErrorBoundary>} />
+            {/* the platform admin's panel; the API answers 404 to anyone else, and the pages show "Bola fora" */}
+            <Route path="/admin" element={<ErrorBoundary><AdminOverviewPage /></ErrorBoundary>} />
+            <Route path="/admin/peladas" element={<ErrorBoundary><AdminPeladasPage /></ErrorBoundary>} />
+            <Route path="/admin/peladas/:id" element={<ErrorBoundary><AdminPeladaPage /></ErrorBoundary>} />
+            <Route path="/admin/pagamentos" element={<ErrorBoundary><AdminPaymentsPage /></ErrorBoundary>} />
+            <Route path="/admin/usuarios" element={<ErrorBoundary><AdminUsersPage /></ErrorBoundary>} />
             {/* old links and e-mails already sent */}
             <Route path="/settings/notifications" element={<Navigate to="/settings#notificacoes" replace />} />
           </Route>

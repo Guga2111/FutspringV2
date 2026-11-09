@@ -1,6 +1,7 @@
 package com.futspring.backend.contract;
 
 import com.futspring.backend.domain.finance.dto.FinanceRequests;
+import com.futspring.backend.domain.platform.dto.PlatformRequests;
 import com.futspring.backend.domain.platform.dto.PlatformViews;
 import tools.jackson.databind.JavaType;
 import tools.jackson.databind.JsonNode;
@@ -129,7 +130,9 @@ class ContractSnapshotTest {
                 UpdateProfileRequest.class, SendMessageRequest.class,
                 NotificationPreferenceDTO.class, UnsubscribeRequestDTO.class,
                 PushSubscriptionRequestDTO.class, RemovePushSubscriptionRequestDTO.class,
-                FinanceRequests.BulkAdjust.class);
+                FinanceRequests.BulkAdjust.class,
+                PlatformRequests.RecordPayment.class, PlatformRequests.ChangeSubscription.class,
+                PlatformRequests.VoidPayment.class);
     }
 
     private static final Set<Class<?>> SENT_AS_LIST = Set.of(MatchResultDTO.class, NotificationPreferenceDTO.class);
