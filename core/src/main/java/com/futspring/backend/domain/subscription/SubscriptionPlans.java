@@ -1,6 +1,7 @@
 package com.futspring.backend.domain.subscription;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 
 /** List prices. The amount actually charged is stored on each payment (a founder's locked price included). */
 public final class SubscriptionPlans {
@@ -22,5 +23,10 @@ public final class SubscriptionPlans {
             case MONTHLY -> large ? LARGE_MONTHLY : MONTHLY;
             case ANNUAL -> large ? LARGE_ANNUAL : ANNUAL;
         };
+    }
+
+    /** Money on the API: an exact two-decimal string ("19.90"). */
+    public static String money(BigDecimal amount) {
+        return amount.setScale(2, RoundingMode.HALF_UP).toPlainString();
     }
 }

@@ -30,6 +30,7 @@ const routes: [RegExp, Handler][] = [
   [/^\/peladas\/\d+\/invitations$/, (_, url) =>
     url.searchParams.get("pending") === "false" ? f.peladaInvitationsHistory : f.peladaInvitationsPending],
   [/^\/peladas\/\d+\/invite-link$/, () => f.inviteLink],
+  [/^\/peladas\/\d+\/subscription$/, () => f.peladaSubscription],
   [/^\/peladas\/\d+\/finance$/, () => f.financeOverview],
   [/^\/peladas\/\d+\/finance\/lists\/\d+$/, () => f.financeDetail],
   [/^\/peladas\/\d+\/finance\/movements$/, (_, url) => filterHistory(f.financeMovements, url, (m) => m.effectiveDate)],

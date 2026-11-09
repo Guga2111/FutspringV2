@@ -48,3 +48,38 @@ export const subscriptionPlanLabel: Record<SubscriptionPlan, string> = {
   MONTHLY: "Mensal",
   ANNUAL: "Anual",
 }
+
+// mirrors PeladaSubscriptionDTO.PlanOffer: a list price for the pelada's member count and its Pix BR Code
+export interface SubscriptionPlanOffer {
+  plan: SubscriptionPlan
+  // exact two-decimal string, "19.90"
+  amount: string
+  // the "Pix Copia e Cola" (also what the QR Code holds); null when the platform has no Pix configured
+  pixCode: string | null
+}
+
+// mirrors PeladaSubscriptionDTO.Payment
+export interface CreatorSubscriptionPayment {
+  // yyyy-MM-dd
+  paidOn: string
+  amount: string
+  plan: SubscriptionPlan
+  // ISO instant: the end of the period it paid for
+  periodEnd: string
+}
+
+// mirrors PeladaSubscriptionDTO: the creator's Assinatura area (GET /peladas/{id}/subscription)
+export interface PeladaSubscription {
+  status: SubscriptionStatus
+  validUntil: string | null
+  plan: SubscriptionPlan | null
+  founder: boolean
+  // the creator said they paid; cleared when the platform admin records the payment
+  pixClaimedAt: string | null
+  claimedPlan: SubscriptionPlan | null
+  // who receives the Pix (full name); null when the platform has no Pix configured
+  pixRecipient: string | null
+  plans: SubscriptionPlanOffer[]
+  // latest first, voided ones left out
+  payments: CreatorSubscriptionPayment[]
+}

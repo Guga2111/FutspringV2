@@ -90,6 +90,10 @@ jobs:
           VAPID_PUBLIC_KEY: ${{ secrets.VAPID_PUBLIC_KEY }}
           VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
           VAPID_SUBJECT: ${{ vars.VAPID_SUBJECT || 'mailto:contato@futspring.luisgosampaio.com' }}
+          BILLING_PIX_KEY: ${{ secrets.BILLING_PIX_KEY }}
+          BILLING_PIX_NAME: ${{ secrets.BILLING_PIX_NAME }}
+          BILLING_PIX_MERCHANT_NAME: ${{ secrets.BILLING_PIX_MERCHANT_NAME }}
+          BILLING_PIX_CITY: ${{ secrets.BILLING_PIX_CITY }}
           MAIL_FROM: ${{ vars.MAIL_FROM || 'Futspring <no-reply@futspring.luisgosampaio.com>' }}
           JWT_EXPIRATION_MS: ${{ vars.JWT_EXPIRATION_MS || '604800000' }}
           ALLOWED_ORIGINS: ${{ vars.ALLOWED_ORIGINS || vars.APP_URL }}
@@ -118,6 +122,10 @@ jobs:
             echo "::warning::VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY not set: Web Push is off."
           fi
 
+          if [[ -z "${BILLING_PIX_KEY}" ]]; then
+            echo "::warning::BILLING_PIX_KEY not set: the subscription screen shows no Pix to pay with."
+          fi
+
           # DDL_AUTO is intentionally not written: the schema is owned by Flyway and Hibernate runs with validate
           {
             printf 'DB_URL=%s\n' "$DB_URL"
@@ -136,6 +144,10 @@ jobs:
             printf 'VAPID_PUBLIC_KEY=%s\n' "$VAPID_PUBLIC_KEY"
             printf 'VAPID_PRIVATE_KEY=%s\n' "$VAPID_PRIVATE_KEY"
             printf 'VAPID_SUBJECT=%s\n' "$VAPID_SUBJECT"
+            printf 'BILLING_PIX_KEY=%s\n' "$BILLING_PIX_KEY"
+            printf 'BILLING_PIX_NAME=%s\n' "$BILLING_PIX_NAME"
+            printf 'BILLING_PIX_MERCHANT_NAME=%s\n' "$BILLING_PIX_MERCHANT_NAME"
+            printf 'BILLING_PIX_CITY=%s\n' "$BILLING_PIX_CITY"
           } > .env
 
       - name: Run deploy.sh

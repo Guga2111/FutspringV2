@@ -18,6 +18,7 @@ const PeladaRankingPage = lazy(() => import("@/pages/PeladaRankingPage"))
 const PeladaAwardsPage = lazy(() => import("@/pages/PeladaAwardsPage"))
 const PeladaFinancePage = lazy(() => import("@/pages/PeladaFinancePage"))
 const PeladaInvitationsPage = lazy(() => import("@/pages/PeladaInvitationsPage"))
+const PeladaSubscriptionPage = lazy(() => import("@/pages/PeladaSubscriptionPage"))
 const PeladaSettingsPage = lazy(() => import("@/pages/PeladaSettingsPage"))
 const DailyDetailPage = lazy(() => import("@/pages/DailyDetailPage"))
 const ProfilePage = lazy(() => import("@/pages/ProfilePage"))
@@ -67,6 +68,7 @@ function App() {
               {/* deep link to one collection (the WhatsApp message links here) */}
               <Route path="financeiro/:listId" element={<ErrorBoundary><PeladaFinancePage /></ErrorBoundary>} />
               <Route path="convites" element={<ErrorBoundary><PeladaInvitationsPage /></ErrorBoundary>} />
+              <Route path="assinatura" element={<ErrorBoundary><PeladaSubscriptionPage /></ErrorBoundary>} />
             </Route>
             <Route path="/pelada/:id/settings" element={<ErrorBoundary><PeladaSettingsPage /></ErrorBoundary>} />
             <Route path="/daily/:id" element={<ErrorBoundary><DailyDetailPage /></ErrorBoundary>} />

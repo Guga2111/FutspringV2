@@ -1,7 +1,7 @@
 import { useMemo } from "react"
 import { Link } from "react-router-dom"
 import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react"
-import { ArrowRight01Icon, Award01Icon, Calendar03Icon, LeftToRightListNumberIcon, MailAdd01Icon, PlusSignIcon, Settings01Icon, UserGroupIcon, Wallet01Icon } from "@hugeicons/core-free-icons"
+import { ArrowRight01Icon, Award01Icon, Calendar03Icon, CreditCardIcon, LeftToRightListNumberIcon, MailAdd01Icon, PlusSignIcon, Settings01Icon, UserGroupIcon, Wallet01Icon } from "@hugeicons/core-free-icons"
 import { NextSessionCard } from "@/components/pelada/NextSessionCard"
 import { PeladaBanner } from "@/components/pelada/PeladaBanner"
 import { SessionRow } from "@/components/pelada/SessionHistoryList"
@@ -23,6 +23,7 @@ const AREA_ICONS: Record<Exclude<PeladaArea, "overview">, IconSvgElement> = {
   finance: Wallet01Icon,
   invitations: MailAdd01Icon,
   settings: Settings01Icon,
+  subscription: CreditCardIcon,
 }
 
 // What is happening now: the next session, the latest sessions, and a way into every area
@@ -33,7 +34,7 @@ export default function PeladaOverviewPage() {
     () => pickRecentSessions(w.dailies, nextSession?.id ?? null, RECENT_LIMIT),
     [w.dailies, nextSession],
   )
-  const shortcuts = visibleAreas(w.isAdmin).filter((area): area is Exclude<PeladaArea, "overview"> => area !== "overview")
+  const shortcuts = visibleAreas(w.role).filter((area): area is Exclude<PeladaArea, "overview"> => area !== "overview")
   const sessionsPath = areaPath(w.pelada.id, "sessions")
 
   return (

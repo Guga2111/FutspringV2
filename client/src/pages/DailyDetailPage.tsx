@@ -125,6 +125,7 @@ export default function DailyDetailPage() {
         />
 
         <SubscriptionNotice
+          peladaId={daily.peladaId}
           subscription={daily.subscription}
           isCreator={user != null && daily.creatorId === user.id}
           timeZone={daily.timeZone}

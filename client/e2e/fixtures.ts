@@ -7,7 +7,7 @@ import type { DailyDetail, DailyListItem, PlayerDTO, RankingDTO, TeamDTO } from 
 import type { StatsDTO, UserMatchHistoryDTO, UserStatsTimelineDTO } from "../src/types/stats"
 import type { NotificationPreference, NotificationResponse } from "../src/types/notification"
 import type { VapidPublicKey } from "../src/types/push"
-import type { SubscriptionSummary } from "../src/types/subscription"
+import type { PeladaSubscription, SubscriptionSummary } from "../src/types/subscription"
 import type { PlatformOverview, PlatformPage, PlatformPayment, PlatformPayments, PlatformPeladaDetail, PlatformPeladaItem, PlatformUserItem } from "../src/types/platform"
 import type { Invitation, InvitationStatus, InviteLink } from "../src/types/invitation"
 import type { FinanceAudit, FinanceDetail, FinanceMovement, FinanceOverview, FinancePage, FinanceSettings, FinanceTemplate } from "../src/types/finance"
@@ -714,4 +714,20 @@ export const platformUsers: PlatformPage<PlatformUserItem> = {
     { id: 31, username: "Ex-jogador", email: "deleted-31@invalid", createdAt: null, peladasCreated: [], memberOf: 0, trialUsedAt: null, isDeleted: true },
   ],
   total: 3,
+}
+
+// The creator's Assinatura area of pelada 1: still in the trial, the annual Pix already informed, one earlier payment
+export const peladaSubscription: PeladaSubscription = {
+  status: "TRIAL",
+  validUntil: trialSubscription.validUntil,
+  plan: null,
+  founder: false,
+  pixClaimedAt: at("2026-11-03", "20:15"),
+  claimedPlan: "ANNUAL",
+  pixRecipient: "Luis Gomes Sampaio",
+  plans: [
+    { plan: "MONTHLY", amount: "19.90", pixCode: "00020126360014br.gov.bcb.pix0114+5511999990000520400005303986540519.905802BR5909FUTSPRING6009SAO PAULO62080504FUT16304EFD2" },
+    { plan: "ANNUAL", amount: "199.00", pixCode: "00020126360014br.gov.bcb.pix0114+55119999900005204000053039865406199.005802BR5909FUTSPRING6009SAO PAULO62080504FUT16304B977" },
+  ],
+  payments: [{ paidOn: "2026-09-10", amount: "19.90", plan: "MONTHLY", periodEnd: endOfDay("2026-10-10") }],
 }

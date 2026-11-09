@@ -3,6 +3,7 @@ import type { usePeladaActions } from "@/components/pelada/hooks/usePeladaAction
 import type { usePeladaDetail } from "@/components/pelada/hooks/usePeladaDetail"
 import type { PeladaDetail, PeladaMember } from "@/types/pelada"
 import type { BulkMemberAction } from "@/utils/bulkMemberActions"
+import type { PeladaRole } from "@/utils/peladaAreas"
 
 // What the pelada layout (PeladaDetailPage) shares with the area pages through <Outlet context>.
 // The area pages only render once the pelada has loaded, so `pelada` is never null here.
@@ -10,6 +11,9 @@ export type PeladaWorkspace = Omit<ReturnType<typeof usePeladaDetail>, "pelada">
   ReturnType<typeof usePeladaActions> & {
     pelada: PeladaDetail
     isAdmin: boolean
+    isCreator: boolean
+    // creator ⊇ admin ⊇ member: which areas the caller sees
+    role: PeladaRole
     // false while the pelada is read-only (subscription): its sporting and finance writes are disabled
     writable: boolean
     currentUserId: number | null
