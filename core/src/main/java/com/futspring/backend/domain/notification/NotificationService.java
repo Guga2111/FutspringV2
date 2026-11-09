@@ -16,7 +16,9 @@ import com.futspring.backend.domain.pelada.MembersRemovedEvent;
 import com.futspring.backend.domain.pelada.MensalistasChangedEvent;
 import com.futspring.backend.domain.pelada.Pelada;
 import com.futspring.backend.domain.pelada.PeladaTransferredEvent;
+import com.futspring.backend.domain.subscription.PixClaimedEvent;
 import com.futspring.backend.domain.user.User;
+import com.futspring.backend.domain.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
@@ -48,6 +50,7 @@ public class NotificationService {
     private final NotificationRepository notificationRepository;
     private final DailyAttendanceRepository attendanceRepository;
     private final DailyAttendanceBumpRepository bumpRepository;
+    private final UserRepository userRepository;
     private final NotificationDelivery delivery;
     private final Clock clock;
 
@@ -134,6 +137,22 @@ public class NotificationService {
     @EventListener
     public void onPeladaTransferred(PeladaTransferredEvent event) {
         create(PELADA_TRANSFERRED, List.of(event.newCreator()), event.actor(), event.pelada());
+    }
+
+    @EventListener
+    public void onPixClaimed(PixClaimedEvent event) {
+        create(SUBSCRIPTION_PIX_CLAIMED, userRepository.findByPlatformAdminTrueAndDeletedAtIsNull(), event.actor(),
+                event.pelada());
+    }
+
+    /**
+     * Subscription notices (no actor) to the pelada's creator; {@code validUntil} is the validity the notice is about,
+     * which SubscriptionNoticeJob also uses to send it once.
+     */
+    public void notifySubscription(NotificationType type, Pelada pelada, Instant validUntil) {
+        Notification n = build(type, pelada.getCreator(), null, pelada, null, Instant.now(clock));
+        n.setValidUntil(validUntil);
+        save(List.of(n));
     }
 
     /** Scheduled events (no actor): the job has already picked the recipients who weren't notified yet. */

@@ -54,6 +54,10 @@ public class Notification {
     @Column(name = "award", length = 20)
     private NotificationAward award;
 
+    // only on SUBSCRIPTION_ENDING / SUBSCRIPTION_PAST_DUE: the subscription's valid_until when the notice went out
+    @Column(name = "valid_until")
+    private Instant validUntil;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 

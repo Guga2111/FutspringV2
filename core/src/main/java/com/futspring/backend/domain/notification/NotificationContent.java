@@ -2,6 +2,11 @@ package com.futspring.backend.domain.notification;
 
 import com.futspring.backend.domain.daily.AttendanceWindow;
 import com.futspring.backend.domain.daily.entity.Daily;
+import com.futspring.backend.domain.subscription.SubscriptionService;
+import com.futspring.backend.domain.subscription.SubscriptionState;
+
+import java.time.Instant;
+import java.time.format.DateTimeFormatter;
 
 /**
  * The text of a notification, plain, for the e-mail (NotificationEmail escapes it) and the Web Push (WebPushDispatcher:
@@ -16,6 +21,8 @@ public record NotificationContent(String subject, String title, String body, Str
     private static final String SEE_SESSION = "Ver a sessão";
     private static final String SEE_PELADA = "Ver a pelada";
     static final int PUSH_BODY_MAX = 180;
+    private static final DateTimeFormatter BILLING_DAY = DateTimeFormatter.ofPattern("dd/MM")
+            .withZone(SubscriptionService.BILLING_ZONE);
 
     // The body of a system notification: push services and lock screens show little, so it is cut at 180 characters
     public String pushBody() {
@@ -129,6 +136,24 @@ public record NotificationContent(String subject, String title, String body, Str
                     actor + " transferiu a " + pelada + " para você. Agora você é o criador da pelada.",
                     SEE_PELADA, peladaPath);
             case AWARD_WON -> award(n, pelada, date, session);
+            case SUBSCRIPTION_ENDING -> new NotificationContent(
+                    "A assinatura da " + pelada + " vence em " + billingDay(n.getValidUntil()),
+                    "Assinatura vencendo",
+                    "O plano da " + pelada + " vence em " + billingDay(n.getValidUntil())
+                            + ". Assine para a pelada não travar.",
+                    "Ver assinatura", subscriptionPath(n));
+            case SUBSCRIPTION_PAST_DUE -> new NotificationContent(
+                    "Pagamento pendente: " + pelada,
+                    "Pagamento pendente",
+                    "O plano da " + pelada + " venceu em " + billingDay(n.getValidUntil()) + ". Renove até "
+                            + billingDay(lockDate(n.getValidUntil())) + " para a pelada não travar.",
+                    "Renovar", subscriptionPath(n));
+            case SUBSCRIPTION_PIX_CLAIMED -> new NotificationContent(
+                    "Pix informado: " + pelada,
+                    "Pix informado",
+                    (n.getActor() != null ? n.getActor().getUsername() : "O criador") + " informou o Pix da assinatura da "
+                            + pelada + ". Confira e registre o pagamento.",
+                    "Abrir no painel", n.getPelada() != null ? "/admin/peladas/" + n.getPelada().getId() : "/admin");
         };
     }
 
@@ -140,6 +165,20 @@ public record NotificationContent(String subject, String title, String body, Str
                         ? "Você ganhou o " + label + " de " + date + " na " + pelada + " 🏆"
                         : "Você foi o " + label + " de " + date + " na " + pelada + " 🏆";
         return new NotificationContent(label + " de " + date, label, sentence, "Ver a sessão", session);
+    }
+
+    // "07/12" in the billing zone (the validity ends at 23:59:59 there)
+    private static String billingDay(Instant instant) {
+        return instant != null ? BILLING_DAY.format(instant) : "";
+    }
+
+    // A paid subscription locks once the grace after valid_until is over
+    private static Instant lockDate(Instant validUntil) {
+        return validUntil != null ? validUntil.plus(SubscriptionState.GRACE) : null;
+    }
+
+    private static String subscriptionPath(Notification n) {
+        return n.getPelada() != null ? "/pelada/" + n.getPelada().getId() + "/assinatura" : "/home";
     }
 
     private static String peladaPath(Notification n) {

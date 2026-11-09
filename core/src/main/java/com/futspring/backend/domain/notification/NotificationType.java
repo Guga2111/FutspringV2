@@ -28,7 +28,13 @@ public enum NotificationType {
     MENSALISTA_REVOKED(MEMBERSHIP, true, true),
     PELADA_TRANSFERRED(MEMBERSHIP, true, true),
 
-    AWARD_WON(AWARDS, true, true);
+    AWARD_WON(AWARDS, true, true),
+
+    // to the creator, from SubscriptionNoticeJob (valid_until set)
+    SUBSCRIPTION_ENDING(BILLING, true, true),
+    SUBSCRIPTION_PAST_DUE(BILLING, true, true),
+    // to the platform admins, on the creator's first "Já fiz o Pix"
+    SUBSCRIPTION_PIX_CLAIMED(BILLING, true, true);
 
     private final NotificationCategory category;
     private final boolean emailable;

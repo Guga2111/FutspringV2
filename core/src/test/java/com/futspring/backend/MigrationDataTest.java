@@ -289,6 +289,29 @@ class MigrationDataTest {
         }
     }
 
+    @Test
+    void v21_keepsExistingRows_andAcceptsTheSubscriptionNotices() throws SQLException {
+        flyway("20").migrate();
+        execute("INSERT INTO users(id,email,username,password) VALUES(1,'aviso@migration.test','Aviso','hash')");
+        execute("INSERT INTO peladas(id,name,day_of_week,time_of_day,duration,auto_create_daily_enabled,number_of_teams,players_per_team,created_at,creator_id) VALUES(1,'A','FRIDAY','18:00',1,false,2,5,now(),1)");
+        execute("INSERT INTO notifications(recipient_id,type,pelada_id,created_at) VALUES(1,'MEMBER_JOINED',1,now())");
+        execute("INSERT INTO notification_preferences(user_id,category,email_enabled) VALUES(1,'AWARDS',true)");
+        flyway(null).migrate();
+        try (Connection c = connect(); Statement st = c.createStatement();
+             ResultSet rs = st.executeQuery("SELECT type, valid_until IS NULL FROM notifications")) {
+            rs.next(); assertThat(rs.getString(1)).isEqualTo("MEMBER_JOINED"); assertThat(rs.getBoolean(2)).isTrue();
+        }
+        execute("INSERT INTO notification_preferences(user_id,category,email_enabled) VALUES(1,'BILLING',false)");
+        execute("INSERT INTO notifications(recipient_id,type,pelada_id,valid_until,created_at) VALUES(1,'SUBSCRIPTION_ENDING',1,'2026-12-08T02:59:59Z',now()),(1,'SUBSCRIPTION_PIX_CLAIMED',1,null,now())");
+        // one notice per pelada, type and validity
+        assertThatThrownBy(() -> execute("INSERT INTO notifications(recipient_id,type,pelada_id,valid_until,created_at) VALUES(1,'SUBSCRIPTION_ENDING',1,'2026-12-08T02:59:59Z',now())"))
+                .isInstanceOf(SQLException.class).hasMessageContaining("uq_notifications_subscription");
+        assertThatThrownBy(() -> execute("INSERT INTO notification_preferences(user_id,category,email_enabled) VALUES(1,'CHAT',true)"))
+                .isInstanceOf(SQLException.class).hasMessageContaining("notification_preferences_category_check");
+        assertThatThrownBy(() -> execute("INSERT INTO notifications(recipient_id,type,created_at) VALUES(1,'SUBSCRIPTION_LOCKED',now())"))
+                .isInstanceOf(SQLException.class).hasMessageContaining("notifications_type_check");
+    }
+
     private static Flyway flyway(String target) {
         var config = Flyway.configure()
                 .dataSource(POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword())

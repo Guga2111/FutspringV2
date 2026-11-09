@@ -171,6 +171,20 @@ class WebPushDispatcherTest {
     }
 
     @Test
+    void subscriptionNotices_followTheBillingPushPreference() {
+        device(1L, ana, "ana");
+        device(2L, bia, "bia");
+        stub(notification(1L, NotificationType.SUBSCRIPTION_ENDING, ana),
+                notification(2L, NotificationType.SUBSCRIPTION_PIX_CLAIMED, bia));
+        when(preferenceRepository.findByIdUserIdIn(anyCollection())).thenReturn(List.of(
+                new NotificationPreference(ana, NotificationCategory.BILLING, true, false)));
+
+        dispatcher().send(List.of(1L, 2L));
+
+        assertThat(sender.sent).extracting(s -> s.subscription().getUser().getId()).containsExactly(bia.getId());
+    }
+
+    @Test
     void everyDeviceOfTheRecipientGetsIt_andRecipientsWithoutDevicesNeedNoPreferenceQuery() {
         device(1L, ana, "phone");
         device(2L, ana, "laptop");

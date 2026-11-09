@@ -26,5 +26,6 @@
   "team" : {
     "name" : "name",
     "color" : "color"
-  }
+  },
+  "validUntil" : "2026-10-31T23:00:00Z"
 }

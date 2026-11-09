@@ -389,7 +389,7 @@ Para planejar um PR, rode o prompt dele numa sessão limpa (`/clear` antes). Ao 
 - A tela usa react-hook-form + `pixClaimSchema` (o plano escolhido decide qual QR aparece). "Já fiz o Pix" fica desabilitado quando o plano escolhido já é o informado. Pelada isenta não mostra planos nem Pix. `SubscriptionStatusBadge` do painel é reaproveitado.
 - O app do banco não foi testado com um QR real: vale escanear um em dev antes do merge.
 
-### [ ] PR 8 — Avisos de assinatura (`feat/subscriptions-notices`)
+### [x] PR 8 — Avisos de assinatura (`feat/subscriptions-notices`)
 
 - **Entrega:**
   - Migration V21 (CHECK de `type` e `category` das notificações; a V20 foi usada pelo PR 5).
@@ -411,6 +411,15 @@ Para planejar um PR, rode o prompt dele numa sessão limpa (`/clear` antes). Ao 
 ```
 /plan-task docs/plans/2026-11-07-subscriptions-platform-admin-spec.md "PR 8 — Avisos de assinatura"
 ```
+
+**Decisões (PR 8):**
+- A data do aviso fica numa coluna nova, `notifications.valid_until` (snapshot do `valid_until` da assinatura quando o aviso saiu), exposta como `validUntil` no `NotificationDTO` (snapshot de contrato). O texto mostra a data exata mesmo se a assinatura for renovada depois. A data da trava do `PAST_DUE` é derivada (`validUntil` + 7 dias: `SubscriptionState.GRACE` no backend, `GRACE_DAYS` no front). Datas em São Paulo.
+- Texto único para trial e pago: "O plano da X vence em 07/12. Assine para a pelada não travar."
+- **Desvio do guard do spec:** em vez de "criada depois de `valid_until − 6 dias`", a chave de idempotência é (pelada, tipo, `valid_until`), com `NOT EXISTS` nas duas queries do job. Mesmo efeito (repetida ou atrasada não duplica; renovar gera aviso novo) sem aritmética de intervalo em JPQL. `uq_notifications_subscription (pelada_id, type, valid_until)` parcial é o backstop em produção.
+- Janelas: `ENDING` para `TRIAL`/`PAID` com `validUntil` em `(now, now + 5 dias]`; `PAST_DUE` para `PAID` com `validUntil` em `(now − 7 dias, now]`. O destinatário é o criador atual (uma transferência leva o aviso junto). O job fica em `domain/subscription` e chama `NotificationService.notifySubscription`.
+- Pix informado: `PixClaimedEvent` só no primeiro claim (troca de plano e repetição não notificam; depois de um pagamento registrado, o claim volta a ser novo). Vai para todo admin da plataforma não excluído (`findByPlatformAdminTrueAndDeletedAtIsNull`); o criador é o ator e fica de fora se também for admin.
+- `BILLING` aparece para todo usuário em `/settings` (e-mail e push ligados), embora só criadores e admins da plataforma recebam. `PUT /notifications/preferences` aceita até 5 itens.
+- Nenhum dos três mostra toast; no sino, `ENDING`/`PAST_DUE` levam a `/pelada/:id/assinatura` e o Pix a `/admin/peladas/:id`.
 
 ### [ ] PR 9 — Política de privacidade (`feat/subscriptions-privacy`)
 

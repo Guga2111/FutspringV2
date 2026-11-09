@@ -13,6 +13,12 @@ export function formatBillingDate(instant: string): string {
     .format(new Date(instant))
 }
 
+// "07/12" in São Paulo, inside a sentence
+export function formatBillingDay(instant: string | number): string {
+  return new Intl.DateTimeFormat("pt-BR", { timeZone: BILLING_ZONE, day: "2-digit", month: "2-digit" })
+    .format(new Date(instant))
+}
+
 // "07/12/2026" from a calendar date (yyyy-MM-dd)
 export function formatIsoDate(date: string): string {
   const [year, month, day] = date.split("-")

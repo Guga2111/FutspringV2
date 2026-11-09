@@ -203,7 +203,7 @@ class ScheduledNotificationJobTest {
     private void run(Instant now) {
         Clock clock = Clock.fixed(now, ZoneOffset.UTC);
         NotificationService notificationService = new NotificationService(notificationRepository,
-                attendanceRepository, bumpRepository, delivery, clock);
+                attendanceRepository, bumpRepository, userRepository, delivery, clock);
         new ScheduledNotificationJob(dailyRepository, attendanceRepository, notificationRepository,
                 notificationService, transactionManager, clock,
                 new SubscriptionGuard(subscriptionRepository, clock)).run();

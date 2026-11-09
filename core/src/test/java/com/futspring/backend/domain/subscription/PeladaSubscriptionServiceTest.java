@@ -49,7 +49,7 @@ class PeladaSubscriptionServiceTest {
         pelada = Pelada.builder().id(7L).name("Pelada").creator(creator).build();
         service = new PeladaSubscriptionService(userAuthHelper, new PeladaAccessHelper(peladaRepository),
                 peladaRepository, subscriptionRepository, paymentRepository, subscriptionService,
-                new BillingPixConfig("", "", "", ""), Clock.fixed(NOW, ZoneOffset.UTC));
+                new BillingPixConfig("", "", "", ""), Clock.fixed(NOW, ZoneOffset.UTC), event -> { });
         when(userAuthHelper.getAuthenticatedUser("c@test")).thenReturn(creator);
     }
 
