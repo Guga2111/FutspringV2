@@ -30,6 +30,9 @@ public interface SubscriptionPaymentRepository extends JpaRepository<Subscriptio
     @EntityGraph(attributePaths = "recordedBy")
     List<SubscriptionPayment> findByPeladaIdOrderByPaidOnDescIdDesc(Long peladaId, Pageable pageable);
 
+    // What the creator sees: voided payments are the platform admin's business
+    List<SubscriptionPayment> findByPeladaIdAndVoidedAtIsNullOrderByPaidOnDescIdDesc(Long peladaId, Pageable pageable);
+
     @Query("""
         SELECT COALESCE(SUM(p.amount), 0) FROM SubscriptionPayment p
         WHERE p.voidedAt IS NULL AND p.paidOn BETWEEN :from AND :to

@@ -92,7 +92,7 @@ public class PlatformReadService {
         List<PlatformViews.MonthRevenue> revenueByMonth = new ArrayList<>();
         for (YearMonth month = first; !month.isAfter(thisMonth); month = month.plusMonths(1)) {
             revenueByMonth.add(new PlatformViews.MonthRevenue(month.toString(),
-                    money(byMonth.getOrDefault(month, BigDecimal.ZERO))));
+                    SubscriptionPlans.money(byMonth.getOrDefault(month, BigDecimal.ZERO))));
         }
 
         BigDecimal recurring = BigDecimal.ZERO;
@@ -105,7 +105,7 @@ public class PlatformReadService {
         PlatformViews.Users users = new PlatformViews.Users(userRepository.countByDeletedAtIsNull(),
                 userRepository.countByDeletedAtIsNullAndCreatedAtGreaterThanEqual(now.minus(Duration.ofDays(30))));
         return new PlatformViews.Overview(counts, trialsEndingSoon, pixClaimed,
-                revenueByMonth.getLast().total(), revenueByMonth, money(recurring), users);
+                revenueByMonth.getLast().total(), revenueByMonth, SubscriptionPlans.money(recurring), users);
     }
 
     /** {@code state} filters by the effective state (in SQL); {@code q} matches the pelada, creator name or e-mail. */
@@ -180,7 +180,7 @@ public class PlatformReadService {
         var rows = paymentRepository.findByPaidOnBetweenOrderByPaidOnDescIdDesc(start, end,
                 PageRequest.of(page(page), size(size)));
         return new PlatformViews.Payments(rows.stream().map(PlatformReadService::paymentView).toList(),
-                rows.getTotalElements(), money(paymentRepository.sumBetween(start, end)));
+                rows.getTotalElements(), SubscriptionPlans.money(paymentRepository.sumBetween(start, end)));
     }
 
     /** Every account (deleted ones included), newest first; {@code q} matches name or e-mail. */
@@ -208,7 +208,7 @@ public class PlatformReadService {
 
     static PlatformViews.Payment paymentView(SubscriptionPayment p) {
         return new PlatformViews.Payment(p.getId(), p.getPeladaId(), p.getPeladaName(),
-                p.getPayer() == null ? null : p.getPayer().getId(), p.getPayerName(), money(p.getAmount()),
+                p.getPayer() == null ? null : p.getPayer().getId(), p.getPayerName(), SubscriptionPlans.money(p.getAmount()),
                 p.getPaidOn(), p.getPlan(), p.getPeriodStart(), p.getPeriodEnd(), PublicUserDTO.from(p.getRecordedBy()),
                 p.getNote(), p.getVoidedAt(), p.getVoidReason(), p.getCreatedAt());
     }
@@ -222,7 +222,7 @@ public class PlatformReadService {
     private static PlatformViews.Subscription subscriptionView(PeladaSubscription s, int memberCount, Instant now) {
         SubscriptionStatus status = SubscriptionState.of(s, now);
         List<PlatformViews.Price> prices = Arrays.stream(SubscriptionPlan.values())
-                .map(plan -> new PlatformViews.Price(plan, money(SubscriptionPlans.price(plan, memberCount))))
+                .map(plan -> new PlatformViews.Price(plan, SubscriptionPlans.money(SubscriptionPlans.price(plan, memberCount))))
                 .toList();
         return new PlatformViews.Subscription(s.getKind(), status, status.writable(), s.getValidUntil(), s.getPlan(),
                 s.isFounder(), s.getPixClaimedAt(), s.getClaimedPlan(), prices, s.getCreatedAt(), s.getUpdatedAt());
@@ -244,10 +244,6 @@ public class PlatformReadService {
             dates.put((Long) row[0], (LocalDate) row[1]);
         }
         return dates;
-    }
-
-    static String money(BigDecimal amount) {
-        return amount.setScale(2, RoundingMode.HALF_UP).toPlainString();
     }
 
     private static String search(String q) {

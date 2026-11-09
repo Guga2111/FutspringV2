@@ -24,6 +24,7 @@ const pages: { name: string; path: string; auth?: boolean; ready?: string }[] = 
   { name: "pelada-finance", path: `${PELADA}/financeiro` },
   { name: "pelada-settings", path: `${PELADA}/settings` },
   { name: "pelada-invitations", path: `${PELADA}/convites` },
+  { name: "pelada-subscription", path: `${PELADA}/assinatura` },
   { name: "daily-scheduled", path: `/daily/${SCHEDULED_ID}` },
   { name: "daily-confirmed", path: `/daily/${CONFIRMED_ID}` },
   { name: "daily-live", path: `/daily/${LIVE_ID}` },
@@ -199,7 +200,7 @@ test("subscription: read-only pelada, as its creator", async ({ page }) => {
     p.route(/\/api\/v1\/peladas\/\d+$/, (route) => route.fulfill({ json: { ...peladaDetail, subscription: readOnlySubscription } })))
   const notice = page.locator("#subscription-notice")
   await expect(notice).toContainText("Pelada em somente leitura")
-  await expect(notice.getByRole("button", { name: "Assinar · Em breve" })).toBeDisabled()
+  await expect(notice.getByRole("link", { name: "Assinar" })).toHaveAttribute("href", `${PELADA}/assinatura`)
   await expect(page.getByRole("button", { name: "Pelada em somente leitura" })).toBeDisabled()
   await expectNoHorizontalScroll(page)
   await expect(page).toHaveScreenshot("subscription-read-only.png", { fullPage: true })

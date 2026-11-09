@@ -358,7 +358,7 @@ Para planejar um PR, rode o prompt dele numa sessão limpa (`/clear` antes). Ao 
 - Os campos dos formulários reaproveitam `FinanceInput` / `FinanceSelect` / `FinanceFormError`, que são genéricos apesar do nome.
 - Os request bodies da plataforma entraram no snapshot de contrato (`PlatformRequests.RecordPayment`, `.ChangeSubscription`, `.VoidPayment`).
 
-### [ ] PR 7 — Pix e área Assinatura do criador (`feat/subscriptions-pix`)
+### [x] PR 7 — Pix e área Assinatura do criador (`feat/subscriptions-pix`)
 
 - **Entrega:**
   - `PixBrCode` (EMV + CRC16, normalização da chave e do nome, falha na inicialização se passar do limite).
@@ -376,6 +376,18 @@ Para planejar um PR, rode o prompt dele numa sessão limpa (`/clear` antes). Ao 
 ```
 /plan-task docs/plans/2026-11-07-subscriptions-platform-admin-spec.md "PR 7 — Pix e área Assinatura do criador"
 ```
+
+**Decisões (PR 7):**
+- Os quatro `BILLING_PIX_*` (`KEY`, `NAME`, `MERCHANT_NAME`, `CITY`) já eram secrets no GitHub (conferido com `gh secret list`); o `deploy.yml` lê os quatro de `secrets.*` e só avisa quando falta a chave.
+- Chave aceita: telefone (só dígitos ganham `+55`; `55…` com 12–13 dígitos ganha o `+`), e-mail (minúsculas) e chave aleatória. CPF/CNPJ não: 11 dígitos são lidos como telefone. Formato inválido, nome no código > 25 ou cidade > 15 (depois de tirar acento e pôr em maiúsculas) derrubam a inicialização (`BillingPixConfig`), como o VAPID.
+- `PixBrCode` só codifica (EMV + CRC-16/CCITT-FALSE), sem normalizar, para o teste reproduzir byte a byte o exemplo do manual do Bacen.
+- **Desvio do contrato do spec:** em vez de `pix: {copyPaste, recipient}`, cada plano traz o próprio `pixCode` (o BR Code leva o valor, então são dois códigos) e `pixRecipient` fica no topo; os dois vêm null sem Pix configurado. Os pagamentos mostrados ao criador são os 20 últimos não estornados.
+- Rotas em `SubscriptionController` (`domain/subscription`), não no `PeladaController`. Pelada inexistente 404; qualquer um que não seja o criador (admin incluído) 403. O claim trava a linha da pelada, como os comandos do painel.
+- Claim: o primeiro grava `pixClaimedAt` + `claimedPlan` e um evento `PIX_CLAIMED`; outro plano só troca o plano (a data fica, para a fila do painel continuar do mais antigo) e grava evento; o mesmo plano de novo não muda nada. `claimPix` devolve se foi o primeiro, para o PR 8 notificar só nesse caso. Pelada `EXEMPT` → 409; sem Pix configurado → 409; pelada travada pode informar (é como destrava).
+- `money()` saiu de `PlatformReadService` para `SubscriptionPlans.money`, usado pelo painel e pela área.
+- Front: `adminOnly` virou `access: "member" | "admin" | "creator"` em `PELADA_AREAS` (o `creatorOnly` do spec), com `PeladaRole` / `peladaRole` / `canSeeArea`; o workspace ganhou `isCreator` e `role`. O "Assinar"/"Renovar" do banner virou link para a área (também na página da sessão); o banner some na própria área, e o chat também.
+- A tela usa react-hook-form + `pixClaimSchema` (o plano escolhido decide qual QR aparece). "Já fiz o Pix" fica desabilitado quando o plano escolhido já é o informado. Pelada isenta não mostra planos nem Pix. `SubscriptionStatusBadge` do painel é reaproveitado.
+- O app do banco não foi testado com um QR real: vale escanear um em dev antes do merge.
 
 ### [ ] PR 8 — Avisos de assinatura (`feat/subscriptions-notices`)
 

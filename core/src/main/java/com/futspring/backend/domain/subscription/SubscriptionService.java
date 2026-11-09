@@ -67,6 +67,28 @@ public class SubscriptionService {
         paymentRepository.detachPelada(peladaId);
     }
 
+    /**
+     * The creator says they paid the Pix of {@code plan} (the caller holds the pelada's row lock). The first claim
+     * records when; another plan only changes the plan, keeping the date (the panel lists the oldest claims first);
+     * the same plan again changes nothing. Allowed in a read-only pelada: that's how it gets unlocked.
+     *
+     * @return true for a new claim (not for a plan change or a repeat)
+     */
+    @Transactional
+    public boolean claimPix(PeladaSubscription subscription, User actor, SubscriptionPlan plan) {
+        if (subscription.getKind() == SubscriptionKind.EXEMPT) {
+            throw new AppException(HttpStatus.CONFLICT, "Esta pelada é isenta: não há nada a pagar");
+        }
+        boolean first = subscription.getPixClaimedAt() == null;
+        if (!first && subscription.getClaimedPlan() == plan) return false;
+        Instant now = Instant.now(clock);
+        Change change = new Change(subscription);
+        if (first) subscription.setPixClaimedAt(now);
+        subscription.setClaimedPlan(plan);
+        change.record(SubscriptionEventType.PIX_CLAIMED, actor, null, now);
+        return first;
+    }
+
     // ---- Platform admin commands. The caller has checked the platform admin and holds the pelada's row lock ----
 
     /**
