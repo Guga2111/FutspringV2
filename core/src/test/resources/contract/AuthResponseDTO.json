@@ -6,6 +6,7 @@
     "username" : "username",
     "image" : "image",
     "backgroundImage" : "backgroundImage",
-    "position" : "position"
+    "position" : "position",
+    "isPlatformAdmin" : true
   }
 }

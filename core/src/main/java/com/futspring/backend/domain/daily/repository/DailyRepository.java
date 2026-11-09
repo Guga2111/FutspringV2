@@ -54,4 +54,12 @@ public interface DailyRepository extends JpaRepository<Daily, Long> {
     List<Daily> findNextDailies(@Param("peladaIds") Collection<Long> peladaIds,
                                 @Param("statuses") Collection<DailyStatus> statuses,
                                 @Param("from") LocalDate from);
+
+    // [peladaId, date of the last finished session] of the peladas that have one, in one query (platform admin)
+    @Query("""
+        SELECT d.pelada.id, MAX(d.dailyDate) FROM Daily d
+        WHERE d.pelada.id IN :peladaIds AND d.status = com.futspring.backend.domain.daily.entity.DailyStatus.FINISHED
+        GROUP BY d.pelada.id
+        """)
+    List<Object[]> findLastFinishedDates(@Param("peladaIds") Collection<Long> peladaIds);
 }

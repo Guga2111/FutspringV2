@@ -1,0 +1,73 @@
+{
+  "pelada" : {
+    "id" : 356,
+    "name" : "name",
+    "image" : "image",
+    "creator" : {
+      "id" : 356,
+      "username" : "username",
+      "image" : "image",
+      "position" : "position",
+      "isDeleted" : true
+    },
+    "creatorEmail" : "creatorEmail",
+    "memberCount" : 254,
+    "lastSessionDate" : "2026-10-31"
+  },
+  "subscription" : {
+    "kind" : "TRIAL",
+    "status" : "TRIAL",
+    "writable" : true,
+    "validUntil" : "2026-10-31T23:00:00Z",
+    "plan" : "MONTHLY",
+    "founder" : true,
+    "pixClaimedAt" : "2026-10-31T23:00:00Z",
+    "claimedPlan" : "MONTHLY",
+    "prices" : [ {
+      "plan" : "MONTHLY",
+      "amount" : "amount"
+    } ],
+    "createdAt" : "2026-10-31T23:00:00Z",
+    "updatedAt" : "2026-10-31T23:00:00Z"
+  },
+  "payments" : [ {
+    "id" : 356,
+    "peladaId" : 995,
+    "peladaName" : "peladaName",
+    "payerId" : 665,
+    "payerName" : "payerName",
+    "amount" : "amount",
+    "paidOn" : "2026-10-31",
+    "plan" : "MONTHLY",
+    "periodStart" : "2026-10-31T23:00:00Z",
+    "periodEnd" : "2026-10-31T23:00:00Z",
+    "recordedBy" : {
+      "id" : 356,
+      "username" : "username",
+      "image" : "image",
+      "position" : "position",
+      "isDeleted" : true
+    },
+    "note" : "note",
+    "voidedAt" : "2026-10-31T23:00:00Z",
+    "voidReason" : "voidReason",
+    "createdAt" : "2026-10-31T23:00:00Z"
+  } ],
+  "events" : [ {
+    "id" : 356,
+    "type" : "CREATED",
+    "actor" : {
+      "id" : 356,
+      "username" : "username",
+      "image" : "image",
+      "position" : "position",
+      "isDeleted" : true
+    },
+    "kindBefore" : "TRIAL",
+    "kindAfter" : "TRIAL",
+    "validUntilBefore" : "2026-10-31T23:00:00Z",
+    "validUntilAfter" : "2026-10-31T23:00:00Z",
+    "note" : "note",
+    "createdAt" : "2026-10-31T23:00:00Z"
+  } ]
+}

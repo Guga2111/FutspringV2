@@ -277,6 +277,18 @@ class MigrationDataTest {
         }
     }
 
+    @Test
+    void v20_copiesTheRegistrationInstant_andLeavesOlderAccountsNull() throws SQLException {
+        flyway("19").migrate();
+        execute("INSERT INTO users(id,email,username,password,terms_version,terms_accepted_at) VALUES(1,'novo@migration.test','Novo','hash','2026-11-06','2026-11-06T10:00:00Z'),(2,'antigo@migration.test','Antigo','hash',null,null)");
+        flyway(null).migrate();
+        try (Connection c = connect(); Statement st = c.createStatement();
+             ResultSet rs = st.executeQuery("SELECT created_at = TIMESTAMPTZ '2026-11-06T10:00:00Z', created_at IS NULL, updated_at IS NULL FROM users ORDER BY id")) {
+            rs.next(); assertThat(rs.getBoolean(1)).isTrue(); assertThat(rs.getBoolean(3)).isTrue();
+            rs.next(); assertThat(rs.getBoolean(2)).isTrue(); assertThat(rs.getBoolean(3)).isTrue();
+        }
+    }
+
     private static Flyway flyway(String target) {
         var config = Flyway.configure()
                 .dataSource(POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword())

@@ -1,5 +1,6 @@
 package com.futspring.backend.domain.user;
 
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -44,4 +45,19 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Modifying
     @Query("UPDATE User u SET u.trialUsedAt = :now WHERE u.id = :id AND u.trialUsedAt IS NULL")
     int markTrialUsed(@Param("id") Long id, @Param("now") Instant now);
+
+    // The platform admin's user list: deleted accounts included, newest first; `q` (lower case) matches name or e-mail
+    @Query(value = """
+        SELECT u FROM User u
+        WHERE :q = '' OR LOWER(u.username) LIKE CONCAT('%', :q, '%') OR LOWER(u.email) LIKE CONCAT('%', :q, '%')
+        ORDER BY u.id DESC
+        """, countQuery = """
+        SELECT COUNT(u) FROM User u
+        WHERE :q = '' OR LOWER(u.username) LIKE CONCAT('%', :q, '%') OR LOWER(u.email) LIKE CONCAT('%', :q, '%')
+        """)
+    Page<User> searchForPlatform(@Param("q") String q, Pageable pageable);
+
+    long countByDeletedAtIsNull();
+
+    long countByDeletedAtIsNullAndCreatedAtGreaterThanEqual(Instant since);
 }
