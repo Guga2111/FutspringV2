@@ -61,7 +61,7 @@ public class NotificationController {
     @PutMapping("/preferences")
     public ResponseEntity<List<NotificationPreferenceDTO>> updatePreferences(
             @RequestBody @NotEmpty(message = "Informe pelo menos uma categoria")
-            @Size(max = 4, message = "No máximo 4 categorias") List<@Valid NotificationPreferenceDTO> preferences,
+            @Size(max = 5, message = "No máximo 5 categorias") List<@Valid NotificationPreferenceDTO> preferences,
             @AuthenticationPrincipal String email) {
         return ResponseEntity.ok(preferenceService.update(preferences, email));
     }

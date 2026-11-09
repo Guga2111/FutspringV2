@@ -5,7 +5,8 @@ public enum NotificationCategory {
     SESSION(false, true, "Sessões"),
     ATTENDANCE(true, true, "Presença"),
     MEMBERSHIP(true, true, "Membros"),
-    AWARDS(false, true, "Prêmios");
+    AWARDS(false, true, "Prêmios"),
+    BILLING(true, true, "Assinatura");
 
     private final boolean defaultEmail;
     private final boolean defaultPush;

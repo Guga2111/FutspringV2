@@ -29,7 +29,7 @@ export const TERMS: LegalDocument = {
       id: "quem-somos",
       title: "Quem somos",
       blocks: [
-        `O Futspring é um app gratuito para organizar peladas: membros, sessões, presença, times, resultados, ranking, prêmios, chat e o financeiro do grupo. Ele é mantido por ${CONTROLLER}. Fale com a gente pelo e-mail ${CONTACT}.`,
+        `O Futspring é um app para organizar peladas: membros, sessões, presença, times, resultados, ranking, prêmios, chat e o financeiro do grupo. Ele é mantido por ${CONTROLLER}. Fale com a gente pelo e-mail ${CONTACT}.`,
       ],
     },
     {
@@ -59,6 +59,19 @@ export const TERMS: LegalDocument = {
       ],
     },
     {
+      id: "assinatura",
+      title: "Assinatura",
+      blocks: [
+        "Cada pelada tem a sua assinatura, paga pelo criador. A primeira pelada criada por uma conta ganha 30 dias de teste grátis; cada conta tem um teste só. Durante o teste, e enquanto a assinatura não é paga, a pelada aceita até 30 membros.",
+        [
+          "Os planos são mensal e anual. O preço depende do número de membros e aparece na área Assinatura da pelada.",
+          "O pagamento é feito por Pix, na chave mostrada nessa área. Depois de pagar, o criador avisa pelo app e nós confirmamos o pagamento manualmente, o que pode levar algum tempo.",
+          "Se a assinatura vencer (no plano pago, depois de 7 dias de carência), a pelada fica em somente leitura: nada é apagado, mas não dá para criar sessões, confirmar presença, montar times, lançar resultados nem mexer no financeiro até a renovação. Membros, chat e configurações continuam funcionando.",
+          "Se a pelada for transferida, a assinatura vai junto com ela, e o teste grátis não recomeça.",
+        ],
+      ],
+    },
+    {
       id: "conteudo",
       title: "O que você envia",
       blocks: [
@@ -70,7 +83,7 @@ export const TERMS: LegalDocument = {
       id: "financeiro",
       title: "Financeiro",
       blocks: [
-        "O financeiro serve para registrar as cobranças e os pagamentos que os membros combinam entre si. O Futspring não processa pagamentos, não recebe nem guarda dinheiro e não é uma instituição financeira.",
+        "O financeiro da pelada serve para registrar as cobranças e os pagamentos que os membros combinam entre si (é diferente da assinatura do Futspring). O Futspring não processa pagamentos, não recebe nem guarda dinheiro e não é uma instituição financeira.",
         "A chave Pix e o QR Code são de quem recebe, indicado pelos responsáveis financeiros da pelada. Valores, prazos e eventuais divergências são acertados entre os membros.",
       ],
     },
@@ -102,7 +115,7 @@ export const TERMS: LegalDocument = {
       id: "responsabilidade",
       title: "Limites da nossa responsabilidade",
       blocks: [
-        "O Futspring é oferecido de graça, do jeito que está. Fazemos o possível para mantê-lo no ar e seguro, mas não garantimos que funcione sem interrupções. Não respondemos por desentendimentos entre membros, pelo que acontece nas partidas nem por valores combinados no financeiro.",
+        "O Futspring é oferecido do jeito que está. Fazemos o possível para mantê-lo no ar e seguro, mas não garantimos que funcione sem interrupções. Não respondemos por desentendimentos entre membros, pelo que acontece nas partidas nem por valores combinados no financeiro.",
       ],
     },
     {
@@ -140,6 +153,7 @@ export const PRIVACY: LegalDocument = {
           "Conta: nome de usuário, e-mail, senha (guardada só de forma criptografada, impossível de ler), posição e foto.",
           "Peladas: de quais você participa, se é admin ou mensalista, presença e horário da confirmação, times, gols, assistências, vitórias, prêmios, as estrelas que os admins dão a você, mensagens do chat e fotos.",
           "Financeiro: cobranças, valores, pagamentos, avisos de pagamento, comprovantes enviados, chave Pix e QR Code de quem recebe e o histórico de alterações.",
+          "Assinatura das peladas que você criou: plano, validade, situação, quando você avisou que fez o Pix e os pagamentos registrados (valor, data, plano, nome da pelada e de quem pagou). Também guardamos se a sua conta já usou o teste grátis.",
           "Notificações, suas preferências de e-mail e quais guias do app você já viu.",
           "Dados técnicos: endereço IP, usado para limitar tentativas de login e acessos a links públicos, e registros do servidor.",
           "A versão destes documentos que você aceitou e quando.",
@@ -152,6 +166,8 @@ export const PRIVACY: LegalDocument = {
       blocks: [
         [
           "Para o app funcionar (conta, peladas, sessões, estatísticas, financeiro, chat e o e-mail de troca de senha): execução do contrato com você (art. 7º, V).",
+          "Para cobrar e controlar as assinaturas das peladas e dar suporte: execução do contrato com você (art. 7º, V).",
+          "Para guardar os registros dos pagamentos de assinatura: cumprimento de obrigação legal, inclusive fiscal (art. 7º, II).",
           "Para segurança e prevenção de abuso (IP, limites de tentativas, registros): legítimo interesse (art. 7º, IX).",
           "Para e-mails de notificação: legítimo interesse, com desativação por categoria em um clique em cada e-mail ou nas configurações de notificação.",
           "Para guardar a prova de que você aceitou estes documentos: exercício regular de direitos (art. 7º, VI).",
@@ -165,7 +181,9 @@ export const PRIVACY: LegalDocument = {
       blocks: [
         [
           "Os membros das peladas de que você participa veem seu nome, foto, posição, presença, estatísticas e mensagens no chat.",
-          "Seu perfil só aparece para quem divide uma pelada com você. O seu e-mail só você vê.",
+          "Seu perfil só aparece para quem divide uma pelada com você. Dentro do app, o seu e-mail só você vê.",
+          "A área Assinatura de uma pelada (situação, planos e pagamentos) só é vista pelo criador.",
+          "Nós, que mantemos o Futspring, temos um painel de administração restrito, usado para dar suporte e cobrar as assinaturas. Nele vemos o nome, o e-mail e a data de cadastro de cada conta, as peladas que ela criou, de quantas participa e se já usou o teste grátis, e a assinatura, os pagamentos e o histórico de alterações da assinatura de cada pelada.",
           "No financeiro em modo individual, cada membro vê só as próprias cobranças. No modo transparente, os membros veem participantes, totais e o caixa. Comprovantes só são vistos por você e pelos responsáveis financeiros.",
         ],
       ],
@@ -194,10 +212,11 @@ export const PRIVACY: LegalDocument = {
           "Conta e dados das peladas: enquanto a conta existir.",
           "Comprovantes de pagamento: ficam disponíveis por 7 dias (cobranças de sessão) ou 30 dias (mensalidades e outras) e depois o arquivo é apagado.",
           "Notificações: as lidas são apagadas após 90 dias e todas após 180 dias.",
+          "Pagamentos de assinatura: guardados pelo prazo exigido pela lei, inclusive a fiscal, mesmo depois que a pelada ou a conta é excluída, com o nome da pelada e de quem pagou.",
           "Links de troca de senha: valem 30 minutos.",
           "Cópias de segurança do banco: mantemos as 10 mais recentes.",
         ],
-        "Quando você exclui a conta, seus dados pessoais são apagados e, nas sessões passadas, você aparece como “Ex-jogador”. Registros que a pelada precisa manter, como resultados das partidas e lançamentos do financeiro, continuam existindo sem os seus dados pessoais.",
+        "Quando você exclui a conta, seus dados pessoais são apagados e, nas sessões passadas, você aparece como “Ex-jogador”. Registros que a pelada precisa manter, como resultados das partidas e lançamentos do financeiro, continuam existindo sem os seus dados pessoais. A exceção são os pagamentos de assinatura, guardados como descrito acima.",
       ],
     },
     {

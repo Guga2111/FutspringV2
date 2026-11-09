@@ -19,6 +19,7 @@ import com.futspring.backend.domain.daily.repository.PlayerMatchStatRepository;
 import com.futspring.backend.domain.daily.repository.TeamRepository;
 import com.futspring.backend.domain.file.FileUploadService;
 import com.futspring.backend.domain.pelada.Pelada;
+import com.futspring.backend.domain.subscription.SubscriptionGuard;
 import com.futspring.backend.shared.exception.AppException;
 import com.futspring.backend.shared.helper.PeladaAccessHelper;
 import com.futspring.backend.shared.helper.UserAuthenticationHelper;
@@ -64,12 +65,14 @@ public class DailyResultsService {
     private final DailyAwardRepository dailyAwardRepository;
     private final DailyListItemAssembler dailyListItemAssembler;
     private final ApplicationEventPublisher eventPublisher;
+    private final SubscriptionGuard subscriptionGuard;
 
     @Transactional
     public List<MatchDTO> submitResults(Long id, List<MatchResultDTO> results, String currentUserEmail) {
         User caller = userAuthHelper.getAuthenticatedUser(currentUserEmail);
         Daily daily = findDaily(id);
         accessHelper.requireAdmin(daily.getPelada(), caller);
+        subscriptionGuard.requireWritable(daily.getPelada());
 
         if (!RESULT_STATUSES.contains(daily.getStatus())) {
             throw new AppException(HttpStatus.BAD_REQUEST,
@@ -254,6 +257,7 @@ public class DailyResultsService {
         Daily daily = findDaily(id);
         Pelada pelada = daily.getPelada();
         accessHelper.requireAdmin(pelada, caller);
+        subscriptionGuard.requireWritable(pelada);
 
         if (!RESULT_STATUSES.contains(daily.getStatus())) {
             throw new AppException(HttpStatus.BAD_REQUEST, "A sessão precisa estar em andamento ou finalizada para ser encerrada");
@@ -410,6 +414,7 @@ public class DailyResultsService {
         User caller = userAuthHelper.getAuthenticatedUser(currentUserEmail);
         Daily daily = findDaily(id);
         accessHelper.requireAdmin(daily.getPelada(), caller);
+        subscriptionGuard.requireWritable(daily.getPelada());
 
         if (daily.getStatus() != DailyStatus.FINISHED) {
             throw new AppException(HttpStatus.BAD_REQUEST, "A foto dos campeões só pode ser enviada em sessões finalizadas");
@@ -428,6 +433,7 @@ public class DailyResultsService {
         Daily daily = findDaily(id);
         Pelada pelada = daily.getPelada();
         accessHelper.requireAdmin(pelada, caller);
+        subscriptionGuard.requireWritable(pelada);
 
         if (!IMPORT_STATUSES.contains(daily.getStatus())) {
             throw new AppException(HttpStatus.BAD_REQUEST, "Só é possível importar em sessões agendadas ou confirmadas");

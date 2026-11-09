@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test"
 import { mockApi, login, type PushState } from "./mockApi"
-import { CONFIRMED_ID, FINISHED_ID, LIVE_ID, NOW, PELADA_ID, SCHEDULED_ID, pendingDeletionBlockers, financeDetail, financeMemberDetail, financeMemberOverview, financeOverview } from "./fixtures"
+import { CONFIRMED_ID, FINISHED_ID, LIVE_ID, NOW, PELADA_ID, SCHEDULED_ID, pendingDeletionBlockers, financeDetail, financeMemberDetail, financeMemberOverview, financeOverview, pastDueSubscription, peladaDetail, readOnlySubscription, scheduledDaily } from "./fixtures"
 
 const PELADA = `/pelada/${PELADA_ID}`
 
@@ -24,6 +24,7 @@ const pages: { name: string; path: string; auth?: boolean; ready?: string }[] = 
   { name: "pelada-finance", path: `${PELADA}/financeiro` },
   { name: "pelada-settings", path: `${PELADA}/settings` },
   { name: "pelada-invitations", path: `${PELADA}/convites` },
+  { name: "pelada-subscription", path: `${PELADA}/assinatura` },
   { name: "daily-scheduled", path: `/daily/${SCHEDULED_ID}` },
   { name: "daily-confirmed", path: `/daily/${CONFIRMED_ID}` },
   { name: "daily-live", path: `/daily/${LIVE_ID}` },
@@ -33,6 +34,12 @@ const pages: { name: string; path: string; auth?: boolean; ready?: string }[] = 
   { name: "profile-peladas", path: "/profile/1?aba=peladas" },
   { name: "account-settings", path: "/settings" },
   { name: "invitation", path: "/invitations/900" },
+  // the platform admin's panel
+  { name: "admin-overview", path: "/admin" },
+  { name: "admin-peladas", path: "/admin/peladas" },
+  { name: "admin-pelada", path: "/admin/peladas/13" },
+  { name: "admin-payments", path: "/admin/pagamentos" },
+  { name: "admin-users", path: "/admin/usuarios" },
 ]
 
 // Loading a lazy page chunk is not what a test asserts, and under parallel workers (or the emulated amd64
@@ -184,6 +191,40 @@ test("sessions gallery", async ({ page }) => {
   await settle(page)
   await expectNoHorizontalScroll(page)
   await expect(page).toHaveScreenshot("pelada-sessions-gallery.png", { fullPage: true })
+  expect(unmatched, "requests without a fixture").toEqual([])
+})
+
+// The subscription's state: the notice under the header and the disabled writes (the server answers 402 anyway)
+test("subscription: read-only pelada, as its creator", async ({ page }) => {
+  const unmatched = await open(page, PELADA, true, "h1, h2", (p) =>
+    p.route(/\/api\/v1\/peladas\/\d+$/, (route) => route.fulfill({ json: { ...peladaDetail, subscription: readOnlySubscription } })))
+  const notice = page.locator("#subscription-notice")
+  await expect(notice).toContainText("Pelada em somente leitura")
+  await expect(notice.getByRole("link", { name: "Assinar" })).toHaveAttribute("href", `${PELADA}/assinatura`)
+  await expect(page.getByRole("button", { name: "Pelada em somente leitura" })).toBeDisabled()
+  await expectNoHorizontalScroll(page)
+  await expect(page).toHaveScreenshot("subscription-read-only.png", { fullPage: true })
+  expect(unmatched, "requests without a fixture").toEqual([])
+})
+
+test("subscription: past due, as its creator", async ({ page }) => {
+  const unmatched = await open(page, PELADA, true, "h1, h2", (p) =>
+    p.route(/\/api\/v1\/peladas\/\d+$/, (route) => route.fulfill({ json: { ...peladaDetail, subscription: pastDueSubscription } })))
+  const notice = page.locator("#subscription-notice")
+  await expect(notice).toContainText("Pagamento pendente: a pelada trava em 09/11")
+  await expect(notice).toHaveScreenshot("subscription-past-due.png")
+  expect(unmatched, "requests without a fixture").toEqual([])
+})
+
+test("subscription: read-only session, as an admin who isn't the creator", async ({ page }) => {
+  const unmatched = await open(page, `/daily/${SCHEDULED_ID}`, true, "h1, h2", (p) =>
+    p.route(/\/api\/v1\/dailies\/\d+$/, (route) =>
+      route.fulfill({ json: { ...scheduledDaily, creatorId: 2, subscription: readOnlySubscription } })))
+  await expect(page.locator("#subscription-notice")).toContainText("o criador precisa renovar a assinatura")
+  await expect(page.getByRole("button", { name: "Confirmar sessão" })).toBeDisabled()
+  await expect(page.getByRole("button", { name: "Importar mensagem" })).toBeDisabled()
+  await expectNoHorizontalScroll(page)
+  await expect(page).toHaveScreenshot("subscription-read-only-session.png", { fullPage: true })
   expect(unmatched, "requests without a fixture").toEqual([])
 })
 
@@ -409,4 +450,23 @@ test("finance tour on the first visit", async ({ page }) => {
   await page.keyboard.press("Escape")
   await expect(page.getByText("Crie uma cobrança")).toBeHidden()
   await expect.poll(() => marked).toEqual(["POST /api/v1/tours/FINANCE_MANAGER/seen"])
+})
+
+test("admin: record a payment", async ({ page }) => {
+  const unmatched = await open(page, "/admin/peladas/13")
+  await page.getByRole("button", { name: "Registrar pagamento" }).click()
+  const sheet = page.getByRole("dialog", { name: "Registrar pagamento" })
+  // the plan the creator claimed, with its list price
+  await expect(sheet.getByLabel("Valor cobrado (R$)")).toHaveValue("299,00")
+  await settle(page)
+  await expect(page).toHaveScreenshot("admin-record-payment.png", DIALOG_SHOT)
+  expect(unmatched, "requests without a fixture").toEqual([])
+})
+
+test("admin: someone who isn't a platform admin gets the 404", async ({ page }) => {
+  await open(page, "/admin", true, "h1", (p) =>
+    p.route(/\/api\/v1\/platform\/overview$/, (route) =>
+      route.fulfill({ status: 404, json: { status: 404, message: "Recurso não encontrado", timestamp: NOW.toISOString() } })))
+  await expect(page.getByRole("heading", { name: "Bola fora" })).toBeVisible()
+  await expect(page).toHaveURL(/\/404$/)
 })

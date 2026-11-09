@@ -17,7 +17,9 @@ import { InvitePlayerDialog } from "@/components/pelada/InvitePlayerDialog"
 import { ConfirmRemoveDialog } from "@/components/pelada/ConfirmRemoveDialog"
 import { CreateSessionDialog } from "@/components/pelada/CreateSessionDialog"
 import { SetPlayerStarsDialog } from "@/components/pelada/SetPlayerStarsDialog"
-import { areaFromPath, PELADA_AREAS } from "@/utils/peladaAreas"
+import { SUBSCRIPTION_NOTICE_ID, SubscriptionNotice } from "@/components/pelada/SubscriptionNotice"
+import { isWritable } from "@/utils/subscription"
+import { areaFromPath, PELADA_AREAS, peladaRole } from "@/utils/peladaAreas"
 import { cn } from "@/lib/utils"
 
 // Lazy so recharts only downloads when the dialog is first opened
@@ -54,6 +56,9 @@ export default function PeladaDetailPage() {
   }
 
   const isAdmin = pelada?.members.find((m) => m.id === currentUser?.id)?.isAdmin ?? false
+  const isCreator = pelada != null && currentUser != null && pelada.creatorId === currentUser.id
+  const role = peladaRole(isAdmin, isCreator)
+  const writable = isWritable(pelada?.subscription)
 
   const runBulkAction = (action: BulkMemberAction, targets: PeladaMember[], stars?: number) => {
     const run: Record<BulkMemberAction, () => Promise<boolean>> = {
@@ -96,6 +101,9 @@ export default function PeladaDetailPage() {
       ...actions,
       pelada,
       isAdmin,
+      isCreator,
+      role,
+      writable,
       currentUserId: currentUser?.id ?? null,
       invitationVersion,
       openInvite: () => setShowInvitePlayer(true),
@@ -113,23 +121,38 @@ export default function PeladaDetailPage() {
           Convidar jogador
         </Button>
       ) : isAdmin && area === "sessions" ? (
-        <Button variant="brand" onClick={() => setShowCreateSession(true)} className="h-9 gap-1.5 px-4 font-semibold">
+        <Button
+          variant="brand"
+          disabled={!writable}
+          aria-describedby={writable ? undefined : SUBSCRIPTION_NOTICE_ID}
+          onClick={() => setShowCreateSession(true)}
+          className="h-9 gap-1.5 px-4 font-semibold"
+        >
           <HugeiconsIcon icon={PlusSignIcon} className="size-[15px]" strokeWidth={2.2} />
           Nova sessão
         </Button>
       ) : null
     // the chat button is fixed in the corner: leave room under the content so it never covers the last row
-    const showChat = area !== "invitations" && area !== "finance"
+    const showChat = area !== "invitations" && area !== "finance" && area !== "subscription"
     content = (
       <PageContainer className={cn(showChat && "pb-24 md:pb-24")}>
         <PeladaPageHeader
           peladaId={pelada.id}
           peladaName={pelada.name}
           area={area}
-          isAdmin={isAdmin}
+          role={role}
           title={area === "overview" ? undefined : PELADA_AREAS[area].label}
           actions={headerAction}
         />
+        {/* the Assinatura area shows the state itself */}
+        {area !== "subscription" && (
+          <SubscriptionNotice
+            peladaId={pelada.id}
+            subscription={pelada.subscription}
+            isCreator={isCreator}
+            timeZone={pelada.timeZone}
+          />
+        )}
         <Suspense fallback={<DetailSkeleton />}>
           <Outlet context={workspace} />
         </Suspense>

@@ -10,6 +10,10 @@ import com.futspring.backend.domain.pelada.Pelada;
 import com.futspring.backend.domain.pelada.PeladaMensalista;
 import com.futspring.backend.domain.pelada.PeladaMensalistaRepository;
 import com.futspring.backend.domain.pelada.PeladaRepository;
+import com.futspring.backend.domain.subscription.PeladaSubscription;
+import com.futspring.backend.domain.subscription.PeladaSubscriptionRepository;
+import com.futspring.backend.domain.subscription.SubscriptionGuard;
+import com.futspring.backend.domain.subscription.SubscriptionKind;
 import com.futspring.backend.domain.user.User;
 import com.futspring.backend.domain.user.UserRepository;
 import jakarta.persistence.EntityManager;
@@ -54,6 +58,7 @@ class ScheduledNotificationJobTest {
     @Autowired private UserRepository userRepository;
     @Autowired private PeladaRepository peladaRepository;
     @Autowired private PeladaMensalistaRepository mensalistaRepository;
+    @Autowired private PeladaSubscriptionRepository subscriptionRepository;
     @Autowired private PlatformTransactionManager transactionManager;
     @Autowired private EntityManager entityManager;
 
@@ -181,12 +186,27 @@ class ScheduledNotificationJobTest {
         assertThat(rows()).isNotEmpty().allMatch(row -> ok.getId().equals(row.toList().get(2)));
     }
 
+    @Test
+    void readOnlyPelada_isSkipped_andAnExemptOneIsNotified() {
+        Pelada locked = pelada("America/Sao_Paulo", 5, mensalista);
+        subscriptionRepository.save(new PeladaSubscription(locked, SubscriptionKind.PENDING, null, OPENS_AT));
+        daily(locked, DATE, DailyStatus.SCHEDULED);
+        Pelada exempt = pelada("America/Sao_Paulo", 5, mensalista);
+        subscriptionRepository.save(new PeladaSubscription(exempt, SubscriptionKind.EXEMPT, null, OPENS_AT));
+        Daily ok = daily(exempt, DATE, DailyStatus.SCHEDULED);
+
+        run(OPENS_AT);
+
+        assertThat(rows()).hasSize(3).allMatch(row -> ok.getId().equals(row.toList().get(2)));
+    }
+
     private void run(Instant now) {
         Clock clock = Clock.fixed(now, ZoneOffset.UTC);
         NotificationService notificationService = new NotificationService(notificationRepository,
-                attendanceRepository, bumpRepository, delivery, clock);
+                attendanceRepository, bumpRepository, userRepository, delivery, clock);
         new ScheduledNotificationJob(dailyRepository, attendanceRepository, notificationRepository,
-                notificationService, transactionManager, clock).run();
+                notificationService, transactionManager, clock,
+                new SubscriptionGuard(subscriptionRepository, clock)).run();
         entityManager.flush();
     }
 

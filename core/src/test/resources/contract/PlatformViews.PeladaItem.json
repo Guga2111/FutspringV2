@@ -1,0 +1,17 @@
+{
+  "id" : 356,
+  "name" : "name",
+  "creator" : {
+    "id" : 356,
+    "username" : "username",
+    "image" : "image",
+    "position" : "position",
+    "isDeleted" : true
+  },
+  "memberCount" : 254,
+  "status" : "TRIAL",
+  "validUntil" : "2026-10-31T23:00:00Z",
+  "founder" : true,
+  "pixClaimedAt" : "2026-10-31T23:00:00Z",
+  "lastSessionDate" : "2026-10-31"
+}

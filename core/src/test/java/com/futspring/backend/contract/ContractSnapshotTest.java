@@ -1,6 +1,10 @@
 package com.futspring.backend.contract;
 
 import com.futspring.backend.domain.finance.dto.FinanceRequests;
+import com.futspring.backend.domain.platform.dto.PlatformRequests;
+import com.futspring.backend.domain.subscription.dto.PeladaSubscriptionDTO;
+import com.futspring.backend.domain.subscription.dto.PixClaimRequestDTO;
+import com.futspring.backend.domain.platform.dto.PlatformViews;
 import tools.jackson.databind.JavaType;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
@@ -107,6 +111,11 @@ class ContractSnapshotTest {
                 TourStateDTO.class,
                 NotificationDTO.class, NotificationPushDTO.class, NotificationPreferenceDTO.class, UnreadCountDTO.class,
                 VapidPublicKeyDTO.class,
+                // /platform/** (the two pages: PlatformViews.Page of PeladaItem / UserItem)
+                PlatformViews.Overview.class, PlatformViews.PeladaItem.class, PlatformViews.PeladaDetail.class,
+                PlatformViews.Payment.class, PlatformViews.Payments.class, PlatformViews.UserItem.class,
+                // the creator's Assinatura area
+                PeladaSubscriptionDTO.class,
                 ErrorResponse.class);
     }
 
@@ -125,7 +134,10 @@ class ContractSnapshotTest {
                 UpdateProfileRequest.class, SendMessageRequest.class,
                 NotificationPreferenceDTO.class, UnsubscribeRequestDTO.class,
                 PushSubscriptionRequestDTO.class, RemovePushSubscriptionRequestDTO.class,
-                FinanceRequests.BulkAdjust.class);
+                FinanceRequests.BulkAdjust.class,
+                PlatformRequests.RecordPayment.class, PlatformRequests.ChangeSubscription.class,
+                PlatformRequests.VoidPayment.class,
+                PixClaimRequestDTO.class);
     }
 
     private static final Set<Class<?>> SENT_AS_LIST = Set.of(MatchResultDTO.class, NotificationPreferenceDTO.class);

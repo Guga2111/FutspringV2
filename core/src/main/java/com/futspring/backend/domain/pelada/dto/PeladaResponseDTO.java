@@ -3,6 +3,7 @@ package com.futspring.backend.domain.pelada.dto;
 import com.futspring.backend.domain.daily.dto.AttendanceBumpDTO;
 import com.futspring.backend.domain.daily.entity.DailyStatus;
 import com.futspring.backend.domain.pelada.Pelada;
+import com.futspring.backend.domain.subscription.dto.SubscriptionSummaryDTO;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Builder;
 
@@ -29,7 +30,9 @@ public record PeladaResponseDTO(
         @JsonProperty("isAdmin")
         boolean isAdmin,
         // next SCHEDULED/CONFIRMED session from today on; only filled by GET /peladas/my and /users/{id}/peladas
-        NextDailyDTO nextDaily) {
+        NextDailyDTO nextDaily,
+        // only filled by GET /peladas/my and /users/{id}/peladas (null in command responses and without a row)
+        SubscriptionSummaryDTO subscription) {
 
     @Builder
     public record NextDailyDTO(
@@ -53,10 +56,11 @@ public record PeladaResponseDTO(
 
     /** Create/update responses: the caller is an admin (both routes require it). */
     public static PeladaResponseDTO forAdmin(Pelada pelada) {
-        return from(pelada, pelada.getMembers().size(), true, null);
+        return from(pelada, pelada.getMembers().size(), true, null, null);
     }
 
-    public static PeladaResponseDTO from(Pelada pelada, int memberCount, boolean isAdmin, NextDailyDTO nextDaily) {
+    public static PeladaResponseDTO from(Pelada pelada, int memberCount, boolean isAdmin, NextDailyDTO nextDaily,
+                                         SubscriptionSummaryDTO subscription) {
         return PeladaResponseDTO.builder()
                 .id(pelada.getId())
                 .name(pelada.getName())
@@ -73,6 +77,7 @@ public record PeladaResponseDTO(
                 .timeZone(pelada.getTimeZone())
                 .isAdmin(isAdmin)
                 .nextDaily(nextDaily)
+                .subscription(subscription)
                 .build();
     }
 }

@@ -6,6 +6,7 @@ import com.futspring.backend.domain.daily.entity.DailyStatus;
 import com.futspring.backend.domain.daily.repository.DailyAttendanceRepository;
 import com.futspring.backend.domain.daily.repository.DailyRepository;
 import com.futspring.backend.domain.pelada.Pelada;
+import com.futspring.backend.domain.subscription.SubscriptionGuard;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -48,6 +49,7 @@ public class ScheduledNotificationJob {
     private final NotificationService notificationService;
     private final PlatformTransactionManager transactionManager;
     private final Clock clock;
+    private final SubscriptionGuard subscriptionGuard;
 
     @Scheduled(cron = "0 */15 * * * *")
     public void run() {
@@ -63,7 +65,8 @@ public class ScheduledNotificationJob {
         byPelada.forEach((pelada, dailies) -> {
             try {
                 List<Daily> due = dailies.stream().filter(d -> isDue(d, now)).toList();
-                if (!due.isEmpty()) {
+                // a read-only pelada can't take confirmations, so nobody is asked to confirm
+                if (!due.isEmpty() && subscriptionGuard.isWritable(pelada)) {
                     transaction.executeWithoutResult(status -> due.forEach(this::notifySession));
                 }
             } catch (RuntimeException e) {

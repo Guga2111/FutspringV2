@@ -376,11 +376,12 @@ class NotificationControllerTest extends BaseIntegrationTest {
     void preferences_withoutRows_returnTheDefaults() throws Exception {
         mockMvc.perform(get("/api/v1/notifications/preferences").header("Authorization", auth(member)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(4)))
+                .andExpect(jsonPath("$", hasSize(5)))
                 .andExpect(jsonPath("$[?(@.category == 'ATTENDANCE')].emailEnabled").value(true))
                 .andExpect(jsonPath("$[?(@.category == 'MEMBERSHIP')].emailEnabled").value(true))
                 .andExpect(jsonPath("$[?(@.category == 'SESSION')].emailEnabled").value(false))
                 .andExpect(jsonPath("$[?(@.category == 'AWARDS')].emailEnabled").value(false))
+                .andExpect(jsonPath("$[?(@.category == 'BILLING')].emailEnabled").value(true))
                 .andExpect(jsonPath("$[*].pushEnabled", everyItem(is(true))));
     }
 
@@ -388,15 +389,16 @@ class NotificationControllerTest extends BaseIntegrationTest {
     void updatePreferences_storesOnlyWhatDiffersFromTheDefault() throws Exception {
         mockMvc.perform(put("/api/v1/notifications/preferences").header("Authorization", auth(member))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(preferencesBody("ATTENDANCE", false, "SESSION", true, "MEMBERSHIP", true)))
+                        .content(preferencesBody("ATTENDANCE", false, "SESSION", true, "MEMBERSHIP", true, "BILLING", false)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(4)))
+                .andExpect(jsonPath("$", hasSize(5)))
                 .andExpect(jsonPath("$[?(@.category == 'ATTENDANCE')].emailEnabled").value(false))
                 .andExpect(jsonPath("$[?(@.category == 'SESSION')].emailEnabled").value(true));
 
         assertThat(preferenceRepository.findByIdUserId(member.getId()))
                 .extracting(NotificationPreference::getCategory)
-                .containsExactlyInAnyOrder(NotificationCategory.ATTENDANCE, NotificationCategory.SESSION);
+                .containsExactlyInAnyOrder(NotificationCategory.ATTENDANCE, NotificationCategory.SESSION,
+                        NotificationCategory.BILLING);
         assertThat(preferenceRepository.findByIdUserId(admin.getId())).isEmpty();
 
         // back to the default → the row goes away
@@ -408,7 +410,7 @@ class NotificationControllerTest extends BaseIntegrationTest {
                 .andExpect(jsonPath("$[?(@.category == 'SESSION')].emailEnabled").value(true));
         assertThat(preferenceRepository.findByIdUserId(member.getId()))
                 .extracting(NotificationPreference::getCategory)
-                .containsExactly(NotificationCategory.SESSION);
+                .containsExactlyInAnyOrder(NotificationCategory.SESSION, NotificationCategory.BILLING);
     }
 
     @Test

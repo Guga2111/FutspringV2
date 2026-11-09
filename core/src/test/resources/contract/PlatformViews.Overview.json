@@ -1,0 +1,30 @@
+{
+  "counts" : {
+    "TRIAL" : 453,
+    "ACTIVE" : 453,
+    "PAST_DUE" : 453,
+    "READ_ONLY" : 453,
+    "PENDING" : 453,
+    "EXEMPT" : 453
+  },
+  "trialsEndingSoon" : [ {
+    "id" : 356,
+    "name" : "name",
+    "date" : "2026-10-31T23:00:00Z"
+  } ],
+  "pixClaimed" : [ {
+    "id" : 356,
+    "name" : "name",
+    "date" : "2026-10-31T23:00:00Z"
+  } ],
+  "revenueThisMonth" : "revenueThisMonth",
+  "revenueByMonth" : [ {
+    "month" : "month",
+    "total" : "total"
+  } ],
+  "recurringEstimate" : "recurringEstimate",
+  "users" : {
+    "total" : 829,
+    "last30Days" : 251
+  }
+}

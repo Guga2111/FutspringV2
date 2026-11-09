@@ -23,9 +23,12 @@ class NotificationContentTest {
 
     private Notification notification(NotificationType type, NotificationAward award) {
         boolean session = type != NotificationType.ADDED_TO_PELADA && type != NotificationType.REMOVED_FROM_PELADA
-                && type.category() != NotificationCategory.MEMBERSHIP;
+                && type.category() != NotificationCategory.MEMBERSHIP && type.category() != NotificationCategory.BILLING;
+        // the paid period ends 07/12/2026 23:59:59 in São Paulo
+        Instant validUntil = type.category() == NotificationCategory.BILLING
+                ? Instant.parse("2026-12-08T02:59:59Z") : null;
         return Notification.builder().id(5L).type(type).recipient(member).actor(leal).pelada(pelada)
-                .daily(session ? daily : null).award(award).createdAt(Instant.now()).build();
+                .daily(session ? daily : null).award(award).validUntil(validUntil).createdAt(Instant.now()).build();
     }
 
     // Every type has text (the switch is exhaustive); the emailable ones are the ones that reach an inbox
@@ -41,6 +44,35 @@ class NotificationContentTest {
         assertThat(content.body()).isNotBlank().doesNotContain("null");
         assertThat(content.ctaLabel()).isNotBlank();
         assertThat(content.ctaPath()).startsWith("/");
+    }
+
+    @Test
+    void subscriptionEnding_showsTheDayInSaoPaulo_andLinksToTheSubscriptionArea() {
+        NotificationContent ending = NotificationContent.of(notification(NotificationType.SUBSCRIPTION_ENDING, null));
+
+        assertThat(ending.subject()).isEqualTo("A assinatura da Pelada do Fut vence em 07/12");
+        assertThat(ending.body()).isEqualTo("O plano da Pelada do Fut vence em 07/12. Assine para a pelada não travar.");
+        assertThat(ending.ctaPath()).isEqualTo("/pelada/10/assinatura");
+    }
+
+    @Test
+    void subscriptionPastDue_showsWhenItLocks_sevenDaysLater() {
+        NotificationContent pastDue = NotificationContent.of(notification(NotificationType.SUBSCRIPTION_PAST_DUE, null));
+
+        assertThat(pastDue.subject()).isEqualTo("Pagamento pendente: Pelada do Fut");
+        assertThat(pastDue.body())
+                .isEqualTo("O plano da Pelada do Fut venceu em 07/12. Renove até 14/12 para a pelada não travar.");
+        assertThat(pastDue.ctaLabel()).isEqualTo("Renovar");
+        assertThat(pastDue.ctaPath()).isEqualTo("/pelada/10/assinatura");
+    }
+
+    @Test
+    void pixClaimed_namesTheCreator_andLinksToThePanel() {
+        NotificationContent claimed = NotificationContent.of(notification(NotificationType.SUBSCRIPTION_PIX_CLAIMED, null));
+
+        assertThat(claimed.subject()).isEqualTo("Pix informado: Pelada do Fut");
+        assertThat(claimed.body()).isEqualTo("Leal informou o Pix da assinatura da Pelada do Fut. Confira e registre o pagamento.");
+        assertThat(claimed.ctaPath()).isEqualTo("/admin/peladas/10");
     }
 
     @Test

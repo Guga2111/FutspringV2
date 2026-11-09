@@ -22,6 +22,9 @@ import com.futspring.backend.shared.helper.PeladaAccessHelper;
 import com.futspring.backend.shared.helper.UserAuthenticationHelper;
 import com.futspring.backend.domain.stats.AggregateRebuildService;
 import com.futspring.backend.domain.stats.repository.RankingRepository;
+import com.futspring.backend.domain.subscription.SubscriptionGuard;
+import com.futspring.backend.domain.subscription.SubscriptionService;
+import com.futspring.backend.domain.subscription.dto.SubscriptionSummaryDTO;
 import com.futspring.backend.domain.user.User;
 import com.futspring.backend.domain.user.UserRepository;
 import com.futspring.backend.domain.user.dto.PublicUserDTO;
@@ -68,6 +71,8 @@ public class PeladaService {
     private final NotificationRepository notificationRepository;
     private final ApplicationEventPublisher eventPublisher;
     private final PeladaInvitationService invitationService;
+    private final SubscriptionService subscriptionService;
+    private final SubscriptionGuard subscriptionGuard;
 
     @Transactional
     public PeladaResponseDTO createPelada(CreatePeladaRequestDTO request, String currentUserEmail) {
@@ -94,6 +99,7 @@ public class PeladaService {
 
         Pelada saved = peladaRepository.save(pelada);
         financePreservation.appointCreator(saved);
+        subscriptionService.start(saved, user);
         return PeladaResponseDTO.forAdmin(saved);
     }
 
@@ -113,7 +119,7 @@ public class PeladaService {
         return toSummaries(peladaRepository.findSharedPeladas(caller.getId(), userId), caller);
     }
 
-    // Member counts, admin flags and next sessions in grouped queries instead of one per pelada
+    // Member counts, admin flags, next sessions and subscriptions in grouped queries instead of one per pelada
     private List<PeladaResponseDTO> toSummaries(List<Pelada> peladas, User caller) {
         if (peladas.isEmpty()) {
             return List.of();
@@ -138,6 +144,7 @@ public class PeladaService {
         Map<Long, AttendanceBumpDTO> unseenBumps = nextIds.isEmpty() ? Map.of()
                 : bumpRepository.findUnseenByUserAndDailyIn(caller.getId(), nextIds).stream()
                         .collect(Collectors.toMap(b -> b.getDaily().getId(), AttendanceBumpDTO::from, (newest, older) -> newest));
+        Map<Long, SubscriptionSummaryDTO> subscriptions = subscriptionGuard.summaries(ids);
 
         return peladas.stream()
                 .map(p -> {
@@ -155,7 +162,7 @@ public class PeladaService {
                             .bump(unseenBumps.get(next.getId()))
                             .build();
                     return PeladaResponseDTO.from(p, memberCounts.getOrDefault(p.getId(), 0),
-                            administered.contains(p.getId()), nextDaily);
+                            administered.contains(p.getId()), nextDaily, subscriptions.get(p.getId()));
                 })
                 .toList();
     }
@@ -166,7 +173,7 @@ public class PeladaService {
         Pelada pelada = findPelada(id);
         accessHelper.requireMember(pelada, user);
         return PeladaDetailResponseDTO.from(pelada, playerStarsRepository.findStarsByPelada(pelada),
-                mensalistaRepository.findUserIdsByPelada(pelada));
+                mensalistaRepository.findUserIdsByPelada(pelada), subscriptionGuard.summary(pelada));
     }
 
     @Transactional
@@ -393,6 +400,7 @@ public class PeladaService {
         rankingRepository.deleteByPelada(pelada);
         playerStarsRepository.deleteByPelada(pelada);
         mensalistaRepository.deleteByPelada(pelada);
+        subscriptionService.deletePeladaData(peladaId);
 
         pelada.getMembers().clear();
         pelada.getAdmins().clear();

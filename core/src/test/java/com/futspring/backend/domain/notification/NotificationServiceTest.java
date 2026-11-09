@@ -18,7 +18,9 @@ import com.futspring.backend.domain.pelada.MembersRemovedEvent;
 import com.futspring.backend.domain.pelada.MensalistasChangedEvent;
 import com.futspring.backend.domain.pelada.Pelada;
 import com.futspring.backend.domain.pelada.PeladaTransferredEvent;
+import com.futspring.backend.domain.subscription.PixClaimedEvent;
 import com.futspring.backend.domain.user.User;
+import com.futspring.backend.domain.user.UserRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -52,6 +54,7 @@ class NotificationServiceTest {
     @Mock NotificationRepository notificationRepository;
     @Mock DailyAttendanceRepository attendanceRepository;
     @Mock DailyAttendanceBumpRepository bumpRepository;
+    @Mock UserRepository userRepository;
     @Mock NotificationDelivery delivery;
 
     NotificationService service;
@@ -64,7 +67,7 @@ class NotificationServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new NotificationService(notificationRepository, attendanceRepository, bumpRepository, delivery,
+        service = new NotificationService(notificationRepository, attendanceRepository, bumpRepository, userRepository, delivery,
                 Clock.fixed(NOW, ZoneOffset.UTC));
         admin = User.builder().id(1L).email("admin@example.com").username("admin").password("hash").build();
         member = User.builder().id(2L).email("member@example.com").username("member").password("hash").build();
@@ -280,6 +283,36 @@ class NotificationServiceTest {
         verifyNoInteractions(delivery);
         TransactionSynchronizationManager.getSynchronizations().forEach(TransactionSynchronization::afterCommit);
         verify(delivery).deliver(saved.stream().map(Notification::getId).toList());
+    }
+
+    @Test
+    void pixClaimed_notifiesThePlatformAdmins_butNotTheCreatorWhoClaimed() {
+        when(userRepository.findByPlatformAdminTrueAndDeletedAtIsNull()).thenReturn(List.of(admin, other));
+
+        service.onPixClaimed(new PixClaimedEvent(pelada, admin));
+
+        assertThat(saved).singleElement().satisfies(n -> {
+            assertThat(n.getType()).isEqualTo(NotificationType.SUBSCRIPTION_PIX_CLAIMED);
+            assertThat(n.getRecipient()).isEqualTo(other);
+            assertThat(n.getActor()).isEqualTo(admin);
+            assertThat(n.getPelada()).isEqualTo(pelada);
+            assertThat(n.getDaily()).isNull();
+        });
+    }
+
+    @Test
+    void notifySubscription_isASystemNotice_toTheCreator_withTheValidity() {
+        Instant validUntil = NOW.plusSeconds(3600);
+
+        service.notifySubscription(NotificationType.SUBSCRIPTION_ENDING, pelada, validUntil);
+
+        assertThat(saved).singleElement().satisfies(n -> {
+            assertThat(n.getRecipient()).isEqualTo(admin);
+            assertThat(n.getActor()).isNull();
+            assertThat(n.getPelada()).isEqualTo(pelada);
+            assertThat(n.getValidUntil()).isEqualTo(validUntil);
+            assertThat(n.getCreatedAt()).isEqualTo(NOW);
+        });
     }
 
     @Test

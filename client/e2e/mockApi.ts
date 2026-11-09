@@ -30,6 +30,7 @@ const routes: [RegExp, Handler][] = [
   [/^\/peladas\/\d+\/invitations$/, (_, url) =>
     url.searchParams.get("pending") === "false" ? f.peladaInvitationsHistory : f.peladaInvitationsPending],
   [/^\/peladas\/\d+\/invite-link$/, () => f.inviteLink],
+  [/^\/peladas\/\d+\/subscription$/, () => f.peladaSubscription],
   [/^\/peladas\/\d+\/finance$/, () => f.financeOverview],
   [/^\/peladas\/\d+\/finance\/lists\/\d+$/, () => f.financeDetail],
   [/^\/peladas\/\d+\/finance\/movements$/, (_, url) => filterHistory(f.financeMovements, url, (m) => m.effectiveDate)],
@@ -50,6 +51,11 @@ const routes: [RegExp, Handler][] = [
   [/^\/notifications\/preferences$/, () => f.notificationPreferences],
   [/^\/users\/me\/deletion-blockers$/, () => f.deletionBlockers],
   [/^\/push\/vapid-public-key$/, () => f.vapidPublicKey],
+  [/^\/platform\/overview$/, () => f.platformOverview],
+  [/^\/platform\/peladas$/, () => f.platformPeladas],
+  [/^\/platform\/peladas\/\d+$/, () => f.platformPelada],
+  [/^\/platform\/payments$/, () => f.platformPayments],
+  [/^\/platform\/users$/, () => f.platformUsers],
 ]
 
 // What a test can set in window.__pushState (an init script added after mockApi's) for the device's Web Push

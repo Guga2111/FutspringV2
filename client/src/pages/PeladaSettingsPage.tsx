@@ -16,7 +16,7 @@ import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useAuth } from "@/hooks/useAuth"
 import { useScrollToHash } from "@/hooks/useScrollToHash"
-import { areaPath } from "@/utils/peladaAreas"
+import { areaPath, peladaRole } from "@/utils/peladaAreas"
 
 const SECTIONS: SettingsSection[] = [
   { id: "informacoes", label: "Informações" },
@@ -99,7 +99,7 @@ export default function PeladaSettingsPage() {
             peladaId={id}
             peladaName={pelada?.name ?? null}
             area="settings"
-            isAdmin={isAdmin}
+            role={peladaRole(isAdmin, isCreator)}
             title="Configurações"
             description="Gerencie as informações, o horário e as vagas da pelada. Preferências são salvas automaticamente; os demais blocos têm botão próprio."
           />

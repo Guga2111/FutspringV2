@@ -155,6 +155,19 @@ class NotificationEmailDispatcherTest {
     }
 
     @Test
+    void subscriptionNotices_goByEmailByDefault_untilBillingIsTurnedOff() {
+        when(emailSender.enabled()).thenReturn(true);
+        stubRows(notification(1L, NotificationType.SUBSCRIPTION_PAST_DUE, ana),
+                notification(2L, NotificationType.SUBSCRIPTION_PIX_CLAIMED, bia));
+        stubPreferences(new NotificationPreference(ana, NotificationCategory.BILLING, false, null));
+
+        dispatcher.dispatch(List.of(1L, 2L));
+        runQueued();
+
+        assertThat(sentTo()).containsExactly("bia@example.com");
+    }
+
+    @Test
     void nonEmailableTypes_neverSend_evenWithTheCategoryOn() {
         when(emailSender.enabled()).thenReturn(true);
         stubRows(notification(1L, NotificationType.ATTENDANCE_CONFIRMED_BY_ADMIN, ana),

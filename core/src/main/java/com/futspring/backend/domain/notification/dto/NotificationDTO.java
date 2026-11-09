@@ -26,7 +26,9 @@ public record NotificationDTO(
         DailyRef daily,
         PublicUserDTO actor,
         // only on TEAMS_SORTED: the recipient's team in that session
-        TeamRef team) {
+        TeamRef team,
+        // only on SUBSCRIPTION_ENDING / SUBSCRIPTION_PAST_DUE: the validity the notice was about
+        Instant validUntil) {
 
     public static NotificationDTO from(Notification n, TeamRef team) {
         Pelada pelada = n.getPelada();
@@ -43,6 +45,7 @@ public record NotificationDTO(
                 .daily(daily == null ? null : new DailyRef(daily.getId(), daily.getDailyDate(), daily.getDailyTime()))
                 .actor(n.getActor() == null ? null : PublicUserDTO.from(n.getActor()))
                 .team(team)
+                .validUntil(n.getValidUntil())
                 .build();
     }
 

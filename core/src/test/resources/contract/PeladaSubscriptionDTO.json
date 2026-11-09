@@ -1,0 +1,20 @@
+{
+  "status" : "TRIAL",
+  "validUntil" : "2026-10-31T23:00:00Z",
+  "plan" : "MONTHLY",
+  "founder" : true,
+  "pixClaimedAt" : "2026-10-31T23:00:00Z",
+  "claimedPlan" : "MONTHLY",
+  "pixRecipient" : "pixRecipient",
+  "plans" : [ {
+    "plan" : "MONTHLY",
+    "amount" : "amount",
+    "pixCode" : "pixCode"
+  } ],
+  "payments" : [ {
+    "paidOn" : "2026-10-31",
+    "amount" : "amount",
+    "plan" : "MONTHLY",
+    "periodEnd" : "2026-10-31T23:00:00Z"
+  } ]
+}

@@ -21,9 +21,12 @@ export type NotificationType =
   | "MENSALISTA_REVOKED"
   | "PELADA_TRANSFERRED"
   | "AWARD_WON"
+  | "SUBSCRIPTION_ENDING"
+  | "SUBSCRIPTION_PAST_DUE"
+  | "SUBSCRIPTION_PIX_CLAIMED"
 
 // mirrors NotificationCategory (drives the e-mail and push preferences)
-export type NotificationCategory = "SESSION" | "ATTENDANCE" | "MEMBERSHIP" | "AWARDS"
+export type NotificationCategory = "SESSION" | "ATTENDANCE" | "MEMBERSHIP" | "AWARDS" | "BILLING"
 
 // mirrors NotificationAward
 export type NotificationAward = "PUSKAS" | "WILTBALL" | "ARTILHEIRO" | "GARCOM"
@@ -33,6 +36,7 @@ export const notificationCategoryLabel: Record<NotificationCategory, string> = {
   SESSION: "Sessões",
   MEMBERSHIP: "Membros",
   AWARDS: "Prêmios",
+  BILLING: "Assinatura",
 }
 
 // rows of the notification preferences card, in this order
@@ -41,6 +45,7 @@ export const notificationPreferenceText: Record<NotificationCategory, { label: s
   SESSION: { label: "Sessões", description: "Nova sessão, confirmações abertas, sessão finalizada" },
   MEMBERSHIP: { label: "Membros", description: "Convites, remoções, mudanças de admin e mensalista" },
   AWARDS: { label: "Prêmios", description: "Artilheiro, Garçom, Puskás, Bola Murcha" },
+  BILLING: { label: "Assinatura", description: "Plano vencendo, pagamento pendente, Pix informado" },
 }
 
 export const NOTIFICATION_CATEGORIES = Object.keys(notificationPreferenceText) as NotificationCategory[]
@@ -76,6 +81,9 @@ export const notificationTypeCategory: Record<NotificationType, NotificationCate
   MENSALISTA_REVOKED: "MEMBERSHIP",
   PELADA_TRANSFERRED: "MEMBERSHIP",
   AWARD_WON: "AWARDS",
+  SUBSCRIPTION_ENDING: "BILLING",
+  SUBSCRIPTION_PAST_DUE: "BILLING",
+  SUBSCRIPTION_PIX_CLAIMED: "BILLING",
 }
 
 // mirrors NotificationDTO: references only, the text is rendered by utils/notifications
@@ -94,6 +102,8 @@ export interface NotificationResponse {
   actor: PublicUser | null
   // only on TEAMS_SORTED: the recipient's team in that session
   team: { name: string; color: string | null } | null
+  // only on SUBSCRIPTION_ENDING / SUBSCRIPTION_PAST_DUE: the subscription's validity the notice was about (ISO instant)
+  validUntil: string | null
 }
 
 // mirrors NotificationPushDTO: a frame on /user/queue/notifications, with the recipient's unread count after it

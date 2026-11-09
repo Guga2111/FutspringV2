@@ -1,7 +1,7 @@
 import { useMemo } from "react"
 import { Link } from "react-router-dom"
 import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react"
-import { ArrowRight01Icon, Award01Icon, Calendar03Icon, LeftToRightListNumberIcon, MailAdd01Icon, PlusSignIcon, Settings01Icon, UserGroupIcon, Wallet01Icon } from "@hugeicons/core-free-icons"
+import { ArrowRight01Icon, Award01Icon, Calendar03Icon, CreditCardIcon, LeftToRightListNumberIcon, MailAdd01Icon, PlusSignIcon, Settings01Icon, UserGroupIcon, Wallet01Icon } from "@hugeicons/core-free-icons"
 import { NextSessionCard } from "@/components/pelada/NextSessionCard"
 import { PeladaBanner } from "@/components/pelada/PeladaBanner"
 import { SessionRow } from "@/components/pelada/SessionHistoryList"
@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { areaPath, PELADA_AREAS, visibleAreas, type PeladaArea } from "@/utils/peladaAreas"
 import { pickNextSession, pickRecentSessions } from "@/utils/sessions"
+import { SUBSCRIPTION_NOTICE_ID } from "@/components/pelada/SubscriptionNotice"
 
 const RECENT_LIMIT = 3
 
@@ -22,6 +23,7 @@ const AREA_ICONS: Record<Exclude<PeladaArea, "overview">, IconSvgElement> = {
   finance: Wallet01Icon,
   invitations: MailAdd01Icon,
   settings: Settings01Icon,
+  subscription: CreditCardIcon,
 }
 
 // What is happening now: the next session, the latest sessions, and a way into every area
@@ -32,7 +34,7 @@ export default function PeladaOverviewPage() {
     () => pickRecentSessions(w.dailies, nextSession?.id ?? null, RECENT_LIMIT),
     [w.dailies, nextSession],
   )
-  const shortcuts = visibleAreas(w.isAdmin).filter((area): area is Exclude<PeladaArea, "overview"> => area !== "overview")
+  const shortcuts = visibleAreas(w.role).filter((area): area is Exclude<PeladaArea, "overview"> => area !== "overview")
   const sessionsPath = areaPath(w.pelada.id, "sessions")
 
   return (
@@ -46,6 +48,7 @@ export default function PeladaOverviewPage() {
           daily={nextSession}
           timeZone={w.pelada.timeZone}
           isAdmin={w.isAdmin}
+          readOnly={!w.writable}
           attendancePending={w.attendancePending}
           onToggleAttendance={w.toggleAttendance}
         />
@@ -67,7 +70,13 @@ export default function PeladaOverviewPage() {
             <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-input p-8 text-center text-sm text-subtle-foreground">
               <span>Nenhuma sessão realizada ainda. Os resultados das sessões aparecem aqui.</span>
               {w.isAdmin && (
-                <Button variant="outline" onClick={w.openCreateSession} className="h-[34px] gap-1.5 px-3.5">
+                <Button
+                  variant="outline"
+                  disabled={!w.writable}
+                  aria-describedby={w.writable ? undefined : SUBSCRIPTION_NOTICE_ID}
+                  onClick={w.openCreateSession}
+                  className="h-[34px] gap-1.5 px-3.5"
+                >
                   <HugeiconsIcon icon={PlusSignIcon} className="size-3.5" strokeWidth={2.2} />
                   Nova sessão
                 </Button>

@@ -30,13 +30,13 @@ describe("resetPassword", () => {
 
 describe("registerUser", () => {
   it("posts the accepted terms version with the account", async () => {
-    await registerUser({ username: "Leal", email: "leal@futspring.com", password: "senha123", termsVersion: "2026-11-06" })
+    await registerUser({ username: "Leal", email: "leal@futspring.com", password: "senha123", termsVersion: "2026-11-09" })
 
     expect(mockPost).toHaveBeenCalledWith("/api/v1/auth/register", {
       username: "Leal",
       email: "leal@futspring.com",
       password: "senha123",
-      termsVersion: "2026-11-06",
+      termsVersion: "2026-11-09",
     })
   })
 })
