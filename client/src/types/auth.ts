@@ -5,6 +5,8 @@ export interface UserResponseDTO {
   image: string | null
   backgroundImage: string | null
   position: string | null
+  // operator of the platform (the admin panel); absent in a session stored before it existed
+  isPlatformAdmin?: boolean
 }
 
 export interface AuthResponse {

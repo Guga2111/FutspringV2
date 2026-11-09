@@ -106,7 +106,7 @@ Ver e-mail no painel é tratamento pelo operador: adicionar uma linha na políti
 
 ### Notificações
 
-- Categoria nova `BILLING` ("Assinatura"), e-mail e push ligados por padrão; CHECK atualizado numa V20 (PR 8).
+- Categoria nova `BILLING` ("Assinatura"), e-mail e push ligados por padrão; CHECK atualizado numa V21 (PR 8).
 - Tipos novos:
   - `SUBSCRIPTION_ENDING` (criador, 5 dias antes do fim do trial ou do pago).
   - `SUBSCRIPTION_PAST_DUE` (criador, ao entrar na carência).
@@ -297,7 +297,7 @@ Para planejar um PR, rode o prompt dele numa sessão limpa (`/clear` antes). Ao 
 - Financeiro: `useFinance(..., writable)` expõe `writable` e `locked = pending || !writable`. Todo controle de escrita usa um dos dois. Leitura, filtros, páginas e a mensagem do WhatsApp continuam liberados. `SettingsCardFooter` ganhou `locked`, que desabilita só o Salvar.
 - O estado vem calculado na resposta, sem polling. O banner do fim do trial aparece na hora certa por `useNowUntil`. Se a tela estiver aberta quando a pelada travar, ela só muda ao recarregar, e o 402 aparece no toast.
 
-### [ ] PR 5 — API do admin da plataforma (`feat/subscriptions-platform-api`)
+### [x] PR 5 — API do admin da plataforma (`feat/subscriptions-platform-api`)
 
 - **Entrega:**
   - `isPlatformAdmin` em `UserResponseDTO` e `ProfileDTO` (próprio).
@@ -316,6 +316,18 @@ Para planejar um PR, rode o prompt dele numa sessão limpa (`/clear` antes). Ao 
 ```
 /plan-task docs/plans/2026-11-07-subscriptions-platform-admin-spec.md "PR 5 — API do admin da plataforma"
 ```
+
+**Decisões (PR 5):**
+- `users` não tinha data de cadastro: a V20 cria `created_at` e `updated_at` (nullable). O backfill copia `terms_accepted_at` (o cadastro desde a V16), e as contas mais antigas ficam null. As duas colunas são preenchidas pelo Hibernate (`@CreationTimestamp` / `@UpdateTimestamp`); statements em lote como `markTrialUsed` não mexem no `updatedAt`. **O PR 8 passa a usar a V21.**
+- Overview: `trialsEndingSoon` (7 dias) e `pixClaimed` são listas `{id, name, date}` de até 20 itens, para o "Precisa de você" linkar cada item a `/admin/peladas/:id`. "Em atraso" fica em `counts.PAST_DUE`, com link para `/admin/peladas?state=PAST_DUE`. `counts` traz todos os estados, inclusive os zerados.
+- O estado efetivo em SQL fica num só lugar, `SubscriptionStatusFilter` (uma `Specification` sobre `kind` + `valid_until`). O filtro do `/peladas` e as contagens do overview usam esse filtro, e o teste confere cada estado contra `SubscriptionState.of` nas bordas exatas. As peladas sem linha de assinatura não aparecem na lista (em produção não existem).
+- Os comandos ficam em `SubscriptionService` (que grava o evento com antes/depois, ator e nota). `PlatformCommandService` faz o acesso, a trava da linha da pelada e as validações por ação (400 no campo). Pagamento e extensão partem de `validUntil` só enquanto um trial ou um pago está correndo; senão, de agora. O "fim do dia" é 23:59:59 em São Paulo (`BILLING_ZONE`): meia-noite do dia seguinte mostraria a data errada, e `LocalTime.MAX` arredondaria para o dia seguinte no Postgres.
+- Isentar e cancelar zeram `valid_until` (o evento guarda o anterior); isentar também limpa um Pix informado. Estender só vale para `TRIAL`/`PAID` (409 nos outros). `SET_VALID_UNTIL` aceita data no passado, o que trava a pelada.
+- O estorno trava a linha do pagamento (não a da pelada, que pode já ter sido excluída) e grava `PAYMENT_VOIDED` enquanto a pelada existe. Um segundo estorno dá 409.
+- Dinheiro como string de duas casas, como no financeiro (`"19.90"` na entrada e na saída). `recurringEstimate` = pagamentos não estornados cujo período cobre agora, de peladas ainda `PAID`, com o anual dividido por 12. Ele usa o valor cobrado de fato (o preço de fundadora entra certo), e uma renovação adiantada não conta duas vezes. `lastSessionDate` = última sessão `FINISHED`.
+- O detalhe traz `prices` (preço de tabela por plano para o número de membros), para o Sheet do PR 6 já vir com o valor preenchido. Pagamentos e eventos vêm limitados aos 50 mais recentes.
+- 404 para quem não é admin, mas um corpo ou id malformado ainda responde 400 antes (`@Valid`). As rotas não são segredo, porque o bundle do front do PR 6 vai nomeá-las; o que fica protegido são os dados.
+- Contrato: `isPlatformAdmin` em `UserResponseDTO` e só no próprio `ProfileDTO` (o tipo do front ficou opcional, porque uma sessão guardada antes não traz o campo). O `ContractFixtures` passou a montar `Map` com chave enum. Os request bodies da plataforma entram no snapshot de requests no PR 6, junto de `api/platform.ts`.
 
 ### [ ] PR 6 — Painel do admin, front (`feat/subscriptions-platform-ui`)
 
@@ -354,7 +366,7 @@ Para planejar um PR, rode o prompt dele numa sessão limpa (`/clear` antes). Ao 
 ### [ ] PR 8 — Avisos de assinatura (`feat/subscriptions-notices`)
 
 - **Entrega:**
-  - Migration V20 (CHECK de `type` e `category` das notificações).
+  - Migration V21 (CHECK de `type` e `category` das notificações; a V20 foi usada pelo PR 5).
   - Categoria `BILLING` ("Assinatura", e-mail e push ligados).
   - Tipos `SUBSCRIPTION_ENDING`, `SUBSCRIPTION_PAST_DUE` e `SUBSCRIPTION_PIX_CLAIMED` em `NotificationContent`.
   - `SubscriptionNoticeJob` (09:00 America/Sao_Paulo, guard `NOT EXISTS`).
@@ -367,7 +379,7 @@ Para planejar um PR, rode o prompt dele numa sessão limpa (`/clear` antes). Ao 
   - Uma pelada com falha não para as outras.
   - Destinatários (criador / admins da plataforma).
   - Matriz e-mail e push.
-  - `MigrationDataTest` (V20).
+  - `MigrationDataTest` (V21).
 - **Docs:** BACKEND.md (Notifications, migrations), FRONTEND.md (notification types, preferências).
 
 ```

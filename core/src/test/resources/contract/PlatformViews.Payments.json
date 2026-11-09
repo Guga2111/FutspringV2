@@ -1,0 +1,27 @@
+{
+  "items" : [ {
+    "id" : 356,
+    "peladaId" : 995,
+    "peladaName" : "peladaName",
+    "payerId" : 665,
+    "payerName" : "payerName",
+    "amount" : "amount",
+    "paidOn" : "2026-10-31",
+    "plan" : "MONTHLY",
+    "periodStart" : "2026-10-31T23:00:00Z",
+    "periodEnd" : "2026-10-31T23:00:00Z",
+    "recordedBy" : {
+      "id" : 356,
+      "username" : "username",
+      "image" : "image",
+      "position" : "position",
+      "isDeleted" : true
+    },
+    "note" : "note",
+    "voidedAt" : "2026-10-31T23:00:00Z",
+    "voidReason" : "voidReason",
+    "createdAt" : "2026-10-31T23:00:00Z"
+  } ],
+  "total" : 829,
+  "sum" : "sum"
+}

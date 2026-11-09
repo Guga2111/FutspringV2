@@ -2,6 +2,7 @@ package com.futspring.backend.domain.user.dto;
 
 import com.futspring.backend.domain.user.User;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Builder;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -14,9 +15,12 @@ public record ProfileDTO(
         String backgroundImage,
         // Rounded average of the user's stars in their peladas; null (omitted) when they have none
         Integer stars,
-        String position) {
+        String position,
+        // Only on the caller's own profile (null, so omitted, on anyone else's)
+        @JsonProperty("isPlatformAdmin")
+        Boolean isPlatformAdmin) {
 
-    // email is only returned to the profile owner
+    // email and isPlatformAdmin are only returned to the profile owner
     public static ProfileDTO from(User user, boolean isSelf, Integer stars) {
         return ProfileDTO.builder()
                 .id(user.getId())
@@ -26,6 +30,7 @@ public record ProfileDTO(
                 .backgroundImage(user.getBackgroundImage())
                 .stars(stars)
                 .position(user.getPosition())
+                .isPlatformAdmin(isSelf ? user.isPlatformAdmin() : null)
                 .build();
     }
 }

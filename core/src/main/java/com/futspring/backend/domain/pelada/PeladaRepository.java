@@ -82,6 +82,14 @@ public interface PeladaRepository extends JpaRepository<Pelada, Long> {
         """)
     List<PeladaRef> findCreatedBy(@Param("userId") Long userId);
 
+    // [creatorId, peladaId, name] of the peladas created by any of `userIds`, in one query (platform admin)
+    @Query("SELECT p.creator.id, p.id, p.name FROM Pelada p WHERE p.creator.id IN :userIds ORDER BY p.id")
+    List<Object[]> findCreatedByAny(@Param("userIds") Collection<Long> userIds);
+
+    // [userId, number of peladas they belong to] for `userIds`, in one query (platform admin)
+    @Query("SELECT m.id, COUNT(p) FROM Pelada p JOIN p.members m WHERE m.id IN :userIds GROUP BY m.id")
+    List<Object[]> countMembershipsByUsers(@Param("userIds") Collection<Long> userIds);
+
     // Account deletion: leaves every pelada at once (the join tables have no entity)
     @Modifying
     @Query(value = "DELETE FROM pelada_admins WHERE user_id = :userId", nativeQuery = true)

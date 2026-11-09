@@ -1,6 +1,7 @@
 package com.futspring.backend.contract;
 
 import com.futspring.backend.domain.finance.dto.FinanceRequests;
+import com.futspring.backend.domain.platform.dto.PlatformViews;
 import tools.jackson.databind.JavaType;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
@@ -107,6 +108,9 @@ class ContractSnapshotTest {
                 TourStateDTO.class,
                 NotificationDTO.class, NotificationPushDTO.class, NotificationPreferenceDTO.class, UnreadCountDTO.class,
                 VapidPublicKeyDTO.class,
+                // /platform/** (the two pages: PlatformViews.Page of PeladaItem / UserItem)
+                PlatformViews.Overview.class, PlatformViews.PeladaItem.class, PlatformViews.PeladaDetail.class,
+                PlatformViews.Payment.class, PlatformViews.Payments.class, PlatformViews.UserItem.class,
                 ErrorResponse.class);
     }
 
