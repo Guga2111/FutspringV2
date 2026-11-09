@@ -13,7 +13,10 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { DailyStatusBadge } from "@/components/daily/DailyStatusBadge"
 import { formatLongDate } from "@/utils/sessions"
+import { dailyTeamPendencies } from "@/utils/teamDraft"
 import type { DailyDetail } from "@/types/daily"
+import { isWritable } from "@/utils/subscription"
+import { SUBSCRIPTION_NOTICE_ID } from "@/components/pelada/SubscriptionNotice"
 
 export interface DailyHeaderActions {
   onImportFromMessage: () => void
@@ -43,6 +46,11 @@ function playersMeta(daily: DailyDetail): string {
 // Back link, date, status, metadata and the admin actions (they used to live in a fixed bottom bar)
 export function DailyHeader({ daily, ...actions }: DailyHeaderProps) {
   const { status } = daily
+  // fewer than two teams or an empty one: the server would refuse the start (short teams only warn)
+  const canStart = !dailyTeamPendencies(daily).blocking
+  // a read-only pelada (subscription): every action is disabled except cancelling, which only calls the session off
+  const writable = isWritable(daily.subscription)
+  const notice = writable ? undefined : SUBSCRIPTION_NOTICE_ID
   return (
     <header className="flex flex-wrap items-end justify-between gap-4">
       <div className="flex min-w-0 flex-col gap-2">
@@ -80,30 +88,49 @@ export function DailyHeader({ daily, ...actions }: DailyHeaderProps) {
         <div className="flex flex-wrap gap-2">
           {status === "SCHEDULED" && (
             <>
-              <Button variant="outline" className={outlineAction} onClick={actions.onImportFromMessage}>
+              <Button variant="outline" className={outlineAction} disabled={!writable} aria-describedby={notice} onClick={actions.onImportFromMessage}>
                 <HugeiconsIcon icon={File01Icon} />
                 Importar mensagem
               </Button>
-              <Button variant="brand" className={`${actionButton} font-semibold`} onClick={actions.onConfirmDaily}>
+              <Button
+                variant="brand"
+                className={`${actionButton} font-semibold`}
+                disabled={!writable}
+                aria-describedby={notice}
+                onClick={actions.onConfirmDaily}
+              >
                 <HugeiconsIcon icon={CheckmarkCircle02Icon} strokeWidth={2.2} />
                 Confirmar sessão
               </Button>
             </>
           )}
           {status === "CONFIRMED" && (
-            <Button variant="brand" className={`${actionButton} font-semibold`} onClick={actions.onStartSession}>
-              <HugeiconsIcon icon={PlayIcon} />
-              Iniciar sessão
-            </Button>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              {!canStart && (
+                <span id="start-session-hint" className="text-body-sm text-muted-foreground">
+                  Monte os times antes de iniciar
+                </span>
+              )}
+              <Button
+                variant="brand"
+                className={`${actionButton} font-semibold`}
+                disabled={!canStart || !writable}
+                aria-describedby={!writable ? notice : canStart ? undefined : "start-session-hint"}
+                onClick={actions.onStartSession}
+              >
+                <HugeiconsIcon icon={PlayIcon} />
+                Iniciar sessão
+              </Button>
+            </div>
           )}
           {/* IN_COURSE: "Lançar resultados" and "Finalizar sessão" live on LiveSessionCard, only the ⋯ menu stays here */}
           {status === "FINISHED" && (
             <>
-              <Button variant="outline" className={outlineAction} onClick={actions.onEditResults}>
+              <Button variant="outline" className={outlineAction} disabled={!writable} aria-describedby={notice} onClick={actions.onEditResults}>
                 <HugeiconsIcon icon={PencilEdit02Icon} />
                 Editar resultados
               </Button>
-              <Button variant="outline" className={outlineAction} onClick={actions.onFinalizeDaily}>
+              <Button variant="outline" className={outlineAction} disabled={!writable} aria-describedby={notice} onClick={actions.onFinalizeDaily}>
                 <HugeiconsIcon icon={Flag01Icon} />
                 Finalizar de novo
               </Button>
@@ -127,7 +154,7 @@ export function DailyHeader({ daily, ...actions }: DailyHeaderProps) {
               )}
               {status === "IN_COURSE" && daily.matches.length > 0 && (
                 <>
-                  <DropdownMenuItem className={menuItem} onSelect={actions.onEditResults}>
+                  <DropdownMenuItem className={menuItem} disabled={!writable} onSelect={actions.onEditResults}>
                     <HugeiconsIcon icon={PencilEdit02Icon} />
                     Editar partidas lançadas
                   </DropdownMenuItem>
@@ -136,7 +163,7 @@ export function DailyHeader({ daily, ...actions }: DailyHeaderProps) {
               )}
               {status === "FINISHED" && (
                 <>
-                  <DropdownMenuItem className={menuItem} onSelect={actions.onChangeChampionPhoto}>
+                  <DropdownMenuItem className={menuItem} disabled={!writable} onSelect={actions.onChangeChampionPhoto}>
                     <HugeiconsIcon icon={Upload01Icon} />
                     {daily.championImage ? "Trocar foto do campeão" : "Enviar foto do campeão"}
                   </DropdownMenuItem>
@@ -145,6 +172,7 @@ export function DailyHeader({ daily, ...actions }: DailyHeaderProps) {
               )}
               <DropdownMenuItem
                 className={`${menuItem} text-destructive focus:bg-destructive-muted focus:text-destructive [&>svg]:text-destructive`}
+                disabled={!writable}
                 onSelect={actions.onDeleteDaily}
               >
                 <HugeiconsIcon icon={Delete02Icon} />

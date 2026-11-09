@@ -2,5 +2,9 @@
   {
     "category": "SESSION",
     "emailEnabled": true
+  },
+  {
+    "category": "ATTENDANCE",
+    "pushEnabled": false
   }
 ]

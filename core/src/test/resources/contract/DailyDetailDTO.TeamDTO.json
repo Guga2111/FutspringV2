@@ -10,7 +10,8 @@
     "image" : "image",
     "stars" : 538,
     "position" : "position",
-    "confirmedAt" : "2026-10-31T23:00:00Z",
-    "isMensalista" : true
+    "isDeleted" : true,
+    "isMensalista" : true,
+    "confirmedAt" : "2026-10-31T23:00:00Z"
   } ]
 }

@@ -3,6 +3,7 @@ package com.futspring.backend.domain.daily.repository;
 import com.futspring.backend.domain.daily.entity.Daily;
 import com.futspring.backend.domain.daily.entity.Team;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -33,4 +34,14 @@ public interface TeamRepository extends JpaRepository<Team, Long> {
 
     @Query("SELECT DISTINCT t FROM Team t LEFT JOIN FETCH t.players WHERE t.daily IN :dailies")
     List<Team> findByDailyInWithPlayers(@Param("dailies") Collection<Daily> dailies);
+
+    // Account deletion: the user leaves the teams of every session that hasn't started; the teams stay
+    @Modifying
+    @Query(value = """
+        DELETE FROM team_players
+        WHERE user_id = :userId
+          AND team_id IN (SELECT t.id FROM teams t JOIN dailies d ON d.id = t.daily_id WHERE d.status IN (:statuses))
+        """, nativeQuery = true)
+    void deletePlayerFromTeamsOfDailiesWithStatus(@Param("userId") Long userId,
+                                                  @Param("statuses") Collection<String> statuses);
 }

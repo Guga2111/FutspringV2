@@ -21,6 +21,7 @@ import com.futspring.backend.domain.daily.repository.TeamRepository;
 import com.futspring.backend.domain.file.FileUploadService;
 import com.futspring.backend.domain.notification.NotificationRepository;
 import com.futspring.backend.domain.pelada.Pelada;
+import com.futspring.backend.domain.subscription.SubscriptionGuard;
 import com.futspring.backend.domain.pelada.PeladaMensalistaRepository;
 import com.futspring.backend.domain.pelada.PeladaPlayerStarsRepository;
 import com.futspring.backend.domain.pelada.PeladaRepository;
@@ -69,12 +70,14 @@ public class DailyService {
     private final DailyListItemAssembler dailyListItemAssembler;
     private final NotificationRepository notificationRepository;
     private final ApplicationEventPublisher eventPublisher;
+    private final SubscriptionGuard subscriptionGuard;
 
     @Transactional
     public DailyListItemDTO createDaily(Long peladaId, CreateDailyRequestDTO request, String currentUserEmail) {
         User caller = userAuthHelper.getAuthenticatedUser(currentUserEmail);
         Pelada pelada = findPelada(peladaId);
         accessHelper.requireAdmin(pelada, caller);
+        subscriptionGuard.requireWritable(pelada);
 
         Daily daily = Daily.builder()
                 .pelada(pelada)
@@ -99,12 +102,23 @@ public class DailyService {
     @Transactional
     public DailyListItemDTO updateStatus(Long id, DailyStatus newStatus, String currentUserEmail) {
         User caller = userAuthHelper.getAuthenticatedUser(currentUserEmail);
-        Daily daily = findDaily(id);
+        // Same row lock as attendance: a withdrawal can't race the start check
+        Daily daily = dailyRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Sessão não encontrada"));
         accessHelper.requireAdmin(daily.getPelada(), caller);
+        // cancelling is free in a read-only pelada: an upcoming session that can't happen can still be called off
+        if (newStatus != DailyStatus.CANCELED) {
+            subscriptionGuard.requireWritable(daily.getPelada());
+        }
 
         if (!daily.getStatus().canTransitionTo(newStatus)) {
             throw new AppException(HttpStatus.BAD_REQUEST,
                     "Não é possível mudar o status de " + daily.getStatus() + " para " + newStatus);
+        }
+        if (newStatus == DailyStatus.IN_COURSE) {
+            Set<Long> confirmedIds = attendanceRepository.findUsersByDaily(daily).stream()
+                    .map(User::getId).collect(Collectors.toSet());
+            TeamsReadiness.requireStartable(teamRepository.findByDailyWithPlayers(daily), confirmedIds);
         }
 
         daily.setStatus(newStatus);
@@ -124,6 +138,8 @@ public class DailyService {
 
         peladaRepository.findByIdForUpdate(pelada.getId())
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Pelada não encontrada"));
+        // under the pelada lock, which subscription changes take too
+        subscriptionGuard.requireWritable(pelada);
         financePreservation.detachDaily(daily, caller);
         Set<User> affected = deleteDailyData(daily);
         aggregateRebuildService.rebuild(pelada, affected);
@@ -142,6 +158,17 @@ public class DailyService {
         }
         dailyAttendanceService.removeAttendees(dailies, users);
         dailyTeamManagementService.removePlayersFromTeams(dailies, users);
+    }
+
+    /**
+     * Account deletion: the same as {@link #removeFromUpcomingSessions} for one user across every pelada, in two
+     * statements whatever the number of peladas and sessions; the bumps where they lost a spot go too.
+     */
+    public void removeAccountFromUpcomingSessions(User user) {
+        Set<DailyStatus> upcoming = EnumSet.complementOf(EnumSet.copyOf(DailyStatus.LOCKED));
+        attendanceRepository.deleteByUserInDailiesWithStatus(user, upcoming);
+        teamRepository.deletePlayerFromTeamsOfDailiesWithStatus(user.getId(), upcoming.stream().map(Enum::name).toList());
+        bumpRepository.deleteByUser(user);
     }
 
     /**
@@ -268,6 +295,7 @@ public class DailyService {
                 .award(award)
                 .peladaId(pelada.getId())
                 .peladaName(pelada.getName())
+                .creatorId(pelada.getCreator() != null ? pelada.getCreator().getId() : null)
                 .numberOfTeams(pelada.getNumberOfTeams())
                 .playersPerTeam(pelada.getPlayersPerTeam())
                 .isAdmin(isAdmin)
@@ -278,6 +306,7 @@ public class DailyService {
                 .confirmOpensAt(mensalistaIds.contains(caller.getId()) ? null : AttendanceWindow.diaristaOpensAt(daily))
                 .myBump(myBump)
                 .bumps(bumps)
+                .subscription(subscriptionGuard.summary(pelada))
                 .build();
     }
 

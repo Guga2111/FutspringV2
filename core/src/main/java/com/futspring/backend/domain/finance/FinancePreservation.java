@@ -2,8 +2,11 @@ package com.futspring.backend.domain.finance;
 
 import com.futspring.backend.domain.daily.entity.Daily;
 import com.futspring.backend.domain.pelada.Pelada;
+import com.futspring.backend.domain.pelada.PeladaRef;
 import com.futspring.backend.domain.user.User;
+import com.futspring.backend.shared.exception.AppException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.*;
@@ -26,12 +29,53 @@ public class FinancePreservation {
     private final FinanceFiles files;
     private final FinanceAccess access;
 
+    /** The creator starts as the only responsável financeiro of a new pelada (already a member of it). */
+    public void appointCreator(Pelada pelada) {
+        var manager = new FinanceManager();
+        manager.setPeladaId(pelada.getId());
+        manager.setUserId(pelada.getCreator().getId());
+        // finance_managers references the membership row, which is only written on flush
+        managers.flush();
+        managers.save(manager);
+    }
+    /** Revokes the removed members' delegation; removing every responsável at once is refused (409), so the money always has someone. */
     public void removeMembers(Pelada pelada, Collection<User> targets, User actor) {
-        var removed = managers.findByPeladaId(pelada.getId()).stream()
+        var current = managers.findByPeladaId(pelada.getId());
+        var removed = current.stream()
                 .filter(m -> targets.stream().anyMatch(u -> u.getId().equals(m.getUserId()))).toList();
         if (removed.isEmpty()) return;
+        if (removed.size() == current.size()) {
+            var names = targets.stream().filter(u -> removed.stream().anyMatch(m -> m.getUserId().equals(u.getId())))
+                    .map(User::getUsername).toList();
+            throw new AppException(HttpStatus.CONFLICT, names.size() == 1
+                    ? names.getFirst() + " é o único responsável financeiro. Designe outro antes de removê-lo."
+                    : "Designe outro responsável financeiro antes de remover " + String.join(", ", names) + ".");
+        }
         managers.deleteAll(removed);
         record(pelada.getId(), actor, "MANAGERS_REVOKED", "Remoção de membro: " + removed.stream().map(FinanceManager::getUserId).toList());
+    }
+    /** Peladas where the user is the only responsável financeiro: their account deletion is blocked there. */
+    public List<PeladaRef> soleManagedPeladas(Long userId) {
+        return managers.findSoleManagedBy(userId);
+    }
+    /**
+     * Account deletion, with the user's peladas already locked and {@link #soleManagedPeladas} empty: they stop being
+     * a responsável everywhere (audited per pelada) and their financial identity is renamed. Charges, receipts,
+     * notices, cash and audit stay. A constant number of reads whatever the number of peladas.
+     */
+    public void forgetAccount(User user, String anonymousName) {
+        var managed = managers.findPeladaIdsByUserId(user.getId());
+        if (!managed.isEmpty()) {
+            managers.deleteByUserId(user.getId());
+            accounts.incrementRevisions(managed);
+            var now = access.now();
+            for (Long peladaId : managed) {
+                var audit = new FinanceAudit(); audit.setPeladaId(peladaId); audit.setActorId(user.getId()); audit.setActorName(anonymousName);
+                audit.setCreatedAt(now); audit.setOperation(FinanceTypes.AuditOperation.MANAGERS_REVOKED); audit.setTarget("MANAGERS_REVOKED");
+                audit.setReason("Conta excluída: deixou de ser responsável financeiro"); audits.save(audit);
+            }
+        }
+        people.renameUser(user.getId(), anonymousName);
     }
     public void detachDaily(Daily daily, User actor) {
         var linkedLists = lists.findByDailyId(daily.getId()); var linkedCash = movements.findByDailyId(daily.getId());

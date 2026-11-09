@@ -26,7 +26,7 @@ export function LiveTeamsSection({ daily }: { daily: DailyDetail }) {
               const t = totals.get(player.id)
               return (
                 <TeamPlayerRow key={player.id} className="py-1.5">
-                  <PlayerAvatar userId={player.id} username={player.username} image={player.image} className="size-[26px] text-[10px]" />
+                  <PlayerAvatar userId={player.id} username={player.username} image={player.image} deleted={player.isDeleted} className="size-[26px] text-[10px]" />
                   <span className="min-w-0 flex-1 truncate text-sm">{player.username}</span>
                   {t && (
                     <span className="text-xs text-muted-foreground">

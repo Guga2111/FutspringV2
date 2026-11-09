@@ -2,6 +2,7 @@ package com.futspring.backend.domain.finance;
 
 import com.futspring.backend.domain.finance.dto.FinanceRequests.Command;
 import com.futspring.backend.domain.finance.dto.FinanceViews;
+import com.futspring.backend.domain.subscription.SubscriptionGuard;
 import com.futspring.backend.shared.exception.AppException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -23,6 +24,7 @@ public class FinanceTransactions {
     private final FinanceAuditRepository audits;
     private final FinanceReadService reads;
     private final JsonMapper json;
+    private final SubscriptionGuard subscriptionGuard;
 
     record Change(Object before, Object after, Long listId) {}
     FinanceViews.Result execute(Long id, String email, Command command, String operation, String target,
@@ -35,6 +37,9 @@ public class FinanceTransactions {
             require(hash.equals(previous.get().getRequestHash()), "A chave de reenvio já foi usada em outra operação");
             return result(ctx, previous.get().getResultListId());
         }
+        // after the replay, which only reads: a command that committed before the pelada turned read-only still
+        // answers its stored result. Every finance write, the payment report and the image uploads included
+        subscriptionGuard.requireWritable(ctx.pelada());
         require(ctx.account().getRevision() == command.revision(), "O financeiro mudou. Atualize a tela e tente novamente");
         if (ctx.account().getId() == null) {
             accounts.save(ctx.account());
@@ -58,7 +63,18 @@ public class FinanceTransactions {
         audit.setAfterData(change.after() == null ? null : json.writeValueAsString(change.after()));
         audit.setRequestKey(command.requestKey()); audit.setRequestHash(hash); audit.setResultListId(change.listId());
         audits.save(audit);
-        return result(ctx, change.listId());
+        // the caller may have just appointed or removed themselves: answer with their new permissions
+        return result("MANAGERS".equals(operation) ? access.refresh(ctx) : ctx, change.listId());
+    }
+    /**
+     * Before decoding an upload: a read-only pelada refuses it without the decode (403 still comes first). A retry
+     * of a command already done goes on to {@link #execute}, which answers its stored result.
+     */
+    void requireWritableUpload(Long id, String email, Command command) {
+        Context ctx = access.read(id, email);
+        if (audits.findByPeladaIdAndRequestKey(id, command.requestKey()).isEmpty()) {
+            subscriptionGuard.requireWritable(ctx.pelada());
+        }
     }
     private FinanceViews.Result result(Context ctx, Long listId) {
         return new FinanceViews.Result(reads.overview(ctx, 0, 50), listId == null ? null : reads.detail(ctx, listId));

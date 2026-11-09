@@ -1,11 +1,14 @@
 package com.futspring.backend.domain.user;
 
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -22,12 +25,42 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     boolean existsByUsernameIgnoreCaseAndIdNot(String username, Long id);
 
-    // Matches username or email, but callers must only return public fields (PublicUserDTO)
+    // A deleted account answers 404 on every profile route
+    Optional<User> findByIdAndDeletedAtIsNull(Long id);
+
+    boolean existsByIdAndDeletedAtIsNull(Long id);
+
+    // The platform's operators (SUBSCRIPTION_PIX_CLAIMED goes to them)
+    List<User> findByPlatformAdminTrueAndDeletedAtIsNull();
+
+    // Matches username or email, but callers must only return public fields (PublicUserDTO); deleted accounts never match
     @Query("""
         SELECT u FROM User u
-        WHERE LOWER(u.username) LIKE LOWER(CONCAT('%', :q, '%'))
-           OR LOWER(u.email) LIKE LOWER(CONCAT('%', :q, '%'))
+        WHERE u.deletedAt IS NULL
+          AND (LOWER(u.username) LIKE LOWER(CONCAT('%', :q, '%'))
+           OR LOWER(u.email) LIKE LOWER(CONCAT('%', :q, '%')))
         ORDER BY u.username
         """)
     List<User> searchByUsernameOrEmail(@Param("q") String q, Pageable pageable);
+
+    // Conditional, so two peladas created at once by the same account can't both take the trial (the row lock of the
+    // UPDATE makes the second one see trial_used_at set); 1 = the trial was taken now
+    @Modifying
+    @Query("UPDATE User u SET u.trialUsedAt = :now WHERE u.id = :id AND u.trialUsedAt IS NULL")
+    int markTrialUsed(@Param("id") Long id, @Param("now") Instant now);
+
+    // The platform admin's user list: deleted accounts included, newest first; `q` (lower case) matches name or e-mail
+    @Query(value = """
+        SELECT u FROM User u
+        WHERE :q = '' OR LOWER(u.username) LIKE CONCAT('%', :q, '%') OR LOWER(u.email) LIKE CONCAT('%', :q, '%')
+        ORDER BY u.id DESC
+        """, countQuery = """
+        SELECT COUNT(u) FROM User u
+        WHERE :q = '' OR LOWER(u.username) LIKE CONCAT('%', :q, '%') OR LOWER(u.email) LIKE CONCAT('%', :q, '%')
+        """)
+    Page<User> searchForPlatform(@Param("q") String q, Pageable pageable);
+
+    long countByDeletedAtIsNull();
+
+    long countByDeletedAtIsNullAndCreatedAtGreaterThanEqual(Instant since);
 }

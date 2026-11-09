@@ -36,7 +36,7 @@ class UserServiceProfileTest {
 
     @BeforeEach
     void setUp() {
-        userService = new UserService(userRepository, fileUploadService, playerStarsRepository);
+        userService = new UserService(userRepository, fileUploadService, playerStarsRepository, null, null, null, null);
 
         user = User.builder()
                 .id(1L)
@@ -50,7 +50,7 @@ class UserServiceProfileTest {
 
     @Test
     void getProfile_existingUser_returnsProfileDTO() {
-        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.of(user));
 
         ProfileDTO result = userService.getProfile(1L, "alice@example.com");
 
@@ -61,7 +61,7 @@ class UserServiceProfileTest {
 
     @Test
     void getProfile_otherViewer_hidesEmail() {
-        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.of(user));
 
         ProfileDTO result = userService.getProfile(1L, "bob@example.com");
 
@@ -71,7 +71,7 @@ class UserServiceProfileTest {
 
     @Test
     void getProfile_userNotFound_throwsNotFound() {
-        when(userRepository.findById(99L)).thenReturn(Optional.empty());
+        when(userRepository.findByIdAndDeletedAtIsNull(99L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> userService.getProfile(99L, "alice@example.com"))
                 .isInstanceOf(AppException.class)
@@ -82,7 +82,7 @@ class UserServiceProfileTest {
 
     @Test
     void updateProfile_success_updatesAllFields() {
-        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.of(user));
         when(userRepository.existsByUsernameIgnoreCaseAndIdNot("newname", 1L)).thenReturn(false);
         when(userRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
@@ -96,7 +96,7 @@ class UserServiceProfileTest {
 
     @Test
     void updateProfile_userNotFound_throwsNotFound() {
-        when(userRepository.findById(99L)).thenReturn(Optional.empty());
+        when(userRepository.findByIdAndDeletedAtIsNull(99L)).thenReturn(Optional.empty());
 
         UpdateProfileRequest req = new UpdateProfileRequest(null, null);
         assertThatThrownBy(() -> userService.updateProfile(99L, req, "alice@example.com"))
@@ -106,7 +106,7 @@ class UserServiceProfileTest {
 
     @Test
     void updateProfile_callerIsNotOwner_throwsForbidden() {
-        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.of(user));
 
         UpdateProfileRequest req = new UpdateProfileRequest(null, null);
         assertThatThrownBy(() -> userService.updateProfile(1L, req, "other@example.com"))
@@ -116,7 +116,7 @@ class UserServiceProfileTest {
 
     @Test
     void updateProfile_usernameAlreadyTakenByOtherUser_throwsConflict() {
-        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.of(user));
         when(userRepository.existsByUsernameIgnoreCaseAndIdNot("taken", 1L)).thenReturn(true);
 
         UpdateProfileRequest req = new UpdateProfileRequest("taken", null);
@@ -128,7 +128,7 @@ class UserServiceProfileTest {
 
     @Test
     void updateProfile_usernameAlreadyTakenBySameUser_updatesSuccessfully() {
-        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.of(user));
         when(userRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         UpdateProfileRequest req = new UpdateProfileRequest("alice", null);
@@ -139,7 +139,7 @@ class UserServiceProfileTest {
 
     @Test
     void updateProfile_nullUsername_doesNotChangeUsername() {
-        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.of(user));
         when(userRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         UpdateProfileRequest req = new UpdateProfileRequest(null, null);
@@ -150,7 +150,7 @@ class UserServiceProfileTest {
 
     @Test
     void updateProfile_validPosition_setsPosition() {
-        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.of(user));
         when(userRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         UpdateProfileRequest req = new UpdateProfileRequest(null, "FORWARD");
@@ -174,7 +174,7 @@ class UserServiceProfileTest {
     @Test
     void updateProfile_emptyStringPosition_clearsPosition() {
         user.setPosition("FORWARD");
-        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.of(user));
         when(userRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         UpdateProfileRequest req = new UpdateProfileRequest(null, "");
@@ -186,7 +186,7 @@ class UserServiceProfileTest {
     @Test
     void updateProfile_nullPosition_doesNotChangePosition() {
         user.setPosition("MIDFIELDER");
-        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.of(user));
         when(userRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         UpdateProfileRequest req = new UpdateProfileRequest(null, null);
@@ -197,7 +197,7 @@ class UserServiceProfileTest {
 
     @Test
     void getProfile_starsAreTheRoundedAverageOfThePeladas() {
-        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.of(user));
         when(playerStarsRepository.averageStarsByUser(1L)).thenReturn(3.5);
 
         ProfileDTO result = userService.getProfile(1L, "bob@example.com");
@@ -207,7 +207,7 @@ class UserServiceProfileTest {
 
     @Test
     void getProfile_withoutPeladas_hasNoStars() {
-        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.of(user));
         when(playerStarsRepository.averageStarsByUser(1L)).thenReturn(null);
 
         ProfileDTO result = userService.getProfile(1L, "bob@example.com");

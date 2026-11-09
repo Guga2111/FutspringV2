@@ -12,13 +12,15 @@
     "id" : 356,
     "username" : "username",
     "image" : "image",
-    "position" : "position"
+    "position" : "position",
+    "isDeleted" : true
   },
   "sender" : {
     "id" : 356,
     "username" : "username",
     "image" : "image",
-    "position" : "position"
+    "position" : "position",
+    "isDeleted" : true
   },
   "status" : "PENDING",
   "createdAt" : "2026-10-31T23:00:00Z",

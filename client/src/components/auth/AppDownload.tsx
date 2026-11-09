@@ -1,6 +1,7 @@
 import { useState } from "react"
+import { Link } from "react-router-dom"
 import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react"
-import { AppleIcon, Copy01Icon, PlayStoreIcon, SmartPhone01Icon, Tick02Icon } from "@hugeicons/core-free-icons"
+import { AppleIcon, Copy01Icon, Download04Icon, PlayStoreIcon, Tick02Icon } from "@hugeicons/core-free-icons"
 import { QRCodeSVG } from "qrcode.react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
@@ -11,13 +12,15 @@ import { MOBILE_APPS, MOBILE_PLATFORMS, type MobilePlatform } from "@/lib/mobile
 const PLATFORM_LABEL: Record<MobilePlatform, string> = { ios: "iOS", android: "Android" }
 const PLATFORM_ICON: Record<MobilePlatform, IconSvgElement> = { ios: AppleIcon, android: PlayStoreIcon }
 
-// Desktop side panel of the auth page: the app's QR Code per platform, scanned with the phone's camera
+// Desktop side panel of the auth page, scanned with the phone's camera: the store's QR Code once the
+// app is published, until then the QR Code of /instalar (the browser install, the same for both platforms)
 export function AppDownloadPanel() {
   const [platform, setPlatform] = useState<MobilePlatform>("ios")
   const [copied, setCopied] = useState(false)
   const app = MOBILE_APPS[platform]
+  const url = app.url ?? `${window.location.origin}/instalar`
 
-  async function copyLink(url: string) {
+  async function copyLink() {
     try {
       await navigator.clipboard.writeText(url)
       setCopied(true)
@@ -58,43 +61,55 @@ export function AppDownloadPanel() {
       </ToggleGroup>
 
       <div className="flex flex-col items-center gap-3">
-        {app.url ? (
-          // QR Codes need a light quiet zone to scan, so the frame is white in both themes
-          <div className="rounded-hero bg-paper p-4 text-night">
-            <QRCodeSVG value={app.url} size={168} fgColor="currentColor" bgColor="transparent" title={`QR Code do app na ${app.store}`} />
-          </div>
-        ) : (
-          <div className="flex size-[200px] flex-col items-center justify-center gap-3 rounded-hero bg-muted p-4">
-            <HugeiconsIcon icon={SmartPhone01Icon} className="size-12 text-muted-foreground" />
-            <p className="text-body font-medium">Em breve na {app.store}</p>
-          </div>
-        )}
-        <p className="text-caption text-muted-foreground">{app.device}</p>
+        {/* QR Codes need a light quiet zone to scan, so the frame is white in both themes */}
+        <div className="rounded-hero bg-paper p-4 text-night">
+          <QRCodeSVG
+            value={url}
+            size={168}
+            fgColor="currentColor"
+            bgColor="transparent"
+            title={app.url ? `QR Code do app na ${app.store}` : "QR Code da página de instalação"}
+          />
+        </div>
+        <p className="text-caption text-muted-foreground">{app.url ? app.device : "Instale pelo navegador, sem loja"}</p>
       </div>
 
-      {app.url ? (
-        <div className="flex w-full items-center gap-2">
-          <Input readOnly value={app.url} aria-label={`Link do app na ${app.store}`} className="h-10 flex-1" onFocus={(e) => e.currentTarget.select()} />
-          <Button type="button" variant="outline" size="sm" onClick={() => app.url && copyLink(app.url)}>
-            <HugeiconsIcon icon={copied ? Tick02Icon : Copy01Icon} className="size-4" />
-            {copied ? "Copiado" : "Copiar link"}
-          </Button>
-        </div>
-      ) : (
-        <p className="text-body text-muted-foreground">
-          O app está a caminho. Por enquanto, use o Futspring no navegador do celular, com a mesma conta.
+      <div className="flex w-full items-center gap-2">
+        <Input
+          readOnly
+          value={url}
+          aria-label={app.url ? `Link do app na ${app.store}` : "Link da página de instalação"}
+          className="h-10 flex-1"
+          onFocus={(e) => e.currentTarget.select()}
+        />
+        <Button type="button" variant="outline" size="sm" onClick={copyLink}>
+          <HugeiconsIcon icon={copied ? Tick02Icon : Copy01Icon} className="size-4" />
+          {copied ? "Copiado" : "Copiar link"}
+        </Button>
+      </div>
+
+      {!app.url && (
+        <p className="text-body-sm text-muted-foreground">
+          {app.store} · Em breve
         </p>
       )}
     </section>
   )
 }
 
-// Below the form on phones and tablets: straight links to the stores (a QR Code makes no sense on the phone itself)
+// Below the form on phones and tablets: the browser install and straight links to the stores
+// (a QR Code makes no sense on the phone itself)
 export function AppDownloadLinks() {
   return (
     <section aria-label="App para celular" className="flex flex-col items-center gap-3 lg:hidden">
       <p className="text-body-sm text-muted-foreground">Também no celular</p>
       <div className="flex flex-wrap justify-center gap-2">
+        <Button asChild variant="outline" size="sm">
+          <Link to="/instalar">
+            <HugeiconsIcon icon={Download04Icon} className="size-4" />
+            Instalar pelo navegador
+          </Link>
+        </Button>
         {MOBILE_PLATFORMS.map((platform) => {
           const app = MOBILE_APPS[platform]
           const content = (

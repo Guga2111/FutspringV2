@@ -5,6 +5,8 @@ export interface UserResponseDTO {
   image: string | null
   backgroundImage: string | null
   position: string | null
+  // operator of the platform (the admin panel); absent in a session stored before it existed
+  isPlatformAdmin?: boolean
 }
 
 export interface AuthResponse {
@@ -12,10 +14,12 @@ export interface AuthResponse {
   user: UserResponseDTO
 }
 
+// mirrors RegisterRequestDTO; termsVersion is the LEGAL_VERSION the user accepted
 export interface RegisterRequest {
   username: string
   email: string
   password: string
+  termsVersion: string
 }
 
 export interface LoginRequest {

@@ -1,5 +1,5 @@
 import { lazy, Suspense } from "react"
-import { Routes, Route } from "react-router-dom"
+import { Navigate, Routes, Route } from "react-router-dom"
 import PrivateRoute from "@/components/PrivateRoute"
 import ErrorBoundary from "@/components/ErrorBoundary"
 import ScrollToTop from "@/components/ScrollToTop"
@@ -18,13 +18,22 @@ const PeladaRankingPage = lazy(() => import("@/pages/PeladaRankingPage"))
 const PeladaAwardsPage = lazy(() => import("@/pages/PeladaAwardsPage"))
 const PeladaFinancePage = lazy(() => import("@/pages/PeladaFinancePage"))
 const PeladaInvitationsPage = lazy(() => import("@/pages/PeladaInvitationsPage"))
+const PeladaSubscriptionPage = lazy(() => import("@/pages/PeladaSubscriptionPage"))
 const PeladaSettingsPage = lazy(() => import("@/pages/PeladaSettingsPage"))
 const DailyDetailPage = lazy(() => import("@/pages/DailyDetailPage"))
 const ProfilePage = lazy(() => import("@/pages/ProfilePage"))
-const NotificationSettingsPage = lazy(() => import("@/pages/NotificationSettingsPage"))
+const AccountSettingsPage = lazy(() => import("@/pages/AccountSettingsPage"))
 const NotificationUnsubscribePage = lazy(() => import("@/pages/NotificationUnsubscribePage"))
 const InvitationPage = lazy(() => import("@/pages/InvitationPage"))
 const JoinPeladaPage = lazy(() => import("@/pages/JoinPeladaPage"))
+const InstallPage = lazy(() => import("@/pages/InstallPage"))
+const TermsPage = lazy(() => import("@/pages/TermsPage"))
+const PrivacyPage = lazy(() => import("@/pages/PrivacyPage"))
+const AdminOverviewPage = lazy(() => import("@/pages/AdminOverviewPage"))
+const AdminPeladasPage = lazy(() => import("@/pages/AdminPeladasPage"))
+const AdminPeladaPage = lazy(() => import("@/pages/AdminPeladaPage"))
+const AdminPaymentsPage = lazy(() => import("@/pages/AdminPaymentsPage"))
+const AdminUsersPage = lazy(() => import("@/pages/AdminUsersPage"))
 const NotFoundPage = lazy(() => import("@/pages/NotFoundPage"))
 
 const fallback = <div className="flex items-center justify-center min-h-screen">Carregando…</div>
@@ -40,7 +49,10 @@ function App() {
           <Route path="/forgot-password" element={<ErrorBoundary><ForgotPasswordPage /></ErrorBoundary>} />
           <Route path="/reset-password" element={<ErrorBoundary><ResetPasswordPage /></ErrorBoundary>} />
           <Route path="/notifications/unsubscribe" element={<ErrorBoundary><NotificationUnsubscribePage /></ErrorBoundary>} />
+          <Route path="/termos" element={<ErrorBoundary><TermsPage /></ErrorBoundary>} />
+          <Route path="/privacidade" element={<ErrorBoundary><PrivacyPage /></ErrorBoundary>} />
           <Route path="/join/:token" element={<ErrorBoundary><JoinPeladaPage /></ErrorBoundary>} />
+          <Route path="/instalar" element={<ErrorBoundary><InstallPage /></ErrorBoundary>} />
           {/* Private pages share the sidebar shell */}
           <Route element={<ErrorBoundary><PrivateRoute><AppLayout /></PrivateRoute></ErrorBoundary>}>
             <Route path="/invitations/:id" element={<ErrorBoundary><InvitationPage /></ErrorBoundary>} />
@@ -56,11 +68,20 @@ function App() {
               {/* deep link to one collection (the WhatsApp message links here) */}
               <Route path="financeiro/:listId" element={<ErrorBoundary><PeladaFinancePage /></ErrorBoundary>} />
               <Route path="convites" element={<ErrorBoundary><PeladaInvitationsPage /></ErrorBoundary>} />
+              <Route path="assinatura" element={<ErrorBoundary><PeladaSubscriptionPage /></ErrorBoundary>} />
             </Route>
             <Route path="/pelada/:id/settings" element={<ErrorBoundary><PeladaSettingsPage /></ErrorBoundary>} />
             <Route path="/daily/:id" element={<ErrorBoundary><DailyDetailPage /></ErrorBoundary>} />
             <Route path="/profile/:id" element={<ErrorBoundary><ProfilePage /></ErrorBoundary>} />
-            <Route path="/settings/notifications" element={<ErrorBoundary><NotificationSettingsPage /></ErrorBoundary>} />
+            <Route path="/settings" element={<ErrorBoundary><AccountSettingsPage /></ErrorBoundary>} />
+            {/* the platform admin's panel; the API answers 404 to anyone else, and the pages show "Bola fora" */}
+            <Route path="/admin" element={<ErrorBoundary><AdminOverviewPage /></ErrorBoundary>} />
+            <Route path="/admin/peladas" element={<ErrorBoundary><AdminPeladasPage /></ErrorBoundary>} />
+            <Route path="/admin/peladas/:id" element={<ErrorBoundary><AdminPeladaPage /></ErrorBoundary>} />
+            <Route path="/admin/pagamentos" element={<ErrorBoundary><AdminPaymentsPage /></ErrorBoundary>} />
+            <Route path="/admin/usuarios" element={<ErrorBoundary><AdminUsersPage /></ErrorBoundary>} />
+            {/* old links and e-mails already sent */}
+            <Route path="/settings/notifications" element={<Navigate to="/settings#notificacoes" replace />} />
           </Route>
           <Route path="*" element={<ErrorBoundary><NotFoundPage /></ErrorBoundary>} />
         </Routes>

@@ -47,12 +47,13 @@ export function FinanceSettings({ peladaId, finance, members, onTemplate }: Fina
   const overview = finance.overview
   if (!overview) return null
   const settings = overview.settings
+  const { manage, appointManagers } = overview.permissions
   return (
     <div className="flex min-w-0 flex-col gap-5">
-      <PixCard peladaId={peladaId} finance={finance} settings={settings} />
-      <VisibilityCard peladaId={peladaId} finance={finance} settings={settings} />
-      {overview.permissions.appointManagers && <ManagersCard peladaId={peladaId} finance={finance} settings={settings} members={members} />}
-      <SettingsCard
+      {manage && <PixCard peladaId={peladaId} finance={finance} settings={settings} />}
+      {manage && <VisibilityCard peladaId={peladaId} finance={finance} settings={settings} />}
+      {appointManagers && <ManagersCard peladaId={peladaId} finance={finance} settings={settings} members={members} />}
+      {manage && <SettingsCard
         id="finance-templates"
         title="Modelos de cobrança"
         description="Os valores que você costuma cobrar, para criar cobranças mais rápido."
@@ -70,17 +71,17 @@ export function FinanceSettings({ peladaId, finance, members, onTemplate }: Fina
                   {formatFinanceMoney(sumFinanceAmounts(template.components.map((component) => component.amount)))} por pessoa
                 </p>
               </div>
-              <Button variant="ghost" size="sm" onClick={() => onTemplate(template)}>
+              <Button variant="ghost" size="sm" disabled={!finance.writable} onClick={() => onTemplate(template)}>
                 Editar
               </Button>
             </li>
           ))}
         </ul>
-        <Button variant="outline" className="self-start" onClick={() => onTemplate()}>
+        <Button variant="outline" className="self-start" disabled={!finance.writable} onClick={() => onTemplate()}>
           <HugeiconsIcon icon={PlusSignIcon} className="size-[15px]" />
           Novo modelo
         </Button>
-      </SettingsCard>
+      </SettingsCard>}
     </div>
   )
 }
@@ -146,6 +147,7 @@ function PixCard({ peladaId, finance, settings }: CardProps) {
           dirty={form.formState.isDirty}
           submitting={form.formState.isSubmitting}
           onCancel={() => form.reset(defaults)}
+          locked={!finance.writable}
         />
       }
     >
@@ -153,7 +155,7 @@ function PixCard({ peladaId, finance, settings }: CardProps) {
         <FinanceInput control={form.control} name="pixKey" label="Chave Pix" placeholder="E-mail, telefone, CPF ou chave aleatória" />
         <FinanceInput control={form.control} name="pixRecipient" label="Nome de quem recebe" placeholder="Como aparece no app do banco" />
       </FieldGroup>
-      <FinanceQrField peladaId={peladaId} qrId={settings.qrId} busy={finance.pending} onUpload={upload} onRemove={removeQr} />
+      <FinanceQrField peladaId={peladaId} qrId={settings.qrId} busy={finance.locked} onUpload={upload} onRemove={removeQr} />
       <SettingsRootError message={form.formState.errors.root?.message} />
     </SettingsCard>
   )
@@ -166,7 +168,7 @@ function VisibilityCard({ peladaId, finance, settings }: CardProps) {
     <SettingsCard
       id="finance-visibility"
       title="O que os membros veem"
-      description="Responsáveis, admins e o criador sempre veem tudo."
+      description="Os responsáveis financeiros sempre veem tudo."
       onSubmit={form.handleSubmit(async (values) => {
         try {
           const next = { ...saved(settings), ...values }
@@ -182,6 +184,7 @@ function VisibilityCard({ peladaId, finance, settings }: CardProps) {
           dirty={form.formState.isDirty}
           submitting={form.formState.isSubmitting}
           onCancel={() => form.reset(defaults)}
+          locked={!finance.writable}
         />
       }
     >
@@ -214,12 +217,9 @@ function VisibilityCard({ peladaId, finance, settings }: CardProps) {
 function ManagersCard({ peladaId, finance, settings, members }: CardProps & { members: PeladaMember[] }) {
   const defaults = { userIds: settings.managerIds }
   const form = useForm({ resolver: zodResolver(financeManagersSchema), defaultValues: defaults })
-  // admins (the creator included) already manage the finance; only the other members can be appointed
-  const admins = members.filter((member) => member.isAdmin)
+  // every member can be a responsável, admins included (being admin doesn't give access to the money);
   // the saved responsáveis first, so they are easy to untick; the order stays put while ticking
-  const candidates = members
-    .filter((member) => !member.isAdmin)
-    .sort((a, b) => Number(settings.managerIds.includes(b.id)) - Number(settings.managerIds.includes(a.id)))
+  const candidates = [...members].sort((a, b) => Number(settings.managerIds.includes(b.id)) - Number(settings.managerIds.includes(a.id)))
   // the member list is long: it opens on demand, with the current choice summarized above it
   const [open, setOpen] = useState(false)
   const userIds = useWatch({ control: form.control, name: "userIds" })
@@ -228,7 +228,7 @@ function ManagersCard({ peladaId, finance, settings, members }: CardProps & { me
     <SettingsCard
       id="finance-managers"
       title="Responsáveis financeiros"
-      description="Membros que cuidam do dinheiro: criam cobranças, recebem e mexem no caixa. Não ganham poderes de admin na pelada."
+      description="Só eles criam cobranças, recebem, mexem no caixa e veem o histórico. Ser admin não dá acesso ao dinheiro: designe-se se for cuidar dele. Responsáveis também podem designar outros."
       onSubmit={form.handleSubmit(async (values) => {
         try {
           await finance.mutate(JSON.stringify({ type: "managers", values }), "", (command) => api.saveFinanceManagers(peladaId, command, values.userIds))
@@ -243,50 +243,49 @@ function ManagersCard({ peladaId, finance, settings, members }: CardProps & { me
           dirty={form.formState.isDirty}
           submitting={form.formState.isSubmitting}
           onCancel={() => form.reset(defaults)}
+          locked={!finance.writable}
         />
       }
     >
-      {admins.length > 0 && (
-        <p className="text-sm text-muted-foreground">
-          Já têm acesso como admins: <span className="text-foreground">{admins.map((admin) => admin.username).join(", ")}</span>
-        </p>
-      )}
-      {candidates.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Todos os membros já são admins.</p>
-      ) : (
-        <Collapsible open={open} onOpenChange={setOpen} className="flex flex-col gap-3">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="text-sm">
-              {chosen.length === 0 ? (
-                <span className="text-muted-foreground">Nenhum responsável além dos admins.</span>
-              ) : (
-                <>
-                  <span className="text-muted-foreground">{chosen.length === 1 ? "Responsável: " : `${chosen.length} responsáveis: `}</span>
-                  {chosen.join(", ")}
-                </>
-              )}
-            </p>
-            <CollapsibleTrigger asChild>
-              <Button type="button" variant="outline" size="sm">
-                {open ? "Recolher" : "Escolher responsáveis"}
-                <HugeiconsIcon icon={ArrowDown01Icon} className={cn("transition-transform", open && "rotate-180")} />
-              </Button>
-            </CollapsibleTrigger>
-          </div>
-          <CollapsibleContent>
-            <Controller
-              control={form.control}
-              name="userIds"
-              render={({ field, fieldState }) => (
-                <Field data-invalid={fieldState.invalid}>
-                  <FinanceMemberChecklist idPrefix="finance-manager" members={candidates} selected={field.value} onChange={field.onChange} />
-                  <FieldError errors={[fieldState.error]} />
-                </Field>
-              )}
-            />
-          </CollapsibleContent>
-        </Collapsible>
-      )}
+      <Collapsible open={open} onOpenChange={setOpen} className="flex flex-col gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm">
+            {chosen.length === 0 ? (
+              <span className="text-muted-foreground">Nenhum responsável escolhido.</span>
+            ) : (
+              <>
+                <span className="text-muted-foreground">{chosen.length === 1 ? "Responsável: " : `${chosen.length} responsáveis: `}</span>
+                {chosen.join(", ")}
+              </>
+            )}
+          </p>
+          <CollapsibleTrigger asChild>
+            <Button type="button" variant="outline" size="sm">
+              {open ? "Recolher" : "Escolher responsáveis"}
+              <HugeiconsIcon icon={ArrowDown01Icon} className={cn("transition-transform", open && "rotate-180")} />
+            </Button>
+          </CollapsibleTrigger>
+        </div>
+        <CollapsibleContent>
+          <Controller
+            control={form.control}
+            name="userIds"
+            render={({ field, fieldState }) => (
+              <Field data-invalid={fieldState.invalid}>
+                <FinanceMemberChecklist
+                  idPrefix="finance-manager"
+                  members={candidates}
+                  selected={field.value}
+                  onChange={field.onChange}
+                  describe={(member) => (member.isAdmin ? "Admin" : "")}
+                />
+              </Field>
+            )}
+          />
+        </CollapsibleContent>
+        {/* outside the collapsible, so the "pick at least one" error shows with the list closed too */}
+        <FieldError errors={[form.formState.errors.userIds]} />
+      </Collapsible>
       <SettingsRootError message={form.formState.errors.root?.message} />
     </SettingsCard>
   )

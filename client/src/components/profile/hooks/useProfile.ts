@@ -60,9 +60,6 @@ export function useProfile(userId: number) {
     status: mainData?.status ?? "loading",
     profile: mainData?.profile ?? null,
     stats: mainData?.stats ?? null,
-    // owner edits merge the returned profile
-    setProfile: (profile: ProfileDTO) =>
-      setMain((prev) => (prev && prev.userId === userId ? { ...prev, data: { ...prev.data, profile } } : prev)),
     peladas: current(peladas) ?? [],
     peladasLoading: current(peladas) === null,
     timelinePoints: current(timeline) ?? [],

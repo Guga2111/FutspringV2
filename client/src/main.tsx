@@ -9,8 +9,13 @@ import "./index.css"
 import App from "./App.tsx"
 import { AuthProvider } from "./context/AuthContext.tsx"
 import { ThemedToaster } from "./components/ThemedToaster.tsx"
+import { PwaUpdater } from "./components/layout/PwaUpdater.tsx"
+import { captureInstallPrompt } from "./lib/installPrompt.ts"
 
 // The theme class is applied by the inline script in index.html, before the first paint
+
+// Chrome can offer the install prompt before any page mounts
+captureInstallPrompt()
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
@@ -18,6 +23,7 @@ createRoot(document.getElementById("root")!).render(
       <AuthProvider>
         <App />
         <ThemedToaster />
+        <PwaUpdater />
       </AuthProvider>
     </BrowserRouter>
   </StrictMode>,

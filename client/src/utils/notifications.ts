@@ -1,7 +1,9 @@
 import { type IconSvgElement } from "@hugeicons/react"
-import { ArrowDataTransferHorizontalIcon, CalendarAdd01Icon, CalendarRemove01Icon, ChampionIcon, CheckmarkBadge01Icon, Clock01Icon, Flag01Icon, NotificationSquareIcon, RemoveCircleIcon, ShieldCheckIcon, ShieldOffIcon, ShuffleIcon, UserAdd01Icon, UserCheck01Icon, UserMinus01Icon, UserRemove01Icon } from "@hugeicons/core-free-icons"
+import { Alert02Icon, ArrowDataTransferHorizontalIcon, CalendarAdd01Icon, CalendarRemove01Icon, ChampionIcon, CheckmarkBadge01Icon, Clock01Icon, CreditCardIcon, Flag01Icon, MoneyReceive01Icon, NotificationSquareIcon, RemoveCircleIcon, ShieldCheckIcon, ShieldOffIcon, ShuffleIcon, UserAdd01Icon, UserCheck01Icon, UserMinus01Icon, UserRemove01Icon } from "@hugeicons/core-free-icons"
 import type { NotificationAward, NotificationResponse, NotificationType } from "@/types/notification"
 import { formatWeekdayDayMonth } from "@/utils/dates"
+import { formatBillingDay } from "@/utils/platform"
+import { GRACE_DAYS } from "@/utils/subscription"
 
 // A piece of a notification's text; names are bold
 export interface NotificationTextPart {
@@ -52,6 +54,12 @@ function awardParts(n: NotificationResponse): NotificationTextPart[] {
   }
 }
 
+const DAY_MS = 86_400_000
+// "07/12": when the subscription ends; "" if absent
+const validUntilDay = (n: NotificationResponse, plusDays = 0) =>
+  n.validUntil ? formatBillingDay(new Date(n.validUntil).getTime() + plusDays * DAY_MS) : ""
+const subscriptionHref = (n: NotificationResponse) => (n.pelada ? `/pelada/${n.pelada.id}/assinatura` : null)
+
 type ViewBuilder = (n: NotificationResponse) => Omit<NotificationView, "href"> & { href?: string | null }
 
 // One entry per type: a new backend type fails the build until it gets its text
@@ -87,8 +95,8 @@ const views: Record<NotificationType, ViewBuilder> = {
   TEAMS_SORTED: (n) => ({
     icon: ShuffleIcon,
     parts: n.team
-      ? [t(`Times sorteados para ${sessionDate(n)}: você está no `), b(n.team.name)]
-      : [t(`Times sorteados para ${sessionDate(n)} na `), b(peladaName(n))],
+      ? [t(`Times definidos para ${sessionDate(n)}: você está no `), b(n.team.name)]
+      : [t(`Times definidos para ${sessionDate(n)} na `), b(peladaName(n))],
   }),
   SESSION_FINISHED: (n) => ({
     icon: Flag01Icon,
@@ -136,6 +144,21 @@ const views: Record<NotificationType, ViewBuilder> = {
     icon: ChampionIcon,
     parts: awardParts(n),
   }),
+  SUBSCRIPTION_ENDING: (n) => ({
+    icon: CreditCardIcon,
+    parts: [t("O plano da "), b(peladaName(n)), t(` vence em ${validUntilDay(n)}`)],
+    href: subscriptionHref(n),
+  }),
+  SUBSCRIPTION_PAST_DUE: (n) => ({
+    icon: Alert02Icon,
+    parts: [t("Pagamento pendente: a "), b(peladaName(n)), t(` trava em ${validUntilDay(n, GRACE_DAYS)}`)],
+    href: subscriptionHref(n),
+  }),
+  SUBSCRIPTION_PIX_CLAIMED: (n) => ({
+    icon: MoneyReceive01Icon,
+    parts: [b(actorName(n)), t(" informou o Pix da "), b(peladaName(n))],
+    href: n.pelada ? `/admin/peladas/${n.pelada.id}` : "/admin",
+  }),
 }
 
 export function notificationView(n: NotificationResponse): NotificationView {
@@ -179,4 +202,7 @@ export const notificationToast: Record<NotificationType, boolean> = {
   MENSALISTA_REVOKED: false,
   PELADA_TRANSFERRED: false,
   AWARD_WON: false,
+  SUBSCRIPTION_ENDING: false,
+  SUBSCRIPTION_PAST_DUE: false,
+  SUBSCRIPTION_PIX_CLAIMED: false,
 }

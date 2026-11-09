@@ -42,6 +42,14 @@ export function LandingFooter() {
       <div className="mt-20 flex flex-wrap justify-between gap-4 text-body-sm text-night-muted">
         <p>© {new Date().getFullYear()} Futspring. Feito para quem joga pelada com os amigos.</p>
         {credits.length > 0 && <p>Fotos: {credits.join(" · ")}</p>}
+        <nav aria-label="Documentos" className="flex gap-4">
+          <Link to="/termos" className="underline-offset-4 hover:text-night-foreground hover:underline">
+            Termos
+          </Link>
+          <Link to="/privacidade" className="underline-offset-4 hover:text-night-foreground hover:underline">
+            Privacidade
+          </Link>
+        </nav>
         <a href="#top" className="underline-offset-4 hover:text-night-foreground hover:underline">
           Voltar ao topo
         </a>

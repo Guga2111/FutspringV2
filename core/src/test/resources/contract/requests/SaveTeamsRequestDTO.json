@@ -1,0 +1,14 @@
+{
+  "teams": [
+    {
+      "name": "Time 1",
+      "color": "#3b82f6",
+      "playerIds": [2, 5, 7]
+    },
+    {
+      "name": "Time 2",
+      "color": null,
+      "playerIds": [3, 4]
+    }
+  ]
+}

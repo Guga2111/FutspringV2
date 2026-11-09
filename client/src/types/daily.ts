@@ -1,3 +1,4 @@
+import type { SubscriptionSummary } from "@/types/subscription"
 import type { PublicUser } from "@/types/user"
 
 // mirrors the backend DailyStatus enum
@@ -31,6 +32,8 @@ export interface PlayerDTO {
   image: string | null
   stars: number
   position: string | null
+  // a deleted account ("Ex-jogador") in a past session: neutral avatar, no profile link
+  isDeleted: boolean
   // only on confirmedPlayers and peladaMembers
   isMensalista?: boolean
   // ISO instant; only on confirmedPlayers
@@ -146,6 +149,8 @@ export interface DailyDetail {
   award: AwardDTO | null
   peladaId: number
   peladaName: string
+  // who created the pelada (the subscription notice differs for them)
+  creatorId: number | null
   numberOfTeams: number
   playersPerTeam: number
   isAdmin: boolean
@@ -160,4 +165,6 @@ export interface DailyDetail {
   myBump: AttendanceBump | null
   // every bump of the session, newest first
   bumps: AttendanceBump[]
+  // the pelada's subscription; null without a row (read as writable)
+  subscription: SubscriptionSummary | null
 }

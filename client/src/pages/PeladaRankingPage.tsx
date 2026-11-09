@@ -30,7 +30,8 @@ export default function PeladaRankingPage() {
           members={w.pelada.members}
           creatorId={w.pelada.creatorId}
           isAdmin={w.isAdmin}
-          onCreateSession={w.openCreateSession}
+          // a read-only pelada can't create sessions: the command is left out
+          onCreateSession={w.writable ? w.openCreateSession : undefined}
           onInvitePlayer={w.openInvite}
           onRemovePlayer={w.confirmRemove}
           onOpenHistory={() => w.openHistory(null)}

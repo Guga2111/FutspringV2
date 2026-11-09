@@ -1,7 +1,8 @@
 import apiClient from "./client"
 import type { StatsDTO, UserStatsTimelineDTO, UserMatchHistoryDTO } from "@/types/stats"
 import type { PeladaResponse } from "@/types/pelada"
-import type { ProfileDTO } from "@/types/user"
+import type { AuthResponse } from "@/types/auth"
+import type { DeletionBlocker, ProfileDTO } from "@/types/user"
 
 export async function getUserStats(userId: number): Promise<StatsDTO> {
   const response = await apiClient.get<StatsDTO>(`/api/v1/users/${userId}/stats`)
@@ -51,4 +52,25 @@ export async function getUserMatchHistory(userId: number): Promise<UserMatchHist
 export async function getUserPeladas(userId: number): Promise<PeladaResponse[]> {
   const response = await apiClient.get<PeladaResponse[]>(`/api/v1/users/${userId}/peladas`)
   return response.data
+}
+
+export interface ChangePasswordData {
+  currentPassword: string
+  newPassword: string
+}
+
+// Answers a token of the new version: the other sessions are logged out
+export async function changePassword(data: ChangePasswordData): Promise<AuthResponse> {
+  const response = await apiClient.post<AuthResponse>("/api/v1/users/me/password", data)
+  return response.data
+}
+
+export async function getDeletionBlockers(): Promise<DeletionBlocker[]> {
+  const response = await apiClient.get<DeletionBlocker[]>("/api/v1/users/me/deletion-blockers")
+  return response.data
+}
+
+// POST: the password goes in the body
+export async function deleteAccount(password: string): Promise<void> {
+  await apiClient.post("/api/v1/users/me/delete", { password })
 }

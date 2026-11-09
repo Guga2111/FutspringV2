@@ -5,6 +5,7 @@ import com.futspring.backend.domain.daily.entity.DailyStatus;
 import com.futspring.backend.domain.daily.repository.DailyRepository;
 import com.futspring.backend.domain.pelada.Pelada;
 import com.futspring.backend.domain.pelada.PeladaRepository;
+import com.futspring.backend.domain.subscription.SubscriptionGuard;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import lombok.extern.slf4j.Slf4j;
@@ -34,8 +35,10 @@ public class DailySchedulerService {
     private final ApplicationEventPublisher eventPublisher;
     private final PlatformTransactionManager transactionManager;
     private final Clock clock;
+    private final SubscriptionGuard subscriptionGuard;
 
     // Hourly: creates the next daily of each pelada once its day starts at most 24 h from now, in the pelada's zone.
+    // A read-only pelada (subscription) gets none.
     // One transaction per pelada: a failing pelada rolls back only its own daily and notifications
     @Scheduled(cron = "0 0 * * * *")
     public void autoCreateDailies() {
@@ -65,6 +68,10 @@ public class DailySchedulerService {
             return;
         }
         if (dailyRepository.existsByPeladaAndDailyDate(pelada, nextOccurrence)) {
+            return;
+        }
+        // last, so only a pelada with a session due pays the subscription query
+        if (!subscriptionGuard.isWritable(pelada)) {
             return;
         }
         Daily daily = dailyRepository.save(Daily.builder()

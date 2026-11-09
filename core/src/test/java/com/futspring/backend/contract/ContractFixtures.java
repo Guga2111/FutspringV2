@@ -9,12 +9,15 @@ import java.lang.reflect.Type;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Arrays;
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
  * Builds a DTO with every field set, so every property shows up in its JSON snapshot. Each value comes from the
- * field's name and type only (strings are the field name, numbers a hash of it, booleans true, one list element),
+ * field's name and type only (strings are the field name, numbers a hash of it, booleans true, one list element,
+ * an enum-keyed map with every key),
  * never from declaration order or the class's shape: a DTO turned into a record gets the very same values, so its
  * snapshot must not change.
  */
@@ -44,6 +47,10 @@ final class ContractFixtures {
             Type element = ((ParameterizedType) generic).getActualTypeArguments()[0];
             Object item = value(rawType(element), element, name, depth + 1);
             return List.class.isAssignableFrom(type) ? List.of(item) : Set.of(item);
+        }
+        if (Map.class.isAssignableFrom(type)) {
+            Type[] arguments = ((ParameterizedType) generic).getActualTypeArguments();
+            return enumMap(rawType(arguments[0]), arguments[1], name, depth);
         }
         if (depth > 5) {
             throw new IllegalStateException("Fixture too deep at " + name + " (" + type.getName() + ")");
@@ -92,6 +99,17 @@ final class ContractFixtures {
         } catch (ReflectiveOperationException e) {
             throw new IllegalStateException("Cannot build " + type.getName(), e);
         }
+    }
+
+    // Maps keyed by an enum carry every key (Overview.counts); other key types aren't used by the DTOs
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private static Object enumMap(Class<?> key, Type value, String name, int depth) {
+        if (!key.isEnum()) throw new IllegalStateException("Map key must be an enum at " + name);
+        Map map = new EnumMap(key);
+        for (Object constant : key.getEnumConstants()) {
+            map.put(constant, value(rawType(value), value, name, depth + 1));
+        }
+        return map;
     }
 
     private static Class<?> rawType(Type type) {

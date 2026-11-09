@@ -8,6 +8,7 @@ import { PeladaAvatar } from "@/components/PeladaAvatar"
 import { SelfConfirmButton } from "@/components/SelfConfirmButton"
 import { formatCardDate, spotsLabel } from "@/utils/home"
 import type { NextDaily, PeladaResponse } from "@/types/pelada"
+import { isWritable } from "@/utils/subscription"
 
 interface UpcomingSessionCardProps {
   pelada: PeladaResponse
@@ -80,6 +81,7 @@ export function UpcomingSessionCard({ pelada, next, pending, onToggle }: Upcomin
               timeZone={pelada.timeZone}
               pending={pending}
               onConfirm={onToggle}
+              readOnly={!isWritable(pelada.subscription)}
               className="h-10 w-full"
             />
           )}

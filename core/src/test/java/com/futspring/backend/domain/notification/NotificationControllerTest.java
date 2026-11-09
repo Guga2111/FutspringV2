@@ -34,7 +34,9 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.everyItem;
 import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -374,26 +376,29 @@ class NotificationControllerTest extends BaseIntegrationTest {
     void preferences_withoutRows_returnTheDefaults() throws Exception {
         mockMvc.perform(get("/api/v1/notifications/preferences").header("Authorization", auth(member)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(4)))
+                .andExpect(jsonPath("$", hasSize(5)))
                 .andExpect(jsonPath("$[?(@.category == 'ATTENDANCE')].emailEnabled").value(true))
                 .andExpect(jsonPath("$[?(@.category == 'MEMBERSHIP')].emailEnabled").value(true))
                 .andExpect(jsonPath("$[?(@.category == 'SESSION')].emailEnabled").value(false))
-                .andExpect(jsonPath("$[?(@.category == 'AWARDS')].emailEnabled").value(false));
+                .andExpect(jsonPath("$[?(@.category == 'AWARDS')].emailEnabled").value(false))
+                .andExpect(jsonPath("$[?(@.category == 'BILLING')].emailEnabled").value(true))
+                .andExpect(jsonPath("$[*].pushEnabled", everyItem(is(true))));
     }
 
     @Test
     void updatePreferences_storesOnlyWhatDiffersFromTheDefault() throws Exception {
         mockMvc.perform(put("/api/v1/notifications/preferences").header("Authorization", auth(member))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(preferencesBody("ATTENDANCE", false, "SESSION", true, "MEMBERSHIP", true)))
+                        .content(preferencesBody("ATTENDANCE", false, "SESSION", true, "MEMBERSHIP", true, "BILLING", false)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(4)))
+                .andExpect(jsonPath("$", hasSize(5)))
                 .andExpect(jsonPath("$[?(@.category == 'ATTENDANCE')].emailEnabled").value(false))
                 .andExpect(jsonPath("$[?(@.category == 'SESSION')].emailEnabled").value(true));
 
         assertThat(preferenceRepository.findByIdUserId(member.getId()))
                 .extracting(NotificationPreference::getCategory)
-                .containsExactlyInAnyOrder(NotificationCategory.ATTENDANCE, NotificationCategory.SESSION);
+                .containsExactlyInAnyOrder(NotificationCategory.ATTENDANCE, NotificationCategory.SESSION,
+                        NotificationCategory.BILLING);
         assertThat(preferenceRepository.findByIdUserId(admin.getId())).isEmpty();
 
         // back to the default → the row goes away
@@ -405,7 +410,7 @@ class NotificationControllerTest extends BaseIntegrationTest {
                 .andExpect(jsonPath("$[?(@.category == 'SESSION')].emailEnabled").value(true));
         assertThat(preferenceRepository.findByIdUserId(member.getId()))
                 .extracting(NotificationPreference::getCategory)
-                .containsExactly(NotificationCategory.SESSION);
+                .containsExactlyInAnyOrder(NotificationCategory.SESSION, NotificationCategory.BILLING);
     }
 
     @Test
@@ -423,6 +428,70 @@ class NotificationControllerTest extends BaseIntegrationTest {
         assertThat(preferenceRepository.findByIdUserId(member.getId())).isEmpty();
     }
 
+    private org.springframework.test.web.servlet.ResultActions putPreferences(String body) throws Exception {
+        return mockMvc.perform(put("/api/v1/notifications/preferences").header("Authorization", auth(member))
+                .contentType(MediaType.APPLICATION_JSON).content(body));
+    }
+
+    @Test
+    void updatePreferences_pushIsPartialAndIndependentFromTheEmail() throws Exception {
+        putPreferences("[{\"category\": \"SESSION\", \"pushEnabled\": false}]")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.category == 'SESSION')].pushEnabled").value(false))
+                .andExpect(jsonPath("$[?(@.category == 'SESSION')].emailEnabled").value(false))
+                .andExpect(jsonPath("$[?(@.category == 'ATTENDANCE')].pushEnabled").value(true));
+        flushAndClear();
+        NotificationPreference row = preferenceRepository.findByIdUserId(member.getId()).getFirst();
+        assertThat(row.getCategory()).isEqualTo(NotificationCategory.SESSION);
+        assertThat(row.isEmailEnabled()).isFalse();
+        assertThat(row.getPushEnabled()).isFalse();
+
+        // changing only the e-mail keeps the push choice
+        putPreferences("[{\"category\": \"SESSION\", \"emailEnabled\": true}]")
+                .andExpect(jsonPath("$[?(@.category == 'SESSION')].emailEnabled").value(true))
+                .andExpect(jsonPath("$[?(@.category == 'SESSION')].pushEnabled").value(false));
+
+        // both channels back to the default → the row goes away
+        putPreferences("[{\"category\": \"SESSION\", \"emailEnabled\": false, \"pushEnabled\": true}]")
+                .andExpect(status().isOk());
+        flushAndClear();
+        assertThat(preferenceRepository.findByIdUserId(member.getId())).isEmpty();
+    }
+
+    @Test
+    void updatePreferences_aPushEqualToTheDefaultIsNotStored() throws Exception {
+        putPreferences("[{\"category\": \"ATTENDANCE\", \"emailEnabled\": false, \"pushEnabled\": true}]")
+                .andExpect(status().isOk());
+        flushAndClear();
+        assertThat(preferenceRepository.findByIdUserId(member.getId()))
+                .singleElement()
+                .satisfies(p -> assertThat(p.getPushEnabled()).isNull());
+    }
+
+    @Test
+    void updatePreferences_anItemWithoutAnyChannelIsABadRequest() throws Exception {
+        putPreferences("[{\"category\": \"SESSION\", \"pushEnabled\": false}, {\"category\": \"AWARDS\"}]")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Informe e-mail ou push"));
+        flushAndClear();
+        assertThat(preferenceRepository.findByIdUserId(member.getId())).isEmpty();
+    }
+
+    @Test
+    void pushEnabled_appliesTheDefaultsAndTheRowsOfEachUser() {
+        preferenceRepository.save(new NotificationPreference(member, NotificationCategory.SESSION, false, false));
+        preferenceRepository.save(new NotificationPreference(member, NotificationCategory.ATTENDANCE, false, null));
+        flushAndClear();
+
+        Map<Long, Map<NotificationCategory, Boolean>> enabled =
+                preferenceService.pushEnabled(List.of(member.getId(), admin.getId()));
+
+        assertThat(enabled.get(member.getId())).containsEntry(NotificationCategory.SESSION, false)
+                .containsEntry(NotificationCategory.ATTENDANCE, true)
+                .containsEntry(NotificationCategory.AWARDS, true);
+        assertThat(enabled.get(admin.getId())).containsOnlyKeys(NotificationCategory.values()).doesNotContainValue(false);
+    }
+
     @Test
     void preferences_withoutToken_returnUnauthorized() throws Exception {
         mockMvc.perform(get("/api/v1/notifications/preferences")).andExpect(status().isUnauthorized());
@@ -430,8 +499,8 @@ class NotificationControllerTest extends BaseIntegrationTest {
 
     @Test
     void emailEnabled_appliesTheDefaultsAndTheRowsOfEachUser() {
-        preferenceRepository.save(new NotificationPreference(member, NotificationCategory.ATTENDANCE, false));
-        preferenceRepository.save(new NotificationPreference(member, NotificationCategory.AWARDS, true));
+        preferenceRepository.save(new NotificationPreference(member, NotificationCategory.ATTENDANCE, false, null));
+        preferenceRepository.save(new NotificationPreference(member, NotificationCategory.AWARDS, true, null));
         flushAndClear();
 
         Map<Long, Map<NotificationCategory, Boolean>> enabled =
@@ -480,6 +549,27 @@ class NotificationControllerTest extends BaseIntegrationTest {
         assertThat(emailOf(member)).containsEntry(NotificationCategory.ATTENDANCE, false)
                 .containsEntry(NotificationCategory.MEMBERSHIP, true);
         assertThat(emailOf(admin)).containsEntry(NotificationCategory.ATTENDANCE, true);
+    }
+
+    @Test
+    void unsubscribe_changesOnlyTheEmail_neverThePush() throws Exception {
+        preferenceRepository.save(new NotificationPreference(member, NotificationCategory.ATTENDANCE, true, false));
+        flushAndClear();
+        String token = unsubscribeTokens.create(member.getId(), NotificationCategory.ATTENDANCE);
+
+        mockMvc.perform(post("/api/v1/notifications/unsubscribe").with(freshIp())
+                        .contentType(MediaType.APPLICATION_JSON).content(tokenBody(token)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.emailEnabled").value(false))
+                .andExpect(jsonPath("$.pushEnabled").value(false));
+        mockMvc.perform(post("/api/v1/notifications/resubscribe").with(freshIp())
+                        .contentType(MediaType.APPLICATION_JSON).content(tokenBody(token)))
+                .andExpect(jsonPath("$.emailEnabled").value(true))
+                .andExpect(jsonPath("$.pushEnabled").value(false));
+
+        flushAndClear();
+        assertThat(preferenceService.pushEnabled(List.of(member.getId())).get(member.getId()))
+                .containsEntry(NotificationCategory.ATTENDANCE, false);
     }
 
     // The browser may still hold an expired or revoked session: the route ignores it instead of answering 401

@@ -115,6 +115,14 @@ export default {
   				muted: 'hsl(var(--night-muted))'
   			},
   			paper: 'hsl(var(--paper))',
+  			preview: {
+  				'light-page': 'hsl(var(--preview-light-page))',
+  				'light-card': 'hsl(var(--preview-light-card))',
+  				'light-line': 'hsl(var(--preview-light-line))',
+  				'dark-page': 'hsl(var(--preview-dark-page))',
+  				'dark-card': 'hsl(var(--preview-dark-card))',
+  				'dark-line': 'hsl(var(--preview-dark-line))'
+  			},
   			success: {
   				DEFAULT: 'hsl(var(--success))',
   				strong: 'hsl(var(--success-strong))',

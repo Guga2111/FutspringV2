@@ -1,11 +1,14 @@
 // Typed API fixtures for the visual tests. Types come from src/types, so a DTO change breaks `tsc`
 // here instead of silently rendering a stale screen. Dates are relative to NOW (the frozen clock).
 import type { UserResponseDTO } from "../src/types/auth"
-import type { ProfileDTO, PublicUser } from "../src/types/user"
+import type { DeletionBlocker, ProfileDTO, PublicUser } from "../src/types/user"
 import type { PeladaAwards, PeladaAttendanceDTO, PeladaDetail, PeladaMember, PeladaResponse } from "../src/types/pelada"
 import type { DailyDetail, DailyListItem, PlayerDTO, RankingDTO, TeamDTO } from "../src/types/daily"
 import type { StatsDTO, UserMatchHistoryDTO, UserStatsTimelineDTO } from "../src/types/stats"
 import type { NotificationPreference, NotificationResponse } from "../src/types/notification"
+import type { VapidPublicKey } from "../src/types/push"
+import type { PeladaSubscription, SubscriptionSummary } from "../src/types/subscription"
+import type { PlatformOverview, PlatformPage, PlatformPayment, PlatformPayments, PlatformPeladaDetail, PlatformPeladaItem, PlatformUserItem } from "../src/types/platform"
 import type { Invitation, InvitationStatus, InviteLink } from "../src/types/invitation"
 import type { FinanceAudit, FinanceDetail, FinanceMovement, FinanceOverview, FinancePage, FinanceSettings, FinanceTemplate } from "../src/types/finance"
 
@@ -16,6 +19,7 @@ export const PELADA_ID = 1
 export const SCHEDULED_ID = 203
 export const LIVE_ID = 202
 export const FINISHED_ID = 201
+export const CONFIRMED_ID = 204
 
 const NAMES = ["Leal", "Bruno", "Caio", "Diego", "Edu", "Fabio", "Gabriel", "Hugo", "Igor", "João", "Kaique", "Lucas"]
 const POSITIONS = ["GOLEIRO", "ZAGUEIRO", "MEIO", "ATACANTE"]
@@ -27,6 +31,8 @@ export const me: UserResponseDTO = {
   image: null,
   backgroundImage: null,
   position: "MEIO",
+  // the platform admin's panel (/admin)
+  isPlatformAdmin: true,
 }
 
 export const members: PeladaMember[] = NAMES.map((username, i) => ({
@@ -45,8 +51,9 @@ const player = (m: PeladaMember): PlayerDTO => ({
   image: null,
   stars: m.stars,
   position: m.position,
+  isDeleted: false,
 })
-const publicUser = (m: PeladaMember): PublicUser => ({ id: m.id, username: m.username, image: null, position: m.position })
+const publicUser = (m: PeladaMember): PublicUser => ({ id: m.id, username: m.username, image: null, position: m.position, isDeleted: false })
 
 const nextDaily = {
   id: SCHEDULED_ID,
@@ -60,6 +67,16 @@ const nextDaily = {
   confirmOpensAt: null,
   bump: null,
 }
+
+// a trial far from its end: no notice, every button enabled (the read-only screens override it)
+export const trialSubscription: SubscriptionSummary = {
+  status: "TRIAL",
+  validUntil: "2026-12-01T18:00:00.000Z",
+  writable: true,
+}
+export const readOnlySubscription: SubscriptionSummary = { status: "READ_ONLY", validUntil: "2026-11-01T18:00:00.000Z", writable: false }
+// paid until 02/11: locks on 09/11
+export const pastDueSubscription: SubscriptionSummary = { status: "PAST_DUE", validUntil: "2026-11-02T18:00:00.000Z", writable: true }
 
 export const myPeladas: PeladaResponse[] = [
   {
@@ -78,6 +95,7 @@ export const myPeladas: PeladaResponse[] = [
     timeZone: "America/Sao_Paulo",
     isAdmin: true,
     nextDaily,
+    subscription: trialSubscription,
   },
   {
     id: 2,
@@ -95,6 +113,7 @@ export const myPeladas: PeladaResponse[] = [
     timeZone: "America/Sao_Paulo",
     isAdmin: false,
     nextDaily: null,
+    subscription: trialSubscription,
   },
 ]
 
@@ -219,6 +238,8 @@ const baseDaily = {
   championImage: null,
   peladaId: PELADA_ID,
   peladaName: "Pelada do Fut",
+  creatorId: 1,
+  subscription: trialSubscription,
   numberOfTeams: 2,
   playersPerTeam: 5,
   isAdmin: true,
@@ -251,6 +272,28 @@ export const scheduledDaily: DailyDetail = {
   award: null,
   startsAt: "2026-11-06T00:00:00.000Z",
   bumps: [{ user: publicUser(members[10]), bumpedBy: publicUser(members[3]), bumpedAt: "2026-11-04T12:00:00.000Z" }],
+}
+
+// Confirmed session after a withdrawal: Branco is one short (4 of 5) and João confirmed without a team
+export const confirmedDaily: DailyDetail = {
+  ...baseDaily,
+  id: CONFIRMED_ID,
+  dailyDate: "2026-11-05",
+  dailyTime: "21:00",
+  status: "CONFIRMED",
+  isFinished: false,
+  confirmedPlayers: confirmed(10),
+  teams: teams.map((team, i) => {
+    const players = i === 1 ? team.players.slice(0, 4) : team.players
+    const total = players.reduce((sum, p) => sum + p.stars, 0)
+    return { ...team, players, totalStars: total, averageStars: total / players.length }
+  }),
+  matches: [],
+  playerStats: [],
+  leagueTable: [],
+  award: null,
+  startsAt: "2026-11-06T00:00:00.000Z",
+  bumps: [],
 }
 
 const leagueTable = [
@@ -371,7 +414,7 @@ export const invitations: Invitation[] = [
 ]
 
 // the Convites page of the pelada: invited accounts that aren't members, sent by the admins
-const guest = (id: number, username: string): PublicUser => ({ id, username, image: null, position: "MEIO" })
+const guest = (id: number, username: string): PublicUser => ({ id, username, image: null, position: "MEIO", isDeleted: false })
 const peladaInvitation = (
   id: number,
   recipient: PublicUser,
@@ -425,15 +468,22 @@ export const notifications: NotificationResponse[] = [
     daily: { id: SCHEDULED_ID, date: "2026-11-05", time: "21:00" },
     actor: null,
     team: null,
+    validUntil: null,
   },
 ]
 
 export const notificationPreferences: NotificationPreference[] = [
-  { category: "ATTENDANCE", emailEnabled: true },
-  { category: "SESSION", emailEnabled: false },
-  { category: "MEMBERSHIP", emailEnabled: true },
-  { category: "AWARDS", emailEnabled: false },
+  { category: "ATTENDANCE", emailEnabled: true, pushEnabled: true },
+  { category: "SESSION", emailEnabled: false, pushEnabled: true },
+  { category: "MEMBERSHIP", emailEnabled: true, pushEnabled: true },
+  { category: "AWARDS", emailEnabled: false, pushEnabled: false },
+  { category: "BILLING", emailEnabled: true, pushEnabled: true },
 ]
+
+// a P-256 public key's shape (65 bytes, base64url); the browser is mocked, so it is never used to encrypt
+export const vapidPublicKey: VapidPublicKey = {
+  publicKey: "BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U",
+}
 
 export const QR_ID = 77
 
@@ -457,7 +507,7 @@ const financeList: FinanceOverview["lists"][number] = {
 export const financeOverview: FinanceOverview = {
   revision: 3,
   permissions: { manage: true, appointManagers: true, viewCash: true },
-  settings: { visibility: "INDIVIDUAL", pixKey: "pix@futspring.com", pixRecipient: "Leal", qrId: QR_ID, managerIds: [5] },
+  settings: { visibility: "INDIVIDUAL", pixKey: "pix@futspring.com", pixRecipient: "Leal", qrId: QR_ID, managerIds: [1, 5] },
   balance: "1250.00",
   templates: ([["Mensalidade", "MONTHLY", "100.00"], ["Diária", "DAILY", "20.00"], ["Evento", "OTHER", "0.00"]] as const).map(
     ([name, classification, amount], i): FinanceTemplate => ({
@@ -567,4 +617,119 @@ export const financeAudit: FinancePage<FinanceAudit> = {
   ],
   hasMore: false,
   total: 5,
+}
+
+// /settings: nothing blocks deleting the account; the "pending items" test answers these instead
+export const deletionBlockers: DeletionBlocker[] = []
+export const pendingDeletionBlockers: DeletionBlocker[] = [
+  { type: "CREATOR", peladaId: PELADA_ID, peladaName: "Pelada do Fut" },
+  { type: "SOLE_FINANCE_MANAGER", peladaId: 2, peladaName: "Racha de Quarta" },
+]
+
+// ---- the platform admin's panel (/admin): validity is the end of a day in São Paulo (23:59:59 -03:00)
+
+const endOfDay = (date: string) => new Date(`${date}T23:59:59-03:00`).toISOString()
+const at = (date: string, time = "10:00") => new Date(`${date}T${time}:00-03:00`).toISOString()
+const leal = publicUser(members[0])
+const bruno = publicUser(members[1])
+const caio = publicUser(members[2])
+
+export const platformOverview: PlatformOverview = {
+  counts: { TRIAL: 6, ACTIVE: 4, PAST_DUE: 1, READ_ONLY: 2, PENDING: 1, EXEMPT: 1 },
+  trialsEndingSoon: [
+    { id: 12, name: "Racha de Quinta", date: endOfDay("2026-11-07") },
+    { id: 14, name: "Futebol dos Amigos", date: endOfDay("2026-11-10") },
+  ],
+  pixClaimed: [{ id: 11, name: "Pelada do Parque", date: at("2026-11-03", "20:15") }],
+  revenueThisMonth: "218.90",
+  revenueByMonth: [
+    "0.00", "0.00", "0.00", "0.00", "0.00", "0.00", "0.00", "0.00", "19.90", "39.80", "218.90", "218.90",
+  ].map((total, i) => ({ month: `${i < 2 ? 2025 : 2026}-${String(((i + 10) % 12) + 1).padStart(2, "0")}`, total })),
+  recurringEstimate: "76.48",
+  users: { total: 148, last30Days: 23 },
+}
+
+const peladaItem = (id: number, name: string, creator: PublicUser, status: PlatformPeladaItem["status"], validUntil: string | null, extra: Partial<PlatformPeladaItem> = {}): PlatformPeladaItem => ({
+  id, name, creator, memberCount: 18, status, validUntil, founder: false, pixClaimedAt: null, lastSessionDate: "2026-11-01", ...extra,
+})
+
+export const platformPeladas: PlatformPage<PlatformPeladaItem> = {
+  items: [
+    peladaItem(PELADA_ID, "Pelada do Fut", leal, "EXEMPT", null, { memberCount: 24 }),
+    peladaItem(11, "Pelada do Parque", bruno, "TRIAL", endOfDay("2026-11-20"), { pixClaimedAt: at("2026-11-03", "20:15"), memberCount: 29 }),
+    peladaItem(12, "Racha de Quinta", caio, "TRIAL", endOfDay("2026-11-07"), { lastSessionDate: "2026-10-29" }),
+    peladaItem(13, "Society da Firma", bruno, "ACTIVE", endOfDay("2027-10-15"), { founder: true, memberCount: 42 }),
+    peladaItem(15, "Bola de Domingo", caio, "PAST_DUE", endOfDay("2026-11-01"), { memberCount: 12 }),
+    peladaItem(16, "Futsal da Vila", leal, "READ_ONLY", endOfDay("2026-10-10"), { memberCount: 9, lastSessionDate: null }),
+  ],
+  total: 15,
+}
+
+const payment = (id: number, amount: string, paidOn: string, plan: PlatformPayment["plan"], periodEnd: string, extra: Partial<PlatformPayment> = {}): PlatformPayment => ({
+  id, peladaId: 13, peladaName: "Society da Firma", payerId: bruno.id, payerName: bruno.username, amount, paidOn, plan,
+  periodStart: at(paidOn), periodEnd: endOfDay(periodEnd), recordedBy: leal, note: null, voidedAt: null, voidReason: null,
+  createdAt: at(paidOn, "12:00"), ...extra,
+})
+
+export const platformPelada: PlatformPeladaDetail = {
+  pelada: { id: 13, name: "Society da Firma", image: null, creator: bruno, creatorEmail: "bruno@futspring.com", memberCount: 42, lastSessionDate: "2026-11-01" },
+  subscription: {
+    kind: "PAID",
+    status: "ACTIVE",
+    writable: true,
+    validUntil: endOfDay("2027-10-15"),
+    plan: "ANNUAL",
+    founder: true,
+    pixClaimedAt: at("2026-11-03", "20:15"),
+    claimedPlan: "ANNUAL",
+    prices: [{ plan: "MONTHLY", amount: "29.90" }, { plan: "ANNUAL", amount: "299.00" }],
+    createdAt: at("2026-09-15"),
+    updatedAt: at("2026-10-15"),
+  },
+  payments: [
+    payment(3, "199.00", "2026-10-15", "ANNUAL", "2027-10-15", { note: "Preço de fundadora" }),
+    payment(2, "19.90", "2026-10-14", "MONTHLY", "2026-11-14", { voidedAt: at("2026-10-15", "09:00"), voidReason: "Registrado no plano errado" }),
+  ],
+  events: [
+    { id: 5, type: "PIX_CLAIMED", actor: bruno, kindBefore: "PAID", kindAfter: "PAID", validUntilBefore: endOfDay("2027-10-15"), validUntilAfter: endOfDay("2027-10-15"), note: null, createdAt: at("2026-11-03", "20:15") },
+    { id: 4, type: "PAYMENT_RECORDED", actor: leal, kindBefore: "TRIAL", kindAfter: "PAID", validUntilBefore: endOfDay("2026-10-15"), validUntilAfter: endOfDay("2027-10-15"), note: "Preço de fundadora", createdAt: at("2026-10-15", "12:00") },
+    { id: 3, type: "PAYMENT_VOIDED", actor: leal, kindBefore: "PAID", kindAfter: "PAID", validUntilBefore: endOfDay("2026-11-14"), validUntilAfter: endOfDay("2026-11-14"), note: "Registrado no plano errado", createdAt: at("2026-10-15", "09:00") },
+    { id: 2, type: "FOUNDER_CHANGED", actor: leal, kindBefore: "TRIAL", kindAfter: "TRIAL", validUntilBefore: endOfDay("2026-10-15"), validUntilAfter: endOfDay("2026-10-15"), note: null, createdAt: at("2026-09-20") },
+    { id: 1, type: "CREATED", actor: null, kindBefore: null, kindAfter: "TRIAL", validUntilBefore: null, validUntilAfter: endOfDay("2026-10-15"), note: null, createdAt: at("2026-09-15") },
+  ],
+}
+
+export const platformPayments: PlatformPayments = {
+  items: [
+    payment(4, "19.90", "2026-11-02", "MONTHLY", "2026-12-02", { peladaId: 11, peladaName: "Pelada do Parque" }),
+    ...platformPelada.payments,
+    payment(1, "19.90", "2026-09-01", "MONTHLY", "2026-10-01", { peladaId: null, peladaName: "Pelada Antiga", payerName: "Caio" }),
+  ],
+  total: 4,
+  sum: "238.80",
+}
+
+export const platformUsers: PlatformPage<PlatformUserItem> = {
+  items: [
+    { id: 30, username: "Novato", email: "novato@exemplo.com", createdAt: at("2026-11-02"), peladasCreated: [], memberOf: 1, trialUsedAt: null, isDeleted: false },
+    { id: bruno.id, username: bruno.username, email: "bruno@futspring.com", createdAt: at("2026-09-10"), peladasCreated: [{ id: 11, name: "Pelada do Parque" }, { id: 13, name: "Society da Firma" }], memberOf: 3, trialUsedAt: at("2026-09-15"), isDeleted: false },
+    { id: 31, username: "Ex-jogador", email: "deleted-31@invalid", createdAt: null, peladasCreated: [], memberOf: 0, trialUsedAt: null, isDeleted: true },
+  ],
+  total: 3,
+}
+
+// The creator's Assinatura area of pelada 1: still in the trial, the annual Pix already informed, one earlier payment
+export const peladaSubscription: PeladaSubscription = {
+  status: "TRIAL",
+  validUntil: trialSubscription.validUntil,
+  plan: null,
+  founder: false,
+  pixClaimedAt: at("2026-11-03", "20:15"),
+  claimedPlan: "ANNUAL",
+  pixRecipient: "Luis Gomes Sampaio",
+  plans: [
+    { plan: "MONTHLY", amount: "19.90", pixCode: "00020126360014br.gov.bcb.pix0114+5511999990000520400005303986540519.905802BR5909FUTSPRING6009SAO PAULO62080504FUT16304EFD2" },
+    { plan: "ANNUAL", amount: "199.00", pixCode: "00020126360014br.gov.bcb.pix0114+55119999900005204000053039865406199.005802BR5909FUTSPRING6009SAO PAULO62080504FUT16304B977" },
+  ],
+  payments: [{ paidOn: "2026-09-10", amount: "19.90", plan: "MONTHLY", periodEnd: endOfDay("2026-10-10") }],
 }

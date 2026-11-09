@@ -131,8 +131,8 @@ class NotificationEmailDispatcherTest {
                 notification(2L, NotificationType.DIARISTA_BUMPED, bia),
                 notification(3L, NotificationType.SESSION_CREATED, ana),          // SESSION, default off
                 notification(4L, NotificationType.SESSION_CREATED, bia));
-        stubPreferences(new NotificationPreference(ana, NotificationCategory.ATTENDANCE, false),
-                new NotificationPreference(bia, NotificationCategory.SESSION, true));
+        stubPreferences(new NotificationPreference(ana, NotificationCategory.ATTENDANCE, false, null),
+                new NotificationPreference(bia, NotificationCategory.SESSION, true, null));
 
         dispatcher.dispatch(List.of(1L, 2L, 3L, 4L));
         runQueued();
@@ -148,10 +148,23 @@ class NotificationEmailDispatcherTest {
         Notification invitation = notification(1L, NotificationType.PELADA_INVITATION, ana);
         invitation.setInvitationId(42L);
         stubRows(invitation, notification(2L, NotificationType.MEMBER_JOINED, bia));
-        stubPreferences(new NotificationPreference(ana, NotificationCategory.MEMBERSHIP, false));
+        stubPreferences(new NotificationPreference(ana, NotificationCategory.MEMBERSHIP, false, null));
         dispatcher.dispatch(List.of(1L, 2L));
         runQueued();
         assertThat(sentTo()).isEmpty();
+    }
+
+    @Test
+    void subscriptionNotices_goByEmailByDefault_untilBillingIsTurnedOff() {
+        when(emailSender.enabled()).thenReturn(true);
+        stubRows(notification(1L, NotificationType.SUBSCRIPTION_PAST_DUE, ana),
+                notification(2L, NotificationType.SUBSCRIPTION_PIX_CLAIMED, bia));
+        stubPreferences(new NotificationPreference(ana, NotificationCategory.BILLING, false, null));
+
+        dispatcher.dispatch(List.of(1L, 2L));
+        runQueued();
+
+        assertThat(sentTo()).containsExactly("bia@example.com");
     }
 
     @Test

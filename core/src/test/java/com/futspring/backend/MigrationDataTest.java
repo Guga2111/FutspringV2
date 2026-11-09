@@ -38,7 +38,7 @@ class MigrationDataTest {
         execute("INSERT INTO peladas(id,name,day_of_week,time_of_day,duration,auto_create_daily_enabled,number_of_teams,players_per_team,created_at,creator_id) VALUES(1,'Legada','SATURDAY','19:00',1,false,2,5,now(),1)");
         execute("INSERT INTO pelada_members(pelada_id,user_id) VALUES(1,1)");
         execute("INSERT INTO dailies(id,pelada_id,daily_date,daily_time,status,is_finished,created_at) VALUES(1,1,'2026-10-31','19:00','SCHEDULED',false,now())");
-        flyway(null).migrate();
+        flyway("14").migrate();
         try (Connection c = connect(); Statement statement = c.createStatement()) {
             try (ResultSet rows = statement.executeQuery("SELECT (SELECT count(*) FROM finance_lists),(SELECT count(*) FROM finance_movements),(SELECT count(*) FROM pelada_members)")) {
                 rows.next(); assertThat(rows.getInt(1)).isZero(); assertThat(rows.getInt(2)).isZero(); assertThat(rows.getInt(3)).isEqualTo(1);
@@ -200,6 +200,116 @@ class MigrationDataTest {
         try (Connection c = connect(); Statement st = c.createStatement(); ResultSet rs = st.executeQuery("SELECT count(*) FROM pelada_link_blocks")) {
             rs.next(); assertThat(rs.getInt(1)).isZero();
         }
+    }
+
+    @Test
+    void v15_makesCurrentAdminsAndCreatorsResponsaveis() throws SQLException {
+        flyway("14").migrate();
+        execute("INSERT INTO users(id,email,username,password) VALUES(1,'criador@migration.test','Criador','hash'),(2,'admin@migration.test','Admin','hash'),(3,'resp@migration.test','Resp','hash'),(4,'membro@migration.test','Membro','hash'),(5,'ex@migration.test','ExAdmin','hash')");
+        execute("INSERT INTO peladas(id,name,day_of_week,time_of_day,duration,auto_create_daily_enabled,number_of_teams,players_per_team,created_at,creator_id) VALUES(1,'Legada','SATURDAY','19:00',1,false,2,5,now(),1)");
+        execute("INSERT INTO pelada_members(pelada_id,user_id) VALUES(1,1),(1,2),(1,3),(1,4)");
+        // an admin row without membership (legacy leftover) is skipped: finance_managers references the membership
+        execute("INSERT INTO pelada_admins(pelada_id,user_id) VALUES(1,1),(1,2),(1,5)");
+        execute("INSERT INTO finance_managers(pelada_id,user_id) VALUES(1,1),(1,3)");
+        flyway(null).migrate();
+        try (Connection c = connect(); Statement st = c.createStatement();
+             ResultSet rs = st.executeQuery("SELECT string_agg(user_id::text, ',' ORDER BY user_id) FROM finance_managers WHERE pelada_id=1")) {
+            rs.next(); assertThat(rs.getString(1)).isEqualTo("1,2,3");
+        }
+    }
+
+    @Test
+    void v18_keepsTheMeaningOfExistingPreferences_andAddsPushSubscriptions() throws SQLException {
+        flyway("17").migrate();
+        execute("INSERT INTO users(id,email,username,password) VALUES(1,'pref@migration.test','Pref','hash')");
+        execute("INSERT INTO notification_preferences(user_id,category,email_enabled) VALUES(1,'ATTENDANCE',false),(1,'AWARDS',true)");
+        flyway(null).migrate();
+        try (Connection c = connect(); Statement st = c.createStatement();
+             ResultSet rs = st.executeQuery("SELECT category, email_enabled, push_enabled FROM notification_preferences ORDER BY category")) {
+            // the e-mail choice is the same and push stays at the category's default (null)
+            rs.next(); assertThat(rs.getString(1)).isEqualTo("ATTENDANCE"); assertThat(rs.getBoolean(2)).isFalse();
+            rs.getBoolean(3); assertThat(rs.wasNull()).isTrue();
+            rs.next(); assertThat(rs.getString(1)).isEqualTo("AWARDS"); assertThat(rs.getBoolean(2)).isTrue();
+            rs.getBoolean(3); assertThat(rs.wasNull()).isTrue();
+        }
+        execute("INSERT INTO push_subscriptions(user_id,endpoint,p256dh,auth,created_at) VALUES(1,'https://fcm.googleapis.com/fcm/send/a','k','a',now())");
+        assertThatThrownBy(() -> execute("INSERT INTO push_subscriptions(user_id,endpoint,p256dh,auth,created_at) VALUES(1,'https://fcm.googleapis.com/fcm/send/a','k2','a2',now())"))
+                .isInstanceOf(SQLException.class).hasMessageContaining("uq_push_subscriptions_endpoint");
+    }
+
+    @Test
+    void v19_givesEveryExistingPeladaA30DayTrial_andMarksTheirCreators() throws SQLException {
+        flyway("18").migrate();
+        execute("INSERT INTO users(id,email,username,password) VALUES(1,'criador@migration.test','Criador','hash'),(2,'membro@migration.test','Membro','hash')");
+        execute("INSERT INTO peladas(id,name,day_of_week,time_of_day,duration,auto_create_daily_enabled,number_of_teams,players_per_team,created_at,creator_id) VALUES(1,'A','SATURDAY','19:00',1,false,2,5,now(),1),(2,'B','SUNDAY','19:00',1,false,2,5,now(),1)");
+        execute("INSERT INTO pelada_members(pelada_id,user_id) VALUES(1,1),(1,2),(2,1)");
+        flyway(null).migrate();
+        try (Connection c = connect(); Statement st = c.createStatement()) {
+            try (ResultSet rs = st.executeQuery("SELECT pelada_id, kind, valid_until BETWEEN now() + INTERVAL '30 days' - INTERVAL '1 minute' AND now() + INTERVAL '30 days', founder FROM pelada_subscriptions ORDER BY pelada_id")) {
+                for (int id = 1; id <= 2; id++) {
+                    rs.next(); assertThat(rs.getLong(1)).isEqualTo(id); assertThat(rs.getString(2)).isEqualTo("TRIAL");
+                    assertThat(rs.getBoolean(3)).isTrue(); assertThat(rs.getBoolean(4)).isFalse();
+                }
+                assertThat(rs.next()).isFalse();
+            }
+            try (ResultSet rs = st.executeQuery("SELECT count(*) FROM subscription_events WHERE type = 'CREATED' AND actor_id IS NULL AND kind_after = 'TRIAL'")) {
+                rs.next(); assertThat(rs.getInt(1)).isEqualTo(2);
+            }
+            // only creators used their trial; nobody is platform admin
+            try (ResultSet rs = st.executeQuery("SELECT id, trial_used_at IS NOT NULL, platform_admin FROM users ORDER BY id")) {
+                rs.next(); assertThat(rs.getBoolean(2)).isTrue(); assertThat(rs.getBoolean(3)).isFalse();
+                rs.next(); assertThat(rs.getBoolean(2)).isFalse(); assertThat(rs.getBoolean(3)).isFalse();
+            }
+        }
+        // one subscription per pelada, and a trial must end
+        assertThatThrownBy(() -> execute("INSERT INTO pelada_subscriptions(pelada_id,kind,valid_until,created_at,updated_at) VALUES(1,'EXEMPT',null,now(),now())"))
+                .isInstanceOf(SQLException.class).hasMessageContaining("uq_pelada_subscriptions_pelada");
+        execute("DELETE FROM pelada_subscriptions WHERE pelada_id = 2");
+        assertThatThrownBy(() -> execute("INSERT INTO pelada_subscriptions(pelada_id,kind,valid_until,created_at,updated_at) VALUES(2,'TRIAL',null,now(),now())"))
+                .isInstanceOf(SQLException.class).hasMessageContaining("ck_pelada_subscriptions_valid_until");
+        // a payment outlives its pelada; the subscription and the history go with it
+        execute("INSERT INTO subscription_payments(pelada_id,pelada_name,payer_id,payer_name,amount,paid_on,plan,period_start,period_end,recorded_by_id,created_at) VALUES(1,'A',1,'Criador',19.90,'2026-11-07','MONTHLY',now(),now() + INTERVAL '1 month',1,now())");
+        execute("DELETE FROM pelada_members WHERE pelada_id = 1");
+        execute("DELETE FROM peladas WHERE id = 1");
+        try (Connection c = connect(); Statement st = c.createStatement();
+             ResultSet rs = st.executeQuery("SELECT (SELECT count(*) FROM pelada_subscriptions WHERE pelada_id = 1), (SELECT count(*) FROM subscription_events WHERE pelada_id = 1), (SELECT count(*) FROM subscription_payments WHERE pelada_id IS NULL AND pelada_name = 'A')")) {
+            rs.next(); assertThat(rs.getInt(1)).isZero(); assertThat(rs.getInt(2)).isZero(); assertThat(rs.getInt(3)).isEqualTo(1);
+        }
+    }
+
+    @Test
+    void v20_copiesTheRegistrationInstant_andLeavesOlderAccountsNull() throws SQLException {
+        flyway("19").migrate();
+        execute("INSERT INTO users(id,email,username,password,terms_version,terms_accepted_at) VALUES(1,'novo@migration.test','Novo','hash','2026-11-06','2026-11-06T10:00:00Z'),(2,'antigo@migration.test','Antigo','hash',null,null)");
+        flyway(null).migrate();
+        try (Connection c = connect(); Statement st = c.createStatement();
+             ResultSet rs = st.executeQuery("SELECT created_at = TIMESTAMPTZ '2026-11-06T10:00:00Z', created_at IS NULL, updated_at IS NULL FROM users ORDER BY id")) {
+            rs.next(); assertThat(rs.getBoolean(1)).isTrue(); assertThat(rs.getBoolean(3)).isTrue();
+            rs.next(); assertThat(rs.getBoolean(2)).isTrue(); assertThat(rs.getBoolean(3)).isTrue();
+        }
+    }
+
+    @Test
+    void v21_keepsExistingRows_andAcceptsTheSubscriptionNotices() throws SQLException {
+        flyway("20").migrate();
+        execute("INSERT INTO users(id,email,username,password) VALUES(1,'aviso@migration.test','Aviso','hash')");
+        execute("INSERT INTO peladas(id,name,day_of_week,time_of_day,duration,auto_create_daily_enabled,number_of_teams,players_per_team,created_at,creator_id) VALUES(1,'A','FRIDAY','18:00',1,false,2,5,now(),1)");
+        execute("INSERT INTO notifications(recipient_id,type,pelada_id,created_at) VALUES(1,'MEMBER_JOINED',1,now())");
+        execute("INSERT INTO notification_preferences(user_id,category,email_enabled) VALUES(1,'AWARDS',true)");
+        flyway(null).migrate();
+        try (Connection c = connect(); Statement st = c.createStatement();
+             ResultSet rs = st.executeQuery("SELECT type, valid_until IS NULL FROM notifications")) {
+            rs.next(); assertThat(rs.getString(1)).isEqualTo("MEMBER_JOINED"); assertThat(rs.getBoolean(2)).isTrue();
+        }
+        execute("INSERT INTO notification_preferences(user_id,category,email_enabled) VALUES(1,'BILLING',false)");
+        execute("INSERT INTO notifications(recipient_id,type,pelada_id,valid_until,created_at) VALUES(1,'SUBSCRIPTION_ENDING',1,'2026-12-08T02:59:59Z',now()),(1,'SUBSCRIPTION_PIX_CLAIMED',1,null,now())");
+        // one notice per pelada, type and validity
+        assertThatThrownBy(() -> execute("INSERT INTO notifications(recipient_id,type,pelada_id,valid_until,created_at) VALUES(1,'SUBSCRIPTION_ENDING',1,'2026-12-08T02:59:59Z',now())"))
+                .isInstanceOf(SQLException.class).hasMessageContaining("uq_notifications_subscription");
+        assertThatThrownBy(() -> execute("INSERT INTO notification_preferences(user_id,category,email_enabled) VALUES(1,'CHAT',true)"))
+                .isInstanceOf(SQLException.class).hasMessageContaining("notification_preferences_category_check");
+        assertThatThrownBy(() -> execute("INSERT INTO notifications(recipient_id,type,created_at) VALUES(1,'SUBSCRIPTION_LOCKED',now())"))
+                .isInstanceOf(SQLException.class).hasMessageContaining("notifications_type_check");
     }
 
     private static Flyway flyway(String target) {

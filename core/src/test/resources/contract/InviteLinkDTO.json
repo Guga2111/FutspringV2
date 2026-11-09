@@ -6,6 +6,7 @@
     "id" : 356,
     "username" : "username",
     "image" : "image",
-    "position" : "position"
+    "position" : "position",
+    "isDeleted" : true
   }
 }

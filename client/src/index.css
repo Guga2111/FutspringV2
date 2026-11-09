@@ -135,6 +135,14 @@
     --night-muted: var(--p-slate-500);
     --paper: var(--p-white);
 
+    /* the theme picker's miniatures (Aparência in /settings): each one keeps its own theme on any page */
+    --preview-light-page: var(--p-offwhite-50);
+    --preview-light-card: var(--p-white);
+    --preview-light-line: var(--p-line-200);
+    --preview-dark-page: var(--p-midnight-950);
+    --preview-dark-card: var(--p-surface-750);
+    --preview-dark-line: var(--p-surface-600);
+
     /* member and pelada avatars without a photo, picked by id/name; white initials */
     --avatar-1: 158 100% 26%;
     --avatar-2: 20 64% 40%;

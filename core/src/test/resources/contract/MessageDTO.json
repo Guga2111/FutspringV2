@@ -5,6 +5,7 @@
   "sender" : {
     "id" : 356,
     "username" : "username",
-    "image" : "image"
+    "image" : "image",
+    "isDeleted" : true
   }
 }

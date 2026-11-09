@@ -6,6 +6,8 @@ import { TeamColorDot } from "@/components/daily/TeamColorDot"
 import { getFileUrl } from "@/lib/utils"
 import { championSummary } from "@/utils/finishedSession"
 import type { DailyDetail } from "@/types/daily"
+import { isWritable } from "@/utils/subscription"
+import { SUBSCRIPTION_NOTICE_ID } from "@/components/pelada/SubscriptionNotice"
 
 interface ChampionHeroProps {
   daily: DailyDetail
@@ -19,8 +21,9 @@ export function ChampionHero({ daily, uploadLoading, onChangePhoto }: ChampionHe
   const champion = championSummary(daily)
   const statsById = new Map(daily.playerStats.map((s) => [s.userId, s]))
 
+  const writable = isWritable(daily.subscription)
   const uploadButton = daily.isAdmin && (
-    <Button variant="outline" size="sm" disabled={uploadLoading} onClick={onChangePhoto} className="gap-1.5 self-start">
+    <Button variant="outline" size="sm" disabled={uploadLoading || !writable} aria-describedby={writable ? undefined : SUBSCRIPTION_NOTICE_ID} onClick={onChangePhoto} className="gap-1.5 self-start">
       <HugeiconsIcon icon={Upload01Icon} className="size-3.5" />
       {uploadLoading ? "Enviando…" : "Enviar foto do campeão"}
     </Button>
@@ -115,7 +118,7 @@ function ChampionPlayers({ champion, statsById }: { champion: Champion; statsByI
         const s = statsById.get(player.id)
         return (
           <li key={player.id} className="flex items-center gap-2.5 py-1.5">
-            <PlayerAvatar userId={player.id} username={player.username} image={player.image} />
+            <PlayerAvatar userId={player.id} username={player.username} image={player.image} deleted={player.isDeleted} />
             <span className="min-w-0 flex-1 truncate text-sm font-medium">{player.username}</span>
             <span className="text-xs text-muted-foreground">
               {s?.goals ?? 0} G · {s?.assists ?? 0} A

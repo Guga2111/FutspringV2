@@ -5,6 +5,7 @@ import { Progress } from "@/components/ui/progress"
 import { SelfConfirmButton } from "@/components/SelfConfirmButton"
 import { attendanceHint } from "@/utils/attendance"
 import type { DailyDetail } from "@/types/daily"
+import { isWritable } from "@/utils/subscription"
 
 interface AttendanceSummaryCardProps {
   daily: DailyDetail
@@ -53,6 +54,7 @@ export function AttendanceSummaryCard({ daily, isConfirmed, pending, onToggle }:
               timeZone={daily.timeZone}
               pending={pending}
               onConfirm={onToggle}
+              readOnly={!isWritable(daily.subscription)}
               className="h-[42px] gap-2 px-5 text-[15px]"
             >
               <HugeiconsIcon icon={CalendarCheckIn01Icon} className="size-4" />

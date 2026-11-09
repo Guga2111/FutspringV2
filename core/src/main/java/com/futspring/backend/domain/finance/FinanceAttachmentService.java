@@ -24,6 +24,7 @@ public class FinanceAttachmentService {
     private final FinanceFiles files;
 
     public FinanceViews.Result qr(Long id, Long listId, FinanceRequests.Command command, MultipartFile file, String email) {
+        tx.requireWritableUpload(id, email, command);
         var image = files.verify(file);
         return tx.execute(id, email, command, "QR", "QR:" + listId, List.of(command, image.hash()), true, ctx -> {
             var list = listId == null ? null : reads.findList(id, listId);

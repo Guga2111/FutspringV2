@@ -1,7 +1,11 @@
 package com.futspring.backend.domain.pelada;
 
-import org.springframework.data.jpa.repository.*;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.*;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
 import java.time.Instant;
 import java.util.*;
 
@@ -25,4 +29,19 @@ public interface PeladaInvitationRepository extends JpaRepository<PeladaInvitati
     Optional<Long> findPeladaIdById(Long id);
     List<PeladaInvitation> findByPeladaIdAndRecipientIdInAndStatus(Long peladaId, Collection<Long> recipients, InvitationStatus status);
     void deleteByPeladaId(Long peladaId);
+
+    // Account deletion: the recipient's open invitations end, as member removal does (canceled; expired when past due)
+    @Modifying
+    @Query("""
+        UPDATE PeladaInvitation i SET i.status = com.futspring.backend.domain.pelada.InvitationStatus.CANCELED, i.canceledAt = :now
+        WHERE i.recipient.id = :userId AND i.status = com.futspring.backend.domain.pelada.InvitationStatus.PENDING
+          AND i.expiresAt > :now
+        """)
+    void cancelPendingForRecipient(@Param("userId") Long userId, @Param("now") Instant now);
+    @Modifying
+    @Query("""
+        UPDATE PeladaInvitation i SET i.status = com.futspring.backend.domain.pelada.InvitationStatus.EXPIRED
+        WHERE i.recipient.id = :userId AND i.status = com.futspring.backend.domain.pelada.InvitationStatus.PENDING
+        """)
+    void expirePendingForRecipient(@Param("userId") Long userId);
 }

@@ -65,7 +65,10 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(AppException.class)
-    public ResponseEntity<ErrorResponse> handleAppException(AppException ex) {
+    public ResponseEntity<?> handleAppException(AppException ex) {
+        if (!ex.getFieldErrors().isEmpty()) {
+            return validationResponse(ex.getFieldErrors());
+        }
         return error(ex.getStatus(), ex.getMessage());
     }
 

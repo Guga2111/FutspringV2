@@ -1,6 +1,10 @@
 package com.futspring.backend.contract;
 
 import com.futspring.backend.domain.finance.dto.FinanceRequests;
+import com.futspring.backend.domain.platform.dto.PlatformRequests;
+import com.futspring.backend.domain.subscription.dto.PeladaSubscriptionDTO;
+import com.futspring.backend.domain.subscription.dto.PixClaimRequestDTO;
+import com.futspring.backend.domain.platform.dto.PlatformViews;
 import tools.jackson.databind.JavaType;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
@@ -21,10 +25,14 @@ import com.futspring.backend.domain.daily.dto.SwapPlayersRequestDTO;
 import com.futspring.backend.domain.daily.dto.UpdateDailyStatusRequestDTO;
 import com.futspring.backend.domain.daily.dto.UpdateTeamColorRequestDTO;
 import com.futspring.backend.domain.daily.dto.UpdateTeamNameRequestDTO;
+import com.futspring.backend.domain.daily.dto.SaveTeamsRequestDTO;
 import com.futspring.backend.domain.notification.dto.NotificationDTO;
 import com.futspring.backend.domain.notification.dto.NotificationPreferenceDTO;
 import com.futspring.backend.domain.notification.dto.NotificationPushDTO;
+import com.futspring.backend.domain.notification.dto.PushSubscriptionRequestDTO;
+import com.futspring.backend.domain.notification.dto.RemovePushSubscriptionRequestDTO;
 import com.futspring.backend.domain.notification.dto.UnreadCountDTO;
+import com.futspring.backend.domain.notification.dto.VapidPublicKeyDTO;
 import com.futspring.backend.domain.tour.dto.TourStateDTO;
 import com.futspring.backend.domain.notification.dto.UnsubscribeRequestDTO;
 import com.futspring.backend.domain.pelada.dto.InvitePlayerRequestDTO;
@@ -102,6 +110,12 @@ class ContractSnapshotTest {
                 MessageDTO.class,
                 TourStateDTO.class,
                 NotificationDTO.class, NotificationPushDTO.class, NotificationPreferenceDTO.class, UnreadCountDTO.class,
+                VapidPublicKeyDTO.class,
+                // /platform/** (the two pages: PlatformViews.Page of PeladaItem / UserItem)
+                PlatformViews.Overview.class, PlatformViews.PeladaItem.class, PlatformViews.PeladaDetail.class,
+                PlatformViews.Payment.class, PlatformViews.Payments.class, PlatformViews.UserItem.class,
+                // the creator's Assinatura area
+                PeladaSubscriptionDTO.class,
                 ErrorResponse.class);
     }
 
@@ -116,10 +130,14 @@ class ContractSnapshotTest {
                 BulkRemovePlayersRequestDTO.class, TransferCreatorRequestDTO.class,
                 CreateDailyRequestDTO.class, SwapPlayersRequestDTO.class, UpdateDailyStatusRequestDTO.class,
                 UpdateTeamNameRequestDTO.class, UpdateTeamColorRequestDTO.class, MatchResultDTO.class,
-                FinalizeDailyRequestDTO.class, PopulateDailyRequestDTO.class,
+                FinalizeDailyRequestDTO.class, PopulateDailyRequestDTO.class, SaveTeamsRequestDTO.class,
                 UpdateProfileRequest.class, SendMessageRequest.class,
                 NotificationPreferenceDTO.class, UnsubscribeRequestDTO.class,
-                FinanceRequests.BulkAdjust.class);
+                PushSubscriptionRequestDTO.class, RemovePushSubscriptionRequestDTO.class,
+                FinanceRequests.BulkAdjust.class,
+                PlatformRequests.RecordPayment.class, PlatformRequests.ChangeSubscription.class,
+                PlatformRequests.VoidPayment.class,
+                PixClaimRequestDTO.class);
     }
 
     private static final Set<Class<?>> SENT_AS_LIST = Set.of(MatchResultDTO.class, NotificationPreferenceDTO.class);

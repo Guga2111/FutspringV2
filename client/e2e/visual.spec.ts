@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test"
-import { mockApi, login } from "./mockApi"
-import { FINISHED_ID, LIVE_ID, NOW, PELADA_ID, SCHEDULED_ID, financeDetail, financeMemberDetail, financeMemberOverview } from "./fixtures"
+import { mockApi, login, type PushState } from "./mockApi"
+import { CONFIRMED_ID, FINISHED_ID, LIVE_ID, NOW, PELADA_ID, SCHEDULED_ID, pendingDeletionBlockers, financeDetail, financeMemberDetail, financeMemberOverview, financeOverview, pastDueSubscription, peladaDetail, readOnlySubscription, scheduledDaily } from "./fixtures"
 
 const PELADA = `/pelada/${PELADA_ID}`
 
@@ -11,6 +11,10 @@ const pages: { name: string; path: string; auth?: boolean; ready?: string }[] = 
   { name: "auth-register", path: "/auth?tab=register", auth: false, ready: "form" },
   { name: "join-link", path: "/join/Mw.8f3a9c2e7b1d4f60a5c8e2b7d9f1a3c5", auth: false },
   { name: "not-found", path: "/pagina-que-nao-existe", auth: false },
+  { name: "terms", path: "/termos", auth: false, ready: "h1" },
+  { name: "privacy", path: "/privacidade", auth: false, ready: "h1" },
+  // the desktop context: a QR Code to open the page on the phone
+  { name: "install", path: "/instalar", auth: false, ready: "h1" },
   { name: "home", path: "/home" },
   { name: "pelada-overview", path: PELADA },
   { name: "pelada-members", path: `${PELADA}/membros` },
@@ -20,14 +24,22 @@ const pages: { name: string; path: string; auth?: boolean; ready?: string }[] = 
   { name: "pelada-finance", path: `${PELADA}/financeiro` },
   { name: "pelada-settings", path: `${PELADA}/settings` },
   { name: "pelada-invitations", path: `${PELADA}/convites` },
+  { name: "pelada-subscription", path: `${PELADA}/assinatura` },
   { name: "daily-scheduled", path: `/daily/${SCHEDULED_ID}` },
+  { name: "daily-confirmed", path: `/daily/${CONFIRMED_ID}` },
   { name: "daily-live", path: `/daily/${LIVE_ID}` },
   { name: "daily-finished", path: `/daily/${FINISHED_ID}` },
   { name: "profile", path: "/profile/1" },
   { name: "profile-history", path: "/profile/1?aba=historico" },
   { name: "profile-peladas", path: "/profile/1?aba=peladas" },
-  { name: "notification-settings", path: "/settings/notifications" },
+  { name: "account-settings", path: "/settings" },
   { name: "invitation", path: "/invitations/900" },
+  // the platform admin's panel
+  { name: "admin-overview", path: "/admin" },
+  { name: "admin-peladas", path: "/admin/peladas" },
+  { name: "admin-pelada", path: "/admin/peladas/13" },
+  { name: "admin-payments", path: "/admin/pagamentos" },
+  { name: "admin-users", path: "/admin/usuarios" },
 ]
 
 // Loading a lazy page chunk is not what a test asserts, and under parallel workers (or the emulated amd64
@@ -84,6 +96,40 @@ for (const { name, path, auth, ready } of pages) {
   })
 }
 
+// /instalar shows the steps of the platform detected from the user agent
+const USER_AGENTS = {
+  ios: "Mozilla/5.0 (iPhone; CPU iPhone OS 18_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.1 Mobile/15E148 Safari/604.1",
+  android: "Mozilla/5.0 (Linux; Android 14; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36",
+  "in-app":
+    "Mozilla/5.0 (Linux; Android 14; SM-S918B Build/UP1A.231005.007; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/131.0.6778.81 Mobile Safari/537.36 WhatsApp/2.24",
+}
+
+for (const [context, userAgent] of Object.entries(USER_AGENTS)) {
+  test.describe(`install steps ${context}`, () => {
+    test.use({ userAgent })
+
+    test(`page install-${context}`, async ({ page }) => {
+      const unmatched = await open(page, "/instalar", false, "h1")
+      await expectNoHorizontalScroll(page)
+      await expect(page).toHaveScreenshot(`install-${context}.png`, { fullPage: true })
+      expect(unmatched, "requests without a fixture").toEqual([])
+    })
+  })
+}
+
+// On a phone's browser, Home offers the install (the default user agent is a desktop, so the card is hidden there)
+test.describe("home on an iPhone", () => {
+  test.use({ userAgent: USER_AGENTS.ios })
+
+  test("home install card", async ({ page }, testInfo) => {
+    test.skip(!testInfo.project.name.startsWith("mobile"), "the card is for phones")
+    await open(page, "/home")
+    const card = page.getByRole("region", { name: "Instalar o app" })
+    await expect(card).toBeVisible()
+    await expect(card).toHaveScreenshot("home-install-card.png")
+  })
+})
+
 // Collapsed sidebar: every row is one 40 px square at the same x (icons and avatars on one axis)
 test("sidebar collapsed", async ({ page }, testInfo) => {
   test.skip(!testInfo.project.name.startsWith("desktop"), "below md the sidebar is a Sheet")
@@ -122,6 +168,23 @@ test("dialog results", async ({ page }) => {
   await expect(page.getByRole("dialog")).toHaveScreenshot("dialog-results.png", DIALOG_SHOT)
 })
 
+// "Montar times" over a confirmed session with a short team and a player without one
+test("teams editor", async ({ page }, testInfo) => {
+  await open(page, `/daily/${CONFIRMED_ID}`)
+  await page.getByRole("button", { name: "Editar times" }).click()
+  const sheet = page.getByRole("dialog", { name: "Montar times" })
+  await expect(sheet).toBeVisible()
+  await settle(page)
+  await expect(sheet).toHaveScreenshot("teams-editor.png", DIALOG_SHOT)
+  if (testInfo.project.name.startsWith("mobile")) {
+    await sheet.getByRole("button", { name: "Mover João" }).click()
+    const drawer = page.getByRole("dialog", { name: /Mover João para/ })
+    await expect(drawer).toBeVisible()
+    await settle(page)
+    await expect(drawer).toHaveScreenshot("teams-editor-move.png", DIALOG_SHOT)
+  }
+})
+
 test("sessions gallery", async ({ page }) => {
   const unmatched = await open(page, `${PELADA}/sessoes`)
   await page.getByRole("radio", { name: "Ver em galeria" }).click()
@@ -129,6 +192,109 @@ test("sessions gallery", async ({ page }) => {
   await expectNoHorizontalScroll(page)
   await expect(page).toHaveScreenshot("pelada-sessions-gallery.png", { fullPage: true })
   expect(unmatched, "requests without a fixture").toEqual([])
+})
+
+// The subscription's state: the notice under the header and the disabled writes (the server answers 402 anyway)
+test("subscription: read-only pelada, as its creator", async ({ page }) => {
+  const unmatched = await open(page, PELADA, true, "h1, h2", (p) =>
+    p.route(/\/api\/v1\/peladas\/\d+$/, (route) => route.fulfill({ json: { ...peladaDetail, subscription: readOnlySubscription } })))
+  const notice = page.locator("#subscription-notice")
+  await expect(notice).toContainText("Pelada em somente leitura")
+  await expect(notice.getByRole("link", { name: "Assinar" })).toHaveAttribute("href", `${PELADA}/assinatura`)
+  await expect(page.getByRole("button", { name: "Pelada em somente leitura" })).toBeDisabled()
+  await expectNoHorizontalScroll(page)
+  await expect(page).toHaveScreenshot("subscription-read-only.png", { fullPage: true })
+  expect(unmatched, "requests without a fixture").toEqual([])
+})
+
+test("subscription: past due, as its creator", async ({ page }) => {
+  const unmatched = await open(page, PELADA, true, "h1, h2", (p) =>
+    p.route(/\/api\/v1\/peladas\/\d+$/, (route) => route.fulfill({ json: { ...peladaDetail, subscription: pastDueSubscription } })))
+  const notice = page.locator("#subscription-notice")
+  await expect(notice).toContainText("Pagamento pendente: a pelada trava em 09/11")
+  await expect(notice).toHaveScreenshot("subscription-past-due.png")
+  expect(unmatched, "requests without a fixture").toEqual([])
+})
+
+test("subscription: read-only session, as an admin who isn't the creator", async ({ page }) => {
+  const unmatched = await open(page, `/daily/${SCHEDULED_ID}`, true, "h1, h2", (p) =>
+    p.route(/\/api\/v1\/dailies\/\d+$/, (route) =>
+      route.fulfill({ json: { ...scheduledDaily, creatorId: 2, subscription: readOnlySubscription } })))
+  await expect(page.locator("#subscription-notice")).toContainText("o criador precisa renovar a assinatura")
+  await expect(page.getByRole("button", { name: "Confirmar sessão" })).toBeDisabled()
+  await expect(page.getByRole("button", { name: "Importar mensagem" })).toBeDisabled()
+  await expectNoHorizontalScroll(page)
+  await expect(page).toHaveScreenshot("subscription-read-only-session.png", { fullPage: true })
+  expect(unmatched, "requests without a fixture").toEqual([])
+})
+
+test("account settings: pending items block the deletion", async ({ page }) => {
+  const unmatched = await open(page, "/settings", true, "h1, h2", (p) =>
+    p.route(/\/users\/me\/deletion-blockers$/, (route) => route.fulfill({ json: pendingDeletionBlockers })))
+  await expect(page.locator("#excluir-conta").getByRole("button", { name: "Excluir conta" })).toBeDisabled()
+  await expectNoHorizontalScroll(page)
+  await expect(page.locator("#excluir-conta")).toHaveScreenshot("account-settings-blockers.png")
+  expect(unmatched, "requests without a fixture").toEqual([])
+})
+
+test("account settings: delete account dialog", async ({ page }) => {
+  await open(page, "/settings")
+  await page.locator("#excluir-conta").getByRole("button", { name: "Excluir conta" }).click()
+  await expect(page.getByRole("alertdialog")).toHaveScreenshot("dialog-delete-account.png", DIALOG_SHOT)
+})
+
+// The "Notificações" card per Web Push state of this device. The Push switches show the saved value but only
+// change on a device that is active
+const PUSH_STATES: Record<string, PushState> = {
+  inactive: {},
+  active: { permission: "granted", subscribed: true },
+  denied: { permission: "denied" },
+}
+
+async function setPushState(page: Page, state: PushState) {
+  await page.addInitScript((s) => {
+    (window as { __pushState?: PushState }).__pushState = s
+  }, state)
+  // an active device sends its subscription again when the app opens
+  await page.route(/\/api\/v1\/push\/subscriptions$/, (route) => route.fulfill({ status: 204 }))
+}
+
+for (const [name, state] of Object.entries(PUSH_STATES)) {
+  test(`account settings: push ${name}`, async ({ page }) => {
+    const unmatched = await open(page, "/settings#notificacoes", true, "h1, h2", (p) => setPushState(p, state))
+    const card = page.locator("#notificacoes")
+    const pushSwitch = card.getByRole("switch", { name: "Push de Presença e vaga" })
+    await expect(pushSwitch).toBeVisible()
+    if (name === "active") await expect(pushSwitch).toBeEnabled()
+    else await expect(pushSwitch).toBeDisabled()
+    await expect(card.getByRole("switch", { name: "E-mail de Presença e vaga" })).toBeEnabled()
+    await expectNoHorizontalScroll(page)
+    await expect(card).toHaveScreenshot(`account-settings-push-${name}.png`)
+    expect(unmatched, "requests without a fixture").toEqual([])
+  })
+}
+
+// An iPhone outside the home screen app has no PushManager: it is pointed at the install steps
+test.describe("account settings on an iPhone's browser", () => {
+  test.use({ userAgent: USER_AGENTS.ios })
+
+  test("account settings: push needsInstall", async ({ page }) => {
+    const unmatched = await open(page, "/settings#notificacoes", true, "h1, h2", (p) =>
+      p.addInitScript(() => {
+        delete (window as { PushManager?: unknown }).PushManager
+      }),
+    )
+    const card = page.locator("#notificacoes")
+    await expect(card.getByRole("link", { name: "Como instalar" })).toHaveAttribute("href", "/instalar")
+    await expect(card.getByRole("switch", { name: "Push de Presença e vaga" })).toBeDisabled()
+    await expect(card).toHaveScreenshot("account-settings-push-needsInstall.png")
+    expect(unmatched, "requests without a fixture").toEqual([])
+  })
+})
+
+test("old notification settings link opens the account settings", async ({ page }) => {
+  await open(page, "/settings/notifications")
+  await expect(page).toHaveURL(/\/settings#notificacoes$/)
 })
 
 test("invitations: history, no active link", async ({ page }) => {
@@ -218,6 +384,26 @@ test("finance manager: history with filters", async ({ page }, testInfo) => {
   expect(unmatched, "requests without a fixture").toEqual([])
 })
 
+test("finance admin who isn't a responsável: member view, notice and the responsáveis card", async ({ page }) => {
+  await page.clock.setFixedTime(NOW)
+  const unmatched = await mockApi(page)
+  const overview = {
+    ...financeMemberOverview,
+    permissions: { manage: false, appointManagers: true, viewCash: false },
+    settings: { ...financeMemberOverview.settings, managerIds: financeOverview.settings.managerIds },
+  }
+  await page.route(/\/finance(\?|$)/, (route) => route.fulfill({ json: overview }))
+  await login(page)
+  await page.goto(FINANCE)
+  await expect(page.getByText("Você não é responsável financeiro")).toBeVisible({ timeout: READY_TIMEOUT })
+  await settle(page)
+  await expect(page).toHaveScreenshot("finance-admin-not-manager.png", { fullPage: true })
+  await page.getByRole("button", { name: "Escolher responsáveis" }).click()
+  await expect(page.getByText("Responsáveis financeiros", { exact: true })).toBeVisible()
+  await expect(page.getByText("Pix para receber")).toHaveCount(0)
+  expect(unmatched, "requests without a fixture").toEqual([])
+})
+
 test("finance member: my charges, Pix and report", async ({ page }) => {
   await page.clock.setFixedTime(NOW)
   const unmatched = await mockApi(page)
@@ -264,4 +450,23 @@ test("finance tour on the first visit", async ({ page }) => {
   await page.keyboard.press("Escape")
   await expect(page.getByText("Crie uma cobrança")).toBeHidden()
   await expect.poll(() => marked).toEqual(["POST /api/v1/tours/FINANCE_MANAGER/seen"])
+})
+
+test("admin: record a payment", async ({ page }) => {
+  const unmatched = await open(page, "/admin/peladas/13")
+  await page.getByRole("button", { name: "Registrar pagamento" }).click()
+  const sheet = page.getByRole("dialog", { name: "Registrar pagamento" })
+  // the plan the creator claimed, with its list price
+  await expect(sheet.getByLabel("Valor cobrado (R$)")).toHaveValue("299,00")
+  await settle(page)
+  await expect(page).toHaveScreenshot("admin-record-payment.png", DIALOG_SHOT)
+  expect(unmatched, "requests without a fixture").toEqual([])
+})
+
+test("admin: someone who isn't a platform admin gets the 404", async ({ page }) => {
+  await open(page, "/admin", true, "h1", (p) =>
+    p.route(/\/api\/v1\/platform\/overview$/, (route) =>
+      route.fulfill({ status: 404, json: { status: 404, message: "Recurso não encontrado", timestamp: NOW.toISOString() } })))
+  await expect(page.getByRole("heading", { name: "Bola fora" })).toBeVisible()
+  await expect(page).toHaveURL(/\/404$/)
 })

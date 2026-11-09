@@ -21,7 +21,7 @@ export default function NotificationUnsubscribePage() {
 function ManagePreferencesButton({ variant }: { variant: "brand" | "ghost" }) {
   return (
     <Button asChild variant={variant} className="w-full">
-      <Link to="/settings/notifications">Gerenciar preferências</Link>
+      <Link to="/settings#notificacoes">Gerenciar preferências</Link>
     </Button>
   )
 }

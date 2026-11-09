@@ -1,12 +1,19 @@
 package com.futspring.backend.domain.user;
 
+import com.futspring.backend.domain.auth.JwtService;
+import com.futspring.backend.domain.auth.dto.AuthResponseDTO;
+import com.futspring.backend.domain.auth.dto.UserResponseDTO;
 import com.futspring.backend.domain.file.FileUploadService;
+import com.futspring.backend.domain.notification.PushSubscriptionRepository;
 import com.futspring.backend.domain.pelada.PeladaPlayerStarsRepository;
 import com.futspring.backend.shared.exception.AppException;
+import com.futspring.backend.shared.helper.UserAuthenticationHelper;
+import com.futspring.backend.domain.user.dto.ChangePasswordRequestDTO;
 import com.futspring.backend.domain.user.dto.ProfileDTO;
 import com.futspring.backend.domain.user.dto.UpdateProfileRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -18,6 +25,10 @@ public class UserService {
     private final UserRepository userRepository;
     private final FileUploadService fileUploadService;
     private final PeladaPlayerStarsRepository playerStarsRepository;
+    private final UserAuthenticationHelper userAuthHelper;
+    private final PasswordEncoder passwordEncoder;
+    private final JwtService jwtService;
+    private final PushSubscriptionRepository pushSubscriptionRepository;
 
     // Public profile; the email is only included for the owner
     @Transactional(readOnly = true)
@@ -66,6 +77,25 @@ public class UserService {
         return toProfile(userRepository.save(user), true);
     }
 
+    /**
+     * Changes the caller's password and revokes every session opened before (tokenVersion), answering a token of the
+     * new version so this device stays logged in. Every Web Push subscription goes too: this device subscribes again
+     * when the app opens (the permission is still granted).
+     */
+    @Transactional
+    public AuthResponseDTO changePassword(ChangePasswordRequestDTO request, String callerEmail) {
+        User user = userAuthHelper.getAuthenticatedUser(callerEmail);
+        if (!passwordEncoder.matches(request.currentPassword(), user.getPassword())) {
+            throw AppException.field("currentPassword", "Senha atual incorreta");
+        }
+        user.setPassword(passwordEncoder.encode(request.newPassword()));
+        user.setTokenVersion(user.getTokenVersion() + 1);
+        userRepository.save(user);
+        pushSubscriptionRepository.deleteAllByUserId(user.getId());
+        String token = jwtService.generateToken(user.getId(), user.getEmail(), user.getTokenVersion());
+        return new AuthResponseDTO(token, UserResponseDTO.from(user));
+    }
+
     // Profile stars: the rounded average of the user's stars in every pelada they belong to
     private ProfileDTO toProfile(User user, boolean isSelf) {
         Double average = playerStarsRepository.averageStarsByUser(user.getId());
@@ -73,7 +103,7 @@ public class UserService {
     }
 
     private User findUser(Long id) {
-        return userRepository.findById(id)
+        return userRepository.findByIdAndDeletedAtIsNull(id)
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Usuário não encontrado"));
     }
 

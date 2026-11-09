@@ -12,6 +12,7 @@
   "numberOfTeams" : 495,
   "playersPerTeam" : 905,
   "timeZone" : "timeZone",
+  "isAdmin" : true,
   "nextDaily" : {
     "id" : 356,
     "date" : "2026-10-31",
@@ -19,6 +20,7 @@
     "status" : "SCHEDULED",
     "confirmedCount" : 697,
     "capacity" : 547,
+    "isConfirmed" : true,
     "startsAt" : "2026-10-31T23:00:00Z",
     "confirmOpensAt" : "2026-10-31T23:00:00Z",
     "bump" : {
@@ -26,17 +28,22 @@
         "id" : 356,
         "username" : "username",
         "image" : "image",
-        "position" : "position"
+        "position" : "position",
+        "isDeleted" : true
       },
       "bumpedBy" : {
         "id" : 356,
         "username" : "username",
         "image" : "image",
-        "position" : "position"
+        "position" : "position",
+        "isDeleted" : true
       },
       "bumpedAt" : "2026-10-31T23:00:00Z"
-    },
-    "isConfirmed" : true
+    }
   },
-  "isAdmin" : true
+  "subscription" : {
+    "status" : "TRIAL",
+    "validUntil" : "2026-10-31T23:00:00Z",
+    "writable" : true
+  }
 }

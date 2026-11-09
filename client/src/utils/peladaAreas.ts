@@ -8,31 +8,43 @@ export type PeladaArea =
   | "finance"
   | "invitations"
   | "settings"
+  | "subscription"
 
 export type PeladaAreaGroup = "Pelada" | "Gestão"
+
+// The caller's relationship with the pelada: the creator is also an admin, an admin also a member
+export type PeladaRole = "member" | "admin" | "creator"
+
+const ROLE_RANK: Record<PeladaRole, number> = { member: 0, admin: 1, creator: 2 }
+
+export function peladaRole(isAdmin: boolean, isCreator: boolean): PeladaRole {
+  return isCreator ? "creator" : isAdmin ? "admin" : "member"
+}
 
 export interface PeladaAreaInfo {
   label: string
   // segment after /pelada/:id ("" for the overview)
   segment: string
   group: PeladaAreaGroup
-  adminOnly: boolean
+  // who sees it in the navigation (the server checks every route anyway)
+  access: PeladaRole
   // one line for the overview shortcuts
   description: string
 }
 
 export const PELADA_AREAS: Record<PeladaArea, PeladaAreaInfo> = {
-  overview: { label: "Visão geral", segment: "", group: "Pelada", adminOnly: false, description: "O que está acontecendo agora" },
-  members: { label: "Membros", segment: "membros", group: "Pelada", adminOnly: false, description: "Jogadores, tipos e estrelas" },
-  sessions: { label: "Sessões", segment: "sessoes", group: "Pelada", adminOnly: false, description: "Próxima sessão e histórico" },
-  ranking: { label: "Ranking", segment: "ranking", group: "Pelada", adminOnly: false, description: "Gols, assistências e vitórias" },
-  awards: { label: "Prêmios", segment: "premios", group: "Pelada", adminOnly: false, description: "Líderes de cada prêmio" },
-  finance: { label: "Financeiro", segment: "financeiro", group: "Gestão", adminOnly: false, description: "Cobranças e caixa" },
-  invitations: { label: "Convites", segment: "convites", group: "Gestão", adminOnly: true, description: "Link e convites individuais" },
-  settings: { label: "Configurações", segment: "settings", group: "Gestão", adminOnly: true, description: "Horário, local e vagas" },
+  overview: { label: "Visão geral", segment: "", group: "Pelada", access: "member", description: "O que está acontecendo agora" },
+  members: { label: "Membros", segment: "membros", group: "Pelada", access: "member", description: "Jogadores, tipos e estrelas" },
+  sessions: { label: "Sessões", segment: "sessoes", group: "Pelada", access: "member", description: "Próxima sessão e histórico" },
+  ranking: { label: "Ranking", segment: "ranking", group: "Pelada", access: "member", description: "Gols, assistências e vitórias" },
+  awards: { label: "Prêmios", segment: "premios", group: "Pelada", access: "member", description: "Líderes de cada prêmio" },
+  finance: { label: "Financeiro", segment: "financeiro", group: "Gestão", access: "member", description: "Cobranças e caixa" },
+  invitations: { label: "Convites", segment: "convites", group: "Gestão", access: "admin", description: "Link e convites individuais" },
+  settings: { label: "Configurações", segment: "settings", group: "Gestão", access: "admin", description: "Horário, local e vagas" },
+  subscription: { label: "Assinatura", segment: "assinatura", group: "Gestão", access: "creator", description: "Plano, Pix e pagamentos" },
 }
 
-const AREA_ORDER: PeladaArea[] = ["overview", "members", "sessions", "ranking", "awards", "finance", "invitations", "settings"]
+const AREA_ORDER: PeladaArea[] = ["overview", "members", "sessions", "ranking", "awards", "finance", "invitations", "settings", "subscription"]
 
 export function areaPath(peladaId: number | string, area: PeladaArea): string {
   const { segment } = PELADA_AREAS[area]
@@ -49,9 +61,14 @@ export function areaFromPath(pathname: string): PeladaArea | null {
   return AREA_ORDER.find((area) => PELADA_AREAS[area].segment === segment) ?? null
 }
 
-// The areas a caller can open, in selector order; admin-only ones are only hidden (the server checks)
-export function visibleAreas(isAdmin: boolean): PeladaArea[] {
-  return AREA_ORDER.filter((area) => isAdmin || !PELADA_AREAS[area].adminOnly)
+// Whether a caller with this role sees the area in the navigation
+export function canSeeArea(area: PeladaArea, role: PeladaRole): boolean {
+  return ROLE_RANK[role] >= ROLE_RANK[PELADA_AREAS[area].access]
+}
+
+// The areas a caller can open, in selector order; the others are only hidden (the server checks)
+export function visibleAreas(role: PeladaRole): PeladaArea[] {
+  return AREA_ORDER.filter((area) => canSeeArea(area, role))
 }
 
 // True on /pelada/:id and every route below it

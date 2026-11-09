@@ -34,6 +34,8 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Map;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Set;
 
@@ -576,5 +578,171 @@ class DailyControllerTest extends BaseIntegrationTest {
         mockMvc.perform(post("/api/v1/dailies/999999/bumps/seen")
                 .header("Authorization", bearerToken(member.getId(), member.getEmail())))
                 .andExpect(status().isNotFound());
+    }
+
+    // --- PUT /api/v1/dailies/{id}/teams ---
+
+    private String teamsBody(List<?> teams) throws Exception {
+        return objectMapper.writeValueAsString(Map.of("teams", teams));
+    }
+
+    private Map<String, Object> teamJson(String name, String color, Long... playerIds) {
+        Map<String, Object> team = new HashMap<>();
+        team.put("name", name);
+        team.put("color", color);
+        team.put("playerIds", List.of(playerIds));
+        return team;
+    }
+
+    private org.springframework.test.web.servlet.ResultActions putTeams(User caller, String body) throws Exception {
+        return mockMvc.perform(put("/api/v1/dailies/" + daily.getId() + "/teams")
+                .contentType(MediaType.APPLICATION_JSON)
+                .header("Authorization", bearerToken(caller.getId(), caller.getEmail()))
+                .content(body));
+    }
+
+    private User confirmedPlayer(String name) {
+        User player = userRepository.save(User.builder()
+                .email(name + "@test.com").username(name).password("hash").build());
+        pelada.getMembers().add(player);
+        attendanceRepository.save(new DailyAttendance(daily, player, Instant.now()));
+        return player;
+    }
+
+    @Test
+    void saveTeams_asAdmin_differentSizesAndALeftover() throws Exception {
+        User a = confirmedPlayer("mt1");
+        User b = confirmedPlayer("mt2");
+        User c = confirmedPlayer("mt3");
+        confirmedPlayer("mt4");
+        teamRepository.save(Team.builder().daily(daily).name("Antigo").players(new HashSet<>(Set.of(a))).build());
+
+        putTeams(admin, teamsBody(List.of(
+                teamJson("Azul", "#3b82f6", a.getId(), b.getId()),
+                teamJson("Verde", null, c.getId()))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].name").value("Azul"))
+                .andExpect(jsonPath("$[0].color").value("#3b82f6"))
+                .andExpect(jsonPath("$[0].players.length()").value(2))
+                .andExpect(jsonPath("$[1].players.length()").value(1));
+
+        assertThat(teamRepository.findByDaily(daily)).extracting(Team::getName).containsExactlyInAnyOrder("Azul", "Verde");
+    }
+
+    @Test
+    void saveTeams_invalidBody_returnsBadRequest() throws Exception {
+        User a = confirmedPlayer("iv1");
+        List<Map<String, Object>> eleven = new java.util.ArrayList<>();
+        for (int i = 0; i < 11; i++) eleven.add(teamJson("Time " + i, null, a.getId()));
+
+        putTeams(admin, teamsBody(List.of(teamJson("Só", null, a.getId())))).andExpect(status().isBadRequest());
+        putTeams(admin, teamsBody(eleven)).andExpect(status().isBadRequest());
+        putTeams(admin, teamsBody(List.of(teamJson("x".repeat(31), null, a.getId()), teamJson("B", null))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors['teams[0].name']").exists());
+        putTeams(admin, teamsBody(List.of(teamJson("A", "azul", a.getId()), teamJson("B", null))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors['teams[0].color']").exists());
+    }
+
+    @Test
+    void saveTeams_repeatedPlayerOrEmptyTeam_returnsBadRequest() throws Exception {
+        User a = confirmedPlayer("rp1");
+        User b = confirmedPlayer("rp2");
+
+        putTeams(admin, teamsBody(List.of(teamJson("A", null, a.getId(), b.getId()), teamJson("B", null, b.getId()))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("rp2 aparece em mais de um time"));
+        putTeams(admin, teamsBody(List.of(teamJson("A", null, a.getId(), b.getId()), teamJson("Time 2", null))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("O Time 2 está vazio"));
+    }
+
+    @Test
+    void saveTeams_playerNotConfirmed_returnsConflict() throws Exception {
+        User a = confirmedPlayer("nc1");
+
+        putTeams(admin, teamsBody(List.of(teamJson("A", null, a.getId()), teamJson("B", null, member.getId()))))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("dmember não está mais confirmada"));
+    }
+
+    @Test
+    void saveTeams_lockedSession_returnsBadRequest() throws Exception {
+        User a = confirmedPlayer("lk1");
+        User b = confirmedPlayer("lk2");
+        daily.setStatus(DailyStatus.IN_COURSE);
+        dailyRepository.save(daily);
+
+        putTeams(admin, teamsBody(List.of(teamJson("A", null, a.getId()), teamJson("B", null, b.getId()))))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void saveTeams_notAdmin_returnsForbidden() throws Exception {
+        String body = teamsBody(List.of(teamJson("A", null, 1L), teamJson("B", null, 2L)));
+        putTeams(member, body).andExpect(status().isForbidden());
+        putTeams(outsider, body).andExpect(status().isForbidden());
+    }
+
+    @Test
+    void saveTeams_unknownDaily_returnsNotFound() throws Exception {
+        mockMvc.perform(put("/api/v1/dailies/999999/teams")
+                .contentType(MediaType.APPLICATION_JSON)
+                .header("Authorization", bearerToken(admin.getId(), admin.getEmail()))
+                .content(teamsBody(List.of(teamJson("A", null, 1L), teamJson("B", null, 2L)))))
+                .andExpect(status().isNotFound());
+    }
+
+    // --- start (CONFIRMED → IN_COURSE) and withdrawals ---
+
+    private org.springframework.test.web.servlet.ResultActions start() throws Exception {
+        return mockMvc.perform(put("/api/v1/dailies/" + daily.getId() + "/status")
+                .contentType(MediaType.APPLICATION_JSON)
+                .header("Authorization", bearerToken(admin.getId(), admin.getEmail()))
+                .content(objectMapper.writeValueAsString(new UpdateDailyStatusRequestDTO(DailyStatus.IN_COURSE))));
+    }
+
+    @Test
+    void start_withoutTeams_returnsConflict() throws Exception {
+        daily.setStatus(DailyStatus.CONFIRMED);
+        dailyRepository.save(daily);
+
+        start().andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("Monte os times antes de iniciar a sessão"));
+    }
+
+    @Test
+    void start_withShortTeamsAndALeftover_succeeds() throws Exception {
+        User a = confirmedPlayer("st1");
+        User b = confirmedPlayer("st2");
+        confirmedPlayer("st3");
+        daily.setStatus(DailyStatus.CONFIRMED);
+        dailyRepository.save(daily);
+        teamRepository.save(Team.builder().daily(daily).name("T1").players(new HashSet<>(Set.of(a))).build());
+        teamRepository.save(Team.builder().daily(daily).name("T2").players(new HashSet<>(Set.of(b))).build());
+
+        start().andExpect(status().isOk()).andExpect(jsonPath("$.status").value("IN_COURSE"));
+    }
+
+    @Test
+    void withdraw_takesThePlayerOutOfTheirTeam() throws Exception {
+        attendanceRepository.save(new DailyAttendance(daily, member, Instant.now()));
+        Team team = teamRepository.save(Team.builder().daily(daily).name("T1")
+                .players(new HashSet<>(Set.of(member))).build());
+
+        mockMvc.perform(delete("/api/v1/dailies/" + daily.getId() + "/confirm")
+                .header("Authorization", bearerToken(member.getId(), member.getEmail())))
+                .andExpect(status().isOk());
+        entityManager.flush();
+        entityManager.clear();
+
+        assertThat(teamRepository.findByDailyWithPlayers(daily))
+                .singleElement()
+                .satisfies(t -> {
+                    assertThat(t.getId()).isEqualTo(team.getId());
+                    assertThat(t.getPlayers()).isEmpty();
+                });
     }
 }

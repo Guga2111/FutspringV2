@@ -1,0 +1,13 @@
+{
+  "id" : 356,
+  "username" : "username",
+  "email" : "email",
+  "createdAt" : "2026-10-31T23:00:00Z",
+  "peladasCreated" : [ {
+    "id" : 356,
+    "name" : "name"
+  } ],
+  "memberOf" : 274,
+  "trialUsedAt" : "2026-10-31T23:00:00Z",
+  "isDeleted" : true
+}

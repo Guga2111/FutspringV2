@@ -21,12 +21,14 @@
       "id" : 356,
       "username" : "username",
       "image" : "image",
-      "position" : "position"
+      "position" : "position",
+      "isDeleted" : true
     },
     "team" : {
       "name" : "name",
       "color" : "color"
-    }
+    },
+    "validUntil" : "2026-10-31T23:00:00Z"
   },
   "unreadCount" : 169
 }

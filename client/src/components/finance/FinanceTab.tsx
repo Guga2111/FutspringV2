@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { ArrowRight01Icon, PlusSignIcon, RefreshIcon } from "@hugeicons/core-free-icons"
+import { ArrowRight01Icon, InformationCircleIcon, PlusSignIcon, RefreshIcon } from "@hugeicons/core-free-icons"
 import { toast } from "sonner"
 import * as api from "@/api/finance"
 import type { PeladaMember } from "@/types/pelada"
@@ -31,6 +31,7 @@ import { FinanceTour, FinanceTourButton } from "@/components/finance/FinanceTour
 import { formatFinanceMoney } from "@/utils/finance"
 import { getErrorMessage } from "@/lib/errors"
 import { Button } from "@/components/ui/button"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
@@ -42,7 +43,8 @@ type EditorAction = { kind: "create" } | { kind: "list"; list?: FinanceList; tem
 type Editor = EditorAction & { revision: number }
 
 // timeZone: the pelada's, for the dates and times of payments and notices
-export function FinanceTab({ peladaId, userId, members, dailies, timeZone }: { peladaId: number; userId: number | null; members: PeladaMember[]; dailies: DailyListItem[]; timeZone: string }) {
+// writable: false while the pelada is read-only (subscription): reading stays, every write control is disabled
+export function FinanceTab({ peladaId, userId, members, dailies, timeZone, writable }: { peladaId: number; userId: number | null; members: PeladaMember[]; dailies: DailyListItem[]; timeZone: string; writable: boolean }) {
   // the open collection lives in the URL (/financeiro/:listId): back/forward, reload and the WhatsApp link open it
   const { listId } = useParams<{ listId: string }>()
   const selected = listId && /^\d+$/.test(listId) ? Number(listId) : null
@@ -52,7 +54,7 @@ export function FinanceTab({ peladaId, userId, members, dailies, timeZone }: { p
     const base = areaPath(peladaId, "finance")
     navigate(id === null ? base : `${base}/${id}`)
   }, [navigate, peladaId, selected])
-  const finance = useFinance(peladaId, selected, select)
+  const finance = useFinance(peladaId, selected, select, writable)
   const [tabState, setTabState] = useState("collections")
   // a collection in the URL is always shown on the collections tab
   const tab = selected !== null ? "collections" : tabState
@@ -75,6 +77,8 @@ export function FinanceTab({ peladaId, userId, members, dailies, timeZone }: { p
     catch (error) { toast.error(getErrorMessage(error, "Não foi possível atualizar a cobrança")) }
   }
   const manage = Boolean(overview?.permissions.manage)
+  // admins who aren't responsáveis see the member view; they only reach the settings to appoint responsáveis
+  const appointOnly = Boolean(overview?.permissions.appointManagers) && !manage
   // the tour points at the collections list, so it brings it on screen first
   const prepareTour = () => { setEditor(null); setReason(null); setTab("collections"); finance.select(null) }
   const collectionRow = (list: FinanceList) => (
@@ -124,7 +128,7 @@ export function FinanceTab({ peladaId, userId, members, dailies, timeZone }: { p
             </TabsTrigger>
             {overview.permissions.viewCash && <TabsTrigger variant="underline" value="cash" data-tour="cash-tab">Caixa</TabsTrigger>}
             {manage && <TabsTrigger variant="underline" value="history">Histórico</TabsTrigger>}
-            {manage && <TabsTrigger variant="underline" value="settings" data-tour="settings-tab">Configurações</TabsTrigger>}
+            {(manage || appointOnly) && <TabsTrigger variant="underline" value="settings" data-tour="settings-tab">Configurações</TabsTrigger>}
           </TabsList>
           <div className="flex shrink-0 items-center">
             <FinanceTourButton onPrepare={prepareTour} />
@@ -132,6 +136,16 @@ export function FinanceTab({ peladaId, userId, members, dailies, timeZone }: { p
           </div>
         </div>
         {finance.error && <FinanceFormError message={finance.error} />}
+        {appointOnly && tab !== "settings" && (
+          <Alert className="mb-5">
+            <HugeiconsIcon icon={InformationCircleIcon} />
+            <AlertTitle>Você não é responsável financeiro</AlertTitle>
+            <AlertDescription className="flex flex-col items-start gap-3">
+              Por isso você vê o financeiro como os outros membros. Para criar cobranças, receber e ver o histórico, designe-se como responsável.
+              <Button variant="outline" size="sm" onClick={() => setTab("settings")}>Escolher responsáveis</Button>
+            </AlertDescription>
+          </Alert>
+        )}
         <TabsContent value="collections" className="mt-0 flex flex-col gap-5">
           {finance.selected === null ? <>
             <header className="flex flex-wrap items-start justify-between gap-3">
@@ -139,7 +153,7 @@ export function FinanceTab({ peladaId, userId, members, dailies, timeZone }: { p
                 <h2 className="text-xl font-semibold">{manage ? "Cobranças da pelada" : "Minhas cobranças"}</h2>
                 <p className="mt-1 text-sm text-muted-foreground">{manage ? "Abra uma cobrança para receber ou conferir pagamentos." : "Veja o que falta pagar, pague com Pix e informe o pagamento."}</p>
               </div>
-              {manage && <Button variant="brand" data-tour="new-collection" onClick={() => open({ kind: "create" })} disabled={finance.pending}><HugeiconsIcon icon={PlusSignIcon} className="size-[15px]" strokeWidth={2.2} />Nova cobrança</Button>}
+              {manage && <Button variant="brand" data-tour="new-collection" onClick={() => open({ kind: "create" })} disabled={finance.locked}><HugeiconsIcon icon={PlusSignIcon} className="size-[15px]" strokeWidth={2.2} />Nova cobrança</Button>}
             </header>
             <ToggleGroup type="single" variant="chip" size="chip" data-tour="scope" value={finance.scope} onValueChange={value => { if (value) finance.setScope(value as FinanceListScope) }} className="justify-start" aria-label="Situação das cobranças">
               {(Object.keys(financeListScopeLabel) as FinanceListScope[]).map(scope => <ToggleGroupItem key={scope} value={scope}>{financeListScopeLabel[scope]}</ToggleGroupItem>)}
@@ -148,7 +162,7 @@ export function FinanceTab({ peladaId, userId, members, dailies, timeZone }: { p
               <div data-tour="collections" className="flex flex-col items-start gap-3 rounded-lg border p-6">
                 <h3 className="font-medium">{scopeEmpty[finance.scope].title}</h3>
                 <p className="text-sm text-muted-foreground">{scopeEmpty[finance.scope].text}</p>
-                {manage && finance.scope === "ACTIVE" && <Button variant="outline" onClick={() => open({ kind: "create" })}>Criar cobrança</Button>}
+                {manage && finance.scope === "ACTIVE" && <Button variant="outline" disabled={!finance.writable} onClick={() => open({ kind: "create" })}>Criar cobrança</Button>}
               </div>
             ) : <ul data-tour="collections" className="rounded-lg border">{overview.lists.map(collectionRow)}</ul>}
             <ListPagination page={finance.page} total={overview.total} size={api.FINANCE_LISTS_PAGE_SIZE} noun={["cobrança", "cobranças"]} disabled={finance.pending} onPage={finance.setPage} />
@@ -158,12 +172,12 @@ export function FinanceTab({ peladaId, userId, members, dailies, timeZone }: { p
           <header><h2 className="text-xl font-semibold">Caixa da pelada</h2><p className="mt-1 text-sm text-muted-foreground">Dinheiro que já entrou e saiu.</p></header>
           <div className="flex flex-wrap items-end justify-between gap-4 rounded-lg bg-muted p-5">
             <div><p className="text-sm text-muted-foreground">Saldo disponível registrado</p><p className="mt-1 font-display text-score font-bold tabular-nums">{formatFinanceMoney(overview.balance ?? "0.00")}</p></div>
-            {manage && <div className="flex flex-wrap gap-2"><Button variant="brand" onClick={() => open({ kind: "cash", cashKind: "EXPENSE" })}><HugeiconsIcon icon={PlusSignIcon} className="size-[15px]" strokeWidth={2.2} />Despesa</Button><Button variant="outline" onClick={() => open({ kind: "cash", cashKind: "INCOME" })}>Outra entrada</Button><DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost">Mais</Button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuGroup><DropdownMenuItem onClick={() => open({ kind: "cash", cashKind: "OPENING" })}>Registrar saldo inicial</DropdownMenuItem></DropdownMenuGroup></DropdownMenuContent></DropdownMenu></div>}
+            {manage && <div className="flex flex-wrap gap-2"><Button variant="brand" disabled={!finance.writable} onClick={() => open({ kind: "cash", cashKind: "EXPENSE" })}><HugeiconsIcon icon={PlusSignIcon} className="size-[15px]" strokeWidth={2.2} />Despesa</Button><Button variant="outline" disabled={!finance.writable} onClick={() => open({ kind: "cash", cashKind: "INCOME" })}>Outra entrada</Button><DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" disabled={!finance.writable}>Mais</Button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuGroup><DropdownMenuItem onClick={() => open({ kind: "cash", cashKind: "OPENING" })}>Registrar saldo inicial</DropdownMenuItem></DropdownMenuGroup></DropdownMenuContent></DropdownMenu></div>}
           </div>
           {tab === "cash" && <FinanceHistory peladaId={peladaId} kind="cash" finance={finance} timeZone={timeZone} members={members} onReason={askReason} />}
         </TabsContent>}
-        {manage && <TabsContent value="settings" className="mt-0 flex flex-col gap-5">
-          <header><h2 className="text-xl font-semibold">Configurações do financeiro</h2><p className="mt-1 text-sm text-muted-foreground">Pix, visibilidade, responsáveis e modelos de cobrança.</p></header>
+        {(manage || appointOnly) && <TabsContent value="settings" className="mt-0 flex flex-col gap-5">
+          <header><h2 className="text-xl font-semibold">Configurações do financeiro</h2><p className="mt-1 text-sm text-muted-foreground">{manage ? "Pix, visibilidade, responsáveis e modelos de cobrança." : "Escolha quem cuida do dinheiro da pelada."}</p></header>
           {tab === "settings" && <FinanceSettings key={overview.revision} peladaId={peladaId} finance={finance} members={members} onTemplate={template => open({ kind: "list", template })} />}
         </TabsContent>}
         {manage && <TabsContent value="history" className="mt-0 flex flex-col gap-5">

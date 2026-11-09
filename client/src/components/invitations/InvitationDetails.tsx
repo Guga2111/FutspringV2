@@ -8,7 +8,7 @@ export function InvitationDetails({ sender, rows }: { sender: PublicUser; rows: 
       <div className="flex flex-col gap-1 sm:col-span-2">
         <dt className="text-body-sm text-muted-foreground">Convidado por</dt>
         <dd className="flex items-center gap-2 text-body font-medium">
-          <PlayerAvatar userId={sender.id} username={sender.username} image={sender.image} className="size-7 text-overline" />
+          <PlayerAvatar userId={sender.id} username={sender.username} image={sender.image} deleted={sender.isDeleted} className="size-7 text-overline" />
           {sender.username}
         </dd>
       </div>

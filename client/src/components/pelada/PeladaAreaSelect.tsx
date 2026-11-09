@@ -1,21 +1,21 @@
 import { useNavigate } from "react-router-dom"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
-import { areaPath, PELADA_AREAS, visibleAreas, type PeladaArea, type PeladaAreaGroup } from "@/utils/peladaAreas"
+import { areaPath, PELADA_AREAS, visibleAreas, type PeladaArea, type PeladaAreaGroup, type PeladaRole } from "@/utils/peladaAreas"
 
 interface PeladaAreaSelectProps {
   peladaId: number | string
   current: PeladaArea
-  isAdmin: boolean
+  role: PeladaRole
   className?: string
 }
 
 const GROUPS: PeladaAreaGroup[] = ["Pelada", "Gestão"]
 
 // The only area switcher inside a pelada: one list, the groups are headings (no submenus)
-export function PeladaAreaSelect({ peladaId, current, isAdmin, className }: PeladaAreaSelectProps) {
+export function PeladaAreaSelect({ peladaId, current, role, className }: PeladaAreaSelectProps) {
   const navigate = useNavigate()
-  const areas = visibleAreas(isAdmin)
+  const areas = visibleAreas(role)
 
   return (
     <Select value={current} onValueChange={(value) => navigate(areaPath(peladaId, value as PeladaArea))}>

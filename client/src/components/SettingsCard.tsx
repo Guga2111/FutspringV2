@@ -47,10 +47,12 @@ interface SettingsCardFooterProps {
   dirty: boolean
   submitting: boolean
   onCancel: () => void
+  // saving isn't allowed now (a read-only pelada): Salvar stays disabled, Cancelar still undoes the edit
+  locked?: boolean
 }
 
 // "Tudo salvo." until a field changes; Cancelar puts the saved values back
-export function SettingsCardFooter({ dirty, submitting, onCancel }: SettingsCardFooterProps) {
+export function SettingsCardFooter({ dirty, submitting, onCancel, locked = false }: SettingsCardFooterProps) {
   return (
     <CardFooter className="flex flex-col items-stretch gap-3 border-t bg-card-elevated px-5 py-4 md:flex-row md:items-center md:justify-between md:px-6">
       <p className="text-sm text-muted-foreground" aria-live="polite">
@@ -60,7 +62,7 @@ export function SettingsCardFooter({ dirty, submitting, onCancel }: SettingsCard
         <Button type="button" variant="outline" className="flex-1 md:flex-none" disabled={!dirty || submitting} onClick={onCancel}>
           Cancelar
         </Button>
-        <Button type="submit" variant="brand" className="flex-1 md:flex-none" disabled={!dirty || submitting}>
+        <Button type="submit" variant="brand" className="flex-1 md:flex-none" disabled={!dirty || submitting || locked}>
           Salvar alterações
         </Button>
       </div>
@@ -74,5 +76,15 @@ export function SettingsRootError({ message }: { message: string | undefined }) 
     <Alert variant="destructive">
       <AlertDescription>{message}</AlertDescription>
     </Alert>
+  )
+}
+
+// A labelled group of cards on a settings page ("Conta", "Zona de perigo")
+export function SettingsGroup({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <section className="flex flex-col gap-3">
+      <h2 className="text-caption font-semibold text-muted-foreground">{label}</h2>
+      <div className="flex flex-col gap-4">{children}</div>
+    </section>
   )
 }

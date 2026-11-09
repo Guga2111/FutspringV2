@@ -36,7 +36,7 @@ class UserServiceTest {
 
     @BeforeEach
     void setUp() {
-        userService = new UserService(userRepository, fileUploadService, playerStarsRepository);
+        userService = new UserService(userRepository, fileUploadService, playerStarsRepository, null, null, null, null);
 
         user = User.builder()
                 .id(1L)
@@ -50,7 +50,7 @@ class UserServiceTest {
 
     @Test
     void uploadUserImage_success() {
-        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.of(user));
         when(userRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         when(fileUploadService.uploadImage(any())).thenReturn("photo.jpg");
 
@@ -64,7 +64,7 @@ class UserServiceTest {
 
     @Test
     void uploadUserImage_unauthorized() {
-        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.of(user));
 
         MockMultipartFile file = new MockMultipartFile("file", "photo.jpg", "image/jpeg", new byte[100]);
 
@@ -75,7 +75,7 @@ class UserServiceTest {
 
     @Test
     void uploadUserImage_userNotFound() {
-        when(userRepository.findById(99L)).thenReturn(Optional.empty());
+        when(userRepository.findByIdAndDeletedAtIsNull(99L)).thenReturn(Optional.empty());
 
         MockMultipartFile file = new MockMultipartFile("file", "photo.jpg", "image/jpeg", new byte[100]);
 
@@ -86,7 +86,7 @@ class UserServiceTest {
 
     @Test
     void uploadUserImage_fileTooLarge() {
-        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.of(user));
         when(fileUploadService.uploadImage(any())).thenThrow(new AppException(HttpStatus.BAD_REQUEST, "File size exceeds 5MB limit"));
 
         byte[] bigFile = new byte[6 * 1024 * 1024];
@@ -99,7 +99,7 @@ class UserServiceTest {
 
     @Test
     void uploadUserImage_invalidMimeType() {
-        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.of(user));
         when(fileUploadService.uploadImage(any())).thenThrow(new AppException(HttpStatus.BAD_REQUEST, "Only JPEG, PNG, and WebP images are allowed"));
 
         MockMultipartFile file = new MockMultipartFile("file", "script.txt", "text/plain", new byte[100]);
@@ -113,7 +113,7 @@ class UserServiceTest {
     void uploadUserImage_deletesOldFile() {
         user.setImage("old-avatar.jpg");
 
-        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.of(user));
         when(userRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         when(fileUploadService.uploadImage(any())).thenReturn("new.jpg");
 
@@ -127,7 +127,7 @@ class UserServiceTest {
 
     @Test
     void uploadBackgroundImage_success() {
-        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.of(user));
         when(userRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         when(fileUploadService.uploadImage(any())).thenReturn("bg.png");
 
@@ -141,7 +141,7 @@ class UserServiceTest {
 
     @Test
     void uploadBackgroundImage_unauthorized() {
-        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.of(user));
 
         MockMultipartFile file = new MockMultipartFile("file", "bg.png", "image/png", new byte[200]);
 
@@ -152,7 +152,7 @@ class UserServiceTest {
 
     @Test
     void uploadBackgroundImage_userNotFound() {
-        when(userRepository.findById(99L)).thenReturn(Optional.empty());
+        when(userRepository.findByIdAndDeletedAtIsNull(99L)).thenReturn(Optional.empty());
 
         MockMultipartFile file = new MockMultipartFile("file", "bg.png", "image/png", new byte[200]);
 
@@ -163,7 +163,7 @@ class UserServiceTest {
 
     @Test
     void uploadBackgroundImage_fileTooLarge() {
-        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.of(user));
         when(fileUploadService.uploadImage(any())).thenThrow(new AppException(HttpStatus.BAD_REQUEST, "File size exceeds 5MB limit"));
 
         byte[] bigFile = new byte[6 * 1024 * 1024];
@@ -176,7 +176,7 @@ class UserServiceTest {
 
     @Test
     void uploadBackgroundImage_invalidMimeType() {
-        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.of(user));
         when(fileUploadService.uploadImage(any())).thenThrow(new AppException(HttpStatus.BAD_REQUEST, "Only JPEG, PNG, and WebP images are allowed"));
 
         MockMultipartFile file = new MockMultipartFile("file", "script.txt", "text/plain", new byte[100]);
@@ -190,7 +190,7 @@ class UserServiceTest {
     void uploadBackgroundImage_deletesOldFile() {
         user.setBackgroundImage("old-bg.jpg");
 
-        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.of(user));
         when(userRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         when(fileUploadService.uploadImage(any())).thenReturn("new-bg.png");
 

@@ -1,6 +1,7 @@
 package com.futspring.backend.domain.daily.dto;
 
 import com.futspring.backend.domain.daily.entity.DailyStatus;
+import com.futspring.backend.domain.subscription.dto.SubscriptionSummaryDTO;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Builder;
@@ -26,6 +27,8 @@ public record DailyDetailDTO(
         AwardDTO award,
         Long peladaId,
         String peladaName,
+        // who created the pelada (the subscription banner differs for them)
+        Long creatorId,
         int numberOfTeams,
         int playersPerTeam,
         @JsonProperty("isAdmin")
@@ -41,7 +44,9 @@ public record DailyDetailDTO(
         // the caller's bump in this session not dismissed yet, or null
         AttendanceBumpDTO myBump,
         // every bump of the session, newest first
-        List<AttendanceBumpDTO> bumps) {
+        List<AttendanceBumpDTO> bumps,
+        // the pelada's subscription; null without a row (read as writable)
+        SubscriptionSummaryDTO subscription) {
 
     @Builder
     public record PlayerDTO(
@@ -50,6 +55,9 @@ public record DailyDetailDTO(
             String image,
             int stars,
             String position,
+            // a deleted account ("Ex-jogador") in a past session
+            @JsonProperty("isDeleted")
+            boolean isDeleted,
             // only on confirmedPlayers and peladaMembers
             @JsonInclude(JsonInclude.Include.NON_NULL)
             @JsonProperty("isMensalista")
