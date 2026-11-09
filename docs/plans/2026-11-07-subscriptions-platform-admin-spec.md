@@ -329,7 +329,7 @@ Para planejar um PR, rode o prompt dele numa sessão limpa (`/clear` antes). Ao 
 - 404 para quem não é admin, mas um corpo ou id malformado ainda responde 400 antes (`@Valid`). As rotas não são segredo, porque o bundle do front do PR 6 vai nomeá-las; o que fica protegido são os dados.
 - Contrato: `isPlatformAdmin` em `UserResponseDTO` e só no próprio `ProfileDTO` (o tipo do front ficou opcional, porque uma sessão guardada antes não traz o campo). O `ContractFixtures` passou a montar `Map` com chave enum. Os request bodies da plataforma entram no snapshot de requests no PR 6, junto de `api/platform.ts`.
 
-### [ ] PR 6 — Painel do admin, front (`feat/subscriptions-platform-ui`)
+### [x] PR 6 — Painel do admin, front (`feat/subscriptions-platform-ui`)
 
 - **Entrega:**
   - `api/platform.ts`, tipos e schemas.
@@ -343,6 +343,20 @@ Para planejar um PR, rode o prompt dele numa sessão limpa (`/clear` antes). Ao 
 ```
 /plan-task docs/plans/2026-11-07-subscriptions-platform-admin-spec.md "PR 6 — Painel do admin, front"
 ```
+
+**Decisões (PR 6):**
+- Um 404 da API do painel faz a página renderizar `<Navigate to="/404" replace>`. `/404` não tem rota própria, cai no `*` e mostra o "Bola fora" em tela cheia, sem a sidebar (escolha do dono). A URL vira `/404`.
+- O item "Admin" do `UserMenu` lê `isPlatformAdmin` da sessão guardada. Quem vira admin por SQL entra de novo uma vez; `/admin` digitado já funciona, porque a API é quem decide.
+- Não há layout de rota para `/admin`: cada página tem `PlatformPageHeader` (breadcrumb, título e as áreas como links sublinhados num `nav`, não um tablist, como o `PeladaPageHeader`).
+- A tabela de peladas é um `Table` do shadcn sem TanStack: a lista vem ordenada e paginada pelo servidor, sem ordenar nem esconder colunas, e o TanStack acrescentaria um segundo aviso `incompatible-library` no lint.
+- O filtro de estado fica na URL (`?estado=PAST_DUE`), para o "Em atraso" da visão geral linkar direto. A página de cada lista pertence ao filtro (`usePageOf`). As buscas esperam 300 ms (`useDebouncedValue`).
+- Uma leitura só para o painel inteiro (`usePlatformRequest`, chaveada pelo fetcher estável). Os comandos devolvem o detalhe e ele substitui o da tela. O estorno devolve só o pagamento: ele entra na hora e o detalhe é lido de novo por causa do evento `PAYMENT_VOIDED`.
+- Fundadora é um `Switch` salvo na hora (`SET_FOUNDER`, `note: null`). As outras ações usam um `Dialog` só, com o campo de cada uma e nota obrigatória. "Estender dias" fica desabilitado fora de `TRIAL`/`PAID` (o servidor dá 409), "Isentar" numa pelada já isenta e "Cancelar" numa já cancelada.
+- O Sheet de pagamento começa no plano que o criador informou no Pix (senão no plano atual, senão mensal), com o preço de tabela (`prices`) até o valor ser digitado. O valor aceita `19,90` / `1.234,56` (`normalizeFinanceAmount`) e vai como `"19.90"`. A data é hoje em São Paulo e não pode ser no futuro.
+- O evento não traz o plano, então a linha do histórico diz "Pagamento registrado", sem "anual". A validade aparece só quando mudou: "validade A → B", "validade até B" (sem anterior) ou "sem validade".
+- `ChartTooltipContent` ganhou `formatValue` opcional (compatível), para o tooltip da receita mostrar a string exata em reais.
+- Os campos dos formulários reaproveitam `FinanceInput` / `FinanceSelect` / `FinanceFormError`, que são genéricos apesar do nome.
+- Os request bodies da plataforma entraram no snapshot de contrato (`PlatformRequests.RecordPayment`, `.ChangeSubscription`, `.VoidPayment`).
 
 ### [ ] PR 7 — Pix e área Assinatura do criador (`feat/subscriptions-pix`)
 

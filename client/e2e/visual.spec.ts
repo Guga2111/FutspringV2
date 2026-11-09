@@ -33,6 +33,12 @@ const pages: { name: string; path: string; auth?: boolean; ready?: string }[] = 
   { name: "profile-peladas", path: "/profile/1?aba=peladas" },
   { name: "account-settings", path: "/settings" },
   { name: "invitation", path: "/invitations/900" },
+  // the platform admin's panel
+  { name: "admin-overview", path: "/admin" },
+  { name: "admin-peladas", path: "/admin/peladas" },
+  { name: "admin-pelada", path: "/admin/peladas/13" },
+  { name: "admin-payments", path: "/admin/pagamentos" },
+  { name: "admin-users", path: "/admin/usuarios" },
 ]
 
 // Loading a lazy page chunk is not what a test asserts, and under parallel workers (or the emulated amd64
@@ -443,4 +449,23 @@ test("finance tour on the first visit", async ({ page }) => {
   await page.keyboard.press("Escape")
   await expect(page.getByText("Crie uma cobrança")).toBeHidden()
   await expect.poll(() => marked).toEqual(["POST /api/v1/tours/FINANCE_MANAGER/seen"])
+})
+
+test("admin: record a payment", async ({ page }) => {
+  const unmatched = await open(page, "/admin/peladas/13")
+  await page.getByRole("button", { name: "Registrar pagamento" }).click()
+  const sheet = page.getByRole("dialog", { name: "Registrar pagamento" })
+  // the plan the creator claimed, with its list price
+  await expect(sheet.getByLabel("Valor cobrado (R$)")).toHaveValue("299,00")
+  await settle(page)
+  await expect(page).toHaveScreenshot("admin-record-payment.png", DIALOG_SHOT)
+  expect(unmatched, "requests without a fixture").toEqual([])
+})
+
+test("admin: someone who isn't a platform admin gets the 404", async ({ page }) => {
+  await open(page, "/admin", true, "h1", (p) =>
+    p.route(/\/api\/v1\/platform\/overview$/, (route) =>
+      route.fulfill({ status: 404, json: { status: 404, message: "Recurso não encontrado", timestamp: NOW.toISOString() } })))
+  await expect(page.getByRole("heading", { name: "Bola fora" })).toBeVisible()
+  await expect(page).toHaveURL(/\/404$/)
 })
