@@ -7,6 +7,7 @@ import type { DailyDetail, DailyListItem, PlayerDTO, RankingDTO, TeamDTO } from 
 import type { StatsDTO, UserMatchHistoryDTO, UserStatsTimelineDTO } from "../src/types/stats"
 import type { NotificationPreference, NotificationResponse } from "../src/types/notification"
 import type { VapidPublicKey } from "../src/types/push"
+import type { SubscriptionSummary } from "../src/types/subscription"
 import type { Invitation, InvitationStatus, InviteLink } from "../src/types/invitation"
 import type { FinanceAudit, FinanceDetail, FinanceMovement, FinanceOverview, FinancePage, FinanceSettings, FinanceTemplate } from "../src/types/finance"
 
@@ -64,6 +65,16 @@ const nextDaily = {
   bump: null,
 }
 
+// a trial far from its end: no notice, every button enabled (the read-only screens override it)
+export const trialSubscription: SubscriptionSummary = {
+  status: "TRIAL",
+  validUntil: "2026-12-01T18:00:00.000Z",
+  writable: true,
+}
+export const readOnlySubscription: SubscriptionSummary = { status: "READ_ONLY", validUntil: "2026-11-01T18:00:00.000Z", writable: false }
+// paid until 02/11: locks on 09/11
+export const pastDueSubscription: SubscriptionSummary = { status: "PAST_DUE", validUntil: "2026-11-02T18:00:00.000Z", writable: true }
+
 export const myPeladas: PeladaResponse[] = [
   {
     id: PELADA_ID,
@@ -81,6 +92,7 @@ export const myPeladas: PeladaResponse[] = [
     timeZone: "America/Sao_Paulo",
     isAdmin: true,
     nextDaily,
+    subscription: trialSubscription,
   },
   {
     id: 2,
@@ -98,6 +110,7 @@ export const myPeladas: PeladaResponse[] = [
     timeZone: "America/Sao_Paulo",
     isAdmin: false,
     nextDaily: null,
+    subscription: trialSubscription,
   },
 ]
 
@@ -222,6 +235,8 @@ const baseDaily = {
   championImage: null,
   peladaId: PELADA_ID,
   peladaName: "Pelada do Fut",
+  creatorId: 1,
+  subscription: trialSubscription,
   numberOfTeams: 2,
   playersPerTeam: 5,
   isAdmin: true,

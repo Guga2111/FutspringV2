@@ -22,5 +22,10 @@
     "position" : "position",
     "isAdmin" : true,
     "isMensalista" : true
-  } ]
+  } ],
+  "subscription" : {
+    "status" : "TRIAL",
+    "validUntil" : "2026-10-31T23:00:00Z",
+    "writable" : true
+  }
 }

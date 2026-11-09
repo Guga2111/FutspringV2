@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test"
 import { mockApi, login, type PushState } from "./mockApi"
-import { CONFIRMED_ID, FINISHED_ID, LIVE_ID, NOW, PELADA_ID, SCHEDULED_ID, pendingDeletionBlockers, financeDetail, financeMemberDetail, financeMemberOverview, financeOverview } from "./fixtures"
+import { CONFIRMED_ID, FINISHED_ID, LIVE_ID, NOW, PELADA_ID, SCHEDULED_ID, pendingDeletionBlockers, financeDetail, financeMemberDetail, financeMemberOverview, financeOverview, pastDueSubscription, peladaDetail, readOnlySubscription, scheduledDaily } from "./fixtures"
 
 const PELADA = `/pelada/${PELADA_ID}`
 
@@ -184,6 +184,40 @@ test("sessions gallery", async ({ page }) => {
   await settle(page)
   await expectNoHorizontalScroll(page)
   await expect(page).toHaveScreenshot("pelada-sessions-gallery.png", { fullPage: true })
+  expect(unmatched, "requests without a fixture").toEqual([])
+})
+
+// The subscription's state: the notice under the header and the disabled writes (the server answers 402 anyway)
+test("subscription: read-only pelada, as its creator", async ({ page }) => {
+  const unmatched = await open(page, PELADA, true, "h1, h2", (p) =>
+    p.route(/\/api\/v1\/peladas\/\d+$/, (route) => route.fulfill({ json: { ...peladaDetail, subscription: readOnlySubscription } })))
+  const notice = page.locator("#subscription-notice")
+  await expect(notice).toContainText("Pelada em somente leitura")
+  await expect(notice.getByRole("button", { name: "Assinar · Em breve" })).toBeDisabled()
+  await expect(page.getByRole("button", { name: "Pelada em somente leitura" })).toBeDisabled()
+  await expectNoHorizontalScroll(page)
+  await expect(page).toHaveScreenshot("subscription-read-only.png", { fullPage: true })
+  expect(unmatched, "requests without a fixture").toEqual([])
+})
+
+test("subscription: past due, as its creator", async ({ page }) => {
+  const unmatched = await open(page, PELADA, true, "h1, h2", (p) =>
+    p.route(/\/api\/v1\/peladas\/\d+$/, (route) => route.fulfill({ json: { ...peladaDetail, subscription: pastDueSubscription } })))
+  const notice = page.locator("#subscription-notice")
+  await expect(notice).toContainText("Pagamento pendente: a pelada trava em 09/11")
+  await expect(notice).toHaveScreenshot("subscription-past-due.png")
+  expect(unmatched, "requests without a fixture").toEqual([])
+})
+
+test("subscription: read-only session, as an admin who isn't the creator", async ({ page }) => {
+  const unmatched = await open(page, `/daily/${SCHEDULED_ID}`, true, "h1, h2", (p) =>
+    p.route(/\/api\/v1\/dailies\/\d+$/, (route) =>
+      route.fulfill({ json: { ...scheduledDaily, creatorId: 2, subscription: readOnlySubscription } })))
+  await expect(page.locator("#subscription-notice")).toContainText("o criador precisa renovar a assinatura")
+  await expect(page.getByRole("button", { name: "Confirmar sessão" })).toBeDisabled()
+  await expect(page.getByRole("button", { name: "Importar mensagem" })).toBeDisabled()
+  await expectNoHorizontalScroll(page)
+  await expect(page).toHaveScreenshot("subscription-read-only-session.png", { fullPage: true })
   expect(unmatched, "requests without a fixture").toEqual([])
 })
 

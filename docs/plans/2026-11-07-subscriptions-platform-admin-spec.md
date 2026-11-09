@@ -270,7 +270,7 @@ Para planejar um PR, rode o prompt dele numa sessão limpa (`/clear` antes). Ao 
 - Pelada sem linha de assinatura não tem teto (fail-open, como o `isWritable`). Convidar e gerar link continuam liberados.
 - Front sem mudança: o 409/402 aparece no erro inline de `useInvitationResponse` e da página do link.
 
-### [ ] PR 4 — Estado nos DTOs + front de leitura (`feat/subscriptions-readonly-ui`)
+### [x] PR 4 — Estado nos DTOs + front de leitura (`feat/subscriptions-readonly-ui`)
 
 - **Entrega:**
   - `subscription {status, validUntil, writable}` em `PeladaDetailResponseDTO`, `PeladaResponseDTO` (`/peladas/my`, lido em lote) e `DailyDetailDTO`.
@@ -286,6 +286,16 @@ Para planejar um PR, rode o prompt dele numa sessão limpa (`/clear` antes). Ao 
 ```
 /plan-task docs/plans/2026-11-07-subscriptions-platform-admin-spec.md "PR 4 — Estado nos DTOs + front de leitura"
 ```
+
+**Decisões (PR 4):**
+- `SubscriptionSummaryDTO {status, validUntil, writable}` em `domain/subscription/dto`. A leitura fica no `SubscriptionGuard` (`summary` / `summaries`), junto do `isWritable`, para o banner e a trava usarem a mesma regra. O `/peladas/my` (e `/users/{id}/peladas`) faz uma query a mais em lote (`findByPeladaIdIn`). `SubscriptionReadModelTest` compara `statements` com 2 e 20 peladas, porque `reads` também conta cada pelada hidratada pela lista.
+- Pelada sem linha de assinatura: `subscription: null`, e o front lê como escrevível (`isWritable`), igual ao fail-open do guard. As respostas de criar, editar, foto e transferir (`PeladaResponseDTO.forAdmin`) também trazem `null`. O `detailFields` do front copia campo a campo, então o estado do detalhe não se perde.
+- `DailyDetailDTO` ganhou `creatorId`, para a página da sessão mostrar o banner por papel. Ela fica fora do layout da pelada.
+- "Assinar" / "Renovar" no banner são botões desabilitados com "Em breve", sem rota nova. O PR 7 troca pelo link de `/pelada/:id/assinatura`.
+- Dica: o banner tem `id="subscription-notice"`, e os botões travados apontam para ele com `aria-describedby`. O botão de confirmar presença troca o texto para "Pelada em somente leitura", como já fazia com "Sessão lotada". O comando "Nova sessão" do ⌘K some em vez de ficar desabilitado.
+- Ficam ativos, como no backend do PR 2: desistir/desconfirmar (próprio e pelo admin), remover da lista e cancelar a sessão. Em uma pelada travada, nome e cor do time voltam a ser texto simples.
+- Financeiro: `useFinance(..., writable)` expõe `writable` e `locked = pending || !writable`. Todo controle de escrita usa um dos dois. Leitura, filtros, páginas e a mensagem do WhatsApp continuam liberados. `SettingsCardFooter` ganhou `locked`, que desabilita só o Salvar.
+- O estado vem calculado na resposta, sem polling. O banner do fim do trial aparece na hora certa por `useNowUntil`. Se a tela estiver aberta quando a pelada travar, ela só muda ao recarregar, e o 402 aparece no toast.
 
 ### [ ] PR 5 — API do admin da plataforma (`feat/subscriptions-platform-api`)
 

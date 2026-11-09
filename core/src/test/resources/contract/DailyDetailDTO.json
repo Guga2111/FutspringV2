@@ -79,6 +79,7 @@
   },
   "peladaId" : 995,
   "peladaName" : "peladaName",
+  "creatorId" : 240,
   "numberOfTeams" : 495,
   "playersPerTeam" : 905,
   "isAdmin" : true,
@@ -129,5 +130,10 @@
       "isDeleted" : true
     },
     "bumpedAt" : "2026-10-31T23:00:00Z"
-  } ]
+  } ],
+  "subscription" : {
+    "status" : "TRIAL",
+    "validUntil" : "2026-10-31T23:00:00Z",
+    "writable" : true
+  }
 }

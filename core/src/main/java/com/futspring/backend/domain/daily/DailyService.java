@@ -295,6 +295,7 @@ public class DailyService {
                 .award(award)
                 .peladaId(pelada.getId())
                 .peladaName(pelada.getName())
+                .creatorId(pelada.getCreator() != null ? pelada.getCreator().getId() : null)
                 .numberOfTeams(pelada.getNumberOfTeams())
                 .playersPerTeam(pelada.getPlayersPerTeam())
                 .isAdmin(isAdmin)
@@ -305,6 +306,7 @@ public class DailyService {
                 .confirmOpensAt(mensalistaIds.contains(caller.getId()) ? null : AttendanceWindow.diaristaOpensAt(daily))
                 .myBump(myBump)
                 .bumps(bumps)
+                .subscription(subscriptionGuard.summary(pelada))
                 .build();
     }
 

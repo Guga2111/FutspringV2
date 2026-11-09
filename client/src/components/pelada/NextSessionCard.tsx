@@ -16,13 +16,15 @@ interface NextSessionCardProps {
   // the pelada's zone, to show when the diarista window opens
   timeZone: string
   isAdmin: boolean
+  // the pelada is read-only (subscription): confirming is locked
+  readOnly: boolean
   attendancePending: boolean
   onToggleAttendance: (daily: DailyListItem) => void
 }
 
 const label = "text-caption font-semibold text-muted-foreground"
 
-export function NextSessionCard({ daily, timeZone, isAdmin, attendancePending, onToggleAttendance }: NextSessionCardProps) {
+export function NextSessionCard({ daily, timeZone, isAdmin, readOnly, attendancePending, onToggleAttendance }: NextSessionCardProps) {
   if (!daily) {
     return (
       <section className="flex flex-wrap items-center gap-5 rounded-tile border border-dashed border-input p-[18px]">
@@ -100,6 +102,7 @@ export function NextSessionCard({ daily, timeZone, isAdmin, attendancePending, o
             timeZone={timeZone}
             pending={attendancePending}
             onConfirm={() => onToggleAttendance(daily)}
+            readOnly={readOnly}
             className="h-[38px] px-[18px]"
           />
         )}

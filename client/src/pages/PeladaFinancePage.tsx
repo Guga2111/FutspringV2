@@ -12,6 +12,7 @@ export default function PeladaFinancePage() {
       members={w.pelada.members}
       dailies={w.dailies}
       timeZone={w.pelada.timeZone}
+      writable={w.writable}
     />
   )
 }

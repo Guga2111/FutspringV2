@@ -6,6 +6,8 @@ import { TeamColorDot } from "@/components/daily/TeamColorDot"
 import { getFileUrl } from "@/lib/utils"
 import { championSummary } from "@/utils/finishedSession"
 import type { DailyDetail } from "@/types/daily"
+import { isWritable } from "@/utils/subscription"
+import { SUBSCRIPTION_NOTICE_ID } from "@/components/pelada/SubscriptionNotice"
 
 interface ChampionHeroProps {
   daily: DailyDetail
@@ -19,8 +21,9 @@ export function ChampionHero({ daily, uploadLoading, onChangePhoto }: ChampionHe
   const champion = championSummary(daily)
   const statsById = new Map(daily.playerStats.map((s) => [s.userId, s]))
 
+  const writable = isWritable(daily.subscription)
   const uploadButton = daily.isAdmin && (
-    <Button variant="outline" size="sm" disabled={uploadLoading} onClick={onChangePhoto} className="gap-1.5 self-start">
+    <Button variant="outline" size="sm" disabled={uploadLoading || !writable} aria-describedby={writable ? undefined : SUBSCRIPTION_NOTICE_ID} onClick={onChangePhoto} className="gap-1.5 self-start">
       <HugeiconsIcon icon={Upload01Icon} className="size-3.5" />
       {uploadLoading ? "Enviando…" : "Enviar foto do campeão"}
     </Button>

@@ -19,6 +19,7 @@ export default function PeladaSessionsPage() {
           daily={nextSession}
           timeZone={w.pelada.timeZone}
           isAdmin={w.isAdmin}
+          readOnly={!w.writable}
           attendancePending={w.attendancePending}
           onToggleAttendance={w.toggleAttendance}
         />

@@ -43,7 +43,8 @@ type EditorAction = { kind: "create" } | { kind: "list"; list?: FinanceList; tem
 type Editor = EditorAction & { revision: number }
 
 // timeZone: the pelada's, for the dates and times of payments and notices
-export function FinanceTab({ peladaId, userId, members, dailies, timeZone }: { peladaId: number; userId: number | null; members: PeladaMember[]; dailies: DailyListItem[]; timeZone: string }) {
+// writable: false while the pelada is read-only (subscription): reading stays, every write control is disabled
+export function FinanceTab({ peladaId, userId, members, dailies, timeZone, writable }: { peladaId: number; userId: number | null; members: PeladaMember[]; dailies: DailyListItem[]; timeZone: string; writable: boolean }) {
   // the open collection lives in the URL (/financeiro/:listId): back/forward, reload and the WhatsApp link open it
   const { listId } = useParams<{ listId: string }>()
   const selected = listId && /^\d+$/.test(listId) ? Number(listId) : null
@@ -53,7 +54,7 @@ export function FinanceTab({ peladaId, userId, members, dailies, timeZone }: { p
     const base = areaPath(peladaId, "finance")
     navigate(id === null ? base : `${base}/${id}`)
   }, [navigate, peladaId, selected])
-  const finance = useFinance(peladaId, selected, select)
+  const finance = useFinance(peladaId, selected, select, writable)
   const [tabState, setTabState] = useState("collections")
   // a collection in the URL is always shown on the collections tab
   const tab = selected !== null ? "collections" : tabState
@@ -152,7 +153,7 @@ export function FinanceTab({ peladaId, userId, members, dailies, timeZone }: { p
                 <h2 className="text-xl font-semibold">{manage ? "Cobranças da pelada" : "Minhas cobranças"}</h2>
                 <p className="mt-1 text-sm text-muted-foreground">{manage ? "Abra uma cobrança para receber ou conferir pagamentos." : "Veja o que falta pagar, pague com Pix e informe o pagamento."}</p>
               </div>
-              {manage && <Button variant="brand" data-tour="new-collection" onClick={() => open({ kind: "create" })} disabled={finance.pending}><HugeiconsIcon icon={PlusSignIcon} className="size-[15px]" strokeWidth={2.2} />Nova cobrança</Button>}
+              {manage && <Button variant="brand" data-tour="new-collection" onClick={() => open({ kind: "create" })} disabled={finance.locked}><HugeiconsIcon icon={PlusSignIcon} className="size-[15px]" strokeWidth={2.2} />Nova cobrança</Button>}
             </header>
             <ToggleGroup type="single" variant="chip" size="chip" data-tour="scope" value={finance.scope} onValueChange={value => { if (value) finance.setScope(value as FinanceListScope) }} className="justify-start" aria-label="Situação das cobranças">
               {(Object.keys(financeListScopeLabel) as FinanceListScope[]).map(scope => <ToggleGroupItem key={scope} value={scope}>{financeListScopeLabel[scope]}</ToggleGroupItem>)}
@@ -161,7 +162,7 @@ export function FinanceTab({ peladaId, userId, members, dailies, timeZone }: { p
               <div data-tour="collections" className="flex flex-col items-start gap-3 rounded-lg border p-6">
                 <h3 className="font-medium">{scopeEmpty[finance.scope].title}</h3>
                 <p className="text-sm text-muted-foreground">{scopeEmpty[finance.scope].text}</p>
-                {manage && finance.scope === "ACTIVE" && <Button variant="outline" onClick={() => open({ kind: "create" })}>Criar cobrança</Button>}
+                {manage && finance.scope === "ACTIVE" && <Button variant="outline" disabled={!finance.writable} onClick={() => open({ kind: "create" })}>Criar cobrança</Button>}
               </div>
             ) : <ul data-tour="collections" className="rounded-lg border">{overview.lists.map(collectionRow)}</ul>}
             <ListPagination page={finance.page} total={overview.total} size={api.FINANCE_LISTS_PAGE_SIZE} noun={["cobrança", "cobranças"]} disabled={finance.pending} onPage={finance.setPage} />
@@ -171,7 +172,7 @@ export function FinanceTab({ peladaId, userId, members, dailies, timeZone }: { p
           <header><h2 className="text-xl font-semibold">Caixa da pelada</h2><p className="mt-1 text-sm text-muted-foreground">Dinheiro que já entrou e saiu.</p></header>
           <div className="flex flex-wrap items-end justify-between gap-4 rounded-lg bg-muted p-5">
             <div><p className="text-sm text-muted-foreground">Saldo disponível registrado</p><p className="mt-1 font-display text-score font-bold tabular-nums">{formatFinanceMoney(overview.balance ?? "0.00")}</p></div>
-            {manage && <div className="flex flex-wrap gap-2"><Button variant="brand" onClick={() => open({ kind: "cash", cashKind: "EXPENSE" })}><HugeiconsIcon icon={PlusSignIcon} className="size-[15px]" strokeWidth={2.2} />Despesa</Button><Button variant="outline" onClick={() => open({ kind: "cash", cashKind: "INCOME" })}>Outra entrada</Button><DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost">Mais</Button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuGroup><DropdownMenuItem onClick={() => open({ kind: "cash", cashKind: "OPENING" })}>Registrar saldo inicial</DropdownMenuItem></DropdownMenuGroup></DropdownMenuContent></DropdownMenu></div>}
+            {manage && <div className="flex flex-wrap gap-2"><Button variant="brand" disabled={!finance.writable} onClick={() => open({ kind: "cash", cashKind: "EXPENSE" })}><HugeiconsIcon icon={PlusSignIcon} className="size-[15px]" strokeWidth={2.2} />Despesa</Button><Button variant="outline" disabled={!finance.writable} onClick={() => open({ kind: "cash", cashKind: "INCOME" })}>Outra entrada</Button><DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" disabled={!finance.writable}>Mais</Button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuGroup><DropdownMenuItem onClick={() => open({ kind: "cash", cashKind: "OPENING" })}>Registrar saldo inicial</DropdownMenuItem></DropdownMenuGroup></DropdownMenuContent></DropdownMenu></div>}
           </div>
           {tab === "cash" && <FinanceHistory peladaId={peladaId} kind="cash" finance={finance} timeZone={timeZone} members={members} onReason={askReason} />}
         </TabsContent>}
