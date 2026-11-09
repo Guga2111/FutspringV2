@@ -421,7 +421,7 @@ Para planejar um PR, rode o prompt dele numa sessão limpa (`/clear` antes). Ao 
 - `BILLING` aparece para todo usuário em `/settings` (e-mail e push ligados), embora só criadores e admins da plataforma recebam. `PUT /notifications/preferences` aceita até 5 itens.
 - Nenhum dos três mostra toast; no sino, `ENDING`/`PAST_DUE` levam a `/pelada/:id/assinatura` e o Pix a `/admin/peladas/:id`.
 
-### [ ] PR 9 — Política de privacidade (`feat/subscriptions-privacy`)
+### [x] PR 9 — Política de privacidade (`feat/subscriptions-privacy`)
 
 - **Entrega:**
   - Linha em `components/legal/content.ts` sobre o operador ver nome, e-mail e dados de assinatura no painel, e sobre os pagamentos guardados.
@@ -432,6 +432,12 @@ Para planejar um PR, rode o prompt dele numa sessão limpa (`/clear` antes). Ao 
 ```
 /plan-task docs/plans/2026-11-07-subscriptions-platform-admin-spec.md "PR 9 — Política de privacidade"
 ```
+
+**Decisões (PR 9):**
+- Os Termos de uso também mudaram (diziam que o app era "gratuito" / "oferecido de graça"): seção nova "Assinatura" com teste de 30 dias (um por conta, até 30 membros), planos mensal/anual por Pix confirmado manualmente, carência de 7 dias, somente leitura sem perder dados e assinatura que acompanha a transferência. Nada sobre reembolso (não há regra definida).
+- Política: dados de assinatura e pagamentos em "Dados que tratamos"; bases legais (contrato para cobrar/suporte, obrigação legal para guardar pagamentos); "Quem vê" troca "o seu e-mail só você vê" por "dentro do app", diz que a área Assinatura é só do criador e descreve o que o painel do operador mostra.
+- Pagamentos de assinatura guardam o nome da pelada e de quem pagou mesmo depois de excluir a pelada ou a conta: descrito na retenção (prazo da lei fiscal), sem mudança de código (a exclusão de conta não anonimiza `subscription_payments.payer_name`).
+- Versão `2026-11-09` em `LEGAL_VERSION` e `LegalTerms.CURRENT_VERSION`. Quem já aceitou a versão anterior não precisa aceitar de novo (o app só checa no cadastro); o aviso aos criadores atuais segue no Rollout.
 
 ## Rollout
 
