@@ -1,5 +1,8 @@
 package com.futspring.backend.domain.subscription;
 
+import com.futspring.backend.domain.notification.Notification;
+import com.futspring.backend.domain.notification.NotificationRepository;
+import com.futspring.backend.domain.notification.NotificationType;
 import com.futspring.backend.domain.pelada.Pelada;
 import com.futspring.backend.domain.pelada.PeladaRepository;
 import com.futspring.backend.domain.user.User;
@@ -47,6 +50,7 @@ class PeladaSubscriptionControllerTest extends BaseIntegrationTest {
     @Autowired PeladaSubscriptionRepository subscriptions;
     @Autowired SubscriptionPaymentRepository payments;
     @Autowired SubscriptionEventRepository events;
+    @Autowired NotificationRepository notifications;
 
     User creator;
     User admin;
@@ -136,6 +140,29 @@ class PeladaSubscriptionControllerTest extends BaseIntegrationTest {
         assertThat(last.getActor().getId()).isEqualTo(creator.getId());
         assertThat(last.getKindBefore()).isEqualTo(SubscriptionKind.TRIAL);
         assertThat(last.getKindAfter()).isEqualTo(SubscriptionKind.TRIAL);
+    }
+
+    @Test
+    void onlyTheFirstClaim_tellsThePlatformAdmins() throws Exception {
+        outsider.setPlatformAdmin(true);
+        users.save(outsider);
+        User deletedAdmin = user("ex-admin");
+        deletedAdmin.setPlatformAdmin(true);
+        deletedAdmin.setDeletedAt(NOW);
+        users.save(deletedAdmin);
+        Pelada pelada = pelada(SubscriptionKind.TRIAL, NOW.plus(Duration.ofDays(3)), Set.of());
+
+        as(creator, claim(pelada, "ANNUAL")).andExpect(status().isOk());
+        as(creator, claim(pelada, "ANNUAL")).andExpect(status().isOk());
+        as(creator, claim(pelada, "MONTHLY")).andExpect(status().isOk());
+
+        List<Notification> claimed = notifications.findAll().stream()
+                .filter(n -> n.getType() == NotificationType.SUBSCRIPTION_PIX_CLAIMED).toList();
+        assertThat(claimed).singleElement().satisfies(n -> {
+            assertThat(n.getRecipient().getId()).isEqualTo(outsider.getId());
+            assertThat(n.getActor().getId()).isEqualTo(creator.getId());
+            assertThat(n.getPelada().getId()).isEqualTo(pelada.getId());
+        });
     }
 
     @Test

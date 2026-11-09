@@ -78,7 +78,7 @@ class DailySchedulerTransactionTest {
         Pelada ok = pelada("Certa", ana, bia);
         Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
         NotificationService notificationService = new NotificationService(notificationRepository,
-                attendanceRepository, bumpRepository, delivery, clock);
+                attendanceRepository, bumpRepository, userRepository, delivery, clock);
         // The real listener, run in the publisher's transaction as Spring does; one pelada fails after its insert
         ApplicationEventPublisher publisher = event -> {
             DailyCreatedEvent created = (DailyCreatedEvent) event;

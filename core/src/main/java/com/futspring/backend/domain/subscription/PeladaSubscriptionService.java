@@ -8,6 +8,7 @@ import com.futspring.backend.shared.exception.AppException;
 import com.futspring.backend.shared.helper.PeladaAccessHelper;
 import com.futspring.backend.shared.helper.UserAuthenticationHelper;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -34,6 +35,7 @@ public class PeladaSubscriptionService {
     private final SubscriptionService subscriptionService;
     private final BillingPixConfig pix;
     private final Clock clock;
+    private final ApplicationEventPublisher events;
 
     @Transactional(readOnly = true)
     public PeladaSubscriptionDTO get(Long peladaId, String email) {
@@ -55,7 +57,10 @@ public class PeladaSubscriptionService {
             throw new AppException(HttpStatus.CONFLICT, "Pagamento por Pix indisponível. Fale com o suporte.");
         }
         PeladaSubscription subscription = subscriptionOf(pelada);
-        subscriptionService.claimPix(subscription, caller, plan);
+        // only a new claim tells the platform admins; a plan change or a repeat is already in their queue
+        if (subscriptionService.claimPix(subscription, caller, plan)) {
+            events.publishEvent(new PixClaimedEvent(pelada, caller));
+        }
         return viewOf(pelada, subscription);
     }
 

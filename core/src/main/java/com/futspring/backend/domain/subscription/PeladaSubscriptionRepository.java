@@ -46,6 +46,31 @@ public interface PeladaSubscriptionRepository extends JpaRepository<PeladaSubscr
         """)
     List<PeladaSubscription> findPixClaimed(Pageable pageable);
 
+    // SubscriptionNoticeJob: trials and paid periods ending in (now, until] whose creator wasn't told about this
+    // validity yet (the notice stores the valid_until it was about, so a renewal is a new notice)
+    @Query("""
+        SELECT s FROM PeladaSubscription s JOIN FETCH s.pelada p JOIN FETCH p.creator
+        WHERE s.kind IN (com.futspring.backend.domain.subscription.SubscriptionKind.TRIAL,
+                         com.futspring.backend.domain.subscription.SubscriptionKind.PAID)
+          AND s.validUntil > :now AND s.validUntil <= :until
+          AND NOT EXISTS (SELECT 1 FROM Notification n WHERE n.pelada = p AND n.validUntil = s.validUntil
+              AND n.type = com.futspring.backend.domain.notification.NotificationType.SUBSCRIPTION_ENDING)
+        ORDER BY s.id
+        """)
+    List<PeladaSubscription> findEndingWithoutNotice(@Param("now") Instant now, @Param("until") Instant until);
+
+    // SubscriptionNoticeJob: paid periods in their grace (valid_until in (graceStart, now]) not told yet
+    @Query("""
+        SELECT s FROM PeladaSubscription s JOIN FETCH s.pelada p JOIN FETCH p.creator
+        WHERE s.kind = com.futspring.backend.domain.subscription.SubscriptionKind.PAID
+          AND s.validUntil <= :now AND s.validUntil > :graceStart
+          AND NOT EXISTS (SELECT 1 FROM Notification n WHERE n.pelada = p AND n.validUntil = s.validUntil
+              AND n.type = com.futspring.backend.domain.notification.NotificationType.SUBSCRIPTION_PAST_DUE)
+        ORDER BY s.id
+        """)
+    List<PeladaSubscription> findPastDueWithoutNotice(@Param("now") Instant now,
+                                                      @Param("graceStart") Instant graceStart);
+
     @Modifying
     @Query("DELETE FROM PeladaSubscription s WHERE s.pelada.id = :peladaId")
     void deleteByPeladaId(@Param("peladaId") Long peladaId);

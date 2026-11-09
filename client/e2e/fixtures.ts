@@ -468,6 +468,7 @@ export const notifications: NotificationResponse[] = [
     daily: { id: SCHEDULED_ID, date: "2026-11-05", time: "21:00" },
     actor: null,
     team: null,
+    validUntil: null,
   },
 ]
 
@@ -476,6 +477,7 @@ export const notificationPreferences: NotificationPreference[] = [
   { category: "SESSION", emailEnabled: false, pushEnabled: true },
   { category: "MEMBERSHIP", emailEnabled: true, pushEnabled: true },
   { category: "AWARDS", emailEnabled: false, pushEnabled: false },
+  { category: "BILLING", emailEnabled: true, pushEnabled: true },
 ]
 
 // a P-256 public key's shape (65 bytes, base64url); the browser is mocked, so it is never used to encrypt

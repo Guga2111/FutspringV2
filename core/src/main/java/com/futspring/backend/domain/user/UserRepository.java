@@ -30,6 +30,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     boolean existsByIdAndDeletedAtIsNull(Long id);
 
+    // The platform's operators (SUBSCRIPTION_PIX_CLAIMED goes to them)
+    List<User> findByPlatformAdminTrueAndDeletedAtIsNull();
+
     // Matches username or email, but callers must only return public fields (PublicUserDTO); deleted accounts never match
     @Query("""
         SELECT u FROM User u

@@ -18,6 +18,7 @@ function make(type: NotificationType, overrides: Partial<NotificationResponse> =
     daily: { id: 100, date: "2026-10-31", time: "20:00" },
     actor: { id: 1, username: "Leal", image: null, position: null, isDeleted: false },
     team: null,
+    validUntil: null,
     ...overrides,
   }
 }
@@ -45,6 +46,10 @@ const cases: [NotificationType, Partial<NotificationResponse>, string, string | 
   ["MENSALISTA_REVOKED", noDaily, "Você agora é diarista da Pelada do Fut", "/pelada/10"],
   ["PELADA_TRANSFERRED", noDaily, "Leal transferiu a Pelada do Fut para você", "/pelada/10"],
   ["AWARD_WON", { award: "ARTILHEIRO", actor: null }, "Você foi o Artilheiro de sáb, 31/10 🏆", "/daily/100"],
+  // the paid period ends 07/12/2026 23:59:59 in São Paulo; it locks 7 days later
+  ["SUBSCRIPTION_ENDING", { ...noDaily, actor: null, validUntil: "2026-12-08T02:59:59Z" }, "O plano da Pelada do Fut vence em 07/12", "/pelada/10/assinatura"],
+  ["SUBSCRIPTION_PAST_DUE", { ...noDaily, actor: null, validUntil: "2026-12-08T02:59:59Z" }, "Pagamento pendente: a Pelada do Fut trava em 14/12", "/pelada/10/assinatura"],
+  ["SUBSCRIPTION_PIX_CLAIMED", noDaily, "Leal informou o Pix da Pelada do Fut", "/admin/peladas/10"],
 ]
 
 describe("notificationView", () => {
