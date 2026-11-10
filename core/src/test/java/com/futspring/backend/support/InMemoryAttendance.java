@@ -1,8 +1,8 @@
 package com.futspring.backend.support;
 
-import com.futspring.backend.domain.daily.entity.Daily;
-import com.futspring.backend.domain.daily.entity.DailyAttendance;
-import com.futspring.backend.domain.daily.repository.DailyAttendanceRepository;
+import com.futspring.backend.domain.daily.Daily;
+import com.futspring.backend.domain.daily.attendance.DailyAttendance;
+import com.futspring.backend.domain.daily.attendance.DailyAttendanceRepository;
 import com.futspring.backend.domain.user.User;
 
 import java.time.Instant;

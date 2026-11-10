@@ -1,6 +1,6 @@
 package com.futspring.backend.domain.notification.dto;
 
-import com.futspring.backend.domain.daily.entity.Daily;
+import com.futspring.backend.domain.daily.Daily;
 import com.futspring.backend.domain.notification.Notification;
 import com.futspring.backend.domain.notification.NotificationAward;
 import com.futspring.backend.domain.notification.NotificationCategory;

@@ -1,15 +1,15 @@
 package com.futspring.backend.domain.notification.inbox;
 
 import com.futspring.backend.domain.daily.dto.UpdateDailyStatusRequestDTO;
-import com.futspring.backend.domain.daily.entity.Daily;
-import com.futspring.backend.domain.daily.entity.DailyAttendance;
-import com.futspring.backend.domain.daily.entity.DailyAttendanceBump;
-import com.futspring.backend.domain.daily.entity.DailyStatus;
-import com.futspring.backend.domain.daily.entity.Team;
-import com.futspring.backend.domain.daily.repository.DailyAttendanceBumpRepository;
-import com.futspring.backend.domain.daily.repository.DailyAttendanceRepository;
-import com.futspring.backend.domain.daily.repository.DailyRepository;
-import com.futspring.backend.domain.daily.repository.TeamRepository;
+import com.futspring.backend.domain.daily.Daily;
+import com.futspring.backend.domain.daily.attendance.DailyAttendance;
+import com.futspring.backend.domain.daily.attendance.DailyAttendanceBump;
+import com.futspring.backend.domain.daily.DailyStatus;
+import com.futspring.backend.domain.daily.team.Team;
+import com.futspring.backend.domain.daily.attendance.DailyAttendanceBumpRepository;
+import com.futspring.backend.domain.daily.attendance.DailyAttendanceRepository;
+import com.futspring.backend.domain.daily.DailyRepository;
+import com.futspring.backend.domain.daily.team.TeamRepository;
 import com.futspring.backend.domain.notification.Notification;
 import com.futspring.backend.domain.notification.NotificationCategory;
 import com.futspring.backend.domain.notification.NotificationRepository;

@@ -1,6 +1,6 @@
 package com.futspring.backend.domain.notification.webpush;
 
-import com.futspring.backend.domain.daily.AttendanceWindow;
+import com.futspring.backend.domain.daily.attendance.AttendanceWindow;
 import com.futspring.backend.domain.notification.Notification;
 import com.futspring.backend.domain.notification.NotificationCategory;
 import com.futspring.backend.domain.notification.NotificationContent;

@@ -1,10 +1,10 @@
 package com.futspring.backend.domain.notification;
 
-import com.futspring.backend.domain.daily.AttendanceWindow;
-import com.futspring.backend.domain.daily.entity.Daily;
-import com.futspring.backend.domain.daily.entity.DailyStatus;
-import com.futspring.backend.domain.daily.repository.DailyAttendanceRepository;
-import com.futspring.backend.domain.daily.repository.DailyRepository;
+import com.futspring.backend.domain.daily.attendance.AttendanceWindow;
+import com.futspring.backend.domain.daily.Daily;
+import com.futspring.backend.domain.daily.DailyStatus;
+import com.futspring.backend.domain.daily.attendance.DailyAttendanceRepository;
+import com.futspring.backend.domain.daily.DailyRepository;
 import com.futspring.backend.domain.pelada.Pelada;
 import com.futspring.backend.domain.subscription.SubscriptionGuard;
 import lombok.RequiredArgsConstructor;

@@ -1,6 +1,6 @@
 package com.futspring.backend.domain.notification.inbox;
 
-import com.futspring.backend.domain.daily.repository.TeamRepository;
+import com.futspring.backend.domain.daily.team.TeamRepository;
 import com.futspring.backend.domain.notification.Notification;
 import com.futspring.backend.domain.notification.NotificationType;
 import com.futspring.backend.domain.notification.dto.NotificationDTO;

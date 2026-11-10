@@ -1,6 +1,6 @@
 package com.futspring.backend.domain.platform;
 
-import com.futspring.backend.domain.daily.repository.DailyRepository;
+import com.futspring.backend.domain.daily.DailyRepository;
 import com.futspring.backend.domain.pelada.Pelada;
 import com.futspring.backend.domain.pelada.PeladaRef;
 import com.futspring.backend.domain.pelada.PeladaRepository;

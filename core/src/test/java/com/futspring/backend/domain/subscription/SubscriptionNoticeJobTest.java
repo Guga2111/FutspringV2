@@ -1,7 +1,7 @@
 package com.futspring.backend.domain.subscription;
 
-import com.futspring.backend.domain.daily.repository.DailyAttendanceBumpRepository;
-import com.futspring.backend.domain.daily.repository.DailyAttendanceRepository;
+import com.futspring.backend.domain.daily.attendance.DailyAttendanceBumpRepository;
+import com.futspring.backend.domain.daily.attendance.DailyAttendanceRepository;
 import com.futspring.backend.domain.notification.NotificationDelivery;
 import com.futspring.backend.domain.notification.NotificationRepository;
 import com.futspring.backend.domain.notification.NotificationService;

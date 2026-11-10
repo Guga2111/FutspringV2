@@ -1,15 +1,15 @@
 package com.futspring.backend.domain.notification;
 
-import com.futspring.backend.domain.daily.AttendanceChangedByAdminEvent;
+import com.futspring.backend.domain.daily.attendance.AttendanceChangedByAdminEvent;
 import com.futspring.backend.domain.daily.DailyCanceledEvent;
 import com.futspring.backend.domain.daily.DailyCreatedEvent;
-import com.futspring.backend.domain.daily.DailyFinalizedEvent;
-import com.futspring.backend.domain.daily.DiaristaBumpedEvent;
+import com.futspring.backend.domain.daily.results.DailyFinalizedEvent;
+import com.futspring.backend.domain.daily.attendance.DiaristaBumpedEvent;
 import com.futspring.backend.domain.daily.TeamsSortedEvent;
-import com.futspring.backend.domain.daily.entity.Daily;
-import com.futspring.backend.domain.daily.entity.DailyAttendanceBump;
-import com.futspring.backend.domain.daily.repository.DailyAttendanceBumpRepository;
-import com.futspring.backend.domain.daily.repository.DailyAttendanceRepository;
+import com.futspring.backend.domain.daily.Daily;
+import com.futspring.backend.domain.daily.attendance.DailyAttendanceBump;
+import com.futspring.backend.domain.daily.attendance.DailyAttendanceBumpRepository;
+import com.futspring.backend.domain.daily.attendance.DailyAttendanceRepository;
 import com.futspring.backend.domain.pelada.AdminsChangedEvent;
 import com.futspring.backend.domain.pelada.invitation.InvitationCreatedEvent;
 import com.futspring.backend.domain.pelada.invitation.model.PeladaInvitation;

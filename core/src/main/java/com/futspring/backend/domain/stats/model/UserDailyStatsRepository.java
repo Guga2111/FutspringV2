@@ -1,7 +1,7 @@
 package com.futspring.backend.domain.stats.model;
 
-import com.futspring.backend.domain.daily.entity.Daily;
-import com.futspring.backend.domain.daily.entity.DailyStatus;
+import com.futspring.backend.domain.daily.Daily;
+import com.futspring.backend.domain.daily.DailyStatus;
 import com.futspring.backend.domain.pelada.Pelada;
 import com.futspring.backend.domain.user.User;
 import org.springframework.data.domain.Pageable;

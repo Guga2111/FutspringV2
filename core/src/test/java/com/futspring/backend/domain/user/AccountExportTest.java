@@ -2,10 +2,10 @@ package com.futspring.backend.domain.user;
 
 import com.futspring.backend.domain.chat.Message;
 import com.futspring.backend.domain.chat.MessageRepository;
-import com.futspring.backend.domain.daily.entity.Daily;
-import com.futspring.backend.domain.daily.entity.DailyAttendance;
-import com.futspring.backend.domain.daily.repository.DailyAttendanceRepository;
-import com.futspring.backend.domain.daily.repository.DailyRepository;
+import com.futspring.backend.domain.daily.Daily;
+import com.futspring.backend.domain.daily.attendance.DailyAttendance;
+import com.futspring.backend.domain.daily.attendance.DailyAttendanceRepository;
+import com.futspring.backend.domain.daily.DailyRepository;
 import com.futspring.backend.domain.finance.account.FinanceAccount;
 import com.futspring.backend.domain.finance.account.FinanceAccountRepository;
 import com.futspring.backend.domain.finance.FinanceCollectionService;

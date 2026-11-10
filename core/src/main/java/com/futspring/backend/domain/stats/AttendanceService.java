@@ -1,7 +1,7 @@
 package com.futspring.backend.domain.stats;
 
-import com.futspring.backend.domain.daily.entity.DailyStatus;
-import com.futspring.backend.domain.daily.repository.DailyRepository;
+import com.futspring.backend.domain.daily.DailyStatus;
+import com.futspring.backend.domain.daily.DailyRepository;
 import com.futspring.backend.domain.pelada.Pelada;
 import com.futspring.backend.domain.pelada.member.PeladaMensalistaRepository;
 import com.futspring.backend.domain.pelada.PeladaRepository;

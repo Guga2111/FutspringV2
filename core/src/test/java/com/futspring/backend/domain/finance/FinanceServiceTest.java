@@ -4,8 +4,6 @@ import com.futspring.backend.domain.finance.dto.*;
 import com.futspring.backend.domain.pelada.*;
 import com.futspring.backend.domain.pelada.dto.CreatePeladaRequestDTO;
 import com.futspring.backend.domain.daily.*;
-import com.futspring.backend.domain.daily.entity.*;
-import com.futspring.backend.domain.daily.repository.*;
 import com.futspring.backend.domain.user.*;
 import com.futspring.backend.shared.exception.AppException;
 import com.futspring.backend.support.BaseIntegrationTest;

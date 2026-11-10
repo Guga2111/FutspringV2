@@ -1,7 +1,7 @@
 package com.futspring.backend.domain.pelada.dto;
 
 import com.futspring.backend.domain.daily.dto.AttendanceBumpDTO;
-import com.futspring.backend.domain.daily.entity.DailyStatus;
+import com.futspring.backend.domain.daily.DailyStatus;
 import com.futspring.backend.domain.pelada.Pelada;
 import com.futspring.backend.domain.subscription.dto.SubscriptionSummaryDTO;
 import com.fasterxml.jackson.annotation.JsonProperty;

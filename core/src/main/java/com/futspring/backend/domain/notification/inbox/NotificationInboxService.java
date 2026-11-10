@@ -1,6 +1,6 @@
 package com.futspring.backend.domain.notification.inbox;
 
-import com.futspring.backend.domain.daily.repository.DailyAttendanceBumpRepository;
+import com.futspring.backend.domain.daily.attendance.DailyAttendanceBumpRepository;
 import com.futspring.backend.domain.notification.Notification;
 import com.futspring.backend.domain.notification.NotificationRepository;
 import com.futspring.backend.domain.notification.NotificationType;
