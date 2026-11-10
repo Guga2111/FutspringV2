@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { ShuffleIcon } from "@hugeicons/core-free-icons"
-import { TeamColorDot } from "@/components/daily/TeamColorDot"
+import { TeamColorDot } from "@/components/daily/teams/TeamColorDot"
 import { Button } from "@/components/ui/button"
 import { StarCount } from "@/components/landing/StarCount"
 import { DRAW_PLAYERS } from "@/components/landing/content"

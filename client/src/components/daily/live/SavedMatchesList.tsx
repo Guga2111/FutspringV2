@@ -1,4 +1,4 @@
-import { TeamColorDot } from "@/components/daily/TeamColorDot"
+import { TeamColorDot } from "@/components/daily/teams/TeamColorDot"
 import { cn } from "@/lib/utils"
 import { scorersLine } from "@/utils/liveSession"
 import type { DailyDetail } from "@/types/daily"
