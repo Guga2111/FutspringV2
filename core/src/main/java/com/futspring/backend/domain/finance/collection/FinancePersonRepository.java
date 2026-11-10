@@ -1,4 +1,4 @@
-package com.futspring.backend.domain.finance;
+package com.futspring.backend.domain.finance.collection;
 import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
 import org.springframework.data.domain.Pageable;

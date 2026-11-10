@@ -20,6 +20,20 @@ import java.util.stream.Collectors;
 import static com.futspring.backend.domain.finance.FinanceTypes.*;
 import static com.futspring.backend.domain.finance.FinanceMoney.*;
 import static com.futspring.backend.domain.finance.FinanceAccess.*;
+import com.futspring.backend.domain.finance.account.FinanceAuditRepository;
+import com.futspring.backend.domain.finance.account.FinanceManager;
+import com.futspring.backend.domain.finance.account.FinanceManagerRepository;
+import com.futspring.backend.domain.finance.collection.FinanceCharge;
+import com.futspring.backend.domain.finance.collection.FinanceChargeRepository;
+import com.futspring.backend.domain.finance.collection.FinanceList;
+import com.futspring.backend.domain.finance.collection.FinanceListRepository;
+import com.futspring.backend.domain.finance.collection.FinanceTemplate;
+import com.futspring.backend.domain.finance.collection.FinanceTemplateRepository;
+import com.futspring.backend.domain.finance.collection.PriceComponent;
+import com.futspring.backend.domain.finance.ledger.FinanceMovement;
+import com.futspring.backend.domain.finance.ledger.FinanceMovementRepository;
+import com.futspring.backend.domain.finance.ledger.FinanceNotice;
+import com.futspring.backend.domain.finance.ledger.FinanceNoticeRepository;
 
 @Service
 @RequiredArgsConstructor

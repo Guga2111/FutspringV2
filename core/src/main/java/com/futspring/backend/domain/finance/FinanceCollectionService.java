@@ -14,6 +14,21 @@ import static com.futspring.backend.domain.finance.FinanceTypes.*;
 import static com.futspring.backend.domain.finance.FinanceAccess.*;
 import static com.futspring.backend.domain.finance.FinanceTransactions.*;
 import static com.futspring.backend.domain.finance.FinanceMoney.*;
+import com.futspring.backend.domain.finance.account.FinanceManager;
+import com.futspring.backend.domain.finance.account.FinanceManagerRepository;
+import com.futspring.backend.domain.finance.account.FinanceQrRepository;
+import com.futspring.backend.domain.finance.collection.FinanceCharge;
+import com.futspring.backend.domain.finance.collection.FinanceChargeRepository;
+import com.futspring.backend.domain.finance.collection.FinanceList;
+import com.futspring.backend.domain.finance.collection.FinanceListRepository;
+import com.futspring.backend.domain.finance.collection.FinancePerson;
+import com.futspring.backend.domain.finance.collection.FinancePersonRepository;
+import com.futspring.backend.domain.finance.collection.FinanceTemplate;
+import com.futspring.backend.domain.finance.collection.FinanceTemplateRepository;
+import com.futspring.backend.domain.finance.collection.PriceComponent;
+import com.futspring.backend.domain.finance.ledger.FinanceMovement;
+import com.futspring.backend.domain.finance.ledger.FinanceMovementRepository;
+import com.futspring.backend.domain.finance.ledger.FinanceNoticeRepository;
 
 @Service
 @RequiredArgsConstructor

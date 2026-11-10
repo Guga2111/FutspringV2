@@ -1,4 +1,4 @@
-package com.futspring.backend.domain.finance;
+package com.futspring.backend.domain.finance.account;
 import com.futspring.backend.domain.pelada.PeladaRef;
 import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;

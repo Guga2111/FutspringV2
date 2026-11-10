@@ -11,6 +11,17 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.*;
 import static com.futspring.backend.domain.finance.FinanceAccess.require;
+import com.futspring.backend.domain.finance.account.FinanceAccountRepository;
+import com.futspring.backend.domain.finance.account.FinanceAudit;
+import com.futspring.backend.domain.finance.account.FinanceAuditRepository;
+import com.futspring.backend.domain.finance.account.FinanceManager;
+import com.futspring.backend.domain.finance.account.FinanceManagerRepository;
+import com.futspring.backend.domain.finance.account.FinanceQrRepository;
+import com.futspring.backend.domain.finance.collection.FinanceChargeRepository;
+import com.futspring.backend.domain.finance.collection.FinanceListRepository;
+import com.futspring.backend.domain.finance.collection.FinancePersonRepository;
+import com.futspring.backend.domain.finance.collection.FinanceTemplateRepository;
+import com.futspring.backend.domain.finance.ledger.FinanceMovementRepository;
 
 /** Narrow internal integration boundary; other domains never edit financial tables themselves. */
 @Service

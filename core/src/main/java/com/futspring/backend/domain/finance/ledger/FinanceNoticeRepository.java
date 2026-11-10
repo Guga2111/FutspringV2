@@ -1,10 +1,11 @@
-package com.futspring.backend.domain.finance;
+package com.futspring.backend.domain.finance.ledger;
 import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
 import org.springframework.data.domain.Pageable;
 import java.util.*;
 import java.time.Instant;
 import java.math.BigDecimal;
+import com.futspring.backend.domain.finance.FinanceTypes;
 public interface FinanceNoticeRepository extends JpaRepository<FinanceNotice, Long> {
     boolean existsByReceiptKey(String key);
     @Query("""
