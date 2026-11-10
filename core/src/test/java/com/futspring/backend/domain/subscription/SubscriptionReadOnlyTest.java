@@ -1,13 +1,13 @@
 package com.futspring.backend.domain.subscription;
 
 import com.futspring.backend.domain.chat.ChatService;
-import com.futspring.backend.domain.daily.entity.Daily;
-import com.futspring.backend.domain.daily.entity.DailyAttendance;
-import com.futspring.backend.domain.daily.entity.DailyStatus;
-import com.futspring.backend.domain.daily.entity.Team;
-import com.futspring.backend.domain.daily.repository.DailyAttendanceRepository;
-import com.futspring.backend.domain.daily.repository.DailyRepository;
-import com.futspring.backend.domain.daily.repository.TeamRepository;
+import com.futspring.backend.domain.daily.Daily;
+import com.futspring.backend.domain.daily.attendance.DailyAttendance;
+import com.futspring.backend.domain.daily.DailyStatus;
+import com.futspring.backend.domain.daily.team.Team;
+import com.futspring.backend.domain.daily.attendance.DailyAttendanceRepository;
+import com.futspring.backend.domain.daily.DailyRepository;
+import com.futspring.backend.domain.daily.team.TeamRepository;
 import com.futspring.backend.domain.finance.account.FinanceManager;
 import com.futspring.backend.domain.finance.account.FinanceManagerRepository;
 import com.futspring.backend.domain.pelada.Pelada;

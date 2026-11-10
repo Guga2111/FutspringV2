@@ -1,0 +1,57 @@
+package com.futspring.backend.domain.daily.results;
+
+import com.futspring.backend.shared.entity.EntityIdentity;
+import jakarta.persistence.*;
+import lombok.*;
+import com.futspring.backend.domain.daily.Daily;
+import com.futspring.backend.domain.daily.team.Team;
+
+@Entity
+@Table(name = "matches")
+@Getter
+@Setter
+@ToString(onlyExplicitlyIncluded = true)
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class Match {
+
+    @Id
+    @ToString.Include
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "daily_id", nullable = false)
+    private Daily daily;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "team1_id", nullable = false)
+    private Team team1;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "team2_id", nullable = false)
+    private Team team2;
+
+    // explicit: since Boot 4 the naming strategy splits a digit from the next capital (team1_score), but the
+    // columns were created as team1score
+    @Column(name = "team1score")
+    private Integer team1Score;
+
+    @Column(name = "team2score")
+    private Integer team2Score;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "winner_id")
+    private Team winner;
+
+    @Override
+    public boolean equals(Object o) {
+        return o instanceof Match other && EntityIdentity.sameEntity(this, o, getId(), other.getId());
+    }
+
+    @Override
+    public int hashCode() {
+        return EntityIdentity.effectiveClass(this).hashCode();
+    }
+}

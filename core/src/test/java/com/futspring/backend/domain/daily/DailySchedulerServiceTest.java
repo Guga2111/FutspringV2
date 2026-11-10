@@ -1,9 +1,9 @@
 package com.futspring.backend.domain.daily;
 
 import org.springframework.context.ApplicationEventPublisher;
-import com.futspring.backend.domain.daily.entity.Daily;
-import com.futspring.backend.domain.daily.entity.DailyStatus;
-import com.futspring.backend.domain.daily.repository.DailyRepository;
+import com.futspring.backend.domain.daily.Daily;
+import com.futspring.backend.domain.daily.DailyStatus;
+import com.futspring.backend.domain.daily.DailyRepository;
 import com.futspring.backend.domain.pelada.Pelada;
 import com.futspring.backend.domain.pelada.PeladaRepository;
 import com.futspring.backend.domain.subscription.PeladaSubscriptionRepository;

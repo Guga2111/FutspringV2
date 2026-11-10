@@ -1,6 +1,6 @@
 package com.futspring.backend.domain.finance;
 
-import com.futspring.backend.domain.daily.entity.Daily;
+import com.futspring.backend.domain.daily.Daily;
 import com.futspring.backend.domain.pelada.Pelada;
 import com.futspring.backend.domain.pelada.PeladaRef;
 import com.futspring.backend.domain.user.User;

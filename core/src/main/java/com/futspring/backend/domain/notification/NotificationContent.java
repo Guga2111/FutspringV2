@@ -1,7 +1,7 @@
 package com.futspring.backend.domain.notification;
 
-import com.futspring.backend.domain.daily.AttendanceWindow;
-import com.futspring.backend.domain.daily.entity.Daily;
+import com.futspring.backend.domain.daily.attendance.AttendanceWindow;
+import com.futspring.backend.domain.daily.Daily;
 import com.futspring.backend.domain.subscription.SubscriptionService;
 import com.futspring.backend.domain.subscription.SubscriptionState;
 

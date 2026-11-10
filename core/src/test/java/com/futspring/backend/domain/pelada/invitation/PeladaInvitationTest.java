@@ -38,8 +38,8 @@ class PeladaInvitationTest extends BaseIntegrationTest {
     @Autowired PeladaInviteLinkRepository links;
     @Autowired PeladaLinkBlockRepository blocks;
     @Autowired NotificationRepository notifications;
-    @Autowired com.futspring.backend.domain.daily.repository.DailyRepository dailies;
-    @Autowired com.futspring.backend.domain.daily.repository.DailyAttendanceRepository attendance;
+    @Autowired com.futspring.backend.domain.daily.DailyRepository dailies;
+    @Autowired com.futspring.backend.domain.daily.attendance.DailyAttendanceRepository attendance;
     @Autowired PeladaMensalistaRepository mensalistas;
     @Autowired PeladaSubscriptionRepository subscriptions;
     User admin, recipient, other;
@@ -78,7 +78,7 @@ class PeladaInvitationTest extends BaseIntegrationTest {
         fails(this::invite, HttpStatus.CONFLICT);
     }
     @Test void membershipIsNotCappedBySessionCapacityAndJoiningNeverConfirmsAttendance() {
-        var daily = dailies.save(com.futspring.backend.domain.daily.entity.Daily.builder().pelada(pelada)
+        var daily = dailies.save(com.futspring.backend.domain.daily.Daily.builder().pelada(pelada)
                 .dailyDate(LocalDate.of(2026, 11, 7)).dailyTime("19:00").build());
         String token = link();
         for (int i = 0; i < 11; i++) service.joinLink(token, user("player" + i).getEmail());

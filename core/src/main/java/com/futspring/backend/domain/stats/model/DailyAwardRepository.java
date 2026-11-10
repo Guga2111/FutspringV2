@@ -1,6 +1,6 @@
 package com.futspring.backend.domain.stats.model;
 
-import com.futspring.backend.domain.daily.entity.Daily;
+import com.futspring.backend.domain.daily.Daily;
 import com.futspring.backend.domain.user.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;

@@ -1,6 +1,6 @@
 package com.futspring.backend.domain.daily.dto;
 
-import com.futspring.backend.domain.daily.entity.DailyAttendanceBump;
+import com.futspring.backend.domain.daily.attendance.DailyAttendanceBump;
 import com.futspring.backend.domain.user.dto.PublicUserDTO;
 import lombok.Builder;
 

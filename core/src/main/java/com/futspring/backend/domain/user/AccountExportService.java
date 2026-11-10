@@ -1,9 +1,9 @@
 package com.futspring.backend.domain.user;
 
 import com.futspring.backend.domain.chat.MessageRepository;
-import com.futspring.backend.domain.daily.entity.Daily;
-import com.futspring.backend.domain.daily.repository.DailyAttendanceBumpRepository;
-import com.futspring.backend.domain.daily.repository.DailyAttendanceRepository;
+import com.futspring.backend.domain.daily.Daily;
+import com.futspring.backend.domain.daily.attendance.DailyAttendanceBumpRepository;
+import com.futspring.backend.domain.daily.attendance.DailyAttendanceRepository;
 import com.futspring.backend.domain.finance.FinanceReadService;
 import com.futspring.backend.domain.notification.preference.NotificationPreferenceService;
 import com.futspring.backend.domain.notification.NotificationRepository;

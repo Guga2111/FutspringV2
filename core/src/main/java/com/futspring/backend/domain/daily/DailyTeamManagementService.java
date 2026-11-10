@@ -2,11 +2,12 @@ package com.futspring.backend.domain.daily;
 
 import com.futspring.backend.domain.daily.dto.DailyDetailDTO;
 import com.futspring.backend.domain.daily.dto.SaveTeamsRequestDTO;
-import com.futspring.backend.domain.daily.entity.Daily;
-import com.futspring.backend.domain.daily.entity.Team;
-import com.futspring.backend.domain.daily.repository.DailyAttendanceRepository;
-import com.futspring.backend.domain.daily.repository.DailyRepository;
-import com.futspring.backend.domain.daily.repository.TeamRepository;
+import com.futspring.backend.domain.daily.Daily;
+import com.futspring.backend.domain.daily.team.Team;
+import com.futspring.backend.domain.daily.attendance.DailyAttendanceRepository;
+import com.futspring.backend.domain.daily.DailyRepository;
+import com.futspring.backend.domain.daily.team.TeamRepository;
+import com.futspring.backend.domain.daily.team.TeamsReadiness;
 import com.futspring.backend.domain.pelada.Pelada;
 import com.futspring.backend.domain.subscription.SubscriptionGuard;
 import com.futspring.backend.domain.pelada.member.PeladaPlayerStars;

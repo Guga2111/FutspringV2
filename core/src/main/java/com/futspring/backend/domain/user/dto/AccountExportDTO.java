@@ -1,6 +1,6 @@
 package com.futspring.backend.domain.user.dto;
 
-import com.futspring.backend.domain.daily.entity.DailyStatus;
+import com.futspring.backend.domain.daily.DailyStatus;
 import com.futspring.backend.domain.finance.dto.FinanceAccountExport;
 import com.futspring.backend.domain.notification.NotificationType;
 import com.futspring.backend.domain.notification.dto.NotificationPreferenceDTO;

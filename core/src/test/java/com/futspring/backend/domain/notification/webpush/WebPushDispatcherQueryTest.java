@@ -1,7 +1,7 @@
 package com.futspring.backend.domain.notification.webpush;
 
-import com.futspring.backend.domain.daily.entity.Daily;
-import com.futspring.backend.domain.daily.repository.DailyRepository;
+import com.futspring.backend.domain.daily.Daily;
+import com.futspring.backend.domain.daily.DailyRepository;
 import com.futspring.backend.domain.notification.Notification;
 import com.futspring.backend.domain.notification.NotificationCategory;
 import com.futspring.backend.domain.notification.NotificationRepository;
