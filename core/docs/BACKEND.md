@@ -169,6 +169,15 @@ com.futspring.backend
 │   │   │                           AggregateRebuildService (rebuilds Ranking per pelada and global Stats for a set of players, batch queries)
 │   │   ├── model/                  Ranking, Stats, UserDailyStats, DailyAward and their repositories (grouped/native aggregate queries)
 │   │   └── dto/                    RankingDTO, StatsDTO, PeladaAwardsDTO, PeladaAttendanceDTO, PlayerPelada{Stats,History}DTO, UserMatchHistoryDTO, UserStatsTimelineDTO
+│   ├── finance/                    FinanceController, FinanceCollectionService, FinanceLedgerService, FinanceReadService, FinanceAttachmentService
+│   │   │                           (the services, see [Pelada finance](#pelada-finance-domainfinance)), FinanceTransactions (runs a command under the
+│   │   │                           pelada lock: authorization, revision, idempotency, audit), FinanceAccess (the caller's finance permissions),
+│   │   │                           FinancePreservation (the only entry point other domains call), FinanceFiles + FinanceReceiptCleanup (private
+│   │   │                           storage and receipt expiry), FinanceMoney, FinanceTypes
+│   │   ├── collection/             FinanceList, FinanceCharge, FinancePerson, FinanceTemplate, PriceComponent and their repositories
+│   │   ├── ledger/                 FinanceMovement, FinanceNotice and their repositories
+│   │   ├── account/                FinanceAccount, FinanceManager, FinanceAudit, FinanceQr and their repositories
+│   │   └── dto/                    FinanceViews, FinanceRequests, FinanceAccountExport, DecimalStringDeserializer
 │   ├── chat/                       ChatController (STOMP + @MessageExceptionHandler), ChatService (save message, paged history), Message, MessageRepository
 │   │   └── dto/                    MessageDTO, SendMessageRequest
 │   ├── notification/               NotificationService (synchronous @EventListener for every domain event: recipients, actor dropped,
@@ -509,7 +518,7 @@ Relationships: **creator** (`pelada.creator`), **admin** (`pelada.admins`), **me
 
 ## Pelada finance (`domain/finance`)
 
-V1 is a local, transactional finance module; it does not integrate banks, process payments or change attendance/mensalista status. `FinanceCollectionService` owns settings, delegated managers, templates, collection lists and individual obligations. `FinanceLedgerService` owns notices, receipts, realized cash, reversals and refunds. `FinanceReadService` owns filtered read models and server totals. `FinanceAttachmentService`/`FinanceFiles` own authenticated images; `FinanceReceiptCleanup` owns expiry and orphan recovery. `FinancePreservation` is the internal boundary used by membership and deletion; other domains never write finance tables.
+V1 is a local, transactional finance module; it does not integrate banks, process payments or change attendance/mensalista status. `FinanceCollectionService` owns settings, delegated managers, templates, collection lists and individual obligations. `FinanceLedgerService` owns notices, receipts, realized cash, reversals and refunds. `FinanceReadService` owns filtered read models and server totals. `FinanceAttachmentService`/`FinanceFiles` own authenticated images; `FinanceReceiptCleanup` owns expiry and orphan recovery. `FinancePreservation` is the internal boundary used by membership and deletion; other domains never write finance tables. The services stay at the root of `domain/finance` (they share package-private helpers); `collection/`, `ledger/` and `account/` hold the entities and repositories of each aggregate.
 
 `FinanceAccount` holds individual/transparent visibility, default Pix and a monotonically increasing revision. All writes lock the existing pelada row **before** checking membership, financial authority and revision. They update obligations, cash and `FinanceAudit` in the same transaction (`FinanceTransactions`). Every command has `command: {revision, requestKey: UUID, reason: string|null}`. A duplicate key with the same caller/path/operation/payload returns the current authorized state without executing again; a different payload or stale revision returns 409. A notice produces at most one receipt (DB uniqueness too). Effective dates default to today in the pelada's zone and cannot be future dates; timestamps come from the server clock.
 
