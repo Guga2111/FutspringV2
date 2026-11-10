@@ -152,18 +152,19 @@ com.futspring.backend
 │   │   │   └── model/              PeladaInvitation, PeladaInviteLink, PeladaLinkBlock and their repositories
 │   │   └── dto/                    Create/UpdatePeladaRequestDTO, DayOfWeekPattern, PeladaResponseDTO, PeladaDetailResponseDTO, PeladaMemberDTO, UpdatePlayerStarsRequestDTO,
 │   │                               SetMensalistaRequestDTO, Bulk{SetAdmin,SetMensalista,SetStars,RemovePlayers}RequestDTO, TransferCreatorRequestDTO…
-│   ├── daily/                      DailyController and the daily services:
+│   ├── daily/                      Daily, DailyStatus, DailyRepository, DailyController, DailyCreatedEvent, DailyCanceledEvent, TeamsSortedEvent and:
 │   │   │                           DailyService (create, list, status transitions, delete, detail aggregation)
-│   │   │                           DailyAttendanceService (confirm / unconfirm, self and by admin; diarista window, capacity, mensalista bump,
-│   │   │                           row lock; bumps seen), AttendanceWindow (session start / diarista window in the pelada's zone),
-│   │   │                           DiaristaBumpedEvent (the bump's notification and e-mail go through domain/notification)
 │   │   │                           DailyTeamManagementService (sort teams with LPT balanced by the stars in the pelada, manual save, swap, rename,
-│   │   │                           color; takes a withdrawn player out of their team), TeamsReadiness (when the teams can start a session)
-│   │   │                           DailyResultsService (results, live league table, finalize, champion image, populate, clearResults)
+│   │   │                           color; takes a withdrawn player out of their team; at the root because attendance and results call it)
 │   │   │                           DailySchedulerService (hourly cron that auto-creates the next daily, in the pelada's zone), DailyDTOMapper (Player/Team/MatchDTO),
-│   │                           DailyListItemAssembler (DailyListItemDTO with counts, the caller's attendance and result, grouped queries)
-│   │   ├── entity/                 Daily, DailyStatus, DailyAttendance (+ DailyAttendanceId), DailyAttendanceBump, Team, Match, PlayerMatchStat, LeagueTableEntry
-│   │   ├── repository/             Daily, DailyAttendance, DailyAttendanceBump, Team, Match, PlayerMatchStat, LeagueTableEntry repositories
+│   │   │                           DailyListItemAssembler (DailyListItemDTO with counts, the caller's attendance and result, grouped queries)
+│   │   ├── attendance/             DailyAttendanceService (confirm / unconfirm, self and by admin; diarista window, capacity, mensalista bump,
+│   │   │                           row lock; bumps seen), AttendanceWindow (session start / diarista window in the pelada's zone),
+│   │   │                           DailyAttendance (+ DailyAttendanceId), DailyAttendanceBump and their repositories, AttendanceChangedByAdminEvent,
+│   │   │                           DiaristaBumpedEvent (the bump's notification and e-mail go through domain/notification)
+│   │   ├── team/                   Team, TeamRepository, TeamsReadiness (when the teams can start a session)
+│   │   ├── results/                DailyResultsService (results, live league table, finalize, champion image, populate, clearResults),
+│   │   │                           Match, PlayerMatchStat, LeagueTableEntry and their repositories, DailyFinalizedEvent
 │   │   └── dto/                    DailyDetailDTO, DailyListItemDTO, AttendanceBumpDTO, MatchResultDTO, Finalize/Populate/Swap/SaveTeams/Update* request DTOs
 │   ├── stats/                      RankingService, AwardsService, StatsService, AttendanceService (read-side aggregates; attendance ranking of the last 6 months),
 │   │   │                           AggregateRebuildService (rebuilds Ranking per pelada and global Stats for a set of players, batch queries)
