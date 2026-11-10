@@ -86,10 +86,10 @@ export function NextSessionCard({ daily, timeZone, isAdmin, readOnly, attendance
               Você vai
             </span>
             <Button
-              variant="ghost"
+              variant="destructive-ghost"
               disabled={attendancePending}
               onClick={() => onToggleAttendance(daily)}
-              className="h-7 px-2.5 text-xs font-normal text-success-soft hover:bg-success-border/40 hover:text-success-soft"
+              className="h-7 px-2.5 text-xs font-medium"
             >
               Desistir
             </Button>
