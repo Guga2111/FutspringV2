@@ -114,7 +114,7 @@ A quick tunnel gets a new URL on every restart: repeat steps 2–3 and reinstall
 
 ## Package layout
 
-Features live under `domain/`, one package per domain (`domain/daily`, `domain/pelada`…). Each domain holds its controller, services, entities and repositories at its root, with request/response classes in `dto/`; the two big domains (`daily`, `stats`) also split `entity/` and `repository/`. Code used by every domain lives in `shared/`; the dev seed in `dev/`.
+Features live under `domain/`, one package per domain (`domain/daily`, `domain/pelada`…). Each domain keeps its request/response classes in `dto/`. A small domain is flat: controller, services, entities and repositories at its root. A domain past 12 classes is split into sub-packages by subject (`auth/passwordreset`, `notification/webpush`, `daily/attendance`), following the rule below. Code used by every domain lives in `shared/`; the dev seed in `dev/`.
 
 ```
 com.futspring.backend
@@ -132,10 +132,11 @@ com.futspring.backend
 │   │   │                           JwtAuthFilter (Bearer → email principal), AccessTokenVerifier (signature + user's current tokenVersion),
 │   │   │                           AuthRateLimitFilter (10/min per IP on every POST /auth route,
 │   │   │                           Bucket4j + Caffeine), JwtChannelInterceptor (authenticates STOMP CONNECT/SUBSCRIBE/SEND),
-│   │   │                           LegalTerms (CURRENT_VERSION of the terms/privacy pages; client/src/lib/legal.ts mirrors it),
-│   │   │                           PasswordResetService (forgot / reset password), PasswordResetToken + repository, ResetTokens
-│   │   │                           (random token + SHA-256), PasswordResetEmailListener (sends the e-mail after commit, @Async),
-│   │   │                           PasswordResetEmail (fills resources/email/password-reset.html), PasswordResetTokenCleanup (daily purge)
+│   │   │                           LegalTerms (CURRENT_VERSION of the terms/privacy pages; client/src/lib/legal.ts mirrors it)
+│   │   ├── passwordreset/          PasswordResetService (forgot / reset password), PasswordResetToken + repository, ResetTokens
+│   │   │                           (random token + SHA-256), PasswordResetRequestedEvent, PasswordResetEmailListener (sends the
+│   │   │                           e-mail after commit, @Async), PasswordResetEmail (fills resources/email/password-reset.html),
+│   │   │                           PasswordResetTokenCleanup (daily purge)
 │   │   └── dto/                    LoginRequestDTO, RegisterRequestDTO, AuthResponseDTO, UserResponseDTO,
 │   │                               ForgotPasswordRequestDTO, ResetPasswordRequestDTO
 │   ├── user/                       UserController, UserService (profile get/update, avatar, background image, change password), User, UserRepository,
@@ -217,7 +218,16 @@ com.futspring.backend
 └── dev/DataInitializer         dev seed (CommandLineRunner, dev profile only)
 ```
 
-New code goes in the domain it belongs to (a new feature is a new package under `domain/`); cross-domain references are plain imports (entities, services and DTOs are public). Code needed by most domains goes in `shared/`. A new domain starts flat (controller, service, entity, repository at its root, DTOs in `dto/`) and splits `entity/` / `repository/` only when it grows like `daily` did. Response DTOs map themselves with a static `from(entity)`; entities are listed in [Domain model](#domain-model). When a service grows past ~300 lines or mixes responsibilities, split it by sub-domain the way the daily services are split (`DailyService` orchestrates, `DailyAttendanceService` / `DailyTeamManagementService` / `DailyResultsService` own one concern each).
+New code goes in the domain it belongs to (a new feature is a new package under `domain/`); cross-domain references are plain imports (entities, services and DTOs are public). Code needed by most domains goes in `shared/`. Response DTOs map themselves with a static `from(entity)`; entities are listed in [Domain model](#domain-model). When a service grows past ~300 lines or mixes responsibilities, split it by sub-domain the way the daily services are split (`DailyService` orchestrates, `DailyAttendanceService` / `DailyTeamManagementService` / `DailyResultsService` own one concern each).
+
+**Where a class goes.** A new domain starts flat (controller, service, entity, repository at its root, DTOs in `dto/`). A package holds at most **12 classes directly** (`dto/` aside); whoever adds the 13th splits it in the same PR:
+
+1. **By subject first:** a group of 3 or more classes about the same thing becomes a sub-package named after it, singular and lowercase (`invitation`, `attendance`, `webpush`), as long as the domain's sub-packages don't depend on each other in a cycle.
+2. **By aggregate when the services are a mesh** (they call each other in a cycle, or separating them would need more than 10 members made `public`): the services stay together at the root and the entities leave with their repositories, enums and value types, grouped by aggregate (`finance/collection`, `finance/ledger`, `finance/account`), or in a single `model/` when there is only one (`stats/model`).
+
+Placement: a class goes in the sub-package of its subject when only that subject (and other domains) uses it; at the domain root when two or more sub-packages use it or it is the domain's entry point (main entity, orchestrating service, guard). An entity and its repository share a package. An event sits next to the service that publishes it; an enum or value type next to the entity it describes. DTOs are always in `<domain>/dto/`. Sibling sub-packages never depend on each other in a cycle; the root may depend on them and they on it.
+
+Package-private members stay package-private. Making one `public` to allow a split goes in its own commit before the moves, listed in the PR. `DomainLayoutTest` (ArchUnit) fails the build on a package with more than 12 classes or a cycle between a domain's sub-packages (`dto/` is left out of both).
 
 ## Architectural patterns
 
@@ -793,7 +803,7 @@ Reads: `/users/{id}`, `/stats*` and `/peladas` of a deleted account → 404, sea
 
 ## Testing
 
-Tests live in `src/test/java/com/futspring/backend`, in the same domain packages as the code they test (`domain/daily/DailyServiceTest`, `domain/stats/repository/UserDailyStatsRepositoryTest`…); shared test helpers (`BaseIntegrationTest`, `MembershipStubs`) are in `support/`, migration tests at the root.
+Tests live in `src/test/java/com/futspring/backend`, in the same domain packages as the code they test (`domain/daily/DailyServiceTest`, `domain/stats/repository/UserDailyStatsRepositoryTest`…); shared test helpers (`BaseIntegrationTest`, `MembershipStubs`) are in `support/`, migration tests at the root. A test lives in the package of the class it tests; an integration test that covers a whole domain stays at the domain root.
 
 - **Invitations** — `PeladaInvitationTest` (H2 integration: permissions, consent, state/expiry/cooldown boundaries, link replacement/revocation, removal/return, deletion, quotas and public previews), `InviteLinkTokensTest` (signature, key isolation, tampering), `InvitationConcurrencyTest` (Postgres 17: duplicate accepts, accept/cancel, join/revoke/replace, removal races, two accepts for the last trial spot, database partial uniqueness), contract snapshots and notification e-mail/after-commit tests.
 - **Service unit tests** — JUnit Jupiter 6 + Mockito + AssertJ, one class per service (`PeladaServiceTest`, `DailyServiceTest`, `DailyAttendanceServiceTest`…). Mock repositories and `UserAuthenticationHelper`; build a real `PeladaAccessHelper` over the mocked `PeladaRepository` and call `MembershipStubs.stubMembership(peladaRepository, pelada…)` so the exists queries answer from the entities' member/admin sets.
@@ -829,6 +839,7 @@ Tests live in `src/test/java/com/futspring/backend`, in the same domain packages
 - DTOs: use records, record accessors (`request.name()`), and complete construction; keep existing Lombok `@Builder` and static mapping factories. No compatibility getters or post-construction setters. `StatsDTO` factories take award counts up front. Preserve validation on components and container elements, Portuguese messages, JSON names, and `@JsonInclude` rules. `CreatePeladaRequestDTO` uses a Jackson 3 builder with defaults of 2 teams and 5 players per team so omission keeps defaults while explicit invalid values still fail validation. Match score and imported player-stat request records also use DTO-local Jackson builders to keep omitted primitive inputs at zero while rejecting explicit nulls (Jackson 3 otherwise rejects missing primitive constructor components). Partial-update components stay nullable and have no defaults.
 - Entities: prefer `@Getter @Setter` + `@NoArgsConstructor`/`@AllArgsConstructor`/`@Builder` over `@Data`, with `equals`/`hashCode` on the id only (see antipatterns).
 - Logging with `@Slf4j`; no `System.out`/`printStackTrace`.
+- A new class goes where 'Where a class goes' (Package layout) says; don't add an `entity/`, `repository/`, `service/` or `event/` package.
 - Code and identifiers in English. `AppException` and validation messages reach the user (the frontend toasts `message`), so new ones are written in Portuguese; existing English messages ("Daily not found", "Only admins can…") are translated when touched.
 
 ## Patterns
