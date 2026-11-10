@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { ConfirmActionDialog } from "@/components/ConfirmActionDialog"
 import { SelectionBar } from "@/components/SelectionBar"
-import { SetPlayerStarsDialog } from "@/components/pelada/SetPlayerStarsDialog"
+import { SetPlayerStarsDialog } from "@/components/pelada/members/SetPlayerStarsDialog"
 import {
   bulkActionLabel,
   planBulkActions,

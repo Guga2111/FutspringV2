@@ -18,7 +18,7 @@ const isMac = navigator.platform.toUpperCase().includes("MAC");
 const mod = isMac ? "⌘" : "Ctrl";
 import { AttendanceRankingDialog } from "./AttendanceRankingDialog";
 import { ComparePlayersDialog } from "./ComparePlayersDialog";
-import { RemovePlayerDialog } from "./RemovePlayerDialog";
+import { RemovePlayerDialog } from "@/components/pelada/ranking/RemovePlayerDialog";
 import type { PeladaMember } from "@/types/pelada";
 
 interface RankingCommandButtonProps {
