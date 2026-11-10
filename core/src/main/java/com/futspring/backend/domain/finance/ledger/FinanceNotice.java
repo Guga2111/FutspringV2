@@ -1,4 +1,4 @@
-package com.futspring.backend.domain.finance;
+package com.futspring.backend.domain.finance.ledger;
 
 import com.futspring.backend.shared.entity.EntityIdentity;
 import jakarta.persistence.*;

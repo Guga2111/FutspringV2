@@ -27,6 +27,17 @@ import static com.futspring.backend.domain.finance.FinanceTypes.*;
 import static org.assertj.core.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import com.futspring.backend.domain.finance.account.FinanceAccount;
+import com.futspring.backend.domain.finance.account.FinanceAccountRepository;
+import com.futspring.backend.domain.finance.account.FinanceAudit;
+import com.futspring.backend.domain.finance.account.FinanceAuditRepository;
+import com.futspring.backend.domain.finance.account.FinanceManager;
+import com.futspring.backend.domain.finance.account.FinanceManagerRepository;
+import com.futspring.backend.domain.finance.collection.FinanceChargeRepository;
+import com.futspring.backend.domain.finance.collection.FinanceListRepository;
+import com.futspring.backend.domain.finance.collection.FinancePersonRepository;
+import com.futspring.backend.domain.finance.ledger.FinanceMovementRepository;
+import com.futspring.backend.domain.finance.ledger.FinanceNoticeRepository;
 
 @Import(FinanceServiceTest.Time.class)
 class FinanceServiceTest extends BaseIntegrationTest {
