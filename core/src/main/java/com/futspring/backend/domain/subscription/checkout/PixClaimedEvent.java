@@ -1,4 +1,4 @@
-package com.futspring.backend.domain.subscription;
+package com.futspring.backend.domain.subscription.checkout;
 
 import com.futspring.backend.domain.pelada.Pelada;
 import com.futspring.backend.domain.user.User;

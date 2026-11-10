@@ -1,4 +1,4 @@
-package com.futspring.backend.domain.subscription;
+package com.futspring.backend.domain.subscription.billing;
 
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;

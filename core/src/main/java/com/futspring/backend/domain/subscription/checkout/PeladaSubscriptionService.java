@@ -1,8 +1,15 @@
-package com.futspring.backend.domain.subscription;
+package com.futspring.backend.domain.subscription.checkout;
 
 import com.futspring.backend.domain.pelada.Pelada;
 import com.futspring.backend.domain.pelada.PeladaRepository;
 import com.futspring.backend.domain.subscription.dto.PeladaSubscriptionDTO;
+import com.futspring.backend.domain.subscription.PeladaSubscription;
+import com.futspring.backend.domain.subscription.PeladaSubscriptionRepository;
+import com.futspring.backend.domain.subscription.SubscriptionPlan;
+import com.futspring.backend.domain.subscription.SubscriptionPlans;
+import com.futspring.backend.domain.subscription.SubscriptionService;
+import com.futspring.backend.domain.subscription.SubscriptionState;
+import com.futspring.backend.domain.subscription.billing.SubscriptionPaymentRepository;
 import com.futspring.backend.domain.user.User;
 import com.futspring.backend.shared.exception.AppException;
 import com.futspring.backend.shared.helper.PeladaAccessHelper;

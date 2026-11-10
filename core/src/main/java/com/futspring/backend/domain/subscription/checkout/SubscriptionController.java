@@ -1,4 +1,4 @@
-package com.futspring.backend.domain.subscription;
+package com.futspring.backend.domain.subscription.checkout;
 
 import com.futspring.backend.domain.subscription.dto.PeladaSubscriptionDTO;
 import com.futspring.backend.domain.subscription.dto.PixClaimRequestDTO;

@@ -15,7 +15,7 @@ import com.futspring.backend.domain.pelada.PeladaRef;
 import com.futspring.backend.domain.pelada.PeladaRepository;
 import com.futspring.backend.domain.stats.StatsService;
 import com.futspring.backend.domain.subscription.PeladaSubscriptionRepository;
-import com.futspring.backend.domain.subscription.SubscriptionPaymentRepository;
+import com.futspring.backend.domain.subscription.billing.SubscriptionPaymentRepository;
 import com.futspring.backend.domain.subscription.SubscriptionPlans;
 import com.futspring.backend.domain.subscription.SubscriptionState;
 import com.futspring.backend.domain.tour.UserTourRepository;

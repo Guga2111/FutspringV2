@@ -1,4 +1,4 @@
-package com.futspring.backend.domain.subscription;
+package com.futspring.backend.domain.subscription.checkout;
 
 import com.futspring.backend.domain.notification.Notification;
 import com.futspring.backend.domain.notification.NotificationRepository;
@@ -8,6 +8,17 @@ import com.futspring.backend.domain.pelada.PeladaRepository;
 import com.futspring.backend.domain.user.User;
 import com.futspring.backend.domain.user.UserRepository;
 import com.futspring.backend.support.BaseIntegrationTest;
+import com.futspring.backend.domain.subscription.PeladaSubscription;
+import com.futspring.backend.domain.subscription.PeladaSubscriptionRepository;
+import com.futspring.backend.domain.subscription.SubscriptionKind;
+import com.futspring.backend.domain.subscription.SubscriptionPlan;
+import com.futspring.backend.domain.subscription.SubscriptionPlans;
+import com.futspring.backend.domain.subscription.SubscriptionService;
+import com.futspring.backend.domain.subscription.billing.SubscriptionEvent;
+import com.futspring.backend.domain.subscription.billing.SubscriptionEventRepository;
+import com.futspring.backend.domain.subscription.billing.SubscriptionEventType;
+import com.futspring.backend.domain.subscription.billing.SubscriptionPayment;
+import com.futspring.backend.domain.subscription.billing.SubscriptionPaymentRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
