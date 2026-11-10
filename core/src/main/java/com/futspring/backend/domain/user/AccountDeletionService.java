@@ -1,6 +1,6 @@
 package com.futspring.backend.domain.user;
 
-import com.futspring.backend.domain.auth.PasswordResetTokenRepository;
+import com.futspring.backend.domain.auth.passwordreset.PasswordResetTokenRepository;
 import com.futspring.backend.domain.file.FileUploadService;
 import com.futspring.backend.domain.finance.FinancePreservation;
 import com.futspring.backend.domain.notification.NotificationPreferenceRepository;
