@@ -47,4 +47,8 @@ public interface PeladaPlayerStarsRepository extends JpaRepository<PeladaPlayerS
     @Modifying
     @Query("DELETE FROM PeladaPlayerStars s WHERE s.user = :user")
     void deleteByUser(@Param("user") User user);
+
+    // Account export: [peladaId, stars] of the user's rows (peladas without one have the default)
+    @Query("SELECT s.pelada.id, s.stars FROM PeladaPlayerStars s WHERE s.user.id = :userId")
+    List<Object[]> findStarsRowsByUser(@Param("userId") Long userId);
 }

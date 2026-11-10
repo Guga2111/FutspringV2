@@ -15,4 +15,12 @@ public interface FinanceChargeRepository extends JpaRepository<FinanceCharge, Lo
     List<Long> findActivePersonIds(@Param("listId") Long listId, @Param("ids") Collection<Long> ids);
     List<FinanceCharge> findByListIdIn(Collection<Long> listIds);
     List<FinanceCharge> findByIdInAndPeladaIdAndListIdOrderById(Collection<Long> ids, Long peladaId, Long listId);
+
+    // Account export: the user's charges in lists that were published (drafts are the managers' work in progress)
+    @EntityGraph(attributePaths = "components")
+    @Query("""
+        SELECT c FROM FinanceCharge c WHERE c.userId = :userId
+        AND c.listId IN (SELECT l.id FROM FinanceList l WHERE l.publishedAt IS NOT NULL) ORDER BY c.id
+        """)
+    List<FinanceCharge> findPublishedByUserId(@Param("userId") Long userId);
 }

@@ -51,4 +51,11 @@ public interface DailyAttendanceBumpRepository extends JpaRepository<DailyAttend
     @Modifying
     @Query("DELETE FROM DailyAttendanceBump b WHERE b.user = :user")
     void deleteByUser(@Param("user") User user);
+
+    // Account export: the bumps where the user lost the spot, with session and pelada, newest first
+    @Query("""
+        SELECT b FROM DailyAttendanceBump b JOIN FETCH b.daily d JOIN FETCH d.pelada
+        WHERE b.user.id = :userId ORDER BY b.bumpedAt DESC, b.id DESC
+        """)
+    List<DailyAttendanceBump> findByUserIdWithDaily(@Param("userId") Long userId);
 }

@@ -46,4 +46,7 @@ public interface PushSubscriptionRepository extends JpaRepository<PushSubscripti
     @Modifying
     @Query("UPDATE PushSubscription s SET s.lastSuccessAt = :at WHERE s.id IN :ids")
     void markSuccess(@Param("ids") Collection<Long> ids, @Param("at") Instant at);
+
+    // Account export
+    List<PushSubscription> findByUser_IdOrderByCreatedAt(Long userId);
 }

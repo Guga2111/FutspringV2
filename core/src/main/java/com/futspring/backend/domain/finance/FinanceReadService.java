@@ -1,7 +1,10 @@
 package com.futspring.backend.domain.finance;
 
 import com.futspring.backend.domain.finance.dto.FinanceViews;
+import com.futspring.backend.domain.finance.dto.FinanceAccountExport;
 import com.futspring.backend.domain.pelada.PeladaMensalistaRepository;
+import com.futspring.backend.domain.pelada.PeladaRef;
+import com.futspring.backend.domain.pelada.PeladaRepository;
 import com.futspring.backend.domain.daily.repository.*;
 import com.futspring.backend.domain.daily.entity.Daily;
 import lombok.RequiredArgsConstructor;
@@ -33,6 +36,7 @@ public class FinanceReadService {
     private final DailyRepository dailies;
     private final DailyAttendanceRepository attendance;
     private final PeladaMensalistaRepository mensalistas;
+    private final PeladaRepository peladas;
 
     public FinanceViews.Overview overview(Long id, String email, int page, int size) {
         return overview(id, email, ListScope.ACTIVE, page, size);
@@ -197,4 +201,32 @@ public class FinanceReadService {
     }
     static int limit(int size) { return Math.clamp(size, 1, 50); }
     static int page(int page) { return Math.clamp(page, 0, 1000000); }
+
+    /**
+     * The account export's finance block: the user's charges in published lists (also of peladas they left) and the
+     * notices they sent. Constant queries: charges with components, their lists, the received sums, pelada names,
+     * notices.
+     */
+    public FinanceAccountExport accountExport(Long userId) {
+        List<FinanceCharge> rows = charges.findPublishedByUserId(userId);
+        Map<Long, FinanceList> listsById = rows.isEmpty() ? Map.of() : lists.findAllById(
+                rows.stream().map(FinanceCharge::getListId).collect(Collectors.toSet())).stream()
+                .collect(Collectors.toMap(FinanceList::getId, list -> list));
+        Map<Long, String> names = rows.isEmpty() ? Map.of() : peladas.findRefsByIdIn(
+                rows.stream().map(FinanceCharge::getPeladaId).collect(Collectors.toSet())).stream()
+                .collect(Collectors.toMap(PeladaRef::id, PeladaRef::name));
+        Map<Long, BigDecimal> paid = paid(rows);
+        var chargeViews = rows.stream().map(charge -> {
+            FinanceList list = listsById.get(charge.getListId());
+            return new FinanceAccountExport.Charge(charge.getId(), charge.getPeladaId(), names.get(charge.getPeladaId()),
+                    list.getId(), list.getName(), list.getClassification(), list.getStatus(),
+                    componentViews(charge.getComponents()), text(charge.getAdjustment()), text(charge.getAmountDue()),
+                    text(paid.getOrDefault(charge.getId(), ZERO)), charge.getDueDate(), charge.isCanceled());
+        }).toList();
+        var noticeViews = notices.findByUserIdOrderById(userId).stream()
+                .map(n -> new FinanceAccountExport.Notice(n.getId(), n.getChargeId(), text(n.getAmount()), n.getStatus(),
+                        n.getCreatedAt(), n.getResolvedAt(), n.getReason(), n.getReceiptKey() != null))
+                .toList();
+        return new FinanceAccountExport(chargeViews, noticeViews);
+    }
 }

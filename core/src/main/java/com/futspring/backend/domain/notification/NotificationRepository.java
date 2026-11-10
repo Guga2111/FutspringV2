@@ -119,4 +119,11 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
     @Modifying
     @Query("DELETE FROM Notification n WHERE n.recipient = :user")
     void deleteByRecipient(@Param("user") User user);
+
+    // Account export: the user's inbox with its pelada, newest first
+    @Query("""
+        SELECT n FROM Notification n LEFT JOIN FETCH n.pelada
+        WHERE n.recipient.id = :userId ORDER BY n.createdAt DESC, n.id DESC
+        """)
+    List<Notification> findByRecipientIdWithPelada(@Param("userId") Long userId);
 }

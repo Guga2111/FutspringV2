@@ -1,0 +1,142 @@
+{
+  "formatVersion" : 178,
+  "exportedAt" : "2026-10-31T23:00:00Z",
+  "account" : {
+    "id" : 356,
+    "username" : "username",
+    "email" : "email",
+    "position" : "position",
+    "image" : "image",
+    "backgroundImage" : "backgroundImage",
+    "createdAt" : "2026-10-31T23:00:00Z",
+    "termsVersion" : "termsVersion",
+    "termsAcceptedAt" : "2026-10-31T23:00:00Z",
+    "trialUsedAt" : "2026-10-31T23:00:00Z"
+  },
+  "peladas" : [ {
+    "peladaId" : 995,
+    "peladaName" : "peladaName",
+    "isCreator" : true,
+    "isAdmin" : true,
+    "isMensalista" : true,
+    "stars" : 538
+  } ],
+  "stats" : {
+    "userId" : 95,
+    "username" : "username",
+    "goals" : 145,
+    "assists" : 403,
+    "matchesPlayed" : 583,
+    "wins" : 560,
+    "sessionsPlayed" : 361,
+    "matchWins" : 77,
+    "wiltballWins" : 393,
+    "artilheiroWins" : 547,
+    "garcomWins" : 969,
+    "puskasDates" : [ "2026-10-31" ]
+  },
+  "matchHistory" : {
+    "rows" : [ {
+      "dailyId" : 309,
+      "date" : "2026-10-31",
+      "peladaId" : 995,
+      "peladaName" : "peladaName",
+      "goals" : 145,
+      "assists" : 403,
+      "matchesPlayed" : 583,
+      "wins" : 560,
+      "result" : "result"
+    } ]
+  },
+  "attendance" : [ {
+    "dailyId" : 309,
+    "peladaId" : 995,
+    "peladaName" : "peladaName",
+    "date" : "2026-10-31",
+    "status" : "SCHEDULED",
+    "confirmedAt" : "2026-10-31T23:00:00Z"
+  } ],
+  "bumps" : [ {
+    "dailyId" : 309,
+    "peladaId" : 995,
+    "peladaName" : "peladaName",
+    "date" : "2026-10-31",
+    "bumpedAt" : "2026-10-31T23:00:00Z",
+    "seenAt" : "2026-10-31T23:00:00Z"
+  } ],
+  "messages" : [ {
+    "peladaId" : 995,
+    "peladaName" : "peladaName",
+    "content" : "content",
+    "sentAt" : "sentAt"
+  } ],
+  "finance" : {
+    "charges" : [ {
+      "id" : 356,
+      "peladaId" : 995,
+      "peladaName" : "peladaName",
+      "listId" : 522,
+      "listName" : "listName",
+      "classification" : "DAILY",
+      "listStatus" : "DRAFT",
+      "components" : [ {
+        "name" : "name",
+        "amount" : "amount"
+      } ],
+      "adjustment" : "adjustment",
+      "amountDue" : "amountDue",
+      "received" : "received",
+      "dueDate" : "2026-10-31",
+      "canceled" : true
+    } ],
+    "notices" : [ {
+      "id" : 356,
+      "chargeId" : 576,
+      "amount" : "amount",
+      "status" : "PENDING",
+      "createdAt" : "2026-10-31T23:00:00Z",
+      "resolvedAt" : "2026-10-31T23:00:00Z",
+      "reason" : "reason",
+      "receiptSent" : true
+    } ]
+  },
+  "subscriptions" : [ {
+    "peladaId" : 995,
+    "peladaName" : "peladaName",
+    "kind" : "TRIAL",
+    "status" : "TRIAL",
+    "plan" : "MONTHLY",
+    "validUntil" : "2026-10-31T23:00:00Z",
+    "founder" : true,
+    "pixClaimedAt" : "2026-10-31T23:00:00Z",
+    "claimedPlan" : "MONTHLY"
+  } ],
+  "subscriptionPayments" : [ {
+    "peladaName" : "peladaName",
+    "amount" : "amount",
+    "paidOn" : "2026-10-31",
+    "plan" : "MONTHLY",
+    "periodStart" : "2026-10-31T23:00:00Z",
+    "periodEnd" : "2026-10-31T23:00:00Z",
+    "voidedAt" : "2026-10-31T23:00:00Z"
+  } ],
+  "notifications" : [ {
+    "type" : "DIARISTA_BUMPED",
+    "peladaName" : "peladaName",
+    "createdAt" : "2026-10-31T23:00:00Z",
+    "readAt" : "2026-10-31T23:00:00Z"
+  } ],
+  "notificationPreferences" : [ {
+    "category" : "SESSION",
+    "emailEnabled" : true,
+    "pushEnabled" : true
+  } ],
+  "toursSeen" : [ {
+    "tour" : "FINANCE_MANAGER",
+    "completedAt" : "2026-10-31T23:00:00Z"
+  } ],
+  "pushDevices" : [ {
+    "createdAt" : "2026-10-31T23:00:00Z",
+    "lastSuccessAt" : "2026-10-31T23:00:00Z"
+  } ]
+}
