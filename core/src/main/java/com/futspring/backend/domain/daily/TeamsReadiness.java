@@ -13,12 +13,12 @@ import java.util.Set;
  * confirmed. Short teams and confirmed players left out never block. Shared by the start transition and the
  * manual save (which reuses the empty-team message).
  */
-final class TeamsReadiness {
+public final class TeamsReadiness {
 
     private TeamsReadiness() {
     }
 
-    static void requireStartable(Collection<Team> teams, Set<Long> confirmedIds) {
+    public static void requireStartable(Collection<Team> teams, Set<Long> confirmedIds) {
         if (teams.size() < 2) {
             throw new AppException(HttpStatus.CONFLICT, "Monte os times antes de iniciar a sessão");
         }
@@ -37,7 +37,7 @@ final class TeamsReadiness {
         }
     }
 
-    static String emptyTeam(String teamName) {
+    public static String emptyTeam(String teamName) {
         return "O " + teamName + " está vazio";
     }
 }

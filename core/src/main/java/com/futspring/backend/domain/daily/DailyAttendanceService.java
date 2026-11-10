@@ -174,12 +174,12 @@ public class DailyAttendanceService {
         notificationRepository.markRead(caller, NotificationType.DIARISTA_BUMPED, daily, now);
     }
 
-    void clearAttendees(Daily daily) {
+    public void clearAttendees(Daily daily) {
         attendanceRepository.deleteAllOfDaily(daily);
     }
 
     // Through the persistence context, like clearAttendees
-    void removeAttendees(Collection<Daily> dailies, Collection<User> users) {
+    public void removeAttendees(Collection<Daily> dailies, Collection<User> users) {
         attendanceRepository.deleteAll(attendanceRepository.findByDailyInAndUserIn(dailies, users));
     }
 

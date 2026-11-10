@@ -618,7 +618,7 @@ public class DailyResultsService {
      * Returns the players whose Ranking/Stats must be rebuilt (empty unless the daily was finalized);
      * the caller rebuilds them after deleting the daily. Called by DailyService.deleteDailyData.
      */
-    Set<User> clearResults(Daily daily) {
+    public Set<User> clearResults(Daily daily) {
         dailyAwardRepository.findByDaily(daily).ifPresent(dailyAwardRepository::delete);
 
         List<UserDailyStats> userDailyStats = userDailyStatsRepository.findByDaily(daily);

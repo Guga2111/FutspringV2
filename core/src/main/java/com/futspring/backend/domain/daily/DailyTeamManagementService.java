@@ -249,7 +249,7 @@ public class DailyTeamManagementService {
     }
 
     /** A player who withdraws (or is bumped) leaves their team; the team stays, even empty. */
-    void removeFromTeams(Daily daily, User user) {
+    public void removeFromTeams(Daily daily, User user) {
         removePlayersFromTeams(List.of(daily), List.of(user));
     }
 
@@ -261,7 +261,7 @@ public class DailyTeamManagementService {
     }
 
     /** Deletes every team of the daily (join rows first). Used by sort, manual save, import from message and daily delete. */
-    void clearTeams(Daily daily) {
+    public void clearTeams(Daily daily) {
         List<Team> teams = teamRepository.findByDaily(daily);
         for (Team team : teams) {
             team.getPlayers().clear();
