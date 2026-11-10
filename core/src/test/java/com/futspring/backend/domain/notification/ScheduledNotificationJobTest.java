@@ -7,8 +7,8 @@ import com.futspring.backend.domain.daily.repository.DailyAttendanceBumpReposito
 import com.futspring.backend.domain.daily.repository.DailyAttendanceRepository;
 import com.futspring.backend.domain.daily.repository.DailyRepository;
 import com.futspring.backend.domain.pelada.Pelada;
-import com.futspring.backend.domain.pelada.PeladaMensalista;
-import com.futspring.backend.domain.pelada.PeladaMensalistaRepository;
+import com.futspring.backend.domain.pelada.member.PeladaMensalista;
+import com.futspring.backend.domain.pelada.member.PeladaMensalistaRepository;
 import com.futspring.backend.domain.pelada.PeladaRepository;
 import com.futspring.backend.domain.subscription.PeladaSubscription;
 import com.futspring.backend.domain.subscription.PeladaSubscriptionRepository;

@@ -1,4 +1,4 @@
-package com.futspring.backend.domain.pelada;
+package com.futspring.backend.domain.pelada.invitation;
 
 import com.futspring.backend.domain.notification.*;
 import com.futspring.backend.domain.subscription.*;
@@ -12,11 +12,19 @@ import org.springframework.http.*;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import java.time.*;
 import java.util.*;
-import static com.futspring.backend.domain.pelada.InvitationStatus.*;
+import static com.futspring.backend.domain.pelada.invitation.InvitationStatus.*;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import com.futspring.backend.domain.pelada.Pelada;
+import com.futspring.backend.domain.pelada.PeladaRepository;
+import com.futspring.backend.domain.pelada.PeladaService;
+import com.futspring.backend.domain.pelada.invitation.model.PeladaInvitation;
+import com.futspring.backend.domain.pelada.invitation.model.PeladaInvitationRepository;
+import com.futspring.backend.domain.pelada.invitation.model.PeladaInviteLinkRepository;
+import com.futspring.backend.domain.pelada.invitation.model.PeladaLinkBlockRepository;
+import com.futspring.backend.domain.pelada.member.PeladaMensalistaRepository;
 
 class PeladaInvitationTest extends BaseIntegrationTest {
     static final Instant NOW = Instant.parse("2026-10-31T12:00:00Z");

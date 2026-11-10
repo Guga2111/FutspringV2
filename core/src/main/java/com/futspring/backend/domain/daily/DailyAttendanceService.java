@@ -11,7 +11,7 @@ import com.futspring.backend.domain.pelada.Pelada;
 import com.futspring.backend.domain.notification.NotificationRepository;
 import com.futspring.backend.domain.subscription.SubscriptionGuard;
 import com.futspring.backend.domain.notification.NotificationType;
-import com.futspring.backend.domain.pelada.PeladaMensalistaRepository;
+import com.futspring.backend.domain.pelada.member.PeladaMensalistaRepository;
 import com.futspring.backend.shared.exception.AppException;
 import com.futspring.backend.shared.helper.PeladaAccessHelper;
 import com.futspring.backend.shared.helper.UserAuthenticationHelper;

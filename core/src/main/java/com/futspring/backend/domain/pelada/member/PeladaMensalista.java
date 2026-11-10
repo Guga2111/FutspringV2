@@ -1,25 +1,24 @@
-package com.futspring.backend.domain.pelada;
+package com.futspring.backend.domain.pelada.member;
 
 import com.futspring.backend.domain.user.User;
 import com.futspring.backend.shared.entity.EntityIdentity;
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
+import com.futspring.backend.domain.pelada.Pelada;
 
-// A member's stars in one pelada, set by its admins. A member without a row has DEFAULT_STARS
+// A member marked as mensalista by the pelada's admins (priority on attendance). No row = diarista
 @Entity
-@Table(name = "pelada_player_stars")
+@Table(name = "pelada_mensalistas")
 @Getter
 @Setter
 @ToString(onlyExplicitlyIncluded = true)
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class PeladaPlayerStars {
-
-    public static final int DEFAULT_STARS = 3;
+public class PeladaMensalista {
 
     @Id
     @ToString.Include
@@ -34,16 +33,13 @@ public class PeladaPlayerStars {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @Column(name = "stars", nullable = false)
-    private int stars;
-
-    @UpdateTimestamp
-    @Column(name = "updated_at", nullable = false)
-    private LocalDateTime updatedAt;
+    @CreationTimestamp
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt;
 
     @Override
     public boolean equals(Object o) {
-        return o instanceof PeladaPlayerStars other && EntityIdentity.sameEntity(this, o, getId(), other.getId());
+        return o instanceof PeladaMensalista other && EntityIdentity.sameEntity(this, o, getId(), other.getId());
     }
 
     @Override

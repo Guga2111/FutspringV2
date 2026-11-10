@@ -1,4 +1,4 @@
-package com.futspring.backend.domain.pelada;
+package com.futspring.backend.domain.pelada.member;
 
 import com.futspring.backend.domain.user.User;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -10,6 +10,7 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import com.futspring.backend.domain.pelada.Pelada;
 
 public interface PeladaMensalistaRepository extends JpaRepository<PeladaMensalista, Long> {
 

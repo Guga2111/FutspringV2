@@ -1,4 +1,4 @@
-package com.futspring.backend.domain.pelada;
+package com.futspring.backend.domain.pelada.member;
 
 import com.futspring.backend.domain.user.User;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import com.futspring.backend.domain.pelada.Pelada;
 
 public interface PeladaPlayerStarsRepository extends JpaRepository<PeladaPlayerStars, Long> {
 

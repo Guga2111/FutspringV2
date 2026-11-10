@@ -41,6 +41,11 @@ import java.util.stream.Stream;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
+import com.futspring.backend.domain.pelada.invitation.PeladaInvitationService;
+import com.futspring.backend.domain.pelada.member.PeladaMensalista;
+import com.futspring.backend.domain.pelada.member.PeladaMensalistaRepository;
+import com.futspring.backend.domain.pelada.member.PeladaPlayerStars;
+import com.futspring.backend.domain.pelada.member.PeladaPlayerStarsRepository;
 
 @ExtendWith(MockitoExtension.class)
 class PeladaServiceTest {

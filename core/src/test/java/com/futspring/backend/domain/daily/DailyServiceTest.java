@@ -2,7 +2,7 @@ package com.futspring.backend.domain.daily;
 
 import com.futspring.backend.domain.notification.NotificationRepository;
 import org.springframework.context.ApplicationEventPublisher;
-import com.futspring.backend.domain.pelada.PeladaPlayerStarsRepository;
+import com.futspring.backend.domain.pelada.member.PeladaPlayerStarsRepository;
 import com.futspring.backend.domain.daily.dto.CreateDailyRequestDTO;
 import com.futspring.backend.domain.daily.dto.DailyDetailDTO;
 import com.futspring.backend.domain.daily.dto.DailyListItemDTO;
@@ -18,7 +18,7 @@ import com.futspring.backend.domain.daily.repository.PlayerMatchStatRepository;
 import com.futspring.backend.domain.daily.repository.TeamRepository;
 import com.futspring.backend.domain.file.FileUploadService;
 import com.futspring.backend.domain.pelada.Pelada;
-import com.futspring.backend.domain.pelada.PeladaMensalistaRepository;
+import com.futspring.backend.domain.pelada.member.PeladaMensalistaRepository;
 import com.futspring.backend.domain.pelada.PeladaRepository;
 import com.futspring.backend.shared.exception.AppException;
 import com.futspring.backend.shared.helper.PeladaAccessHelper;

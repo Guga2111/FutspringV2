@@ -1,10 +1,11 @@
-package com.futspring.backend.domain.pelada;
+package com.futspring.backend.domain.pelada.invitation.model;
 
 import com.futspring.backend.domain.user.User;
 import com.futspring.backend.shared.entity.EntityIdentity;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.Instant;
+import com.futspring.backend.domain.pelada.Pelada;
 
 @Entity
 @Table(name = "pelada_link_blocks")

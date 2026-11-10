@@ -1,4 +1,4 @@
-package com.futspring.backend.domain.pelada;
+package com.futspring.backend.domain.pelada.invitation;
 
 import com.futspring.backend.domain.subscription.*;
 import com.futspring.backend.domain.user.*;
@@ -15,6 +15,10 @@ import org.testcontainers.junit.jupiter.*;
 import java.util.*;
 import java.util.concurrent.*;
 import static org.assertj.core.api.Assertions.*;
+import com.futspring.backend.domain.pelada.Pelada;
+import com.futspring.backend.domain.pelada.PeladaRepository;
+import com.futspring.backend.domain.pelada.PeladaService;
+import com.futspring.backend.domain.pelada.invitation.model.PeladaInvitationRepository;
 
 /** Real transactions and PostgreSQL row locks, including Flyway's partial unique indexes. */
 @SpringBootTest
