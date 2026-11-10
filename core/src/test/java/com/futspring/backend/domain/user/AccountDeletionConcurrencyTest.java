@@ -1,11 +1,11 @@
 package com.futspring.backend.domain.user;
 
-import com.futspring.backend.domain.daily.entity.Daily;
-import com.futspring.backend.domain.daily.entity.DailyAttendance;
-import com.futspring.backend.domain.daily.entity.Team;
-import com.futspring.backend.domain.daily.repository.DailyAttendanceRepository;
-import com.futspring.backend.domain.daily.repository.DailyRepository;
-import com.futspring.backend.domain.daily.repository.TeamRepository;
+import com.futspring.backend.domain.daily.Daily;
+import com.futspring.backend.domain.daily.attendance.DailyAttendance;
+import com.futspring.backend.domain.daily.team.Team;
+import com.futspring.backend.domain.daily.attendance.DailyAttendanceRepository;
+import com.futspring.backend.domain.daily.DailyRepository;
+import com.futspring.backend.domain.daily.team.TeamRepository;
 import com.futspring.backend.domain.pelada.Pelada;
 import com.futspring.backend.domain.pelada.PeladaRepository;
 import com.futspring.backend.domain.pelada.PeladaService;

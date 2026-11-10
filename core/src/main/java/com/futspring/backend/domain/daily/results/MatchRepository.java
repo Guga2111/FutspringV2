@@ -1,0 +1,29 @@
+package com.futspring.backend.domain.daily.results;
+
+import com.futspring.backend.domain.daily.Daily;
+import com.futspring.backend.domain.daily.results.Match;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
+import java.util.Collection;
+import java.util.List;
+
+public interface MatchRepository extends JpaRepository<Match, Long> {
+
+    List<Match> findByDaily(Daily daily);
+
+    long countByDaily(Daily daily);
+
+    // [dailyId, match count] in one query
+    @Query("SELECT m.daily.id, COUNT(m) FROM Match m WHERE m.daily.id IN :ids GROUP BY m.daily.id")
+    List<Object[]> countByDailyIds(@Param("ids") Collection<Long> ids);
+
+    @Query("""
+        SELECT m FROM Match m
+        JOIN FETCH m.team1 JOIN FETCH m.team2 LEFT JOIN FETCH m.winner
+        WHERE m.daily = :daily
+        ORDER BY m.id
+        """)
+    List<Match> findByDailyWithTeams(@Param("daily") Daily daily);
+}

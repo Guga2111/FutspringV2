@@ -1,6 +1,6 @@
 package com.futspring.backend.domain.daily.dto;
 
-import com.futspring.backend.domain.daily.entity.DailyStatus;
+import com.futspring.backend.domain.daily.DailyStatus;
 import jakarta.validation.constraints.NotNull;
 
 public record UpdateDailyStatusRequestDTO(

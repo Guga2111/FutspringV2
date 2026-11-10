@@ -1,16 +1,16 @@
 package com.futspring.backend.domain.platform;
 
-import com.futspring.backend.domain.daily.repository.DailyRepository;
+import com.futspring.backend.domain.daily.DailyRepository;
 import com.futspring.backend.domain.pelada.Pelada;
 import com.futspring.backend.domain.pelada.PeladaRef;
 import com.futspring.backend.domain.pelada.PeladaRepository;
 import com.futspring.backend.domain.platform.dto.PlatformViews;
 import com.futspring.backend.domain.subscription.PeladaSubscription;
 import com.futspring.backend.domain.subscription.PeladaSubscriptionRepository;
-import com.futspring.backend.domain.subscription.SubscriptionEvent;
-import com.futspring.backend.domain.subscription.SubscriptionEventRepository;
-import com.futspring.backend.domain.subscription.SubscriptionPayment;
-import com.futspring.backend.domain.subscription.SubscriptionPaymentRepository;
+import com.futspring.backend.domain.subscription.billing.SubscriptionEvent;
+import com.futspring.backend.domain.subscription.billing.SubscriptionEventRepository;
+import com.futspring.backend.domain.subscription.billing.SubscriptionPayment;
+import com.futspring.backend.domain.subscription.billing.SubscriptionPaymentRepository;
 import com.futspring.backend.domain.subscription.SubscriptionPlan;
 import com.futspring.backend.domain.subscription.SubscriptionPlans;
 import com.futspring.backend.domain.subscription.SubscriptionService;

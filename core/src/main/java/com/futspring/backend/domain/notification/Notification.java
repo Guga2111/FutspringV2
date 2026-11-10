@@ -1,6 +1,6 @@
 package com.futspring.backend.domain.notification;
 
-import com.futspring.backend.domain.daily.entity.Daily;
+import com.futspring.backend.domain.daily.Daily;
 import com.futspring.backend.domain.pelada.Pelada;
 import com.futspring.backend.domain.user.User;
 import com.futspring.backend.shared.entity.EntityIdentity;

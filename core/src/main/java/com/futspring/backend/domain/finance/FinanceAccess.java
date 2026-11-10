@@ -8,6 +8,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import java.time.*;
+import com.futspring.backend.domain.finance.account.FinanceAccount;
+import com.futspring.backend.domain.finance.account.FinanceAccountRepository;
+import com.futspring.backend.domain.finance.account.FinanceManagerRepository;
 
 @Component
 @RequiredArgsConstructor

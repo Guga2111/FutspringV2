@@ -1,14 +1,14 @@
 package com.futspring.backend.domain.stats;
 
-import com.futspring.backend.domain.daily.entity.Daily;
+import com.futspring.backend.domain.daily.Daily;
 import com.futspring.backend.domain.pelada.Pelada;
 import com.futspring.backend.domain.pelada.PeladaRepository;
 import com.futspring.backend.shared.exception.AppException;
 import com.futspring.backend.shared.helper.PeladaAccessHelper;
 import com.futspring.backend.shared.helper.UserAuthenticationHelper;
 import com.futspring.backend.domain.stats.dto.PeladaAwardsDTO;
-import com.futspring.backend.domain.stats.entity.DailyAward;
-import com.futspring.backend.domain.stats.repository.DailyAwardRepository;
+import com.futspring.backend.domain.stats.model.DailyAward;
+import com.futspring.backend.domain.stats.model.DailyAwardRepository;
 import com.futspring.backend.support.MembershipStubs;
 import com.futspring.backend.domain.user.User;
 import org.junit.jupiter.api.BeforeEach;

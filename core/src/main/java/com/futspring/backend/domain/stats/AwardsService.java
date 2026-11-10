@@ -8,7 +8,7 @@ import com.futspring.backend.shared.helper.UserAuthenticationHelper;
 import com.futspring.backend.domain.stats.dto.PeladaAwardsDTO.AwardCategoryDTO;
 import com.futspring.backend.domain.stats.dto.PeladaAwardsDTO.AwardWinnerDTO;
 import com.futspring.backend.domain.stats.dto.PeladaAwardsDTO;
-import com.futspring.backend.domain.stats.repository.DailyAwardRepository;
+import com.futspring.backend.domain.stats.model.DailyAwardRepository;
 import com.futspring.backend.domain.user.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;

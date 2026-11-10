@@ -1,14 +1,14 @@
 package com.futspring.backend.domain.notification;
 
-import com.futspring.backend.domain.daily.entity.Daily;
-import com.futspring.backend.domain.daily.entity.DailyAttendance;
-import com.futspring.backend.domain.daily.entity.DailyStatus;
-import com.futspring.backend.domain.daily.repository.DailyAttendanceBumpRepository;
-import com.futspring.backend.domain.daily.repository.DailyAttendanceRepository;
-import com.futspring.backend.domain.daily.repository.DailyRepository;
+import com.futspring.backend.domain.daily.Daily;
+import com.futspring.backend.domain.daily.attendance.DailyAttendance;
+import com.futspring.backend.domain.daily.DailyStatus;
+import com.futspring.backend.domain.daily.attendance.DailyAttendanceBumpRepository;
+import com.futspring.backend.domain.daily.attendance.DailyAttendanceRepository;
+import com.futspring.backend.domain.daily.DailyRepository;
 import com.futspring.backend.domain.pelada.Pelada;
-import com.futspring.backend.domain.pelada.PeladaMensalista;
-import com.futspring.backend.domain.pelada.PeladaMensalistaRepository;
+import com.futspring.backend.domain.pelada.member.PeladaMensalista;
+import com.futspring.backend.domain.pelada.member.PeladaMensalistaRepository;
 import com.futspring.backend.domain.pelada.PeladaRepository;
 import com.futspring.backend.domain.subscription.PeladaSubscription;
 import com.futspring.backend.domain.subscription.PeladaSubscriptionRepository;

@@ -15,6 +15,12 @@ import static com.futspring.backend.domain.finance.FinanceTransactions.*;
 import static com.futspring.backend.domain.finance.FinanceTypes.*;
 import static com.futspring.backend.domain.finance.FinanceMoney.*;
 import static com.futspring.backend.domain.finance.FinanceCollectionService.active;
+import com.futspring.backend.domain.finance.collection.FinanceChargeRepository;
+import com.futspring.backend.domain.finance.collection.FinanceList;
+import com.futspring.backend.domain.finance.ledger.FinanceMovement;
+import com.futspring.backend.domain.finance.ledger.FinanceMovementRepository;
+import com.futspring.backend.domain.finance.ledger.FinanceNotice;
+import com.futspring.backend.domain.finance.ledger.FinanceNoticeRepository;
 
 @Service
 @RequiredArgsConstructor

@@ -2,14 +2,14 @@ package com.futspring.backend.domain.pelada;
 
 import com.futspring.backend.domain.chat.MessageRepository;
 import com.futspring.backend.domain.finance.FinancePreservation;
-import com.futspring.backend.domain.daily.AttendanceWindow;
+import com.futspring.backend.domain.daily.attendance.AttendanceWindow;
 import com.futspring.backend.domain.daily.DailyService;
 import com.futspring.backend.domain.daily.dto.AttendanceBumpDTO;
-import com.futspring.backend.domain.daily.entity.Daily;
-import com.futspring.backend.domain.daily.entity.DailyStatus;
-import com.futspring.backend.domain.daily.repository.DailyAttendanceBumpRepository;
-import com.futspring.backend.domain.daily.repository.DailyAttendanceRepository;
-import com.futspring.backend.domain.daily.repository.DailyRepository;
+import com.futspring.backend.domain.daily.Daily;
+import com.futspring.backend.domain.daily.DailyStatus;
+import com.futspring.backend.domain.daily.attendance.DailyAttendanceBumpRepository;
+import com.futspring.backend.domain.daily.attendance.DailyAttendanceRepository;
+import com.futspring.backend.domain.daily.DailyRepository;
 import com.futspring.backend.domain.file.FileUploadService;
 import com.futspring.backend.domain.notification.NotificationRepository;
 import com.futspring.backend.domain.pelada.dto.CreatePeladaRequestDTO;
@@ -21,7 +21,7 @@ import com.futspring.backend.shared.exception.AppException;
 import com.futspring.backend.shared.helper.PeladaAccessHelper;
 import com.futspring.backend.shared.helper.UserAuthenticationHelper;
 import com.futspring.backend.domain.stats.AggregateRebuildService;
-import com.futspring.backend.domain.stats.repository.RankingRepository;
+import com.futspring.backend.domain.stats.model.RankingRepository;
 import com.futspring.backend.domain.subscription.SubscriptionGuard;
 import com.futspring.backend.domain.subscription.SubscriptionService;
 import com.futspring.backend.domain.subscription.dto.SubscriptionSummaryDTO;
@@ -44,6 +44,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import com.futspring.backend.domain.pelada.invitation.PeladaInvitationService;
+import com.futspring.backend.domain.pelada.member.PeladaMensalista;
+import com.futspring.backend.domain.pelada.member.PeladaMensalistaRepository;
+import com.futspring.backend.domain.pelada.member.PeladaPlayerStars;
+import com.futspring.backend.domain.pelada.member.PeladaPlayerStarsRepository;
 
 @Service
 @RequiredArgsConstructor
