@@ -6,7 +6,7 @@ import com.futspring.backend.domain.daily.dto.DailyDetailDTO.PlayerStatDTO;
 import com.futspring.backend.domain.daily.dto.DailyDetailDTO;
 import com.futspring.backend.domain.daily.entity.Match;
 import com.futspring.backend.domain.daily.entity.Team;
-import com.futspring.backend.domain.pelada.PeladaPlayerStars;
+import com.futspring.backend.domain.pelada.member.PeladaPlayerStars;
 import com.futspring.backend.domain.user.User;
 import org.springframework.stereotype.Component;
 

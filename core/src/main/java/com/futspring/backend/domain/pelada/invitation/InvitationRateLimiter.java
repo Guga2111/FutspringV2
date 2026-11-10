@@ -1,4 +1,4 @@
-package com.futspring.backend.domain.pelada;
+package com.futspring.backend.domain.pelada.invitation;
 
 import com.futspring.backend.shared.exception.AppException;
 import com.github.benmanes.caffeine.cache.*;

@@ -1,6 +1,6 @@
 package com.futspring.backend.domain.user;
 
-import com.futspring.backend.domain.pelada.PeladaPlayerStarsRepository;
+import com.futspring.backend.domain.pelada.member.PeladaPlayerStarsRepository;
 import com.futspring.backend.domain.file.FileUploadService;
 import com.futspring.backend.shared.exception.AppException;
 import com.futspring.backend.domain.user.dto.ProfileDTO;

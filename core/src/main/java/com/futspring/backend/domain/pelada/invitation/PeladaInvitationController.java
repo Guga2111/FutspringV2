@@ -1,4 +1,4 @@
-package com.futspring.backend.domain.pelada;
+package com.futspring.backend.domain.pelada.invitation;
 
 import com.futspring.backend.domain.pelada.dto.*;
 import jakarta.validation.Valid;

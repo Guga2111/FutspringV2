@@ -2,7 +2,7 @@ package com.futspring.backend.domain.finance;
 
 import com.futspring.backend.domain.finance.dto.FinanceViews;
 import com.futspring.backend.domain.finance.dto.FinanceAccountExport;
-import com.futspring.backend.domain.pelada.PeladaMensalistaRepository;
+import com.futspring.backend.domain.pelada.member.PeladaMensalistaRepository;
 import com.futspring.backend.domain.pelada.PeladaRef;
 import com.futspring.backend.domain.pelada.PeladaRepository;
 import com.futspring.backend.domain.daily.repository.*;

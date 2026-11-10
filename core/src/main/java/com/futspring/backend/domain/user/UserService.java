@@ -5,7 +5,7 @@ import com.futspring.backend.domain.auth.dto.AuthResponseDTO;
 import com.futspring.backend.domain.auth.dto.UserResponseDTO;
 import com.futspring.backend.domain.file.FileUploadService;
 import com.futspring.backend.domain.notification.PushSubscriptionRepository;
-import com.futspring.backend.domain.pelada.PeladaPlayerStarsRepository;
+import com.futspring.backend.domain.pelada.member.PeladaPlayerStarsRepository;
 import com.futspring.backend.shared.exception.AppException;
 import com.futspring.backend.shared.helper.UserAuthenticationHelper;
 import com.futspring.backend.domain.user.dto.ChangePasswordRequestDTO;

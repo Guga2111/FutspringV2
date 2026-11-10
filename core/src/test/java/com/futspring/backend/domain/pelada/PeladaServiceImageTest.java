@@ -31,6 +31,9 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
+import com.futspring.backend.domain.pelada.invitation.PeladaInvitationService;
+import com.futspring.backend.domain.pelada.member.PeladaMensalistaRepository;
+import com.futspring.backend.domain.pelada.member.PeladaPlayerStarsRepository;
 
 @ExtendWith(MockitoExtension.class)
 class PeladaServiceImageTest {

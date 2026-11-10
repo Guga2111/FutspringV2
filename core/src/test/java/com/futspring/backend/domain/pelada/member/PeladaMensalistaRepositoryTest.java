@@ -1,4 +1,4 @@
-package com.futspring.backend.domain.pelada;
+package com.futspring.backend.domain.pelada.member;
 
 import com.futspring.backend.domain.user.User;
 import com.futspring.backend.domain.user.UserRepository;
@@ -10,6 +10,8 @@ import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import com.futspring.backend.domain.pelada.Pelada;
+import com.futspring.backend.domain.pelada.PeladaRepository;
 
 @DataJpaTest
 class PeladaMensalistaRepositoryTest {

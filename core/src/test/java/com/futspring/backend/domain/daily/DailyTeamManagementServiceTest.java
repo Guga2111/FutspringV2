@@ -1,7 +1,7 @@
 package com.futspring.backend.domain.daily;
 
 import org.springframework.context.ApplicationEventPublisher;
-import com.futspring.backend.domain.pelada.PeladaPlayerStarsRepository;
+import com.futspring.backend.domain.pelada.member.PeladaPlayerStarsRepository;
 import com.futspring.backend.domain.daily.dto.DailyDetailDTO;
 import com.futspring.backend.domain.daily.entity.Daily;
 import com.futspring.backend.domain.daily.entity.DailyStatus;

@@ -1,4 +1,4 @@
-package com.futspring.backend.domain.pelada;
+package com.futspring.backend.domain.pelada.invitation;
 
 import com.futspring.backend.domain.pelada.dto.*;
 import com.futspring.backend.domain.subscription.SubscriptionGuard;
@@ -21,7 +21,15 @@ import java.time.Instant;
 import java.util.List;
 import java.util.HashSet;
 
-import static com.futspring.backend.domain.pelada.InvitationStatus.*;
+import static com.futspring.backend.domain.pelada.invitation.InvitationStatus.*;
+import com.futspring.backend.domain.pelada.Pelada;
+import com.futspring.backend.domain.pelada.PeladaRepository;
+import com.futspring.backend.domain.pelada.invitation.model.PeladaInvitation;
+import com.futspring.backend.domain.pelada.invitation.model.PeladaInvitationRepository;
+import com.futspring.backend.domain.pelada.invitation.model.PeladaInviteLink;
+import com.futspring.backend.domain.pelada.invitation.model.PeladaInviteLinkRepository;
+import com.futspring.backend.domain.pelada.invitation.model.PeladaLinkBlock;
+import com.futspring.backend.domain.pelada.invitation.model.PeladaLinkBlockRepository;
 
 /** Every mutation locks the pelada first, then reads invitations/links/membership. GETs never change state. */
 @Service

@@ -3,6 +3,8 @@ package com.futspring.backend.domain.pelada.dto;
 import com.futspring.backend.domain.pelada.*;
 import com.futspring.backend.domain.user.dto.PublicUserDTO;
 import java.time.Instant;
+import com.futspring.backend.domain.pelada.invitation.InvitationStatus;
+import com.futspring.backend.domain.pelada.invitation.model.PeladaInvitation;
 
 public record InvitationDTO(Long id, Long peladaId, PeladaPreviewDTO pelada, PublicUserDTO recipient,
         PublicUserDTO sender, InvitationStatus status, Instant createdAt, Instant expiresAt,

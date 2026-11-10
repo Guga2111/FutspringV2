@@ -1,4 +1,4 @@
-package com.futspring.backend.domain.pelada;
+package com.futspring.backend.domain.pelada.invitation;
 
 import com.futspring.backend.shared.config.JwtConfig;
 import org.junit.jupiter.api.Test;

@@ -44,6 +44,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import com.futspring.backend.domain.pelada.invitation.PeladaInvitationService;
+import com.futspring.backend.domain.pelada.member.PeladaMensalista;
+import com.futspring.backend.domain.pelada.member.PeladaMensalistaRepository;
+import com.futspring.backend.domain.pelada.member.PeladaPlayerStars;
+import com.futspring.backend.domain.pelada.member.PeladaPlayerStarsRepository;
 
 @Service
 @RequiredArgsConstructor
