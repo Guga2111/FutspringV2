@@ -17,7 +17,7 @@ export interface LegalDocument {
   sections: LegalSection[]
 }
 
-const CONTROLLER = "[NOME DO CONTROLADOR]"
+const CONTROLLER = "Luís Gustavo"
 const CONTACT = "[E-MAIL DE CONTATO]"
 
 export const TERMS: LegalDocument = {
@@ -128,7 +128,7 @@ export const TERMS: LegalDocument = {
     {
       id: "lei",
       title: "Lei e foro",
-      blocks: ["Estes termos seguem as leis do Brasil. Fica eleito o foro da comarca de [CIDADE-UF]."],
+      blocks: ["Estes termos seguem as leis do Brasil. Fica eleito o foro da comarca de Recife-PE."],
     },
   ],
 }
@@ -193,7 +193,7 @@ export const PRIVACY: LegalDocument = {
       title: "Serviços que usamos",
       blocks: [
         "Alguns fornecedores tratam dados em nosso nome, só para o app funcionar:",
-        ["Supabase: banco de dados.", "Resend: envio de e-mails.", "[PROVEDOR DA VPS]: servidor onde o app roda e onde ficam fotos e comprovantes."],
+        ["Supabase: banco de dados.", "Resend: envio de e-mails.", "Hostinger: servidor onde o app roda e onde ficam fotos e comprovantes."],
         "Esses fornecedores podem guardar dados fora do Brasil. Nesses casos, a transferência segue as garantias contratuais de proteção de dados de cada um.",
       ],
     },
