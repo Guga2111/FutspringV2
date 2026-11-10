@@ -1,9 +1,8 @@
-package com.futspring.backend.domain.stats.repository;
+package com.futspring.backend.domain.stats.model;
 
 import com.futspring.backend.domain.daily.entity.Daily;
 import com.futspring.backend.domain.daily.entity.DailyStatus;
 import com.futspring.backend.domain.pelada.Pelada;
-import com.futspring.backend.domain.stats.entity.UserDailyStats;
 import com.futspring.backend.domain.user.User;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;

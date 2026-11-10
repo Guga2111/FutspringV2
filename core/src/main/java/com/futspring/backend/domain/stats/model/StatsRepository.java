@@ -1,6 +1,5 @@
-package com.futspring.backend.domain.stats.repository;
+package com.futspring.backend.domain.stats.model;
 
-import com.futspring.backend.domain.stats.entity.Stats;
 import com.futspring.backend.domain.user.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 

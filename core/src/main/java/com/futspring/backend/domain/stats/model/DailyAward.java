@@ -1,4 +1,4 @@
-package com.futspring.backend.domain.stats.entity;
+package com.futspring.backend.domain.stats.model;
 
 import com.futspring.backend.domain.daily.entity.Daily;
 import com.futspring.backend.shared.entity.EntityIdentity;

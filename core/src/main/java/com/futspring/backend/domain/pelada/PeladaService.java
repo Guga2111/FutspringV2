@@ -21,7 +21,7 @@ import com.futspring.backend.shared.exception.AppException;
 import com.futspring.backend.shared.helper.PeladaAccessHelper;
 import com.futspring.backend.shared.helper.UserAuthenticationHelper;
 import com.futspring.backend.domain.stats.AggregateRebuildService;
-import com.futspring.backend.domain.stats.repository.RankingRepository;
+import com.futspring.backend.domain.stats.model.RankingRepository;
 import com.futspring.backend.domain.subscription.SubscriptionGuard;
 import com.futspring.backend.domain.subscription.SubscriptionService;
 import com.futspring.backend.domain.subscription.dto.SubscriptionSummaryDTO;

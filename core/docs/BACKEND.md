@@ -163,8 +163,7 @@ com.futspring.backend
 │   │   └── dto/                    DailyDetailDTO, DailyListItemDTO, AttendanceBumpDTO, MatchResultDTO, Finalize/Populate/Swap/SaveTeams/Update* request DTOs
 │   ├── stats/                      RankingService, AwardsService, StatsService, AttendanceService (read-side aggregates; attendance ranking of the last 6 months),
 │   │   │                           AggregateRebuildService (rebuilds Ranking per pelada and global Stats for a set of players, batch queries)
-│   │   ├── entity/                 Ranking, Stats, UserDailyStats, DailyAward
-│   │   ├── repository/             Ranking, Stats, UserDailyStats, DailyAward repositories (grouped/native aggregate queries)
+│   │   ├── model/                  Ranking, Stats, UserDailyStats, DailyAward and their repositories (grouped/native aggregate queries)
 │   │   └── dto/                    RankingDTO, StatsDTO, PeladaAwardsDTO, PeladaAttendanceDTO, PlayerPelada{Stats,History}DTO, UserMatchHistoryDTO, UserStatsTimelineDTO
 │   ├── chat/                       ChatController (STOMP + @MessageExceptionHandler), ChatService (save message, paged history), Message, MessageRepository
 │   │   └── dto/                    MessageDTO, SendMessageRequest
@@ -803,7 +802,7 @@ Reads: `/users/{id}`, `/stats*` and `/peladas` of a deleted account → 404, sea
 
 ## Testing
 
-Tests live in `src/test/java/com/futspring/backend`, in the same domain packages as the code they test (`domain/daily/DailyServiceTest`, `domain/stats/repository/UserDailyStatsRepositoryTest`…); shared test helpers (`BaseIntegrationTest`, `MembershipStubs`) are in `support/`, migration tests at the root. A test lives in the package of the class it tests; an integration test that covers a whole domain stays at the domain root.
+Tests live in `src/test/java/com/futspring/backend`, in the same domain packages as the code they test (`domain/daily/DailyServiceTest`, `domain/stats/model/UserDailyStatsRepositoryTest`…); shared test helpers (`BaseIntegrationTest`, `MembershipStubs`) are in `support/`, migration tests at the root. A test lives in the package of the class it tests; an integration test that covers a whole domain stays at the domain root.
 
 - **Invitations** — `PeladaInvitationTest` (H2 integration: permissions, consent, state/expiry/cooldown boundaries, link replacement/revocation, removal/return, deletion, quotas and public previews), `InviteLinkTokensTest` (signature, key isolation, tampering), `InvitationConcurrencyTest` (Postgres 17: duplicate accepts, accept/cancel, join/revoke/replace, removal races, two accepts for the last trial spot, database partial uniqueness), contract snapshots and notification e-mail/after-commit tests.
 - **Service unit tests** — JUnit Jupiter 6 + Mockito + AssertJ, one class per service (`PeladaServiceTest`, `DailyServiceTest`, `DailyAttendanceServiceTest`…). Mock repositories and `UserAuthenticationHelper`; build a real `PeladaAccessHelper` over the mocked `PeladaRepository` and call `MembershipStubs.stubMembership(peladaRepository, pelada…)` so the exists queries answer from the entities' member/admin sets.

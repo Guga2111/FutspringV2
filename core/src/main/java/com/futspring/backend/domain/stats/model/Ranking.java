@@ -1,4 +1,4 @@
-package com.futspring.backend.domain.stats.entity;
+package com.futspring.backend.domain.stats.model;
 
 import com.futspring.backend.domain.pelada.Pelada;
 import com.futspring.backend.shared.entity.EntityIdentity;
