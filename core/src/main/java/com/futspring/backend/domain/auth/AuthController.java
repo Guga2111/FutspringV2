@@ -5,6 +5,7 @@ import com.futspring.backend.domain.auth.dto.ForgotPasswordRequestDTO;
 import com.futspring.backend.domain.auth.dto.LoginRequestDTO;
 import com.futspring.backend.domain.auth.dto.RegisterRequestDTO;
 import com.futspring.backend.domain.auth.dto.ResetPasswordRequestDTO;
+import com.futspring.backend.domain.auth.passwordreset.PasswordResetService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;

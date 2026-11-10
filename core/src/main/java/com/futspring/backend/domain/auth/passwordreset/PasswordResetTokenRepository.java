@@ -1,4 +1,4 @@
-package com.futspring.backend.domain.auth;
+package com.futspring.backend.domain.auth.passwordreset;
 
 import com.futspring.backend.domain.user.User;
 import jakarta.persistence.LockModeType;

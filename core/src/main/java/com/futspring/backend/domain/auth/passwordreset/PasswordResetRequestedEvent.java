@@ -1,4 +1,4 @@
-package com.futspring.backend.domain.auth;
+package com.futspring.backend.domain.auth.passwordreset;
 
 // Published by PasswordResetService, handled after the commit by PasswordResetEmailListener
 public record PasswordResetRequestedEvent(String email, String username, String rawToken) {
