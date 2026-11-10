@@ -61,4 +61,7 @@ public interface SubscriptionPaymentRepository extends JpaRepository<Subscriptio
     @Modifying
     @Query("UPDATE SubscriptionPayment p SET p.peladaId = null WHERE p.peladaId = :peladaId")
     void detachPelada(@Param("peladaId") Long peladaId);
+
+    // Account export: the payments the user made (voided ones included), newest first
+    List<SubscriptionPayment> findByPayer_IdOrderByPaidOnDescIdDesc(Long payerId);
 }

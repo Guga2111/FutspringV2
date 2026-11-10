@@ -22,4 +22,7 @@ public interface FinanceNoticeRepository extends JpaRepository<FinanceNotice, Lo
     @Query("SELECT DISTINCT n.chargeId FROM FinanceNotice n WHERE n.chargeId IN :ids AND n.status = :status")
     List<Long> chargeIdsWithStatus(@Param("ids") Collection<Long> ids, @Param("status") FinanceTypes.NoticeStatus status);
     List<FinanceNotice> findByReceiptExpiresAtLessThanEqualAndReceiptDeletedAtIsNull(Instant now, Pageable page);
+
+    // Account export: the payment notices the user sent
+    List<FinanceNotice> findByUserIdOrderById(Long userId);
 }

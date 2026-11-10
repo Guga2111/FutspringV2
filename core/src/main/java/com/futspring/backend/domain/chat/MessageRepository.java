@@ -17,4 +17,8 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
     @Modifying
     @Query("DELETE FROM Message m WHERE m.pelada = :pelada")
     void deleteByPelada(@Param("pelada") Pelada pelada);
+
+    // Account export: the messages the user sent, with their pelada, oldest first
+    @Query("SELECT m FROM Message m JOIN FETCH m.pelada WHERE m.sender.id = :userId ORDER BY m.sentAt, m.id")
+    List<Message> findBySenderIdWithPelada(@Param("userId") Long userId);
 }

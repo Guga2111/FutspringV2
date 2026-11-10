@@ -27,7 +27,8 @@ import java.util.stream.Stream;
  * 10 requests per minute per client IP on each POST /api/v1/auth/ route (login, register, forgot-password,
  * reset-password), the logged-in password checks (POST /api/v1/users/me/password and /me/delete), the Web Push
  * subscription (POST /api/v1/push/subscriptions: each one can cause future sends) and on the public e-mail link
- * routes (notifications unsubscribe / resubscribe).
+ * routes (notifications unsubscribe / resubscribe), and on the account export (GET /api/v1/users/me/export: it reads
+ * everything the account has).
  * Buckets live in a bounded, expiring Caffeine cache. The client IP comes from getRemoteAddr(), which
  * reflects X-Forwarded-For because server.forward-headers-strategy=framework (the API only listens on
  * 127.0.0.1 behind nginx). In-memory: one API instance only. Every 429 counts in futspring.ratelimit.rejected
@@ -42,6 +43,7 @@ public class AuthRateLimitFilter extends OncePerRequestFilter {
                     "/api/v1/auth/forgot-password", "/api/v1/auth/reset-password",
                     "/api/v1/users/me/password", "/api/v1/users/me/delete", "/api/v1/push/subscriptions"),
             SecurityConfig.EMAIL_LINK_PATHS.stream()).collect(Collectors.toUnmodifiableSet());
+    private static final String EXPORT_PATH = "/api/v1/users/me/export";
 
     private final JsonMapper objectMapper;
     private final MeterRegistry meterRegistry;
@@ -60,7 +62,9 @@ public class AuthRateLimitFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        return !isInvitePreview(request) && (!"POST".equals(request.getMethod()) || !LIMITED_PATHS.contains(request.getRequestURI()));
+        if (isInvitePreview(request)) return false;
+        if ("GET".equals(request.getMethod())) return !EXPORT_PATH.equals(request.getRequestURI());
+        return !"POST".equals(request.getMethod()) || !LIMITED_PATHS.contains(request.getRequestURI());
     }
 
     private static boolean isInvitePreview(HttpServletRequest request) {

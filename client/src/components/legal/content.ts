@@ -226,6 +226,7 @@ export const PRIVACY: LegalDocument = {
         "Pela LGPD (art. 18), você pode pedir a confirmação de que tratamos seus dados, o acesso a eles, a correção, a portabilidade, informações sobre com quem compartilhamos e a exclusão.",
         [
           "Corrigir: você mesmo edita nome, posição e foto no seu perfil.",
+          "Acessar e levar seus dados (portabilidade): em Configurações › Zona de perigo, “Baixar meus dados” gera um arquivo JSON com tudo o que guardamos da sua conta.",
           "Excluir: em Configurações › Zona de perigo.",
           `Os demais pedidos: pelo e-mail ${CONTACT}. Respondemos em até 15 dias.`,
         ],

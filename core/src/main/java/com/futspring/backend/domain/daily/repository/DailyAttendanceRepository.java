@@ -75,4 +75,11 @@ public interface DailyAttendanceRepository extends JpaRepository<DailyAttendance
         """)
     void deleteByUserInDailiesWithStatus(@Param("user") User user,
                                          @Param("statuses") Collection<DailyStatus> statuses);
+
+    // Account export: every confirmation of the user, with its session and pelada, newest session first
+    @Query("""
+        SELECT a FROM DailyAttendance a JOIN FETCH a.daily d JOIN FETCH d.pelada
+        WHERE a.user.id = :userId ORDER BY d.dailyDate DESC, d.id DESC
+        """)
+    List<DailyAttendance> findByUserIdWithDaily(@Param("userId") Long userId);
 }
