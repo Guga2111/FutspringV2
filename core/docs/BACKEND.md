@@ -144,8 +144,12 @@ com.futspring.backend
 │   │   │                           AccountExportService (the caller's data export, LGPD access and portability)
 │   │   └── dto/                    ProfileDTO, PublicUserDTO, UpdateProfileRequest, ChangePasswordRequestDTO, DeleteAccountRequestDTO, DeletionBlockerDTO, AccountExportDTO
 │   ├── pelada/                     PeladaController, PeladaService (pelada CRUD, effective members, admins, member stars, mensalistas, user search, image, creator transfer; each member action works on a list of members and the single routes call it with one id), Pelada, PeladaRepository,
-│   │                               PeladaPlayerStars + PeladaPlayerStarsRepository (stars per member, profile average),
-│   │                               PeladaMensalista + PeladaMensalistaRepository (members marked as mensalistas)
+│   │   │                           PeladaRef, AdminsChangedEvent, MembersRemovedEvent, MensalistasChangedEvent, PeladaTransferredEvent (published by PeladaService)
+│   │   ├── member/                 PeladaPlayerStars + PeladaPlayerStarsRepository (stars per member, profile average),
+│   │   │                           PeladaMensalista + PeladaMensalistaRepository (members marked as mensalistas)
+│   │   ├── invitation/             PeladaInvitationController, PeladaInvitationService (invitations and the share link), InvitationStatus,
+│   │   │   │                       InviteLinkTokens, InvitationRateLimiter, InvitationCreatedEvent, MemberJoinedEvent
+│   │   │   └── model/              PeladaInvitation, PeladaInviteLink, PeladaLinkBlock and their repositories
 │   │   └── dto/                    Create/UpdatePeladaRequestDTO, DayOfWeekPattern, PeladaResponseDTO, PeladaDetailResponseDTO, PeladaMemberDTO, UpdatePlayerStarsRequestDTO,
 │   │                               SetMensalistaRequestDTO, Bulk{SetAdmin,SetMensalista,SetStars,RemovePlayers}RequestDTO, TransferCreatorRequestDTO…
 │   ├── daily/                      DailyController and the daily services:
@@ -289,7 +293,7 @@ There are no JPA cascades: deletes are explicit in the services (`DailyService.d
 
 **Daily status machine** (`DailyStatus.canTransitionTo`): `SCHEDULED → CONFIRMED | CANCELED`, `CONFIRMED → IN_COURSE | CANCELED`. Starting (`→ IN_COURSE`) also needs startable teams (`TeamsReadiness.requireStartable`, under the attendance row lock): at least 2 teams, none empty, every team player still confirmed; otherwise 409 with the first problem ("Monte os times antes de iniciar a sessão", "O Time 3 está vazio", "Ana não está mais confirmada e está no Time 2"). Short teams and confirmed players without a team don't block. `FINISHED` is reached only through finalize; populate can also move a daily to `IN_COURSE`. Attendance and team changes are blocked while the status is in `DailyStatus.LOCKED` (`IN_COURSE`, `FINISHED`, `CANCELED`).
 
-Invitation entities (all in `domain/pelada`): `PeladaInvitation` → `pelada_invitations` (`pelada`, `recipient`, `sender`, status and creation/expiry/response/cancellation instants); `PeladaInviteLink` → `pelada_invite_links` (`pelada`, `creator`, creation/expiry/revocation); `PeladaLinkBlock` → `pelada_link_blocks` (`pelada`, `user`, creation, unique pair). Pelada deletion explicitly removes notifications before all three new record types; database cascades are a safety net.
+Invitation entities (all in `domain/pelada/invitation/model`): `PeladaInvitation` → `pelada_invitations` (`pelada`, `recipient`, `sender`, status and creation/expiry/response/cancellation instants); `PeladaInviteLink` → `pelada_invite_links` (`pelada`, `creator`, creation/expiry/revocation); `PeladaLinkBlock` → `pelada_link_blocks` (`pelada`, `user`, creation, unique pair). Pelada deletion explicitly removes notifications before all three new record types; database cascades are a safety net.
 
 ### Attendance: mensalistas and diaristas
 
