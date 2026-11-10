@@ -1,4 +1,4 @@
-package com.futspring.backend.domain.subscription;
+package com.futspring.backend.domain.subscription.checkout;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;

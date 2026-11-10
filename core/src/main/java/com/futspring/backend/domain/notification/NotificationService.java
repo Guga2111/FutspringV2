@@ -16,7 +16,7 @@ import com.futspring.backend.domain.pelada.MembersRemovedEvent;
 import com.futspring.backend.domain.pelada.MensalistasChangedEvent;
 import com.futspring.backend.domain.pelada.Pelada;
 import com.futspring.backend.domain.pelada.PeladaTransferredEvent;
-import com.futspring.backend.domain.subscription.PixClaimedEvent;
+import com.futspring.backend.domain.subscription.checkout.PixClaimedEvent;
 import com.futspring.backend.domain.user.User;
 import com.futspring.backend.domain.user.UserRepository;
 import lombok.RequiredArgsConstructor;

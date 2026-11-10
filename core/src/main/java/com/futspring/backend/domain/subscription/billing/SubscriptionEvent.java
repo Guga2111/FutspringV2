@@ -1,7 +1,8 @@
-package com.futspring.backend.domain.subscription;
+package com.futspring.backend.domain.subscription.billing;
 
 import com.futspring.backend.domain.user.User;
 import com.futspring.backend.shared.entity.EntityIdentity;
+import com.futspring.backend.domain.subscription.SubscriptionKind;
 import jakarta.persistence.*;
 import lombok.*;
 

@@ -187,20 +187,21 @@ com.futspring.backend
 │   │   │                           window opens), NotificationRetentionJob (04:00: deletes read notifications > 90 days, any > 180 days)
 │   │   └── dto/                    NotificationDTO, NotificationPushDTO, UnreadCountDTO, NotificationPreferenceDTO, UnsubscribeRequestDTO,
 │   │                               PushSubscriptionRequestDTO, RemovePushSubscriptionRequestDTO, VapidPublicKeyDTO
-│   ├── subscription/               PeladaSubscription (+ SubscriptionKind, SubscriptionPlan), SubscriptionPayment, SubscriptionEvent
-│   │                               (+ SubscriptionEventType) and their repositories; SubscriptionState (pure: kind + valid_until + now
-│   │                               → SubscriptionStatus, with `writable`), SubscriptionPlans (list prices), SubscriptionService (a new
-│   │                               pelada's TRIAL or PENDING; the pelada's rows on delete), SubscriptionGuard (`requireWritable`: 402 on a
-│   │                               read-only pelada; `isWritable` for the jobs; `summary` / `summaries`: what the client reads),
-│   │                               dto/SubscriptionSummaryDTO; SubscriptionStatusFilter (the state as a JPA Specification over kind +
-│   │                               valid_until, for the platform admin's filter and counts); SubscriptionService also holds the platform
-│   │                               admin's commands (record / void a payment, set validity, extend, exempt, cancel, founder) and the
-│   │                               creator's Pix claim, each recording its SubscriptionEvent; the creator's Assinatura area:
-│   │                               SubscriptionController (/peladas/{id}/subscription) + PeladaSubscriptionService (creator only),
-│   │                               PixBrCode (static Pix BR Code: EMV fields + CRC16), BillingPixConfig (BILLING_PIX_*: normalized
-│   │                               key, name and city, fails the startup when the BR Code can't carry them),
-│   │                               dto/PeladaSubscriptionDTO, dto/PixClaimRequestDTO; PixClaimedEvent (a new Pix claim);
-│   │                               SubscriptionNoticeJob (09:00 São Paulo: SUBSCRIPTION_ENDING / SUBSCRIPTION_PAST_DUE to the creator)
+│   ├── subscription/               PeladaSubscription (+ SubscriptionKind, SubscriptionPlan) and its repository; SubscriptionState (pure:
+│   │   │                           kind + valid_until + now → SubscriptionStatus, with `writable`), SubscriptionPlans (list prices),
+│   │   │                           SubscriptionService (a new pelada's TRIAL or PENDING; the pelada's rows on delete; the platform admin's
+│   │   │                           commands (record / void a payment, set validity, extend, exempt, cancel, founder) and the creator's Pix
+│   │   │                           claim, each recording its SubscriptionEvent), SubscriptionGuard (`requireWritable`: 402 on a read-only
+│   │   │                           pelada; `isWritable` for the jobs; `summary` / `summaries`: what the client reads),
+│   │   │                           SubscriptionStatusFilter (the state as a JPA Specification over kind + valid_until, for the platform
+│   │   │                           admin's filter and counts), SubscriptionNoticeJob (09:00 São Paulo: SUBSCRIPTION_ENDING /
+│   │   │                           SUBSCRIPTION_PAST_DUE to the creator)
+│   │   ├── billing/                SubscriptionPayment, SubscriptionEvent (+ SubscriptionEventType) and their repositories
+│   │   ├── checkout/               the creator's Assinatura area: SubscriptionController (/peladas/{id}/subscription) +
+│   │   │                           PeladaSubscriptionService (creator only), PixBrCode (static Pix BR Code: EMV fields + CRC16),
+│   │   │                           BillingPixConfig (BILLING_PIX_*: normalized key, name and city, fails the startup when the BR Code
+│   │   │                           can't carry them), PixClaimedEvent (a new Pix claim)
+│   │   └── dto/                    SubscriptionSummaryDTO, PeladaSubscriptionDTO, PixClaimRequestDTO
 │   ├── platform/                   PlatformController (/platform), PlatformAccess (`requirePlatformAdmin`: 404 to anyone else),
 │   │   │                           PlatformReadService (overview, peladas, detail, payments, users; constant queries),
 │   │   │                           PlatformCommandService (pelada row lock, then SubscriptionService)

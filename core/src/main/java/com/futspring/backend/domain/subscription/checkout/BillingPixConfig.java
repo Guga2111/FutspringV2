@@ -1,4 +1,4 @@
-package com.futspring.backend.domain.subscription;
+package com.futspring.backend.domain.subscription.checkout;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;

@@ -1,5 +1,7 @@
-package com.futspring.backend.domain.subscription;
+package com.futspring.backend.domain.subscription.billing;
 
+import com.futspring.backend.domain.subscription.PeladaSubscription;
+import com.futspring.backend.domain.subscription.SubscriptionKind;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
