@@ -173,22 +173,22 @@ com.futspring.backend
 │   │   └── dto/                    MessageDTO, SendMessageRequest
 │   ├── notification/               NotificationService (synchronous @EventListener for every domain event: recipients, actor dropped,
 │   │   │                           collapse of repeatable types, saves the rows and registers the after-commit delivery),
-│   │   │                           NotificationInboxService (list / count / read / read-all of the caller), NotificationController,
 │   │   │                           Notification + NotificationRepository, NotificationType (category + emailable + pushable), NotificationCategory,
 │   │   │                           NotificationAward, NotificationDelivery (after-commit hook: the STOMP push, the e-mail, the Web Push),
-│   │   │                           NotificationPushService (@Async STOMP push to /user/queue/notifications),
-│   │   │                           NotificationDTOAssembler (NotificationDTOs of one or many recipients, one team query),
-│   │   │                           NotificationPreference (+ Id) + repository + NotificationPreferenceService (e-mail and push per category,
-│   │   │                           only what differs from the default is stored; unsubscribe / resubscribe by token), UnsubscribeTokens (HMAC),
-│   │   │                           NotificationEmailDispatcher (own single-thread executor, bounded queue), EmailPacer (Bucket4j, 2/s),
 │   │   │                           NotificationContent (exhaustive switch: subject, title, body, CTA per type; e-mail and Web Push),
-│   │   │                           NotificationEmail (fills resources/email/notification.html),
-│   │   │                           PushSubscription + PushSubscriptionRepository, PushSubscriptionService + PushController (/push),
-│   │   │                           PushEndpointPolicy (anti-SSRF allowlist, key sizes), WebPushSender (interface) + VapidWebPushSender
-│   │   │                           (zerodep + JDK HttpClient, no redirects) / NoopWebPushSender, WebPushConfig (VAPID pair, picks the
-│   │   │                           sender), WebPushDispatcher (@Async, four queries per batch, TTL/Urgency/Topic, 404/410 deletes),
 │   │   │                           ScheduledNotificationJob (every 15 min: SESSION_REMINDER / DIARISTA_WINDOW_OPEN once the diarista
 │   │   │                           window opens), NotificationRetentionJob (04:00: deletes read notifications > 90 days, any > 180 days)
+│   │   ├── inbox/                  NotificationController, NotificationInboxService (list / count / read / read-all of the caller),
+│   │   │                           NotificationPushService (@Async STOMP push to /user/queue/notifications),
+│   │   │                           NotificationDTOAssembler (NotificationDTOs of one or many recipients, one team query)
+│   │   ├── preference/             NotificationPreference (+ Id) + repository + NotificationPreferenceService (e-mail and push per category,
+│   │   │                           only what differs from the default is stored; unsubscribe / resubscribe by token), UnsubscribeTokens (HMAC)
+│   │   ├── email/                  NotificationEmailDispatcher (own single-thread executor, bounded queue), EmailPacer (Bucket4j, 2/s),
+│   │   │                           NotificationEmail (fills resources/email/notification.html)
+│   │   ├── webpush/                PushSubscription + PushSubscriptionRepository, PushSubscriptionService + PushController (/push),
+│   │   │                           PushEndpointPolicy (anti-SSRF allowlist, key sizes), WebPushSender (interface) + VapidWebPushSender
+│   │   │                           (zerodep + JDK HttpClient, no redirects) / NoopWebPushSender, WebPushConfig (VAPID pair, picks the
+│   │   │                           sender), WebPushDispatcher (@Async, four queries per batch, TTL/Urgency/Topic, 404/410 deletes)
 │   │   └── dto/                    NotificationDTO, NotificationPushDTO, UnreadCountDTO, NotificationPreferenceDTO, UnsubscribeRequestDTO,
 │   │                               PushSubscriptionRequestDTO, RemovePushSubscriptionRequestDTO, VapidPublicKeyDTO
 │   ├── subscription/               PeladaSubscription (+ SubscriptionKind, SubscriptionPlan) and its repository; SubscriptionState (pure:
