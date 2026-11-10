@@ -1,6 +1,6 @@
 package com.futspring.backend.domain.stats.dto;
 
-import com.futspring.backend.domain.stats.entity.Ranking;
+import com.futspring.backend.domain.stats.model.Ranking;
 import com.futspring.backend.domain.user.User;
 import lombok.Builder;
 

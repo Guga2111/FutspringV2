@@ -1,10 +1,9 @@
-package com.futspring.backend.domain.stats.repository;
+package com.futspring.backend.domain.stats.model;
 
 import com.futspring.backend.domain.daily.entity.Daily;
 import com.futspring.backend.domain.daily.repository.DailyRepository;
 import com.futspring.backend.domain.pelada.Pelada;
 import com.futspring.backend.domain.pelada.PeladaRepository;
-import com.futspring.backend.domain.stats.entity.DailyAward;
 import com.futspring.backend.domain.user.User;
 import com.futspring.backend.domain.user.UserRepository;
 import org.junit.jupiter.api.BeforeEach;

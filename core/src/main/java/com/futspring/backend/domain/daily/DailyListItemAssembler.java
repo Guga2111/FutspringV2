@@ -6,7 +6,7 @@ import com.futspring.backend.domain.daily.repository.DailyAttendanceRepository;
 import com.futspring.backend.domain.daily.repository.MatchRepository;
 import com.futspring.backend.domain.daily.repository.TeamRepository;
 import com.futspring.backend.domain.pelada.PeladaMensalistaRepository;
-import com.futspring.backend.domain.stats.repository.UserDailyStatsRepository;
+import com.futspring.backend.domain.stats.model.UserDailyStatsRepository;
 import com.futspring.backend.domain.user.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;

@@ -1,7 +1,6 @@
-package com.futspring.backend.domain.stats.repository;
+package com.futspring.backend.domain.stats.model;
 
 import com.futspring.backend.domain.pelada.Pelada;
-import com.futspring.backend.domain.stats.entity.Ranking;
 import com.futspring.backend.domain.user.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;

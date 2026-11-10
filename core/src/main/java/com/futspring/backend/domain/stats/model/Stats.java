@@ -1,32 +1,31 @@
-package com.futspring.backend.domain.stats.entity;
+package com.futspring.backend.domain.stats.model;
 
-import com.futspring.backend.domain.daily.entity.Daily;
 import com.futspring.backend.shared.entity.EntityIdentity;
 import com.futspring.backend.domain.user.User;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
+
 @Entity
-@Table(name = "user_daily_stats")
+@Table(name = "stats")
 @Getter
 @Setter
 @ToString(onlyExplicitlyIncluded = true)
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class UserDailyStats {
+public class Stats {
 
     @Id
     @ToString.Include
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "daily_id", nullable = false)
-    private Daily daily;
-
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "user_id", nullable = false)
+    @OneToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "user_id", nullable = false, unique = true)
     private User user;
 
     @Column(nullable = false)
@@ -47,11 +46,21 @@ public class UserDailyStats {
 
     @Column(nullable = false)
     @Builder.Default
-    private boolean wonSession = false;
+    private int sessionsPlayed = 0;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private int matchWins = 0;
+
+    @ElementCollection
+    @CollectionTable(name = "stats_puskas_dates", joinColumns = @JoinColumn(name = "stats_id"))
+    @Column(name = "puskas_date")
+    @Builder.Default
+    private List<LocalDate> puskasDates = new ArrayList<>();
 
     @Override
     public boolean equals(Object o) {
-        return o instanceof UserDailyStats other && EntityIdentity.sameEntity(this, o, getId(), other.getId());
+        return o instanceof Stats other && EntityIdentity.sameEntity(this, o, getId(), other.getId());
     }
 
     @Override

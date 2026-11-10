@@ -6,7 +6,7 @@ import com.futspring.backend.domain.pelada.Pelada;
 import com.futspring.backend.domain.pelada.PeladaMensalistaRepository;
 import com.futspring.backend.domain.pelada.PeladaRepository;
 import com.futspring.backend.domain.stats.dto.PeladaAttendanceDTO;
-import com.futspring.backend.domain.stats.repository.UserDailyStatsRepository;
+import com.futspring.backend.domain.stats.model.UserDailyStatsRepository;
 import com.futspring.backend.domain.user.User;
 import com.futspring.backend.shared.exception.AppException;
 import com.futspring.backend.shared.helper.PeladaAccessHelper;
