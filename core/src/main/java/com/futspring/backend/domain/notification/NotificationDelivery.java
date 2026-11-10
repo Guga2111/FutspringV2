@@ -1,5 +1,8 @@
 package com.futspring.backend.domain.notification;
 
+import com.futspring.backend.domain.notification.email.NotificationEmailDispatcher;
+import com.futspring.backend.domain.notification.inbox.NotificationPushService;
+import com.futspring.backend.domain.notification.webpush.WebPushDispatcher;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 

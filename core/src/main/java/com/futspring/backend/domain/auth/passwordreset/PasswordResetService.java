@@ -1,6 +1,6 @@
 package com.futspring.backend.domain.auth.passwordreset;
 
-import com.futspring.backend.domain.notification.PushSubscriptionRepository;
+import com.futspring.backend.domain.notification.webpush.PushSubscriptionRepository;
 import com.futspring.backend.domain.user.User;
 import com.futspring.backend.domain.user.UserRepository;
 import com.futspring.backend.shared.exception.AppException;

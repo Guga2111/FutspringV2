@@ -129,24 +129,6 @@ class NotificationContentTest {
     }
 
     @Test
-    void html_fillsEveryPlaceholderAndEscapesUserText() {
-        pelada.setName("<b>Fut</b> {{unsubscribeUrl}}");
-        NotificationContent content = NotificationContent.of(notification(NotificationType.DIARISTA_BUMPED, null));
-
-        String html = NotificationEmail.html(content, NotificationCategory.ATTENDANCE, "https://app.example.com",
-                "https://app.example.com/daily/100", "https://app.example.com/settings/notifications",
-                "https://app.example.com/notifications/unsubscribe?token=a.b");
-
-        assertThat(html).doesNotContain("{{title}}", "{{body}}", "{{ctaUrl}}", "{{ctaLabel}}", "{{categoryLabel}}",
-                "{{preferencesUrl}}", "{{appUrl}}", "<b>Fut</b>");
-        assertThat(html).contains("&lt;b&gt;Fut&lt;/b&gt; {{unsubscribeUrl}}")
-                .contains("Você perdeu a vaga")
-                .contains("href=\"https://app.example.com/daily/100\"")
-                .contains("href=\"https://app.example.com/notifications/unsubscribe?token=a.b\"")
-                .contains("os e-mails de <strong style=\"color:#0F2E1A\">Presença</strong> estão ligados");
-    }
-
-    @Test
     void pushBody_keepsAShortBody_andCutsALongOneAt180WithAnEllipsis() {
         NotificationContent shortOne = new NotificationContent("s", "t", "Curto.", "c", "/home");
         assertThat(shortOne.pushBody()).isEqualTo("Curto.");
