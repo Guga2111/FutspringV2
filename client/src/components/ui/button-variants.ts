@@ -13,6 +13,8 @@ export const buttonVariants = cva(
         link: "text-primary underline-offset-4 hover:underline",
         // the main action: Electric Blue with Midnight text (white on this blue fails AA)
         brand: "bg-brand text-brand-foreground hover:bg-brand-hover",
+        // a secondary action that undoes something ("Desistir"): red text, no fill (destructive-soft keeps 4.5:1)
+        "destructive-ghost": "text-destructive-soft hover:bg-destructive-muted hover:text-destructive-soft",
       },
       size: {
         default: "h-10 px-4 py-2",

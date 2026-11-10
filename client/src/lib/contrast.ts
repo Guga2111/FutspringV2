@@ -105,6 +105,8 @@ export const CONTRAST_PAIRS: [string, string, number][] = [
   ["warning", "card", TEXT],
   ["destructive-soft", "card", TEXT],
   ["destructive-soft", "destructive-muted", TEXT],
+  // "Desistir" inside the "Você vai" pill
+  ["destructive-soft", "success-muted", TEXT],
   ["status-scheduled-foreground", "status-scheduled", TEXT],
   ["status-live-foreground", "status-live", TEXT],
   ["live-foreground", "live-from", TEXT],

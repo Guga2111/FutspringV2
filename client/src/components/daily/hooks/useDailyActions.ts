@@ -15,7 +15,9 @@ import {
   updateTeamName,
   uploadChampionImage,
 } from '@/api/dailies'
+import { useAuth } from '@/hooks/useAuth'
 import { useNotificationsContext } from '@/hooks/useNotificationsContext'
+import { withCallerAttendance } from '@/utils/attendance'
 import { getErrorMessage, getErrorStatus } from '@/lib/errors'
 import { validateImageFile } from '@/schemas/upload'
 import type { DailyDetail, DailyStatus, TeamDTO } from '@/types/daily'
@@ -39,6 +41,7 @@ export function useDailyActions({ daily, setDaily, refetch }: Options) {
   const [confirmAllLoading, setConfirmAllLoading] = useState(false)
   const [dismissBumpLoading, setDismissBumpLoading] = useState(false)
   const { markBumpRead } = useNotificationsContext()
+  const { user } = useAuth()
   const [selectedPlayer, setSelectedPlayer] = useState<{ id: number; teamId: number } | null>(null)
 
   async function run(action: () => Promise<unknown>, success: string, failure: string, reload = true) {
@@ -57,13 +60,22 @@ export function useDailyActions({ daily, setDaily, refetch }: Options) {
     setDaily((prev) => (prev ? { ...prev, teams: prev.teams.map((t) => (t.id === teamId ? updated : t)) } : prev))
   }
 
+  // Optimistic: the caller enters / leaves the confirmed list at once; the detail is then read again (teams, bumps,
+  // counts), and an error puts the previous detail back
   async function toggleAttendance(confirmed: boolean) {
-    if (!daily) return
+    if (!daily || !user) return
     setConfirmLoading(true)
-    await (confirmed
-      ? run(() => disconfirmAttendance(daily.id), 'Presença cancelada', 'Não foi possível cancelar a presença')
-      : run(() => confirmAttendance(daily.id), 'Presença confirmada', 'Não foi possível confirmar a presença'))
-    setConfirmLoading(false)
+    const previous = daily
+    setDaily(withCallerAttendance(daily, user.id, !confirmed, new Date()))
+    try {
+      await (confirmed ? disconfirmAttendance(daily.id) : confirmAttendance(daily.id))
+      await refetch()
+    } catch (error) {
+      setDaily(previous)
+      toast.error(getErrorMessage(error, confirmed ? 'Não foi possível cancelar a presença' : 'Não foi possível confirmar a presença'))
+    } finally {
+      setConfirmLoading(false)
+    }
   }
 
   async function adminToggle(userId: number, confirm: boolean) {

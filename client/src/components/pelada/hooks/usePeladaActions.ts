@@ -15,6 +15,7 @@ import { useMyPeladasContext } from "@/hooks/useMyPeladasContext"
 import { getErrorMessage } from "@/lib/errors"
 import { pluralMembers } from "@/utils/bulkMemberActions"
 import type { PeladaDetail, PeladaMember } from "@/types/pelada"
+import { toggledAttendance } from "@/utils/attendance"
 import type { DailyListItem } from "@/types/daily"
 
 // Mutations of the pelada page: admin actions on one member or a selection (member changes are merged into
@@ -171,15 +172,21 @@ export function usePeladaActions(
     )
   }
 
+  // Optimistic: the session card and the sidebar flip at once, the server's answer replaces them and an error puts
+  // them back
   async function toggleAttendance(daily: DailyListItem) {
     if (!pelada) return
     setAttendancePending(true)
+    const expected = toggledAttendance(daily.isConfirmed, daily.confirmedPlayerCount)
+    mergeDaily({ ...daily, isConfirmed: expected.isConfirmed, confirmedPlayerCount: expected.confirmedCount })
+    updateNextDaily(pelada.id, expected)
     try {
       const updated = daily.isConfirmed ? await disconfirmAttendance(daily.id) : await confirmAttendance(daily.id)
       mergeDaily(updated)
       updateNextDaily(pelada.id, { confirmedCount: updated.confirmedPlayerCount, isConfirmed: updated.isConfirmed })
-      toast.success(updated.isConfirmed ? "Presença confirmada" : "Presença cancelada")
     } catch (error) {
+      mergeDaily(daily)
+      updateNextDaily(pelada.id, { confirmedCount: daily.confirmedPlayerCount, isConfirmed: daily.isConfirmed })
       toast.error(getErrorMessage(error, "Não foi possível atualizar a presença"))
     } finally {
       setAttendancePending(false)

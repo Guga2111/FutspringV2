@@ -40,7 +40,7 @@ export function AttendanceSummaryCard({ daily, isConfirmed, pending, onToggle }:
               <HugeiconsIcon icon={Tick02Icon} className="size-4" strokeWidth={2.4} />
               Presença confirmada
             </span>
-            <Button variant="outline" disabled={pending} onClick={onToggle} className="h-9 bg-transparent px-4 hover:bg-accent">
+            <Button variant="destructive-ghost" disabled={pending} onClick={onToggle} className="h-9 border border-destructive-soft/40 px-4">
               Não vou mais
             </Button>
           </>

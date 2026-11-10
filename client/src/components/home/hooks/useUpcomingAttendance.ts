@@ -5,6 +5,7 @@ import { useMyPeladasContext } from "@/hooks/useMyPeladasContext"
 import { useNotificationsContext } from "@/hooks/useNotificationsContext"
 import { getErrorMessage } from "@/lib/errors"
 import type { NextDaily } from "@/types/pelada"
+import { toggledAttendance } from "@/utils/attendance"
 
 // Confirm / withdraw from a pelada's next session on the Home cards; merged into the shared peladas
 export function useUpcomingAttendance() {
@@ -12,13 +13,16 @@ export function useUpcomingAttendance() {
   const { markBumpRead } = useNotificationsContext()
   const [pendingId, setPendingId] = useState<number | null>(null)
 
+  // Optimistic: the card flips at once, the server's answer replaces it and an error puts it back
   async function toggle(peladaId: number, next: NextDaily) {
     setPendingId(next.id)
+    const previous = { isConfirmed: next.isConfirmed, confirmedCount: next.confirmedCount }
+    updateNextDaily(peladaId, toggledAttendance(next.isConfirmed, next.confirmedCount))
     try {
       const updated = next.isConfirmed ? await disconfirmAttendance(next.id) : await confirmAttendance(next.id)
       updateNextDaily(peladaId, { confirmedCount: updated.confirmedPlayerCount, isConfirmed: updated.isConfirmed })
-      toast.success(updated.isConfirmed ? "Presença confirmada" : "Presença cancelada")
     } catch (error) {
+      updateNextDaily(peladaId, previous)
       toast.error(getErrorMessage(error, "Não foi possível atualizar a presença"))
     } finally {
       setPendingId(null)
