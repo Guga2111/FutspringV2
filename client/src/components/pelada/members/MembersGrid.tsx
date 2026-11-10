@@ -4,8 +4,8 @@ import { Cancel01Icon, CheckListIcon, Search01Icon } from "@hugeicons/core-free-
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
-import { MemberCard, type MemberStats } from "@/components/pelada/MemberCard"
-import { MemberSelectionBar } from "@/components/pelada/MemberSelectionBar"
+import { MemberCard, type MemberStats } from "@/components/pelada/members/MemberCard"
+import { MemberSelectionBar } from "@/components/pelada/members/MemberSelectionBar"
 import { useSelection } from "@/hooks/useSelection"
 import type { BulkMemberAction } from "@/utils/bulkMemberActions"
 import {

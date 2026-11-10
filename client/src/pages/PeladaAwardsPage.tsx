@@ -1,4 +1,4 @@
-import { AwardsTab } from "@/components/pelada/AwardsTab"
+import { AwardsTab } from "@/components/pelada/ranking/AwardsTab"
 import { usePeladaWorkspace } from "@/components/pelada/hooks/usePeladaWorkspace"
 
 export default function PeladaAwardsPage() {

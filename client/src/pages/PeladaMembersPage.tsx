@@ -1,4 +1,4 @@
-import { MembersGrid } from "@/components/pelada/MembersGrid"
+import { MembersGrid } from "@/components/pelada/members/MembersGrid"
 import { usePeladaWorkspace } from "@/components/pelada/hooks/usePeladaWorkspace"
 
 export default function PeladaMembersPage() {

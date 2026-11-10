@@ -1,5 +1,5 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { TeamColorDot } from "@/components/daily/TeamColorDot"
+import { TeamColorDot } from "@/components/daily/teams/TeamColorDot"
 import { cn } from "@/lib/utils"
 import { formatGoalDiff, goalDiffClass } from "@/utils/liveSession"
 import type { DailyDetail } from "@/types/daily"

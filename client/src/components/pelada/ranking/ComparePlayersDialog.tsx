@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ComparablePlayerStatsCard } from "@/components/pelada/ComparablePlayerStatsCard";
+import { ComparablePlayerStatsCard } from "@/components/pelada/ranking/ComparablePlayerStatsCard";
 import { useComparePlayers } from "@/components/pelada/hooks/useComparePlayers";
 import type { PeladaMember } from "@/types/pelada";
 

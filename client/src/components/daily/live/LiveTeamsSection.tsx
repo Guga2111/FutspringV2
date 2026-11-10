@@ -1,7 +1,7 @@
 import { useMemo } from "react"
 import { PlayerAvatar } from "@/components/PlayerAvatar"
-import { TeamCard, TeamPlayerRow } from "@/components/daily/TeamCard"
-import { TeamColorDot } from "@/components/daily/TeamColorDot"
+import { TeamCard, TeamPlayerRow } from "@/components/daily/teams/TeamCard"
+import { TeamColorDot } from "@/components/daily/teams/TeamColorDot"
 import { playerTotals } from "@/utils/liveSession"
 import type { DailyDetail } from "@/types/daily"
 
