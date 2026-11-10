@@ -99,7 +99,7 @@ client/
     │   ├── PrivateRoute.tsx, ErrorBoundary.tsx, ScrollToTop.tsx, ThemedToaster.tsx
     │   ├── pelada-settings/  settings page of a pelada (SettingsNav, InfoCard, ScheduleCard, LocationCard, SlotsCard, AutomationCard, DangerZone + TransferPeladaDialog / DeletePeladaDialog, ConfirmNameField)
     │   │   └── hooks/    usePeladaSettings, useSettingsSubmit
-    │   ├── platform/     the platform admin's panel (`/admin*`): PlatformPageHeader (breadcrumb, title, the areas as underlined links), OverviewKpis, AttentionList ("Precisa de você"), RevenueChart, PeladasTable, SubscriptionCard (state, founder `Switch`, actions), RecordPaymentSheet, SubscriptionActionDialog, VoidPaymentDialog, PlatformPaymentsList, SubscriptionEventList, PlatformUsersList, SubscriptionStatusBadge, PlatformSearch, PlatformLoadError
+    │   ├── platform/     the platform admin's panel (`/admin*`): PlatformPageHeader (breadcrumb, title, the areas as underlined links), OverviewKpis, AttentionList ("Precisa de você"), RevenueChart, PeladasTable, PlatformPaymentsList, PlatformUsersList, SubscriptionStatusBadge, PlatformSearch, PlatformLoadError; `subscription/`: SubscriptionCard (state, founder `Switch`, actions), RecordPaymentSheet, SubscriptionActionDialog, VoidPaymentDialog, SubscriptionEventList
     │   │   └── hooks/    usePlatformRequest (+ `usePageOf`, `useDebouncedValue`), usePlatformPeladaActions
     │   ├── subscription/ the creator's Assinatura area: SubscriptionStatusCard, SubscriptionCheckout (plans, Pix QR + copy and paste, "Já fiz o Pix"), SubscriptionPaymentsList
     │   │   └── hooks/    usePeladaSubscription
