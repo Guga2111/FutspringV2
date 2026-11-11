@@ -7,8 +7,8 @@ Severidade: **Alta** (exploração simples, impacto em dados ou contas), **Médi
 | # | Problema | Severidade | Status |
 |---|----------|-----------|--------|
 | 1 | Busca de usuários lista todas as contas e funciona como oráculo de e-mail | Alta | Corrigido (PR A1) |
-| 2 | Rate limit de login contornável com variação de URL | Alta | A confirmar |
-| 3 | IP do rate limit forjável por `X-Forwarded-For` | Alta / Média | A confirmar (nginx) |
+| 2 | Rate limit de login contornável com variação de URL | Alta | Confirmado e corrigido (PR A2) |
+| 3 | IP do rate limit forjável por `X-Forwarded-For` | Alta / Média | Confirmado no nginx da VPS; corrigido (PR A2: `RemoteIpValve` + `ops/nginx/futspring.conf`, nginx aplicado à mão) |
 | 4 | Membro removido continua recebendo o chat | Média | Confirmado |
 | 5 | JWT de 7 dias em `localStorage`, sem revogação por sessão | Média | Confirmado |
 | 6 | Upload público confia no Content-Type e não remove EXIF | Média | Confirmado |

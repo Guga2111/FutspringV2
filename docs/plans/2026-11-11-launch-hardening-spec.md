@@ -185,9 +185,15 @@ Para planejar um PR, rode o prompt dele numa sessão limpa (`/clear` antes). Ao 
 /plan-task docs/plans/2026-11-11-launch-hardening-spec.md "PR A1 — Busca de usuários"
 ```
 
-### [ ] PR A2 — Rate limit e IP real (`fix/rate-limit-ip`)
+### [x] PR A2 — Rate limit e IP real (`fix/rate-limit-ip`)
 - **Entrega:** matcher decodificado com chave lógica, `RemoteIpValve`, `ops/nginx/futspring.conf` (proxy, PWA, gzip), remoção do `NGINX-PWA.md`.
 - **Docs:** BACKEND.md (Rate limiting, Configuration, CI/CD → nginx).
+- **Decisões:**
+  - **`internal-proxies` fica no padrão do Boot** (loopback + 10/8, 172.16/12, 192.168/16), não `127\.0\.0\.1` como dizia a seção A2/Decisões. O nginx chega ao container pela porta publicada do Docker, então a API vê o gateway da rede do compose (`172.25.0.1` na VPS hoje), não 127.0.0.1; com o regex do spec todo mundo cairia num bucket só. Risco aceito: um container nosso nas mesmas redes poderia forjar o IP.
+  - #3 confirmado na VPS: o `location /api/` usava `$proxy_add_x_forwarded_for` (acrescenta ao valor do cliente). O `ops/nginx/futspring.conf` é cópia do arquivo da VPS (2026-11-11) com `X-Forwarded-For $remote_addr`, `X-Forwarded-Proto`, `proxy_pass http://127.0.0.1:8081` (o Docker só publica em IPv4; `localhost` pode tentar `::1`) e `gzip_types` (o `gzip on` do `nginx.conf` só cobria `text/html`). Linhas do Certbot intactas. **Aplicar à mão na VPS** (passos no cabeçalho do arquivo); o valve já protege mesmo com o nginx antigo, porque lê da direita para a esquerda.
+  - A tag `route` de `futspring.ratelimit.rejected` passou a ser o nome lógico (`login`, `invite-preview`…); o painel do Grafana agrupa por `route` e não mudou.
+  - `JwtAuthFilter.shouldNotFilter` também compara o `getRequestURI()` cru, mas falha fechado (uma variante codificada só passa pela checagem do JWT): ficou fora.
+  - `AuthRateLimitFilterTest` usa o `HttpClient` do JDK com `URI.create` (o `RestClient` recodifica o `%` de templates).
 
 ```
 /plan-task docs/plans/2026-11-11-launch-hardening-spec.md "PR A2 — Rate limit e IP real"
