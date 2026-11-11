@@ -47,3 +47,18 @@ describe("registerSchema (RegisterRequestDTO)", () => {
     expect(registerSchema.safeParse({ ...valid, terms: false }).success).toBe(false)
   })
 })
+
+describe("password limits (BcryptLength)", () => {
+  const ok = "a".repeat(72)
+  const tooLong = "a".repeat(73)
+  // 40 characters but 80 bytes: BCrypt counts bytes
+  const accents = "é".repeat(40)
+
+  it("caps every password at 72 bytes, accents counting twice", () => {
+    expect(registerSchema.safeParse({ username: "Leal", email: "leal@futspring.com", password: ok, confirmPassword: ok, terms: true }).success).toBe(true)
+    expect(resetPasswordSchema.safeParse({ newPassword: tooLong, confirmPassword: tooLong }).success).toBe(false)
+    expect(resetPasswordSchema.safeParse({ newPassword: accents, confirmPassword: accents }).success).toBe(false)
+    expect(loginSchema.safeParse({ email: "leal@futspring.com", password: ok }).success).toBe(true)
+    expect(loginSchema.safeParse({ email: "leal@futspring.com", password: accents }).success).toBe(false)
+  })
+})

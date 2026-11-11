@@ -19,6 +19,10 @@ import java.time.Instant;
 @RequiredArgsConstructor
 public class AuthService {
 
+    // BCrypt (cost 10, the default strength of SecurityConfig's encoder) of a password nobody has: a login for an
+    // unknown e-mail is compared against it, so it takes as long as a wrong password and doesn't reveal accounts
+    static final String DUMMY_HASH = "$2a$10$Hhq/Zzp2Oit8GCJmPNCLE.d2dGluX14qqQuarR44Ym1DnTgMKaFe.";
+
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
@@ -52,10 +56,9 @@ public class AuthService {
     }
 
     public AuthResponseDTO login(LoginRequestDTO request) {
-        User user = userRepository.findByEmail(request.email())
-                .orElseThrow(() -> new AppException(HttpStatus.UNAUTHORIZED, "E-mail ou senha inválidos"));
-
-        if (!passwordEncoder.matches(request.password(), user.getPassword())) {
+        User user = userRepository.findByEmail(request.email()).orElse(null);
+        String hash = user == null ? DUMMY_HASH : user.getPassword();
+        if (!passwordEncoder.matches(request.password(), hash) || user == null) {
             throw new AppException(HttpStatus.UNAUTHORIZED, "E-mail ou senha inválidos");
         }
 

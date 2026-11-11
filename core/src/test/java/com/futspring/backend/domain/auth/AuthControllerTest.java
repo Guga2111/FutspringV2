@@ -10,6 +10,9 @@ import io.micrometer.core.instrument.MeterRegistry;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
+
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -157,5 +160,85 @@ class AuthControllerTest extends BaseIntegrationTest {
         // 15 requests against a bucket of 10: at least 5 rejections counted for the route
         assertThat(meterRegistry.get("futspring.ratelimit.rejected").tag("route", "login")
                 .counter().count()).isGreaterThanOrEqualTo(5);
+    }
+
+    // --- input hardening (PR A3): BCrypt's 72 bytes, e-mail case and spaces ---
+
+    private static final AtomicInteger IP = new AtomicInteger();
+    // 73 ASCII characters, and 40 "é": 40 characters but 80 bytes, which @Size alone would let through
+    private static final String PASSWORD_73 = "a".repeat(73);
+    private static final String PASSWORD_80_BYTES = "é".repeat(40);
+
+    @Test
+    void register_passwordOver72Characters_is400() throws Exception {
+        mockMvc.perform(auth("/api/v1/auth/register").content(objectMapper.writeValueAsString(
+                        new RegisterRequestDTO("longo", "longo@example.com", PASSWORD_73, LegalTerms.CURRENT_VERSION))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.password").value("A senha é longa demais (até 72 caracteres; letras com acento contam em dobro)"));
+    }
+
+    @Test
+    void register_passwordOver72Bytes_is400NotA500() throws Exception {
+        mockMvc.perform(auth("/api/v1/auth/register").content(objectMapper.writeValueAsString(
+                        new RegisterRequestDTO("acentos", "acentos@example.com", PASSWORD_80_BYTES, LegalTerms.CURRENT_VERSION))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.password").value("A senha é longa demais (até 72 caracteres; letras com acento contam em dobro)"));
+        assertThat(userRepository.findByEmail("acentos@example.com")).isEmpty();
+    }
+
+    @Test
+    void register_storesTheEmailTrimmedAndInLowerCase() throws Exception {
+        mockMvc.perform(auth("/api/v1/auth/register").content("""
+                        {"username": "Ana", "email": "  Ana@X.com ", "password": "password123", "termsVersion": "%s"}
+                        """.formatted(LegalTerms.CURRENT_VERSION)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.user.email").value("ana@x.com"));
+        assertThat(userRepository.findByEmail("ana@x.com")).isPresent();
+    }
+
+    @Test
+    void register_emailDifferingOnlyByCase_isConflict() throws Exception {
+        saveUser("ana", "ana@x.com");
+
+        mockMvc.perform(auth("/api/v1/auth/register").content(objectMapper.writeValueAsString(
+                        new RegisterRequestDTO("outra", "ANA@x.com", "password123", LegalTerms.CURRENT_VERSION))))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("Este e-mail já está cadastrado"));
+    }
+
+    @Test
+    void login_emailWithOtherCaseAndSpaces_findsTheAccount() throws Exception {
+        saveUser("ana", "ana@x.com");
+
+        mockMvc.perform(auth("/api/v1/auth/login").content("""
+                        {"email": "Ana@X.com ", "password": "password123"}
+                        """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.user.email").value("ana@x.com"));
+    }
+
+    @Test
+    void login_passwordOver72Bytes_is400NotA500() throws Exception {
+        saveUser("ana", "ana@x.com");
+
+        mockMvc.perform(auth("/api/v1/auth/login").content(objectMapper.writeValueAsString(
+                        new LoginRequestDTO("ana@x.com", PASSWORD_73))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.password").value("A senha é longa demais (até 72 caracteres; letras com acento contam em dobro)"));
+    }
+
+    private void saveUser(String username, String email) {
+        userRepository.save(User.builder()
+                .username(username)
+                .email(email)
+                .password(passwordEncoder.encode("password123"))
+                .build());
+    }
+
+    // each request from its own IP, so the 10/min login bucket shared by this class never answers 429 here
+    private MockHttpServletRequestBuilder auth(String path) {
+        int n = IP.incrementAndGet();
+        String ip = "10.3." + (n / 250) + "." + (n % 250 + 1);
+        return post(path).with(r -> { r.setRemoteAddr(ip); return r; }).contentType(MediaType.APPLICATION_JSON);
     }
 }

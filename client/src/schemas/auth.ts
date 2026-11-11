@@ -1,12 +1,32 @@
 import { z } from "zod"
 
-// RegisterRequestDTO.password and ResetPasswordRequestDTO.newPassword
+// RegisterRequestDTO.password, ResetPasswordRequestDTO.newPassword and ChangePasswordRequestDTO.newPassword
 export const PASSWORD_MIN_LENGTH = 8
+// BcryptLength: BCrypt takes 72 bytes in UTF-8, on every password the API hashes or compares
+export const PASSWORD_MAX_BYTES = 72
+const PASSWORD_TOO_LONG = "A senha é longa demais (até 72 caracteres; letras com acento contam em dobro)"
+const utf8 = new TextEncoder()
+
+// a password the API compares (login, current password, account deletion)
+export function passwordField(requiredMessage: string) {
+  return z
+    .string()
+    .min(1, requiredMessage)
+    .refine((value) => utf8.encode(value).length <= PASSWORD_MAX_BYTES, PASSWORD_TOO_LONG)
+}
+
+// a password the API stores (registration, reset, change)
+export function newPasswordField(requiredMessage: string) {
+  return passwordField(requiredMessage).min(
+    PASSWORD_MIN_LENGTH,
+    `A senha deve ter pelo menos ${PASSWORD_MIN_LENGTH} caracteres`,
+  )
+}
 
 // mirrors LoginRequestDTO
 export const loginSchema = z.object({
   email: z.string().trim().min(1, "O e-mail é obrigatório").email("E-mail inválido"),
-  password: z.string().min(1, "A senha é obrigatória"),
+  password: passwordField("A senha é obrigatória"),
 })
 export type LoginValues = z.infer<typeof loginSchema>
 
@@ -20,10 +40,7 @@ export const registerSchema = z
       .min(3, "O nome de usuário deve ter entre 3 e 30 caracteres")
       .max(30, "O nome de usuário deve ter entre 3 e 30 caracteres"),
     email: z.string().trim().min(1, "O e-mail é obrigatório").email("E-mail inválido"),
-    password: z
-      .string()
-      .min(1, "A senha é obrigatória")
-      .min(PASSWORD_MIN_LENGTH, `A senha deve ter pelo menos ${PASSWORD_MIN_LENGTH} caracteres`),
+    password: newPasswordField("A senha é obrigatória"),
     confirmPassword: z.string().min(1, "Confirme sua senha"),
     terms: z.boolean().refine((accepted) => accepted, "Aceite os termos de uso para criar a conta"),
   })
@@ -42,10 +59,7 @@ export type ForgotPasswordValues = z.infer<typeof forgotPasswordSchema>
 // mirrors ResetPasswordRequestDTO (the token comes from the link, not from the form); confirmPassword is client-only
 export const resetPasswordSchema = z
   .object({
-    newPassword: z
-      .string()
-      .min(1, "A senha é obrigatória")
-      .min(PASSWORD_MIN_LENGTH, `A senha deve ter pelo menos ${PASSWORD_MIN_LENGTH} caracteres`),
+    newPassword: newPasswordField("A senha é obrigatória"),
     confirmPassword: z.string().min(1, "Confirme a nova senha"),
   })
   .refine((values) => values.newPassword === values.confirmPassword, {

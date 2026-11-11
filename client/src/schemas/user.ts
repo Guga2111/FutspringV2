@@ -1,5 +1,6 @@
 import { z } from "zod"
 import { EDITABLE_POSITIONS } from "@/types/user"
+import { newPasswordField, passwordField } from "@/schemas/auth"
 
 // mirrors UpdateProfileRequest ("" clears the position)
 export const profileSchema = z.object({
@@ -11,8 +12,8 @@ export type ProfileValues = z.infer<typeof profileSchema>
 // mirrors ChangePasswordRequestDTO; confirmPassword is client-only
 export const changePasswordSchema = z
   .object({
-    currentPassword: z.string().min(1, "Informe a senha atual"),
-    newPassword: z.string().min(8, "A senha deve ter pelo menos 8 caracteres"),
+    currentPassword: passwordField("Informe a senha atual"),
+    newPassword: newPasswordField("A senha é obrigatória"),
     confirmPassword: z.string(),
   })
   .refine((values) => values.confirmPassword === values.newPassword, {
@@ -23,6 +24,6 @@ export type ChangePasswordValues = z.infer<typeof changePasswordSchema>
 
 // mirrors DeleteAccountRequestDTO
 export const deleteAccountSchema = z.object({
-  password: z.string().min(1, "Informe a sua senha"),
+  password: passwordField("Informe a sua senha"),
 })
 export type DeleteAccountValues = z.infer<typeof deleteAccountSchema>

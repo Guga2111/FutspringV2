@@ -312,6 +312,20 @@ class MigrationDataTest {
                 .isInstanceOf(SQLException.class).hasMessageContaining("notifications_type_check");
     }
 
+    @Test
+    void v22_normalizesEmails_andRejectsOneDifferingOnlyByCase() throws SQLException {
+        flyway("21").migrate();
+        execute("INSERT INTO users(id,email,username,password) VALUES(1,' Ana@X.com','Ana','hash'),(2,'bruno@x.com','Bruno','hash')");
+        flyway(null).migrate();
+        try (Connection c = connect(); Statement st = c.createStatement();
+             ResultSet rs = st.executeQuery("SELECT email FROM users ORDER BY id")) {
+            rs.next(); assertThat(rs.getString(1)).isEqualTo("ana@x.com");
+            rs.next(); assertThat(rs.getString(1)).isEqualTo("bruno@x.com");
+        }
+        assertThatThrownBy(() -> execute("INSERT INTO users(id,email,username,password) VALUES(3,'ANA@X.COM','Outra','hash')"))
+                .isInstanceOf(SQLException.class).hasMessageContaining("uq_users_email_lower");
+    }
+
     private static Flyway flyway(String target) {
         var config = Flyway.configure()
                 .dataSource(POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword())

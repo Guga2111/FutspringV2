@@ -199,9 +199,16 @@ Para planejar um PR, rode o prompt dele numa sessão limpa (`/clear` antes). Ao 
 /plan-task docs/plans/2026-11-11-launch-hardening-spec.md "PR A2 — Rate limit e IP real"
 ```
 
-### [ ] PR A3 — Entradas de autenticação (`fix/auth-inputs`)
+### [x] PR A3 — Entradas de autenticação (`fix/auth-inputs`)
 - **Entrega:** senha 8–72 nos dois lados, e-mail normalizado, BCrypt dummy, V22 (com o resultado da consulta de duplicatas na descrição).
 - **Docs:** BACKEND.md (Domain model `User`, migrations, Auth), FRONTEND.md (schemas).
+- **Decisões:**
+  - **Consulta em produção (2026-11-11, 56 contas):** 0 duplicatas por `LOWER(TRIM(email))` e 0 e-mails fora do padrão. A V22 só cria o índice em prod e nenhum JWT antigo quebra (o `sub` já estava normalizado).
+  - **O máximo é em bytes, não em caracteres:** o BCrypt do Spring Security 7.1 lança exceção acima de 72 bytes UTF-8 tanto no `encode` quanto no `matches`. Por isso o `@Size(max = 72)` do spec virou a constraint `@BcryptLength` (`domain/auth`, validador aninhado), sem o `max` no `@Size` (as duas juntas dariam mensagens diferentes a cada vez para 73 caracteres). Uma mensagem só: "A senha é longa demais (até 72 caracteres; letras com acento contam em dobro)". O `@Size(min = 8)` continua.
+  - `@BcryptLength` vale também para as senhas que só são comparadas (login, senha atual da troca, exclusão de conta): sem ela, um `matches` de 73 bytes dava 500.
+  - **E-mail normalizado no construtor compacto** dos records de cadastro, login e forgot-password (`User.normalizeEmail`), antes da validação; assim `"Ana@X.com "` passa no `@Email` e os serviços não mudam. A busca do A1 usa o mesmo helper; a query `LOWER(u.email) = :email` ficou e agora usa o índice funcional da V22.
+  - `DUMMY_HASH` é um literal BCrypt de custo 10 (o padrão do `BCryptPasswordEncoder` do `SecurityConfig`).
+  - Front: `passwordField` / `newPasswordField` em `schemas/auth.ts` (limite com `TextEncoder`), reusados em `schemas/user.ts`. O e-mail não é rebaixado no front.
 
 ```
 /plan-task docs/plans/2026-11-11-launch-hardening-spec.md "PR A3 — Entradas de autenticação"

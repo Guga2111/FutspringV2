@@ -130,6 +130,23 @@ class AccountSettingsTest extends BaseIntegrationTest {
                 .andExpect(jsonPath("$.errors.newPassword").exists());
     }
 
+    // BCrypt takes 72 bytes: above that the encoder throws, in encode and matches alike (a 400, never a 500)
+    @Test
+    void changePassword_passwordsOver72Bytes_are400() throws Exception {
+        mockMvc.perform(as(post("/api/v1/users/me/password"), player)
+                        .content(json(Map.of("currentPassword", PASSWORD, "newPassword", "é".repeat(40)))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.newPassword").value("A senha é longa demais (até 72 caracteres; letras com acento contam em dobro)"));
+        mockMvc.perform(as(post("/api/v1/users/me/password"), player)
+                        .content(json(Map.of("currentPassword", "a".repeat(73), "newPassword", "nova-senha-123"))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.currentPassword").value("A senha é longa demais (até 72 caracteres; letras com acento contam em dobro)"));
+        mockMvc.perform(as(post("/api/v1/users/me/delete"), player).content(json(Map.of("password", "a".repeat(73)))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.password").value("A senha é longa demais (até 72 caracteres; letras com acento contam em dobro)"));
+        assertThat(users.findById(player.getId()).orElseThrow().getTokenVersion()).isZero();
+    }
+
     @Test
     void changePassword_returnsAWorkingTokenAndRevokesTheOldOne() throws Exception {
         String body = mockMvc.perform(as(post("/api/v1/users/me/password"), player)

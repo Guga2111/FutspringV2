@@ -7,6 +7,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.Instant;
+import java.util.Locale;
 
 @Entity
 @Table(name = "users")
@@ -72,6 +73,12 @@ public class User {
     @UpdateTimestamp
     @Column(name = "updated_at")
     private Instant updatedAt;
+
+    // The stored form of an e-mail (V22 keeps the column unique on LOWER(email)): every e-mail the client sends
+    // to look up or create an account goes through it, so "Ana@X.com " finds ana@x.com
+    public static String normalizeEmail(String email) {
+        return email == null ? null : email.trim().toLowerCase(Locale.ROOT);
+    }
 
     public boolean isDeleted() {
         return deletedAt != null;

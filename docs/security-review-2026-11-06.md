@@ -13,9 +13,9 @@ Severidade: **Alta** (exploração simples, impacto em dados ou contas), **Médi
 | 5 | JWT de 7 dias em `localStorage`, sem revogação por sessão | Média | Confirmado |
 | 6 | Upload público confia no Content-Type e não remove EXIF | Média | Confirmado |
 | 7 | `/files/**` público e permanente | Média / Baixa | Confirmado |
-| 8 | Enumeração de contas no cadastro e no login | Baixa / Média | Confirmado |
+| 8 | Enumeração de contas no cadastro e no login | Baixa / Média | Login corrigido (PR A3: hash BCrypt dummy); 409 do cadastro aceito (spec de lançamento) |
 | 9 | Actuator aberto com `threaddump` na rede `observability` | Baixa | Confirmado |
-| 10 | Senha sem tamanho máximo e e-mail sensível a maiúsculas | Baixa | Confirmado |
+| 10 | Senha sem tamanho máximo e e-mail sensível a maiúsculas | Baixa | Corrigido (PR A3: ≤ 72 bytes, e-mail normalizado, V22); sem limite por conta |
 
 ---
 
