@@ -1,12 +1,12 @@
 package com.futspring.backend.domain.stats;
 
 import com.futspring.backend.domain.pelada.Pelada;
-import com.futspring.backend.domain.stats.entity.Ranking;
-import com.futspring.backend.domain.stats.entity.Stats;
-import com.futspring.backend.domain.stats.repository.DailyAwardRepository;
-import com.futspring.backend.domain.stats.repository.RankingRepository;
-import com.futspring.backend.domain.stats.repository.StatsRepository;
-import com.futspring.backend.domain.stats.repository.UserDailyStatsRepository;
+import com.futspring.backend.domain.stats.model.Ranking;
+import com.futspring.backend.domain.stats.model.Stats;
+import com.futspring.backend.domain.stats.model.DailyAwardRepository;
+import com.futspring.backend.domain.stats.model.RankingRepository;
+import com.futspring.backend.domain.stats.model.StatsRepository;
+import com.futspring.backend.domain.stats.model.UserDailyStatsRepository;
 import com.futspring.backend.domain.user.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

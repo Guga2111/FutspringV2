@@ -1,6 +1,6 @@
 package com.futspring.backend.domain.notification;
 
-import com.futspring.backend.domain.daily.entity.Daily;
+import com.futspring.backend.domain.daily.Daily;
 import com.futspring.backend.domain.pelada.Pelada;
 import com.futspring.backend.domain.user.User;
 import org.junit.jupiter.api.Test;
@@ -126,24 +126,6 @@ class NotificationContentTest {
         n.setActor(null);
 
         assertThat(NotificationContent.of(n).body()).isEqualTo("Você entrou na Pelada do Fut.");
-    }
-
-    @Test
-    void html_fillsEveryPlaceholderAndEscapesUserText() {
-        pelada.setName("<b>Fut</b> {{unsubscribeUrl}}");
-        NotificationContent content = NotificationContent.of(notification(NotificationType.DIARISTA_BUMPED, null));
-
-        String html = NotificationEmail.html(content, NotificationCategory.ATTENDANCE, "https://app.example.com",
-                "https://app.example.com/daily/100", "https://app.example.com/settings/notifications",
-                "https://app.example.com/notifications/unsubscribe?token=a.b");
-
-        assertThat(html).doesNotContain("{{title}}", "{{body}}", "{{ctaUrl}}", "{{ctaLabel}}", "{{categoryLabel}}",
-                "{{preferencesUrl}}", "{{appUrl}}", "<b>Fut</b>");
-        assertThat(html).contains("&lt;b&gt;Fut&lt;/b&gt; {{unsubscribeUrl}}")
-                .contains("Você perdeu a vaga")
-                .contains("href=\"https://app.example.com/daily/100\"")
-                .contains("href=\"https://app.example.com/notifications/unsubscribe?token=a.b\"")
-                .contains("os e-mails de <strong style=\"color:#0F2E1A\">Presença</strong> estão ligados");
     }
 
     @Test

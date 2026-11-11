@@ -9,6 +9,8 @@ import org.springframework.transaction.support.TransactionTemplate;
 import java.io.IOException;
 import java.nio.file.*;
 import java.time.*;
+import com.futspring.backend.domain.finance.account.FinanceQrRepository;
+import com.futspring.backend.domain.finance.ledger.FinanceNoticeRepository;
 
 @Component
 @RequiredArgsConstructor

@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react"
-import { RankingCommandButton } from "@/components/pelada/RankingCommandButton"
-import { RankingTable, type RankingCol } from "@/components/pelada/RankingTable"
+import { RankingCommandButton } from "@/components/pelada/ranking/RankingCommandButton"
+import { RankingTable, type RankingCol } from "@/components/pelada/ranking/RankingTable"
 import { usePeladaWorkspace } from "@/components/pelada/hooks/usePeladaWorkspace"
 
 export default function PeladaRankingPage() {

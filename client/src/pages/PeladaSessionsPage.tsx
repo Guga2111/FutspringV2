@@ -1,6 +1,6 @@
 import { useMemo } from "react"
-import { NextSessionCard } from "@/components/pelada/NextSessionCard"
-import { SessionHistoryList } from "@/components/pelada/SessionHistoryList"
+import { NextSessionCard } from "@/components/pelada/sessions/NextSessionCard"
+import { SessionHistoryList } from "@/components/pelada/sessions/SessionHistoryList"
 import { usePeladaWorkspace } from "@/components/pelada/hooks/usePeladaWorkspace"
 import { Skeleton } from "@/components/ui/skeleton"
 import { pickNextSession } from "@/utils/sessions"

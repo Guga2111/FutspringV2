@@ -5,8 +5,11 @@ import { CONFIRMED_ID, FINISHED_ID, LIVE_ID, NOW, PELADA_ID, SCHEDULED_ID, pendi
 const PELADA = `/pelada/${PELADA_ID}`
 
 // ready: what shows that the lazy page chunk rendered (default: a heading)
-const pages: { name: string; path: string; auth?: boolean; ready?: string }[] = [
-  { name: "landing", path: "/", auth: false, ready: "h1" },
+// mask: elements painted over in the shot
+const pages: { name: string; path: string; auth?: boolean; ready?: string; mask?: string }[] = [
+  // the rotated photo prints: a photo resampled under a rotation differs by a few hundred scattered
+  // pixels between arm64 (local) and amd64 (CI); their paper frames stay in the shot
+  { name: "landing", path: "/", auth: false, ready: "h1", mask: '[aria-labelledby="campeoes-title"] figure[data-reveal] img' },
   { name: "auth", path: "/auth", auth: false, ready: "form" },
   { name: "auth-register", path: "/auth?tab=register", auth: false, ready: "form" },
   { name: "join-link", path: "/join/Mw.8f3a9c2e7b1d4f60a5c8e2b7d9f1a3c5", auth: false },
@@ -87,11 +90,11 @@ test("document language is pt-BR", async ({ page }) => {
   await expect(page.locator("html")).toHaveAttribute("lang", "pt-BR")
 })
 
-for (const { name, path, auth, ready } of pages) {
+for (const { name, path, auth, ready, mask } of pages) {
   test(`page ${name}`, async ({ page }) => {
     const unmatched = await open(page, path, auth, ready)
     await expectNoHorizontalScroll(page)
-    await expect(page).toHaveScreenshot(`${name}.png`, { fullPage: true })
+    await expect(page).toHaveScreenshot(`${name}.png`, { fullPage: true, mask: mask ? [page.locator(mask)] : [] })
     expect(unmatched, "requests without a fixture").toEqual([])
   })
 }

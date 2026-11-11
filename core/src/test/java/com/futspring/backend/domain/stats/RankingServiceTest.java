@@ -1,7 +1,7 @@
 package com.futspring.backend.domain.stats;
 
-import com.futspring.backend.domain.pelada.PeladaPlayerStarsRepository;
-import com.futspring.backend.domain.daily.entity.Daily;
+import com.futspring.backend.domain.pelada.member.PeladaPlayerStarsRepository;
+import com.futspring.backend.domain.daily.Daily;
 import com.futspring.backend.domain.pelada.Pelada;
 import com.futspring.backend.domain.pelada.PeladaRepository;
 import com.futspring.backend.shared.exception.AppException;
@@ -10,11 +10,11 @@ import com.futspring.backend.shared.helper.UserAuthenticationHelper;
 import com.futspring.backend.domain.stats.dto.PlayerPeladaHistoryDTO;
 import com.futspring.backend.domain.stats.dto.PlayerPeladaStatsDTO;
 import com.futspring.backend.domain.stats.dto.RankingDTO;
-import com.futspring.backend.domain.stats.entity.Ranking;
-import com.futspring.backend.domain.stats.entity.UserDailyStats;
-import com.futspring.backend.domain.stats.repository.DailyAwardRepository;
-import com.futspring.backend.domain.stats.repository.RankingRepository;
-import com.futspring.backend.domain.stats.repository.UserDailyStatsRepository;
+import com.futspring.backend.domain.stats.model.Ranking;
+import com.futspring.backend.domain.stats.model.UserDailyStats;
+import com.futspring.backend.domain.stats.model.DailyAwardRepository;
+import com.futspring.backend.domain.stats.model.RankingRepository;
+import com.futspring.backend.domain.stats.model.UserDailyStatsRepository;
 import com.futspring.backend.support.MembershipStubs;
 import com.futspring.backend.domain.user.User;
 import com.futspring.backend.domain.user.UserRepository;

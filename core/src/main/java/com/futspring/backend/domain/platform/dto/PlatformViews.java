@@ -2,7 +2,7 @@ package com.futspring.backend.domain.platform.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.futspring.backend.domain.pelada.PeladaRef;
-import com.futspring.backend.domain.subscription.SubscriptionEventType;
+import com.futspring.backend.domain.subscription.billing.SubscriptionEventType;
 import com.futspring.backend.domain.subscription.SubscriptionKind;
 import com.futspring.backend.domain.subscription.SubscriptionPlan;
 import com.futspring.backend.domain.subscription.SubscriptionStatus;

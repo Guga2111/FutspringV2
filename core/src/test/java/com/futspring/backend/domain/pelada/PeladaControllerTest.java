@@ -2,23 +2,23 @@ package com.futspring.backend.domain.pelada;
 
 import com.futspring.backend.domain.chat.ChatService;
 import com.futspring.backend.domain.chat.MessageRepository;
-import com.futspring.backend.domain.daily.DailyResultsService;
+import com.futspring.backend.domain.daily.results.DailyResultsService;
 import com.futspring.backend.domain.daily.dto.PopulateDailyRequestDTO;
-import com.futspring.backend.domain.daily.entity.Daily;
-import com.futspring.backend.domain.daily.entity.DailyAttendance;
-import com.futspring.backend.domain.daily.entity.DailyAttendanceBump;
-import com.futspring.backend.domain.daily.entity.DailyStatus;
-import com.futspring.backend.domain.daily.repository.DailyAttendanceBumpRepository;
-import com.futspring.backend.domain.daily.repository.DailyAttendanceRepository;
-import com.futspring.backend.domain.daily.repository.DailyRepository;
-import com.futspring.backend.domain.daily.repository.TeamRepository;
-import com.futspring.backend.domain.daily.entity.Team;
+import com.futspring.backend.domain.daily.Daily;
+import com.futspring.backend.domain.daily.attendance.DailyAttendance;
+import com.futspring.backend.domain.daily.attendance.DailyAttendanceBump;
+import com.futspring.backend.domain.daily.DailyStatus;
+import com.futspring.backend.domain.daily.attendance.DailyAttendanceBumpRepository;
+import com.futspring.backend.domain.daily.attendance.DailyAttendanceRepository;
+import com.futspring.backend.domain.daily.DailyRepository;
+import com.futspring.backend.domain.daily.team.TeamRepository;
+import com.futspring.backend.domain.daily.team.Team;
 import com.futspring.backend.domain.pelada.dto.InvitePlayerRequestDTO;
 import com.futspring.backend.domain.pelada.dto.CreatePeladaRequestDTO;
 import com.futspring.backend.domain.pelada.dto.SetAdminRequestDTO;
 import com.futspring.backend.domain.pelada.dto.UpdatePeladaRequestDTO;
-import com.futspring.backend.domain.stats.repository.RankingRepository;
-import com.futspring.backend.domain.stats.repository.StatsRepository;
+import com.futspring.backend.domain.stats.model.RankingRepository;
+import com.futspring.backend.domain.stats.model.StatsRepository;
 import com.futspring.backend.support.BaseIntegrationTest;
 import com.futspring.backend.domain.user.User;
 import com.futspring.backend.domain.user.UserRepository;
@@ -38,6 +38,8 @@ import java.util.Set;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import com.futspring.backend.domain.pelada.member.PeladaMensalista;
+import com.futspring.backend.domain.pelada.member.PeladaMensalistaRepository;
 
 class PeladaControllerTest extends BaseIntegrationTest {
 

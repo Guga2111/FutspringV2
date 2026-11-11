@@ -11,6 +11,8 @@ import com.futspring.backend.domain.daily.dto.SwapPlayersRequestDTO;
 import com.futspring.backend.domain.daily.dto.UpdateDailyStatusRequestDTO;
 import com.futspring.backend.domain.daily.dto.UpdateTeamColorRequestDTO;
 import com.futspring.backend.domain.daily.dto.UpdateTeamNameRequestDTO;
+import com.futspring.backend.domain.daily.attendance.DailyAttendanceService;
+import com.futspring.backend.domain.daily.results.DailyResultsService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
 import lombok.RequiredArgsConstructor;

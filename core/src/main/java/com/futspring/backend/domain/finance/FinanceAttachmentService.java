@@ -10,6 +10,10 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.*;
 import static com.futspring.backend.domain.finance.FinanceAccess.*;
 import static com.futspring.backend.domain.finance.FinanceTransactions.*;
+import com.futspring.backend.domain.finance.account.FinanceQr;
+import com.futspring.backend.domain.finance.account.FinanceQrRepository;
+import com.futspring.backend.domain.finance.collection.FinanceChargeRepository;
+import com.futspring.backend.domain.finance.ledger.FinanceNoticeRepository;
 
 @Service
 @RequiredArgsConstructor

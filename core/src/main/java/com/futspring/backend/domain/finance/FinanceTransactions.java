@@ -13,6 +13,12 @@ import java.security.*;
 import java.util.*;
 import java.util.function.Function;
 import static com.futspring.backend.domain.finance.FinanceAccess.*;
+import com.futspring.backend.domain.finance.account.FinanceAccountRepository;
+import com.futspring.backend.domain.finance.account.FinanceAudit;
+import com.futspring.backend.domain.finance.account.FinanceAuditRepository;
+import com.futspring.backend.domain.finance.collection.FinanceTemplate;
+import com.futspring.backend.domain.finance.collection.FinanceTemplateRepository;
+import com.futspring.backend.domain.finance.collection.PriceComponent;
 
 /** Called inside a service transaction. One pelada lock owns authorization, revision, ledger and audit. */
 @Component

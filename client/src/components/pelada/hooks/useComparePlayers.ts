@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react"
 import { getPlayerPeladaStats } from "@/api/peladas"
 import { getUser } from "@/api/users"
-import type { PlayerCompareData } from "@/components/pelada/ComparablePlayerStatsCard"
+import type { PlayerCompareData } from "@/components/pelada/ranking/ComparablePlayerStatsCard"
 
 interface Result {
   key: string

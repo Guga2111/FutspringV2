@@ -1,6 +1,6 @@
 package com.futspring.backend.domain.daily;
 
-import com.futspring.backend.domain.daily.entity.Daily;
+import com.futspring.backend.domain.daily.Daily;
 import com.futspring.backend.domain.user.User;
 
 import java.util.Collection;

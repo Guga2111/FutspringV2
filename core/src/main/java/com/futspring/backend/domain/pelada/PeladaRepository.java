@@ -98,4 +98,14 @@ public interface PeladaRepository extends JpaRepository<Pelada, Long> {
     @Modifying
     @Query(value = "DELETE FROM pelada_members WHERE user_id = :userId", nativeQuery = true)
     void deleteMemberRowsOfUser(@Param("userId") Long userId);
+
+    // Account export: the peladas the user belongs to / a set of peladas, as id and name
+    @Query("""
+        SELECT new com.futspring.backend.domain.pelada.PeladaRef(p.id, p.name)
+        FROM Pelada p JOIN p.members m WHERE m.id = :userId ORDER BY p.id
+        """)
+    List<PeladaRef> findRefsByMemberId(@Param("userId") Long userId);
+
+    @Query("SELECT new com.futspring.backend.domain.pelada.PeladaRef(p.id, p.name) FROM Pelada p WHERE p.id IN :ids")
+    List<PeladaRef> findRefsByIdIn(@Param("ids") Collection<Long> ids);
 }

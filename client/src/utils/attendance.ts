@@ -1,4 +1,4 @@
-import type { PlayerDTO } from "@/types/daily"
+import type { DailyDetail, PlayerDTO } from "@/types/daily"
 
 const byName = (a: PlayerDTO, b: PlayerDTO) => a.username.localeCompare(b.username, "pt-BR", { sensitivity: "base" })
 
@@ -63,4 +63,20 @@ export function sortByConfirmation(confirmed: PlayerDTO[]): PlayerDTO[] {
     if (b.confirmedAt) return 1
     return byName(a, b)
   })
+}
+
+// Optimistic attendance: what the card shows right after the caller taps Confirmar / Desistir, before the server
+// answers. The server's answer replaces it (a mensalista who bumps a diarista keeps the count), an error restores it.
+export function toggledAttendance(isConfirmed: boolean, confirmedCount: number) {
+  return { isConfirmed: !isConfirmed, confirmedCount: Math.max(0, confirmedCount + (isConfirmed ? -1 : 1)) }
+}
+
+// The session detail with the caller added to (from peladaMembers, confirmed now) or taken out of the confirmed
+// list; the teams are left to the refetch that follows
+export function withCallerAttendance(daily: DailyDetail, userId: number, confirm: boolean, now: Date): DailyDetail {
+  const others = daily.confirmedPlayers.filter((player) => player.id !== userId)
+  if (!confirm) return { ...daily, confirmedPlayers: others }
+  const me = daily.peladaMembers.find((member) => member.id === userId)
+  if (!me) return daily
+  return { ...daily, confirmedPlayers: [...others, { ...me, confirmedAt: now.toISOString() }] }
 }

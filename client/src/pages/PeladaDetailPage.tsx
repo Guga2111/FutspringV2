@@ -13,10 +13,10 @@ import type { PeladaWorkspace } from "@/components/pelada/hooks/usePeladaWorkspa
 import { PeladaChat } from "@/components/pelada/PeladaChat"
 import { PeladaPageHeader } from "@/components/pelada/PeladaPageHeader"
 import { DetailSkeleton } from "@/components/pelada/DetailSkeleton"
-import { InvitePlayerDialog } from "@/components/pelada/InvitePlayerDialog"
-import { ConfirmRemoveDialog } from "@/components/pelada/ConfirmRemoveDialog"
-import { CreateSessionDialog } from "@/components/pelada/CreateSessionDialog"
-import { SetPlayerStarsDialog } from "@/components/pelada/SetPlayerStarsDialog"
+import { InvitePlayerDialog } from "@/components/pelada/members/InvitePlayerDialog"
+import { ConfirmRemoveDialog } from "@/components/pelada/members/ConfirmRemoveDialog"
+import { CreateSessionDialog } from "@/components/pelada/sessions/CreateSessionDialog"
+import { SetPlayerStarsDialog } from "@/components/pelada/members/SetPlayerStarsDialog"
 import { SUBSCRIPTION_NOTICE_ID, SubscriptionNotice } from "@/components/pelada/SubscriptionNotice"
 import { isWritable } from "@/utils/subscription"
 import { areaFromPath, PELADA_AREAS, peladaRole } from "@/utils/peladaAreas"
@@ -24,7 +24,7 @@ import { cn } from "@/lib/utils"
 
 // Lazy so recharts only downloads when the dialog is first opened
 const PlayerHistoryDialog = lazy(() =>
-  import("@/components/pelada/PlayerHistoryDialog").then((m) => ({
+  import("@/components/pelada/ranking/PlayerHistoryDialog").then((m) => ({
     default: m.PlayerHistoryDialog,
   })),
 )

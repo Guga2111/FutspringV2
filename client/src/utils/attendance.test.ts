@@ -1,6 +1,15 @@
 import { describe, it, expect } from "vitest"
-import { attendanceHint, canSortTeams, getSelfConfirmState, sortByConfirmation, sortTeamsHint, splitAttendance } from "./attendance"
-import type { PlayerDTO } from "@/types/daily"
+import {
+  attendanceHint,
+  canSortTeams,
+  getSelfConfirmState,
+  sortByConfirmation,
+  sortTeamsHint,
+  splitAttendance,
+  toggledAttendance,
+  withCallerAttendance,
+} from "./attendance"
+import type { DailyDetail, PlayerDTO } from "@/types/daily"
 
 const p = (id: number, username: string): PlayerDTO => ({ id, username, image: null, stars: 3, position: null, isDeleted: false })
 
@@ -73,5 +82,36 @@ describe("sortByConfirmation", () => {
       p(5, "Alê"),
     ])
     expect(sorted.map((x) => x.id)).toEqual([4, 1, 2, 5, 3])
+  })
+})
+
+describe("toggledAttendance", () => {
+  it("confirms with one more and withdraws with one less, never below zero", () => {
+    expect(toggledAttendance(false, 7)).toEqual({ isConfirmed: true, confirmedCount: 8 })
+    expect(toggledAttendance(true, 8)).toEqual({ isConfirmed: false, confirmedCount: 7 })
+    expect(toggledAttendance(true, 0)).toEqual({ isConfirmed: false, confirmedCount: 0 })
+  })
+})
+
+describe("withCallerAttendance", () => {
+  const now = new Date("2026-11-10T12:00:00Z")
+  const daily = {
+    confirmedPlayers: [{ ...p(1, "Tuca"), confirmedAt: "2026-11-09T10:00:00Z" }],
+    peladaMembers: [p(1, "Tuca"), { ...p(2, "Leal"), isMensalista: true }],
+  } as DailyDetail
+
+  it("adds the caller from the members, confirmed now", () => {
+    const result = withCallerAttendance(daily, 2, true, now)
+    expect(result.confirmedPlayers.map((player) => player.id)).toEqual([1, 2])
+    expect(result.confirmedPlayers[1]).toMatchObject({ username: "Leal", isMensalista: true, confirmedAt: now.toISOString() })
+  })
+
+  it("takes the caller out", () => {
+    expect(withCallerAttendance(daily, 1, false, now).confirmedPlayers).toEqual([])
+  })
+
+  it("never duplicates the caller and leaves a non-member as it was", () => {
+    expect(withCallerAttendance(daily, 1, true, now).confirmedPlayers).toHaveLength(1)
+    expect(withCallerAttendance(daily, 9, true, now)).toBe(daily)
   })
 })

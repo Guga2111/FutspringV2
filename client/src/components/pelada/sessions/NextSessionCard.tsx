@@ -1,0 +1,112 @@
+import { Link } from "react-router-dom"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { CalendarRemove01Icon, Tick02Icon } from "@hugeicons/core-free-icons"
+import { Button } from "@/components/ui/button"
+import { Progress } from "@/components/ui/progress"
+import { DailyStatusBadge } from "@/components/daily/DailyStatusBadge"
+import { SelfConfirmButton } from "@/components/SelfConfirmButton"
+import { parseLocalDate, weekdayShort } from "@/utils/dates"
+import { formatRelativeSessionDay } from "@/utils/sessions"
+import type { DailyListItem } from "@/types/daily"
+
+const MONTHS_SHORT = ["JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO", "SET", "OUT", "NOV", "DEZ"] as const
+
+interface NextSessionCardProps {
+  daily: DailyListItem | null
+  // the pelada's zone, to show when the diarista window opens
+  timeZone: string
+  isAdmin: boolean
+  // the pelada is read-only (subscription): confirming is locked
+  readOnly: boolean
+  attendancePending: boolean
+  onToggleAttendance: (daily: DailyListItem) => void
+}
+
+const label = "text-caption font-semibold text-muted-foreground"
+
+export function NextSessionCard({ daily, timeZone, isAdmin, readOnly, attendancePending, onToggleAttendance }: NextSessionCardProps) {
+  if (!daily) {
+    return (
+      <section className="flex flex-wrap items-center gap-5 rounded-tile border border-dashed border-input p-[18px]">
+        <div className="flex h-20 w-[72px] shrink-0 items-center justify-center rounded-xl border border-dashed border-input text-faint-foreground">
+          <HugeiconsIcon icon={CalendarRemove01Icon} className="size-[26px]" strokeWidth={1.8} />
+        </div>
+        <div className="flex min-w-[220px] flex-1 flex-col gap-1.5">
+          <span className={label}>Próxima sessão</span>
+          <span className="text-[17px] font-semibold">Nenhuma sessão agendada</span>
+          <span className="text-[13px] text-muted-foreground">
+            {isAdmin
+              ? "Crie a próxima sessão ou ative a criação automática nas configurações da pelada."
+              : "Quando um admin agendar a próxima sessão, ela aparece aqui."}
+          </span>
+        </div>
+      </section>
+    )
+  }
+
+  const date = parseLocalDate(daily.dailyDate)
+  const capacity = daily.capacity
+  const percent = capacity > 0 ? Math.min(100, (daily.confirmedPlayerCount / capacity) * 100) : 0
+
+  return (
+    <section className="flex flex-wrap items-center gap-5 rounded-tile border bg-card p-[18px]">
+      <div className="flex h-20 w-[72px] shrink-0 flex-col items-center justify-center rounded-xl bg-brand text-brand-foreground">
+        <span className="text-[11px] font-bold tracking-[0.08em]">{weekdayShort(daily.dailyDate).toUpperCase()}</span>
+        <span className="font-display text-score font-extrabold tabular-nums">{String(date.getDate()).padStart(2, "0")}</span>
+        <span className="text-[11px] font-semibold">{MONTHS_SHORT[date.getMonth()]}</span>
+      </div>
+      <div className="flex min-w-[220px] flex-1 flex-col gap-2">
+        <div className="flex items-center gap-2">
+          <span className={label}>Próxima sessão</span>
+          <DailyStatusBadge status={daily.status} />
+        </div>
+        <span className="text-lg font-semibold">
+          {formatRelativeSessionDay(daily.dailyDate)} · {daily.dailyTime}
+        </span>
+        <div className="flex items-center gap-2.5">
+          <Progress
+            value={percent}
+            aria-label="Confirmados"
+            className="h-1.5 max-w-[260px] flex-1 bg-secondary"
+            indicatorClassName="bg-brand"
+          />
+          <span className="text-[13px] text-muted-foreground">
+            <span className="font-semibold text-foreground">{daily.confirmedPlayerCount}</span> de {capacity} confirmados
+          </span>
+        </div>
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <Button asChild variant="outline" className="h-[38px] bg-transparent px-4 hover:bg-accent">
+          <Link to={`/daily/${daily.id}`}>Ver sessão</Link>
+        </Button>
+        {daily.isConfirmed ? (
+          <div className="flex h-[38px] items-center gap-2 rounded-full bg-success-muted pl-3 pr-1.5">
+            <span className="flex items-center gap-1.5 text-[13px] font-semibold text-success">
+              <HugeiconsIcon icon={Tick02Icon} className="size-3.5" strokeWidth={2.6} />
+              Você vai
+            </span>
+            <Button
+              variant="destructive-ghost"
+              disabled={attendancePending}
+              onClick={() => onToggleAttendance(daily)}
+              className="h-7 px-2.5 text-xs font-medium"
+            >
+              Desistir
+            </Button>
+          </div>
+        ) : (
+          <SelfConfirmButton
+            confirmOpensAt={daily.confirmOpensAt}
+            confirmedCount={daily.confirmedPlayerCount}
+            capacity={capacity}
+            timeZone={timeZone}
+            pending={attendancePending}
+            onConfirm={() => onToggleAttendance(daily)}
+            readOnly={readOnly}
+            className="h-[38px] px-[18px]"
+          />
+        )}
+      </div>
+    </section>
+  )
+}

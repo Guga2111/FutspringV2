@@ -4,16 +4,16 @@ import com.futspring.backend.domain.notification.NotificationRepository;
 import org.springframework.context.ApplicationEventPublisher;
 import com.futspring.backend.domain.chat.MessageRepository;
 import com.futspring.backend.domain.daily.DailyService;
-import com.futspring.backend.domain.daily.repository.DailyAttendanceBumpRepository;
-import com.futspring.backend.domain.daily.repository.DailyAttendanceRepository;
-import com.futspring.backend.domain.daily.repository.DailyRepository;
+import com.futspring.backend.domain.daily.attendance.DailyAttendanceBumpRepository;
+import com.futspring.backend.domain.daily.attendance.DailyAttendanceRepository;
+import com.futspring.backend.domain.daily.DailyRepository;
 import com.futspring.backend.domain.file.FileUploadService;
 import com.futspring.backend.domain.pelada.dto.PeladaResponseDTO;
 import com.futspring.backend.shared.exception.AppException;
 import com.futspring.backend.shared.helper.PeladaAccessHelper;
 import com.futspring.backend.shared.helper.UserAuthenticationHelper;
 import com.futspring.backend.domain.stats.AggregateRebuildService;
-import com.futspring.backend.domain.stats.repository.RankingRepository;
+import com.futspring.backend.domain.stats.model.RankingRepository;
 import com.futspring.backend.support.MembershipStubs;
 import com.futspring.backend.domain.user.User;
 import com.futspring.backend.domain.user.UserRepository;
@@ -31,6 +31,9 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
+import com.futspring.backend.domain.pelada.invitation.PeladaInvitationService;
+import com.futspring.backend.domain.pelada.member.PeladaMensalistaRepository;
+import com.futspring.backend.domain.pelada.member.PeladaPlayerStarsRepository;
 
 @ExtendWith(MockitoExtension.class)
 class PeladaServiceImageTest {

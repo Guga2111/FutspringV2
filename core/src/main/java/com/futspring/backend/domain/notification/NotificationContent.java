@@ -1,7 +1,7 @@
 package com.futspring.backend.domain.notification;
 
-import com.futspring.backend.domain.daily.AttendanceWindow;
-import com.futspring.backend.domain.daily.entity.Daily;
+import com.futspring.backend.domain.daily.attendance.AttendanceWindow;
+import com.futspring.backend.domain.daily.Daily;
 import com.futspring.backend.domain.subscription.SubscriptionService;
 import com.futspring.backend.domain.subscription.SubscriptionState;
 
@@ -20,7 +20,7 @@ public record NotificationContent(String subject, String title, String body, Str
 
     private static final String SEE_SESSION = "Ver a sessão";
     private static final String SEE_PELADA = "Ver a pelada";
-    static final int PUSH_BODY_MAX = 180;
+    public static final int PUSH_BODY_MAX = 180;
     private static final DateTimeFormatter BILLING_DAY = DateTimeFormatter.ofPattern("dd/MM")
             .withZone(SubscriptionService.BILLING_ZONE);
 

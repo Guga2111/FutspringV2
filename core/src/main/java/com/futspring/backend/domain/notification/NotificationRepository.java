@@ -1,6 +1,6 @@
 package com.futspring.backend.domain.notification;
 
-import com.futspring.backend.domain.daily.entity.Daily;
+import com.futspring.backend.domain.daily.Daily;
 import com.futspring.backend.domain.pelada.Pelada;
 import com.futspring.backend.domain.user.User;
 import org.springframework.data.domain.Pageable;
@@ -119,4 +119,11 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
     @Modifying
     @Query("DELETE FROM Notification n WHERE n.recipient = :user")
     void deleteByRecipient(@Param("user") User user);
+
+    // Account export: the user's inbox with its pelada, newest first
+    @Query("""
+        SELECT n FROM Notification n LEFT JOIN FETCH n.pelada
+        WHERE n.recipient.id = :userId ORDER BY n.createdAt DESC, n.id DESC
+        """)
+    List<Notification> findByRecipientIdWithPelada(@Param("userId") Long userId);
 }

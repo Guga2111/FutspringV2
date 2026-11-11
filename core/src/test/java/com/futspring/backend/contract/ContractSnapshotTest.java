@@ -61,6 +61,7 @@ import com.futspring.backend.domain.stats.dto.RankingDTO;
 import com.futspring.backend.domain.stats.dto.StatsDTO;
 import com.futspring.backend.domain.stats.dto.UserMatchHistoryDTO;
 import com.futspring.backend.domain.stats.dto.UserStatsTimelineDTO;
+import com.futspring.backend.domain.user.dto.AccountExportDTO;
 import com.futspring.backend.domain.user.dto.ProfileDTO;
 import com.futspring.backend.domain.user.dto.PublicUserDTO;
 import com.futspring.backend.domain.user.dto.UpdateProfileRequest;
@@ -100,7 +101,7 @@ class ContractSnapshotTest {
     // Top-level response bodies; nested DTOs (members, teams, refs…) are covered inside them
     static Stream<Class<?>> responses() {
         return Stream.of(
-                AuthResponseDTO.class, ProfileDTO.class, PublicUserDTO.class,
+                AuthResponseDTO.class, ProfileDTO.class, PublicUserDTO.class, AccountExportDTO.class,
                 InvitationDTO.class, InviteLinkDTO.class, PeladaPreviewDTO.class, JoinPeladaDTO.class,
                 PeladaResponseDTO.class, PeladaDetailResponseDTO.class, PeladaMemberDTO.class,
                 DailyListItemDTO.class, DailyDetailDTO.class, DailyDetailDTO.TeamDTO.class, DailyDetailDTO.MatchDTO.class,

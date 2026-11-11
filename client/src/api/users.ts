@@ -74,3 +74,10 @@ export async function getDeletionBlockers(): Promise<DeletionBlocker[]> {
 export async function deleteAccount(password: string): Promise<void> {
   await apiClient.post("/api/v1/users/me/delete", { password })
 }
+
+// LGPD access and portability: the caller's data as a JSON file. The client only saves it, so it stays a Blob
+// (no type in src/types)
+export async function exportMyData(): Promise<Blob> {
+  const response = await apiClient.get<Blob>("/api/v1/users/me/export", { responseType: "blob" })
+  return response.data
+}

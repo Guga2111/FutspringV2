@@ -2,15 +2,16 @@ package com.futspring.backend.domain.daily;
 
 import com.futspring.backend.domain.daily.dto.DailyDetailDTO;
 import com.futspring.backend.domain.daily.dto.SaveTeamsRequestDTO;
-import com.futspring.backend.domain.daily.entity.Daily;
-import com.futspring.backend.domain.daily.entity.Team;
-import com.futspring.backend.domain.daily.repository.DailyAttendanceRepository;
-import com.futspring.backend.domain.daily.repository.DailyRepository;
-import com.futspring.backend.domain.daily.repository.TeamRepository;
+import com.futspring.backend.domain.daily.Daily;
+import com.futspring.backend.domain.daily.team.Team;
+import com.futspring.backend.domain.daily.attendance.DailyAttendanceRepository;
+import com.futspring.backend.domain.daily.DailyRepository;
+import com.futspring.backend.domain.daily.team.TeamRepository;
+import com.futspring.backend.domain.daily.team.TeamsReadiness;
 import com.futspring.backend.domain.pelada.Pelada;
 import com.futspring.backend.domain.subscription.SubscriptionGuard;
-import com.futspring.backend.domain.pelada.PeladaPlayerStars;
-import com.futspring.backend.domain.pelada.PeladaPlayerStarsRepository;
+import com.futspring.backend.domain.pelada.member.PeladaPlayerStars;
+import com.futspring.backend.domain.pelada.member.PeladaPlayerStarsRepository;
 import com.futspring.backend.shared.exception.AppException;
 import com.futspring.backend.shared.helper.PeladaAccessHelper;
 import com.futspring.backend.shared.helper.UserAuthenticationHelper;
@@ -249,7 +250,7 @@ public class DailyTeamManagementService {
     }
 
     /** A player who withdraws (or is bumped) leaves their team; the team stays, even empty. */
-    void removeFromTeams(Daily daily, User user) {
+    public void removeFromTeams(Daily daily, User user) {
         removePlayersFromTeams(List.of(daily), List.of(user));
     }
 
@@ -261,7 +262,7 @@ public class DailyTeamManagementService {
     }
 
     /** Deletes every team of the daily (join rows first). Used by sort, manual save, import from message and daily delete. */
-    void clearTeams(Daily daily) {
+    public void clearTeams(Daily daily) {
         List<Team> teams = teamRepository.findByDaily(daily);
         for (Team team : teams) {
             team.getPlayers().clear();

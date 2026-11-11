@@ -13,7 +13,7 @@ Futspring manages amateur soccer groups ("peladas"): members and admins, match-d
 - PostgreSQL 17 (runtime: Supabase in production, `postgres:17-alpine` in dev), H2 in PostgreSQL mode (tests)
 - JJWT 0.13 (HS256), Bucket4j 8.21 (`bucket4j_jdk17-core`) + Caffeine (login/register rate limit, in memory), Lombok
 - `zerodep-web-push-java` 2.1.5 (Web Push: VAPID ES256 + RFC 8291 `aes128gcm` on the JDK's own crypto, no transitive dependencies; it only builds a `java.net.http.HttpRequest`, sent by the JDK `HttpClient`)
-- Tests: JUnit Jupiter 6, Mockito 5 (inline mock maker loaded as a Surefire `-javaagent`, JEP 451), AssertJ, spring-security-test, Testcontainers 2 (`testcontainers-postgresql`, managed by Boot)
+- Tests: JUnit Jupiter 6, Mockito 5 (inline mock maker loaded as a Surefire `-javaagent`, JEP 451), AssertJ, spring-security-test, Testcontainers 2 (`testcontainers-postgresql`, managed by Boot), ArchUnit 1.5 (package layout rules, test scope)
 - Flyway 12 (`spring-boot-starter-flyway`) + `flyway-database-postgresql` (schema migrations, see [Database schema & migrations](#database-schema--migrations))
 - Spring Boot Actuator + Micrometer Prometheus registry, on an internal management port (see [Observability](#observability))
 - springdoc-openapi 3 (OpenAPI document + Swagger UI), served only when `API_DOCS_ENABLED=true` (dev)
@@ -114,7 +114,7 @@ A quick tunnel gets a new URL on every restart: repeat steps 2–3 and reinstall
 
 ## Package layout
 
-Features live under `domain/`, one package per domain (`domain/daily`, `domain/pelada`…). Each domain holds its controller, services, entities and repositories at its root, with request/response classes in `dto/`; the two big domains (`daily`, `stats`) also split `entity/` and `repository/`. Code used by every domain lives in `shared/`; the dev seed in `dev/`.
+Features live under `domain/`, one package per domain (`domain/daily`, `domain/pelada`…). Each domain keeps its request/response classes in `dto/`. A small domain is flat: controller, services, entities and repositories at its root. A domain past 12 classes is split into sub-packages by subject (`auth/passwordreset`, `notification/webpush`, `daily/attendance`), following the rule below. Code used by every domain lives in `shared/`; the dev seed in `dev/`.
 
 ```
 com.futspring.backend
@@ -132,74 +132,90 @@ com.futspring.backend
 │   │   │                           JwtAuthFilter (Bearer → email principal), AccessTokenVerifier (signature + user's current tokenVersion),
 │   │   │                           AuthRateLimitFilter (10/min per IP on every POST /auth route,
 │   │   │                           Bucket4j + Caffeine), JwtChannelInterceptor (authenticates STOMP CONNECT/SUBSCRIBE/SEND),
-│   │   │                           LegalTerms (CURRENT_VERSION of the terms/privacy pages; client/src/lib/legal.ts mirrors it),
-│   │   │                           PasswordResetService (forgot / reset password), PasswordResetToken + repository, ResetTokens
-│   │   │                           (random token + SHA-256), PasswordResetEmailListener (sends the e-mail after commit, @Async),
-│   │   │                           PasswordResetEmail (fills resources/email/password-reset.html), PasswordResetTokenCleanup (daily purge)
+│   │   │                           LegalTerms (CURRENT_VERSION of the terms/privacy pages; client/src/lib/legal.ts mirrors it)
+│   │   ├── passwordreset/          PasswordResetService (forgot / reset password), PasswordResetToken + repository, ResetTokens
+│   │   │                           (random token + SHA-256), PasswordResetRequestedEvent, PasswordResetEmailListener (sends the
+│   │   │                           e-mail after commit, @Async), PasswordResetEmail (fills resources/email/password-reset.html),
+│   │   │                           PasswordResetTokenCleanup (daily purge)
 │   │   └── dto/                    LoginRequestDTO, RegisterRequestDTO, AuthResponseDTO, UserResponseDTO,
 │   │                               ForgotPasswordRequestDTO, ResetPasswordRequestDTO
 │   ├── user/                       UserController, UserService (profile get/update, avatar, background image, change password), User, UserRepository,
-│   │   │                           AccountDeletionService (deletion blockers, account deletion by anonymization), DeletionBlockerType
-│   │   └── dto/                    ProfileDTO, PublicUserDTO, UpdateProfileRequest, ChangePasswordRequestDTO, DeleteAccountRequestDTO, DeletionBlockerDTO
+│   │   │                           AccountDeletionService (deletion blockers, account deletion by anonymization), DeletionBlockerType,
+│   │   │                           AccountExportService (the caller's data export, LGPD access and portability)
+│   │   └── dto/                    ProfileDTO, PublicUserDTO, UpdateProfileRequest, ChangePasswordRequestDTO, DeleteAccountRequestDTO, DeletionBlockerDTO, AccountExportDTO
 │   ├── pelada/                     PeladaController, PeladaService (pelada CRUD, effective members, admins, member stars, mensalistas, user search, image, creator transfer; each member action works on a list of members and the single routes call it with one id), Pelada, PeladaRepository,
-│   │                               PeladaPlayerStars + PeladaPlayerStarsRepository (stars per member, profile average),
-│   │                               PeladaMensalista + PeladaMensalistaRepository (members marked as mensalistas)
+│   │   │                           PeladaRef, AdminsChangedEvent, MembersRemovedEvent, MensalistasChangedEvent, PeladaTransferredEvent (published by PeladaService)
+│   │   ├── member/                 PeladaPlayerStars + PeladaPlayerStarsRepository (stars per member, profile average),
+│   │   │                           PeladaMensalista + PeladaMensalistaRepository (members marked as mensalistas)
+│   │   ├── invitation/             PeladaInvitationController, PeladaInvitationService (invitations and the share link), InvitationStatus,
+│   │   │   │                       InviteLinkTokens, InvitationRateLimiter, InvitationCreatedEvent, MemberJoinedEvent
+│   │   │   └── model/              PeladaInvitation, PeladaInviteLink, PeladaLinkBlock and their repositories
 │   │   └── dto/                    Create/UpdatePeladaRequestDTO, DayOfWeekPattern, PeladaResponseDTO, PeladaDetailResponseDTO, PeladaMemberDTO, UpdatePlayerStarsRequestDTO,
 │   │                               SetMensalistaRequestDTO, Bulk{SetAdmin,SetMensalista,SetStars,RemovePlayers}RequestDTO, TransferCreatorRequestDTO…
-│   ├── daily/                      DailyController and the daily services:
+│   ├── daily/                      Daily, DailyStatus, DailyRepository, DailyController, DailyCreatedEvent, DailyCanceledEvent, TeamsSortedEvent and:
 │   │   │                           DailyService (create, list, status transitions, delete, detail aggregation)
-│   │   │                           DailyAttendanceService (confirm / unconfirm, self and by admin; diarista window, capacity, mensalista bump,
-│   │   │                           row lock; bumps seen), AttendanceWindow (session start / diarista window in the pelada's zone),
-│   │   │                           DiaristaBumpedEvent (the bump's notification and e-mail go through domain/notification)
 │   │   │                           DailyTeamManagementService (sort teams with LPT balanced by the stars in the pelada, manual save, swap, rename,
-│   │   │                           color; takes a withdrawn player out of their team), TeamsReadiness (when the teams can start a session)
-│   │   │                           DailyResultsService (results, live league table, finalize, champion image, populate, clearResults)
+│   │   │                           color; takes a withdrawn player out of their team; at the root because attendance and results call it)
 │   │   │                           DailySchedulerService (hourly cron that auto-creates the next daily, in the pelada's zone), DailyDTOMapper (Player/Team/MatchDTO),
-│   │                           DailyListItemAssembler (DailyListItemDTO with counts, the caller's attendance and result, grouped queries)
-│   │   ├── entity/                 Daily, DailyStatus, DailyAttendance (+ DailyAttendanceId), DailyAttendanceBump, Team, Match, PlayerMatchStat, LeagueTableEntry
-│   │   ├── repository/             Daily, DailyAttendance, DailyAttendanceBump, Team, Match, PlayerMatchStat, LeagueTableEntry repositories
+│   │   │                           DailyListItemAssembler (DailyListItemDTO with counts, the caller's attendance and result, grouped queries)
+│   │   ├── attendance/             DailyAttendanceService (confirm / unconfirm, self and by admin; diarista window, capacity, mensalista bump,
+│   │   │                           row lock; bumps seen), AttendanceWindow (session start / diarista window in the pelada's zone),
+│   │   │                           DailyAttendance (+ DailyAttendanceId), DailyAttendanceBump and their repositories, AttendanceChangedByAdminEvent,
+│   │   │                           DiaristaBumpedEvent (the bump's notification and e-mail go through domain/notification)
+│   │   ├── team/                   Team, TeamRepository, TeamsReadiness (when the teams can start a session)
+│   │   ├── results/                DailyResultsService (results, live league table, finalize, champion image, populate, clearResults),
+│   │   │                           Match, PlayerMatchStat, LeagueTableEntry and their repositories, DailyFinalizedEvent
 │   │   └── dto/                    DailyDetailDTO, DailyListItemDTO, AttendanceBumpDTO, MatchResultDTO, Finalize/Populate/Swap/SaveTeams/Update* request DTOs
 │   ├── stats/                      RankingService, AwardsService, StatsService, AttendanceService (read-side aggregates; attendance ranking of the last 6 months),
 │   │   │                           AggregateRebuildService (rebuilds Ranking per pelada and global Stats for a set of players, batch queries)
-│   │   ├── entity/                 Ranking, Stats, UserDailyStats, DailyAward
-│   │   ├── repository/             Ranking, Stats, UserDailyStats, DailyAward repositories (grouped/native aggregate queries)
+│   │   ├── model/                  Ranking, Stats, UserDailyStats, DailyAward and their repositories (grouped/native aggregate queries)
 │   │   └── dto/                    RankingDTO, StatsDTO, PeladaAwardsDTO, PeladaAttendanceDTO, PlayerPelada{Stats,History}DTO, UserMatchHistoryDTO, UserStatsTimelineDTO
+│   ├── finance/                    FinanceController, FinanceCollectionService, FinanceLedgerService, FinanceReadService, FinanceAttachmentService
+│   │   │                           (the services, see [Pelada finance](#pelada-finance-domainfinance)), FinanceTransactions (runs a command under the
+│   │   │                           pelada lock: authorization, revision, idempotency, audit), FinanceAccess (the caller's finance permissions),
+│   │   │                           FinancePreservation (the only entry point other domains call), FinanceFiles + FinanceReceiptCleanup (private
+│   │   │                           storage and receipt expiry), FinanceMoney, FinanceTypes
+│   │   ├── collection/             FinanceList, FinanceCharge, FinancePerson, FinanceTemplate, PriceComponent and their repositories
+│   │   ├── ledger/                 FinanceMovement, FinanceNotice and their repositories
+│   │   ├── account/                FinanceAccount, FinanceManager, FinanceAudit, FinanceQr and their repositories
+│   │   └── dto/                    FinanceViews, FinanceRequests, FinanceAccountExport, DecimalStringDeserializer
 │   ├── chat/                       ChatController (STOMP + @MessageExceptionHandler), ChatService (save message, paged history), Message, MessageRepository
 │   │   └── dto/                    MessageDTO, SendMessageRequest
 │   ├── notification/               NotificationService (synchronous @EventListener for every domain event: recipients, actor dropped,
 │   │   │                           collapse of repeatable types, saves the rows and registers the after-commit delivery),
-│   │   │                           NotificationInboxService (list / count / read / read-all of the caller), NotificationController,
 │   │   │                           Notification + NotificationRepository, NotificationType (category + emailable + pushable), NotificationCategory,
 │   │   │                           NotificationAward, NotificationDelivery (after-commit hook: the STOMP push, the e-mail, the Web Push),
-│   │   │                           NotificationPushService (@Async STOMP push to /user/queue/notifications),
-│   │   │                           NotificationDTOAssembler (NotificationDTOs of one or many recipients, one team query),
-│   │   │                           NotificationPreference (+ Id) + repository + NotificationPreferenceService (e-mail and push per category,
-│   │   │                           only what differs from the default is stored; unsubscribe / resubscribe by token), UnsubscribeTokens (HMAC),
-│   │   │                           NotificationEmailDispatcher (own single-thread executor, bounded queue), EmailPacer (Bucket4j, 2/s),
 │   │   │                           NotificationContent (exhaustive switch: subject, title, body, CTA per type; e-mail and Web Push),
-│   │   │                           NotificationEmail (fills resources/email/notification.html),
-│   │   │                           PushSubscription + PushSubscriptionRepository, PushSubscriptionService + PushController (/push),
-│   │   │                           PushEndpointPolicy (anti-SSRF allowlist, key sizes), WebPushSender (interface) + VapidWebPushSender
-│   │   │                           (zerodep + JDK HttpClient, no redirects) / NoopWebPushSender, WebPushConfig (VAPID pair, picks the
-│   │   │                           sender), WebPushDispatcher (@Async, four queries per batch, TTL/Urgency/Topic, 404/410 deletes),
 │   │   │                           ScheduledNotificationJob (every 15 min: SESSION_REMINDER / DIARISTA_WINDOW_OPEN once the diarista
 │   │   │                           window opens), NotificationRetentionJob (04:00: deletes read notifications > 90 days, any > 180 days)
+│   │   ├── inbox/                  NotificationController, NotificationInboxService (list / count / read / read-all of the caller),
+│   │   │                           NotificationPushService (@Async STOMP push to /user/queue/notifications),
+│   │   │                           NotificationDTOAssembler (NotificationDTOs of one or many recipients, one team query)
+│   │   ├── preference/             NotificationPreference (+ Id) + repository + NotificationPreferenceService (e-mail and push per category,
+│   │   │                           only what differs from the default is stored; unsubscribe / resubscribe by token), UnsubscribeTokens (HMAC)
+│   │   ├── email/                  NotificationEmailDispatcher (own single-thread executor, bounded queue), EmailPacer (Bucket4j, 2/s),
+│   │   │                           NotificationEmail (fills resources/email/notification.html)
+│   │   ├── webpush/                PushSubscription + PushSubscriptionRepository, PushSubscriptionService + PushController (/push),
+│   │   │                           PushEndpointPolicy (anti-SSRF allowlist, key sizes), WebPushSender (interface) + VapidWebPushSender
+│   │   │                           (zerodep + JDK HttpClient, no redirects) / NoopWebPushSender, WebPushConfig (VAPID pair, picks the
+│   │   │                           sender), WebPushDispatcher (@Async, four queries per batch, TTL/Urgency/Topic, 404/410 deletes)
 │   │   └── dto/                    NotificationDTO, NotificationPushDTO, UnreadCountDTO, NotificationPreferenceDTO, UnsubscribeRequestDTO,
 │   │                               PushSubscriptionRequestDTO, RemovePushSubscriptionRequestDTO, VapidPublicKeyDTO
-│   ├── subscription/               PeladaSubscription (+ SubscriptionKind, SubscriptionPlan), SubscriptionPayment, SubscriptionEvent
-│   │                               (+ SubscriptionEventType) and their repositories; SubscriptionState (pure: kind + valid_until + now
-│   │                               → SubscriptionStatus, with `writable`), SubscriptionPlans (list prices), SubscriptionService (a new
-│   │                               pelada's TRIAL or PENDING; the pelada's rows on delete), SubscriptionGuard (`requireWritable`: 402 on a
-│   │                               read-only pelada; `isWritable` for the jobs; `summary` / `summaries`: what the client reads),
-│   │                               dto/SubscriptionSummaryDTO; SubscriptionStatusFilter (the state as a JPA Specification over kind +
-│   │                               valid_until, for the platform admin's filter and counts); SubscriptionService also holds the platform
-│   │                               admin's commands (record / void a payment, set validity, extend, exempt, cancel, founder) and the
-│   │                               creator's Pix claim, each recording its SubscriptionEvent; the creator's Assinatura area:
-│   │                               SubscriptionController (/peladas/{id}/subscription) + PeladaSubscriptionService (creator only),
-│   │                               PixBrCode (static Pix BR Code: EMV fields + CRC16), BillingPixConfig (BILLING_PIX_*: normalized
-│   │                               key, name and city, fails the startup when the BR Code can't carry them),
-│   │                               dto/PeladaSubscriptionDTO, dto/PixClaimRequestDTO; PixClaimedEvent (a new Pix claim);
-│   │                               SubscriptionNoticeJob (09:00 São Paulo: SUBSCRIPTION_ENDING / SUBSCRIPTION_PAST_DUE to the creator)
+│   ├── subscription/               PeladaSubscription (+ SubscriptionKind, SubscriptionPlan) and its repository; SubscriptionState (pure:
+│   │   │                           kind + valid_until + now → SubscriptionStatus, with `writable`), SubscriptionPlans (list prices),
+│   │   │                           SubscriptionService (a new pelada's TRIAL or PENDING; the pelada's rows on delete; the platform admin's
+│   │   │                           commands (record / void a payment, set validity, extend, exempt, cancel, founder) and the creator's Pix
+│   │   │                           claim, each recording its SubscriptionEvent), SubscriptionGuard (`requireWritable`: 402 on a read-only
+│   │   │                           pelada; `isWritable` for the jobs; `summary` / `summaries`: what the client reads),
+│   │   │                           SubscriptionStatusFilter (the state as a JPA Specification over kind + valid_until, for the platform
+│   │   │                           admin's filter and counts), SubscriptionNoticeJob (09:00 São Paulo: SUBSCRIPTION_ENDING /
+│   │   │                           SUBSCRIPTION_PAST_DUE to the creator)
+│   │   ├── billing/                SubscriptionPayment, SubscriptionEvent (+ SubscriptionEventType) and their repositories
+│   │   ├── checkout/               the creator's Assinatura area: SubscriptionController (/peladas/{id}/subscription) +
+│   │   │                           PeladaSubscriptionService (creator only), PixBrCode (static Pix BR Code: EMV fields + CRC16),
+│   │   │                           BillingPixConfig (BILLING_PIX_*: normalized key, name and city, fails the startup when the BR Code
+│   │   │                           can't carry them), PixClaimedEvent (a new Pix claim)
+│   │   └── dto/                    SubscriptionSummaryDTO, PeladaSubscriptionDTO, PixClaimRequestDTO
 │   ├── platform/                   PlatformController (/platform), PlatformAccess (`requirePlatformAdmin`: 404 to anyone else),
 │   │   │                           PlatformReadService (overview, peladas, detail, payments, users; constant queries),
 │   │   │                           PlatformCommandService (pelada row lock, then SubscriptionService)
@@ -216,7 +232,16 @@ com.futspring.backend
 └── dev/DataInitializer         dev seed (CommandLineRunner, dev profile only)
 ```
 
-New code goes in the domain it belongs to (a new feature is a new package under `domain/`); cross-domain references are plain imports (entities, services and DTOs are public). Code needed by most domains goes in `shared/`. A new domain starts flat (controller, service, entity, repository at its root, DTOs in `dto/`) and splits `entity/` / `repository/` only when it grows like `daily` did. Response DTOs map themselves with a static `from(entity)`; entities are listed in [Domain model](#domain-model). When a service grows past ~300 lines or mixes responsibilities, split it by sub-domain the way the daily services are split (`DailyService` orchestrates, `DailyAttendanceService` / `DailyTeamManagementService` / `DailyResultsService` own one concern each).
+New code goes in the domain it belongs to (a new feature is a new package under `domain/`); cross-domain references are plain imports (entities, services and DTOs are public). Code needed by most domains goes in `shared/`. Response DTOs map themselves with a static `from(entity)`; entities are listed in [Domain model](#domain-model). When a service grows past ~300 lines or mixes responsibilities, split it by sub-domain the way the daily services are split (`DailyService` orchestrates, `DailyAttendanceService` / `DailyTeamManagementService` / `DailyResultsService` own one concern each).
+
+**Where a class goes.** A new domain starts flat (controller, service, entity, repository at its root, DTOs in `dto/`). A package holds at most **12 classes directly** (`dto/` aside); whoever adds the 13th splits it in the same PR:
+
+1. **By subject first:** a group of 3 or more classes about the same thing becomes a sub-package named after it, singular and lowercase (`invitation`, `attendance`, `webpush`), as long as the domain's sub-packages don't depend on each other in a cycle.
+2. **By aggregate when the services are a mesh** (they call each other in a cycle, or separating them would need more than 10 members made `public`): the services stay together at the root and the entities leave with their repositories, enums and value types, grouped by aggregate (`finance/collection`, `finance/ledger`, `finance/account`), or in a single `model/` when there is only one (`stats/model`).
+
+Placement: a class goes in the sub-package of its subject when only that subject (and other domains) uses it; at the domain root when two or more sub-packages use it or it is the domain's entry point (main entity, orchestrating service, guard). An entity and its repository share a package. An event sits next to the service that publishes it; an enum or value type next to the entity it describes. DTOs are always in `<domain>/dto/`. Sibling sub-packages never depend on each other in a cycle; the root may depend on them and they on it.
+
+Package-private members stay package-private. Making one `public` to allow a split goes in its own commit before the moves, listed in the PR. `DomainLayoutTest` (ArchUnit) fails the build on a package with more than 12 classes or a cycle between a domain's sub-packages (`dto/` is left out of both).
 
 ## Architectural patterns
 
@@ -278,7 +303,7 @@ There are no JPA cascades: deletes are explicit in the services (`DailyService.d
 
 **Daily status machine** (`DailyStatus.canTransitionTo`): `SCHEDULED → CONFIRMED | CANCELED`, `CONFIRMED → IN_COURSE | CANCELED`. Starting (`→ IN_COURSE`) also needs startable teams (`TeamsReadiness.requireStartable`, under the attendance row lock): at least 2 teams, none empty, every team player still confirmed; otherwise 409 with the first problem ("Monte os times antes de iniciar a sessão", "O Time 3 está vazio", "Ana não está mais confirmada e está no Time 2"). Short teams and confirmed players without a team don't block. `FINISHED` is reached only through finalize; populate can also move a daily to `IN_COURSE`. Attendance and team changes are blocked while the status is in `DailyStatus.LOCKED` (`IN_COURSE`, `FINISHED`, `CANCELED`).
 
-Invitation entities (all in `domain/pelada`): `PeladaInvitation` → `pelada_invitations` (`pelada`, `recipient`, `sender`, status and creation/expiry/response/cancellation instants); `PeladaInviteLink` → `pelada_invite_links` (`pelada`, `creator`, creation/expiry/revocation); `PeladaLinkBlock` → `pelada_link_blocks` (`pelada`, `user`, creation, unique pair). Pelada deletion explicitly removes notifications before all three new record types; database cascades are a safety net.
+Invitation entities (all in `domain/pelada/invitation/model`): `PeladaInvitation` → `pelada_invitations` (`pelada`, `recipient`, `sender`, status and creation/expiry/response/cancellation instants); `PeladaInviteLink` → `pelada_invite_links` (`pelada`, `creator`, creation/expiry/revocation); `PeladaLinkBlock` → `pelada_link_blocks` (`pelada`, `user`, creation, unique pair). Pelada deletion explicitly removes notifications before all three new record types; database cascades are a safety net.
 
 ### Attendance: mensalistas and diaristas
 
@@ -376,7 +401,7 @@ New status-like fields must be Java enums stored with `@Enumerated(EnumType.STRI
 
 Invitation quotas and public preview limits are documented in [Membership invitations](#membership-invitations-peladainvitationcontroller).
 
-`AuthRateLimitFilter` (in the security chain): 10 requests per minute per client IP on each of `POST /api/v1/auth/login`, `/register`, `/forgot-password`, `/reset-password`, the logged-in password checks `POST /api/v1/users/me/password` and `/users/me/delete`, the Web Push subscription `POST /api/v1/push/subscriptions` (each one can cause future sends), and the e-mail link routes `/api/v1/notifications/unsubscribe` and `/resubscribe`, answering 429 with the usual error body. Buckets live in a Caffeine cache (max 100k entries, evicted 10 min after the last access). The IP is `getRemoteAddr()`, which reflects `X-Forwarded-For` because of `server.forward-headers-strategy=framework`. In memory: one API instance only. New rate limits go into a filter like this one.
+`AuthRateLimitFilter` (in the security chain): 10 requests per minute per client IP on each of `POST /api/v1/auth/login`, `/register`, `/forgot-password`, `/reset-password`, the logged-in password checks `POST /api/v1/users/me/password` and `/users/me/delete`, the Web Push subscription `POST /api/v1/push/subscriptions` (each one can cause future sends), and the e-mail link routes `/api/v1/notifications/unsubscribe` and `/resubscribe`, and the account export `GET /api/v1/users/me/export` (it reads everything the account has), answering 429 with the usual error body. Buckets live in a Caffeine cache (max 100k entries, evicted 10 min after the last access). The IP is `getRemoteAddr()`, which reflects `X-Forwarded-For` because of `server.forward-headers-strategy=framework`. In memory: one API instance only. New rate limits go into a filter like this one.
 
 ### WebSocket (`S/domain/auth/JwtChannelInterceptor.java`)
 
@@ -461,7 +486,7 @@ Relationships: **creator** (`pelada.creator`), **admin** (`pelada.admins`), **me
 | Change team color | member and (team player or admin); writable subscription (402) |
 | Any finance write (`/peladas/{id}/finance/**` POST/PUT) | see [Finance permissions](#finance-permissions-and-filtering); writable subscription (402) |
 | Update profile, avatar, background | self |
-| Change password, read deletion blockers, delete the account (`/users/me/*`) | self only: the caller comes from the token, the routes take no `{id}`; the current password is re-checked for the change and the deletion |
+| Change password, read deletion blockers, delete the account, export the account's data (`/users/me/*`) | self only: the caller comes from the token, the routes take no `{id}`; the current password is re-checked for the change and the deletion |
 | View a profile (`/users/{id}`) | any authenticated user; `email` only for self; a deleted account → 404 (also on `/stats*` and `/peladas`) |
 | User stats, timeline, match history (`/users/{id}/stats…`) | self, or a user who shares a pelada (403 otherwise); non-self viewers only get sessions of the peladas they share |
 | Peladas in common (`/users/{id}/peladas`) | any; returns only peladas both users belong to |
@@ -494,7 +519,7 @@ Relationships: **creator** (`pelada.creator`), **admin** (`pelada.admins`), **me
 
 ## Pelada finance (`domain/finance`)
 
-V1 is a local, transactional finance module; it does not integrate banks, process payments or change attendance/mensalista status. `FinanceCollectionService` owns settings, delegated managers, templates, collection lists and individual obligations. `FinanceLedgerService` owns notices, receipts, realized cash, reversals and refunds. `FinanceReadService` owns filtered read models and server totals. `FinanceAttachmentService`/`FinanceFiles` own authenticated images; `FinanceReceiptCleanup` owns expiry and orphan recovery. `FinancePreservation` is the internal boundary used by membership and deletion; other domains never write finance tables.
+V1 is a local, transactional finance module; it does not integrate banks, process payments or change attendance/mensalista status. `FinanceCollectionService` owns settings, delegated managers, templates, collection lists and individual obligations. `FinanceLedgerService` owns notices, receipts, realized cash, reversals and refunds. `FinanceReadService` owns filtered read models and server totals. `FinanceAttachmentService`/`FinanceFiles` own authenticated images; `FinanceReceiptCleanup` owns expiry and orphan recovery. `FinancePreservation` is the internal boundary used by membership and deletion; other domains never write finance tables. The services stay at the root of `domain/finance` (they share package-private helpers); `collection/`, `ledger/` and `account/` hold the entities and repositories of each aggregate.
 
 `FinanceAccount` holds individual/transparent visibility, default Pix and a monotonically increasing revision. All writes lock the existing pelada row **before** checking membership, financial authority and revision. They update obligations, cash and `FinanceAudit` in the same transaction (`FinanceTransactions`). Every command has `command: {revision, requestKey: UUID, reason: string|null}`. A duplicate key with the same caller/path/operation/payload returns the current authorized state without executing again; a different payload or stale revision returns 409. A notice produces at most one receipt (DB uniqueness too). Effective dates default to today in the pelada's zone and cannot be future dates; timestamps come from the server clock.
 
@@ -726,6 +751,7 @@ The caller's guided tours of the web app (today the finance page, one tour per r
 | Method | Path | Body | Auth | Response |
 |--------|------|------|------|----------|
 | POST | `/users/me/password` | `ChangePasswordRequestDTO {currentPassword @NotBlank, newPassword @NotBlank ≥ 8}` | self | `AuthResponseDTO {token, user}`: new BCrypt hash, `tokenVersion++` and a token of the new version (the other sessions get 401 on their next request; an open STOMP connection survives until it reconnects); every Web Push subscription of the caller is deleted (this device subscribes again on open). Wrong current password → 400 `{errors: {currentPassword: "Senha atual incorreta"}}` (`AppException.field`); rate limited |
+| GET | `/users/me/export` | — | self | `AccountExportDTO` as a download (`Content-Disposition: attachment; filename="futspring-meus-dados-yyyy-MM-dd.json"`, `Cache-Control: no-store`): LGPD access and portability. `formatVersion` (1), `exportedAt`, `account` (no password, token version or platform flag), `peladas` (each membership with `isCreator`, `isAdmin`, `isMensalista`, `stars`), `stats` / `matchHistory` (the self views of `/stats` and `/stats/matches`), `attendance` (every confirmation with `confirmedAt`), `bumps` (where they lost the spot), `messages` (only the ones they sent), `finance` (`FinanceReadService.accountExport`: their charges in published lists, also of peladas they left, with components, due, received; the notices they sent, `receiptSent` but no file), `subscriptions` (of the peladas they created) and `subscriptionPayments` (where they are the payer, voided ones included), `notifications`, `notificationPreferences`, `toursSeen`, `pushDevices` (dates only, no endpoint or keys). Nothing about other people (their e-mails, charges, messages, the bumper), no Pix of the receivers, no audit. One or two queries per block whatever the data (`AccountExportTest` compares 1 and 5 peladas with `QueryCounter.statements`); rate limited |
 | GET | `/users/me/deletion-blockers` | — | self | `List<DeletionBlockerDTO {type: CREATOR \| SOLE_FINANCE_MANAGER, peladaId, peladaName}>`: peladas the caller created, then peladas where they are the only responsável financeiro (`FinancePreservation.soleManagedPeladas`); two queries |
 | POST | `/users/me/delete` | `DeleteAccountRequestDTO {password @NotBlank}` (POST: a DELETE with a body is poorly supported) | self | 204; wrong password → 400 on `password`; a blocker → 409 with the first one ("Transfira ou exclua a Pelada do Fut antes de excluir a conta"); rate limited. See [Account deletion](#account-deletion) |
 | GET | `/users/search?q=` | — | any | `List<PublicUserDTO {id, username, image, position, isDeleted}>` (max 10); matches username or email, never a deleted account; `q` needs ≥ 3 characters (400) |
@@ -791,7 +817,7 @@ Reads: `/users/{id}`, `/stats*` and `/peladas` of a deleted account → 404, sea
 
 ## Testing
 
-Tests live in `src/test/java/com/futspring/backend`, in the same domain packages as the code they test (`domain/daily/DailyServiceTest`, `domain/stats/repository/UserDailyStatsRepositoryTest`…); shared test helpers (`BaseIntegrationTest`, `MembershipStubs`) are in `support/`, migration tests at the root.
+Tests live in `src/test/java/com/futspring/backend`, in the same domain packages as the code they test (`domain/daily/DailyServiceTest`, `domain/stats/model/UserDailyStatsRepositoryTest`…); shared test helpers (`BaseIntegrationTest`, `MembershipStubs`) are in `support/`, migration tests at the root. A test lives in the package of the class it tests; an integration test that covers a whole domain stays at the domain root.
 
 - **Invitations** — `PeladaInvitationTest` (H2 integration: permissions, consent, state/expiry/cooldown boundaries, link replacement/revocation, removal/return, deletion, quotas and public previews), `InviteLinkTokensTest` (signature, key isolation, tampering), `InvitationConcurrencyTest` (Postgres 17: duplicate accepts, accept/cancel, join/revoke/replace, removal races, two accepts for the last trial spot, database partial uniqueness), contract snapshots and notification e-mail/after-commit tests.
 - **Service unit tests** — JUnit Jupiter 6 + Mockito + AssertJ, one class per service (`PeladaServiceTest`, `DailyServiceTest`, `DailyAttendanceServiceTest`…). Mock repositories and `UserAuthenticationHelper`; build a real `PeladaAccessHelper` over the mocked `PeladaRepository` and call `MembershipStubs.stubMembership(peladaRepository, pelada…)` so the exists queries answer from the entities' member/admin sets.
@@ -800,6 +826,7 @@ Tests live in `src/test/java/com/futspring/backend`, in the same domain packages
 - **Attendance** — `DailyAttendanceServiceTest` uses `Clock.fixed` and `support/InMemoryAttendance` (lenient stubs that back `DailyAttendanceRepository` with an in-memory list); `AttendanceWindowTest` covers zones and the Canadian DST change; `DailyAttendanceRepositoryTest` the victim query; `AttendanceConcurrencyTest` (Testcontainers Postgres, no test transaction, skipped without Docker) starts eight virtual-thread diaristas behind one latch for the last spot and expects one confirmation and seven conflicts.
 - **Notifications** — `NotificationServiceTest` (recipients per type, actor excluded, collapse, awards only on the first finalize, delivery only after commit, through `TransactionSynchronizationManager`); `NotificationPushServiceTest` (each recipient's e-mail and unread count, the team on `TEAMS_SORTED`, one failed send doesn't stop the others, failures only logged); `NotificationControllerTest` (REST, the bump `seenAt` ↔ `readAt` sync both ways, one event per path end to end, deleting a daily / pelada with notifications on H2, preferences GET/PUT and validation, public unsubscribe / resubscribe with no session, a stale session header, the one-click form POST, invalid tokens and the rate limit); `NotificationContentTest` (every type renders subject, title, body and CTA; escaping and one-pass placeholders; the push body cut at 180 without splitting an emoji); `NotificationEmailDispatcherTest` (send matrix type × preference × default, headers, pacing per send, failures only logged, nothing queued without a real sender); `EmailPacerTest` (fake clock: never more than 2 sends in a second); `UnsubscribeTokensTest` (tampered, swapped category or user, another secret); `NotificationRepositoryTest` (scheduled recipients: mensalista vs diarista, creator and admins as diaristas, confirmed and already-notified left out, scoped to the session); `ScheduledNotificationJobTest` (`@DataJpaTest` on H2 with `Clock.fixed`: recipients, full session, locked / canceled / started sessions, the window edge, idempotent runs through `NOT EXISTS` alone, the Toronto DST change, a session created inside its window, a failing pelada not stopping the others, nothing delivered without a commit); `NotificationRetentionJobTest` (the 90 / 180-day boundaries); `DailySchedulerTransactionTest` (`@DataJpaTest` with no test transaction: a failing pelada rolls back alone, the other commits its daily and `SESSION_CREATED`, delivered after the commit). The publishing services' tests verify the events they publish.
 - **Web Push** — `PushEndpointPolicyTest` (allowlist, subdomains, look-alike hosts such as `push.apple.com.evil.com`, IP literals, `http`, ports, credentials, key sizes and base64); `WebPushConfigTest` (no key = no-op, a raw base64url pair, a mismatched or malformed pair fails); `PushControllerTest` (401, upsert: create, new keys, moved from another account; the 11th drops the least recently alive; `remove` of someone else's does nothing; validation and policy 400s; `vapid-public-key` 204; 429); `WebPushDispatcherTest` (fake sender: type × pushable × preference × default, payload, the 180-character body, url with `?notificacao=`, tag, unread count, TTL / urgency / topic, 2xx marks, 404/410 deletes, 400/5xx/IO only logged and never stop the others, the metric, nothing read without a sender); `WebPushDispatcherQueryTest` (H2: the same number of statements for 2 and 20 recipients with two devices each; `statements`, since `reads` counts every hydrated subscription row); `NotificationDeliveryTest` (the three channels after the commit); the preferences with `pushEnabled` in `NotificationControllerTest` (partial, the row deleted when both channels are back to the default, an item without a channel → 400, unsubscribe never touches the push); `PasswordResetServiceTest` / `AccountSettingsTest` (the subscriptions go with a reset, a password change and a deletion); `MigrationDataTest` (V18: an old preference row keeps its e-mail value with `push_enabled` null).
+- **Account export** — `AccountExportTest` (H2 integration: 401, the download headers, each block with the caller's data only (no other member's e-mail, charge or message, no draft list), the creator's subscription, the rate limit, the same statements for 1 and 5 peladas); the `AccountExportDTO` contract snapshot.
 - **Account settings** — `AccountSettingsTest` (H2 integration: password change (wrong current password on the field, short new one, the new token works and the old one gets 401, 429), deletion blockers, deletion (wrong password, creator / sole responsável 409, the full anonymization, reads, ranking and cash balance unchanged, the e-mail registers again, constant reads for 1 vs 5 peladas, the avatar deleted only after a commit and a rollback changing nothing)); `AccountDeletionConcurrencyTest` (Postgres 17: the native locks and bulk statements, a deletion racing a transfer of the pelada to the leaving admin never leaves a deleted creator).
 - **Subscriptions** — `SubscriptionReadModelTest` (H2 integration: `subscription` on `/peladas/my`, `/peladas/{id}` and `/dailies/{id}` for a trial, an expired trial, the grace, `PENDING` and a pelada without a row; `creatorId` on the session; the same statements for 2 and 20 peladas on `/peladas/my`); `SubscriptionStateTest` (every row of the state table at the exact edges: `validUntil`, + 7 days; prices); `SubscriptionGuardTest` (writable per kind at the same edges, 402 and its message, no row = writable; room for a member: 29 vs 30 in `TRIAL`/`PENDING`, read-only 402, paid / grace / exempt / no row uncapped); the cap through invitation and link in `PeladaInvitationTest` (the 30th joins, the 31st 409 without a `MEMBER_JOINED`, `PENDING` capped, read-only 402, paid uncapped, existing members idempotent); `SubscriptionReadOnlyTest` (H2 integration, a `PENDING` pelada: one 402 per locked command with nothing changed (an invalid upload answers 402, not 400), an expired trial too, an `EXEMPT` pelada writing, a finance retry of a command done before the lock answering its result, withdrawals and cancelling a session, reads, chat, settings, members, `bumps/seen`, invitations and deletion still working); the read-only skip in `DailySchedulerTransactionTest` and `ScheduledNotificationJobTest`; `SubscriptionCreationTest` (H2 integration: the first pelada a 30-day `TRIAL` marking `trialUsedAt` with a `CREATED` event, the second `PENDING`, a transfer keeping the subscription and giving no trial to either side, a deletion keeping the payments); `MigrationDataTest` (V19 backfill and constraints); `SubscriptionNoticeJobTest` (`@DataJpaTest` without a test transaction, `Clock.fixed`: the 5-day edge to the second, trial and paid, the grace edges, `EXEMPT` / `PENDING` / `CANCELED` ignored, repeated runs idempotent and a renewal notified again, the current creator after a transfer, a failing pelada rolling back alone); the first Pix claim notifying the platform admins (not a deleted one) and a plan change or repeat not, in `PeladaSubscriptionControllerTest`; `MigrationDataTest` (V21).
 - **Assinatura** — `PixBrCodeTest` (the Bacen manual's example byte for byte, CRC-16/CCITT-FALSE check value, amount and txid fields, a field over 99 characters); `BillingPixConfigTest` (no key = no Pix; phone, e-mail and random key normalization; invalid key, name or city over the limit and a missing name or city fail; accents removed, the merchant name's fallback); `PeladaSubscriptionControllerTest` (H2 integration, the fake Pix of the test `application.properties`: prices per member band with valid BR Codes, voided payments left out, 403 for admin / member / outsider, 404, claim idempotent / plan change keeping the date / events, a `PENDING` pelada claiming, `EXEMPT` 409, 400 without plan); `PeladaSubscriptionServiceTest` (no Pix configured: null codes, claim 409).
@@ -811,6 +838,7 @@ Tests live in `src/test/java/com/futspring/backend`, in the same domain packages
 - **Virtual threads** — `VirtualThreadsTest` uses test-only imported HTTP, `@Async` and one-shot `@Scheduled` probes, with no executor bean or production endpoint. A real HTTP socket request verifies Tomcat's virtual thread (MockMvc cannot); async and scheduler callbacks check `Thread.currentThread().isVirtual()`. Both STOMP executor beans are the same virtual-thread application executor. It also verifies Hikari's ten-connection/five-second limits.
 - **Actuator** — `ActuatorExposureTest` (`@AutoConfigureMetrics`, `@AutoConfigureTestRestTemplate`): `/livez`, `/readyz` public on the main port, no actuator endpoint served there, `/actuator/prometheus` and health details on the management port without a token. The domain counters are checked in `NotificationEmailDispatcherTest`, `NotificationPushServiceTest` and `AuthControllerTest` (`SimpleMeterRegistry` / the context's registry).
 - **Query counts** — `support/QueryCounter` (a test `@Component`, injected in `BaseIntegrationTest` subclasses) reads Hibernate Statistics, turned on only in the test `application.properties` (`hibernate.generate_statistics`). `reads(block)` counts queries plus entity/collection loads and fetches, `statements(block)` every prepared statement. N+1 tests run the command once as a warm-up, then assert that `reads` is the **same** for a small and a large batch (e.g. 2 and 20 items), never an absolute number; inserts stay out of the comparison (one per row with `IDENTITY`). Reference: `FinanceServiceTest.transitionsReadAConstantNumberOfQueries`.
+- **Layout** — `DomainLayoutTest` (ArchUnit): no package under `domain/` holds more than 12 top-level classes (`dto/` aside) and the sub-packages of a domain are free of cycles (`dto/` classes left out, since `XDTO.from(entity)` and a service returning the DTO form one by design). See "Where a class goes" in Package layout.
 - **Migration tests** — `FlywayMigrationTest` applies every migration to a Postgres container and starts the app with `validate`; `MigrationDataTest` migrates to a version, inserts production-shaped rows and checks what the next migration does. A new migration or entity change must keep them green (needs Docker).
 - When adding an endpoint: a controller test (happy path, validation 400, 403 for non-member/non-admin, 404) and service tests for the rules, including the ownership cases listed in [Rules for new code](#rules-for-new-code).
 - Mockito strict stubs are on: remove stubs a test doesn't use (`UnnecessaryStubbingException`).
@@ -826,6 +854,7 @@ Tests live in `src/test/java/com/futspring/backend`, in the same domain packages
 - DTOs: use records, record accessors (`request.name()`), and complete construction; keep existing Lombok `@Builder` and static mapping factories. No compatibility getters or post-construction setters. `StatsDTO` factories take award counts up front. Preserve validation on components and container elements, Portuguese messages, JSON names, and `@JsonInclude` rules. `CreatePeladaRequestDTO` uses a Jackson 3 builder with defaults of 2 teams and 5 players per team so omission keeps defaults while explicit invalid values still fail validation. Match score and imported player-stat request records also use DTO-local Jackson builders to keep omitted primitive inputs at zero while rejecting explicit nulls (Jackson 3 otherwise rejects missing primitive constructor components). Partial-update components stay nullable and have no defaults.
 - Entities: prefer `@Getter @Setter` + `@NoArgsConstructor`/`@AllArgsConstructor`/`@Builder` over `@Data`, with `equals`/`hashCode` on the id only (see antipatterns).
 - Logging with `@Slf4j`; no `System.out`/`printStackTrace`.
+- A new class goes where 'Where a class goes' (Package layout) says; don't add an `entity/`, `repository/`, `service/` or `event/` package.
 - Code and identifiers in English. `AppException` and validation messages reach the user (the frontend toasts `message`), so new ones are written in Portuguese; existing English messages ("Daily not found", "Only admins can…") are translated when touched.
 
 ## Patterns
