@@ -62,7 +62,9 @@ docker run -d --name "${API}" --network "${NET}" --cpus=1 --memory=1g -p "127.0.
   -e DB_URL="jdbc:postgresql://${PG}:5432/futspringdb" -e DB_USERNAME=futspring -e DB_PASSWORD=futspring \
   -e JWT_SECRET="loadtest-secret-0123456789-0123456789-0123456789" \
   -e JAVA_TOOL_OPTIONS="${JAVA_OPTS}" \
+  -e MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE=health,prometheus,metrics,threaddump \
   "${IMAGE}" >/dev/null
+# ^ production exposes only health and prometheus; the probes below read metrics and threaddump
 
 for _ in $(seq 1 60); do
   [[ "$(curl -s -o /dev/null -w '%{http_code}' "${API_URL}/readyz" || true)" == "200" ]] && break

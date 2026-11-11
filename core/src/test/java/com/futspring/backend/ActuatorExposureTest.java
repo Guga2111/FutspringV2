@@ -61,11 +61,27 @@ class ActuatorExposureTest extends BaseIntegrationTest {
     }
 
     @Test
-    void health_showsDetailsOnTheManagementPort() {
-        ResponseEntity<String> response = restTemplate.getForEntity(
-                "http://localhost:" + managementPort + "/actuator/health/readiness", String.class);
+    void managementPort_exposesOnlyHealthAndPrometheus() {
+        for (String path : new String[] {"/actuator/threaddump", "/actuator/metrics", "/actuator/info",
+                "/actuator/env", "/actuator/heapdump"}) {
+            ResponseEntity<String> response = restTemplate.getForEntity(
+                    "http://localhost:" + managementPort + path, String.class);
+            // not exposed → not an actuator endpoint, so the API chain answers (401 without a token)
+            assertThat(response.getStatusCode().is2xxSuccessful()).as(path).isFalse();
+        }
+    }
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getBody()).contains("\"status\":\"UP\"");
+    @Test
+    void health_hidesDetailsOnTheManagementPort() {
+        for (String path : new String[] {"/actuator/health", "/actuator/health/readiness"}) {
+            ResponseEntity<String> response = restTemplate.getForEntity(
+                    "http://localhost:" + managementPort + path, String.class);
+
+            assertThat(response.getStatusCode()).as(path).isEqualTo(HttpStatus.OK);
+            assertThat(response.getBody()).as(path)
+                    .contains("\"status\":\"UP\"")
+                    .doesNotContain("components")
+                    .doesNotContain("details");
+        }
     }
 }

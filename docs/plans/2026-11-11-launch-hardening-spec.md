@@ -214,9 +214,14 @@ Para planejar um PR, rode o prompt dele numa sessão limpa (`/clear` antes). Ao 
 /plan-task docs/plans/2026-11-11-launch-hardening-spec.md "PR A3 — Entradas de autenticação"
 ```
 
-### [ ] PR A4 — Actuator (`fix/actuator`)
+### [x] PR A4 — Actuator (`fix/actuator`)
 - **Entrega:** exposição mínima, health sem detalhes.
 - **Docs:** BACKEND.md (Configuration, Observability).
+- **Decisões:**
+  - Conferido: o Prometheus lê só `/actuator/prometheus`, o `HEALTHCHECK` só o status HTTP de `/actuator/health/readiness`, o smoke test do deploy `/readyz` e os dashboards do Grafana consultam o Prometheus. Nada dependia de `metrics`, `info` ou `threaddump` em produção.
+  - **O load test dependia** (`threaddump` na sonda STOMP, `metrics/jvm.threads.live` e `hikaricp.connections.pending` na amostragem): o `ops/loadtest/run.sh` reabre `metrics,threaddump` no próprio container com `MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE`. A imagem não muda; a mesma variável serve para reabrir em produção temporariamente (documentado no BACKEND.md).
+  - Um endpoint não exposto na porta 9091 deixa de ser endpoint do Actuator e cai na cadeia da API, que responde 401 sem token (não 404). O teste afirma "não 2xx", como já fazia para a porta principal.
+  - Autenticação básica no `actuatorFilterChain` (opcional na revisão) ficou fora.
 
 ```
 /plan-task docs/plans/2026-11-11-launch-hardening-spec.md "PR A4 — Actuator"
