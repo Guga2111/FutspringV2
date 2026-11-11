@@ -155,7 +155,7 @@ class AuthControllerTest extends BaseIntegrationTest {
                 .content(body))
                 .andExpect(status().isTooManyRequests());
         // 15 requests against a bucket of 10: at least 5 rejections counted for the route
-        assertThat(meterRegistry.get("futspring.ratelimit.rejected").tag("route", "/api/v1/auth/login")
+        assertThat(meterRegistry.get("futspring.ratelimit.rejected").tag("route", "login")
                 .counter().count()).isGreaterThanOrEqualTo(5);
     }
 }
