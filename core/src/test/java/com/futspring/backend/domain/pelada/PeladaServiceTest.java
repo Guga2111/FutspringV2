@@ -22,7 +22,6 @@ import com.futspring.backend.domain.stats.model.RankingRepository;
 import com.futspring.backend.support.MembershipStubs;
 import com.futspring.backend.domain.user.User;
 import com.futspring.backend.domain.user.UserRepository;
-import com.futspring.backend.domain.user.dto.PublicUserDTO;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -484,35 +483,6 @@ class PeladaServiceTest {
                 .isInstanceOf(AppException.class)
                 .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.NOT_FOUND));
         verify(playerStarsRepository, never()).saveAll(any());
-    }
-
-    // --- searchUsers ---
-
-    @Test
-    void searchUsers_returnsMatchingUsers() {
-        when(userRepository.searchByUsernameOrEmail(eq("ali"), any())).thenReturn(List.of(admin));
-
-        List<PublicUserDTO> result = peladaService.searchUsers("ali");
-
-        assertThat(result).hasSize(1);
-        assertThat(result.get(0).username()).isEqualTo("admin");
-    }
-
-    @Test
-    void searchUsers_queryTooShort_throwsBadRequest() {
-        assertThatThrownBy(() -> peladaService.searchUsers(" a "))
-                .isInstanceOf(AppException.class)
-                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.BAD_REQUEST));
-        verifyNoInteractions(userRepository);
-    }
-
-    @Test
-    void searchUsers_noMatches_returnsEmptyList() {
-        when(userRepository.searchByUsernameOrEmail(eq("zzz"), any())).thenReturn(Collections.emptyList());
-
-        List<PublicUserDTO> result = peladaService.searchUsers("zzz");
-
-        assertThat(result).isEmpty();
     }
 
     // --- updatePelada ---

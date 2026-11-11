@@ -172,9 +172,14 @@ Treze PRs pequenos, cada um revisável sozinho, com seus testes e a parte do BAC
 
 Para planejar um PR, rode o prompt dele numa sessão limpa (`/clear` antes). Ao terminar, o `/plan-task` marca o `[x]` e anota as decisões abaixo do item.
 
-### [ ] PR A1 — Busca de usuários (`fix/user-search`)
+### [x] PR A1 — Busca de usuários (`fix/user-search`)
 - **Entrega:** e-mail por igualdade, escape de curingas no username, texto do `InvitePlayerDialog`.
 - **Docs:** BACKEND.md (`GET /users/search`), FRONTEND.md se o texto do diálogo for descrito.
+- **Decisões:**
+  - `searchUsers` saiu do `PeladaService` e foi para o `UserService` (o spec já o colocava lá; a busca é do domínio de usuário). Testes unitários movidos para `UserServiceTest`.
+  - A query compara `LOWER(u.email) = :email` (o `LOWER` fica na coluna até a V22 do A3 normalizar os e-mails gravados); o serviço manda `q` com `trim` e `toLowerCase(Locale.ROOT)`. Username com `LIKE :pattern ESCAPE '\'`, padrão montado no serviço.
+  - `UserRepository.searchForPlatform` (painel do admin da plataforma) tem o mesmo `LIKE` sem escape, mas só responde ao operador (404 para os outros) e não é oráculo: ficou fora.
+  - Sem mudança de contrato (rota, parâmetro, DTO e 400 iguais); o diálogo diz "Nome ou e-mail completo". Nenhum snapshot visual cobre o diálogo.
 
 ```
 /plan-task docs/plans/2026-11-11-launch-hardening-spec.md "PR A1 — Busca de usuários"
