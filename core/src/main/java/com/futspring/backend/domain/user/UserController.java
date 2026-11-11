@@ -72,7 +72,7 @@ public class UserController {
 
     @GetMapping("/search")
     public ResponseEntity<List<PublicUserDTO>> searchUsers(@RequestParam String q) {
-        return ResponseEntity.ok(peladaService.searchUsers(q));
+        return ResponseEntity.ok(userService.searchUsers(q));
     }
 
     @GetMapping("/{id}/stats")

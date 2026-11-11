@@ -10,17 +10,25 @@ import com.futspring.backend.shared.exception.AppException;
 import com.futspring.backend.shared.helper.UserAuthenticationHelper;
 import com.futspring.backend.domain.user.dto.ChangePasswordRequestDTO;
 import com.futspring.backend.domain.user.dto.ProfileDTO;
+import com.futspring.backend.domain.user.dto.PublicUserDTO;
 import com.futspring.backend.domain.user.dto.UpdateProfileRequest;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.List;
+import java.util.Locale;
+
 @Service
 @RequiredArgsConstructor
 public class UserService {
+
+    static final int MIN_SEARCH_LENGTH = 3;
+    static final int MAX_SEARCH_RESULTS = 10;
 
     private final UserRepository userRepository;
     private final FileUploadService fileUploadService;
@@ -29,6 +37,25 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final PushSubscriptionRepository pushSubscriptionRepository;
+
+    // Username containing the query (wildcards taken literally) or the exact e-mail, any case; public fields only
+    @Transactional(readOnly = true)
+    public List<PublicUserDTO> searchUsers(String query) {
+        String q = query == null ? "" : query.trim();
+        if (q.length() < MIN_SEARCH_LENGTH) {
+            throw new AppException(HttpStatus.BAD_REQUEST, "Digite pelo menos " + MIN_SEARCH_LENGTH + " caracteres para buscar");
+        }
+        String lower = q.toLowerCase(Locale.ROOT);
+        return userRepository.searchByUsernameOrEmail("%" + escapeLike(lower) + "%", lower,
+                        PageRequest.of(0, MAX_SEARCH_RESULTS)).stream()
+                .map(PublicUserDTO::from)
+                .toList();
+    }
+
+    // Escape character first, so the escapes added for % and _ aren't escaped again
+    private static String escapeLike(String value) {
+        return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
+    }
 
     // Public profile; the email is only included for the owner
     @Transactional(readOnly = true)

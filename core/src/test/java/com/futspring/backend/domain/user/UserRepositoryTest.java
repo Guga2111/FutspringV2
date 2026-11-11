@@ -8,7 +8,9 @@ import org.springframework.test.context.TestPropertySource;
 
 import org.springframework.data.domain.PageRequest;
 
+import java.time.Instant;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.*;
@@ -81,40 +83,60 @@ class UserRepositoryTest {
 
     @Test
     void searchByUsernameOrEmail_caseInsensitiveUsernameMatch() {
-        List<User> results = userRepository.searchByUsernameOrEmail("ALICE", PAGE);
-        assertThat(results).extracting(User::getUsername).contains("alice_user");
+        assertThat(search("ALICE")).extracting(User::getUsername).containsExactly("alice_user");
     }
 
     @Test
-    void searchByUsernameOrEmail_emailMatch() {
-        List<User> results = userRepository.searchByUsernameOrEmail("bob@test", PAGE);
-        assertThat(results).extracting(User::getEmail).contains("bob@test.org");
+    void searchByUsernameOrEmail_partialUsernameMatch() {
+        assertThat(search("player")).extracting(User::getUsername).containsExactly("bob_player");
     }
 
     @Test
-    void searchByUsernameOrEmail_partialMatch() {
-        List<User> results = userRepository.searchByUsernameOrEmail("player", PAGE);
-        assertThat(results).extracting(User::getUsername).contains("bob_player");
+    void searchByUsernameOrEmail_exactEmailMatches() {
+        assertThat(search("bob@test.org")).extracting(User::getUsername).containsExactly("bob_player");
+    }
+
+    @Test
+    void searchByUsernameOrEmail_emailFragmentNeverMatches() {
+        assertThat(search("bob@test")).isEmpty();
+        assertThat(search("@example.com")).isEmpty();
+        assertThat(search("test.org")).isEmpty();
+    }
+
+    @Test
+    void searchByUsernameOrEmail_wildcardsAreLiteral() {
+        assertThat(search("%%%")).isEmpty();
+        assertThat(search("___")).isEmpty();
+
+        userRepository.save(User.builder().email("ab@test.org").username("a_b").password("x").build());
+        userRepository.save(User.builder().email("axb@test.org").username("axb").password("x").build());
+        assertThat(search("a_b")).extracting(User::getUsername).containsExactly("a_b");
+    }
+
+    @Test
+    void searchByUsernameOrEmail_deletedNeverMatches() {
+        alice.setDeletedAt(Instant.now());
+        userRepository.save(alice);
+
+        assertThat(search("alice")).isEmpty();
+        assertThat(search("alice@example.com")).isEmpty();
     }
 
     @Test
     void searchByUsernameOrEmail_noMatch_returnsEmpty() {
-        List<User> results = userRepository.searchByUsernameOrEmail("zzzzz", PAGE);
-        assertThat(results).isEmpty();
-    }
-
-    @Test
-    void searchByUsernameOrEmail_noDuplicates() {
-        // "example" matches alice's email; "alice" matches alice's username — only one result
-        List<User> results = userRepository.searchByUsernameOrEmail("alice", PAGE);
-        long distinctIds = results.stream().map(User::getId).distinct().count();
-        assertThat(distinctIds).isEqualTo(results.size());
+        assertThat(search("zzzzz")).isEmpty();
     }
 
     @Test
     void searchByUsernameOrEmail_respectsPageSize() {
-        List<User> results = userRepository.searchByUsernameOrEmail("", PageRequest.of(0, 1));
-        assertThat(results).hasSize(1);
+        assertThat(userRepository.searchByUsernameOrEmail("%", "", PageRequest.of(0, 1))).hasSize(1);
+    }
+
+    // The pattern UserService builds: lower case, \, % and _ escaped
+    private List<User> search(String q) {
+        String lower = q.toLowerCase(Locale.ROOT);
+        String escaped = lower.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
+        return userRepository.searchByUsernameOrEmail("%" + escaped + "%", lower, PAGE);
     }
 
     private static final PageRequest PAGE = PageRequest.of(0, 10);

@@ -12,6 +12,7 @@ import org.springframework.mock.web.MockMultipartFile;
 
 import java.time.LocalDate;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -195,11 +196,22 @@ class UserControllerTest extends BaseIntegrationTest {
     @Test
     void searchUsers_matchesEmailButNeverReturnsIt() throws Exception {
         mockMvc.perform(get("/api/v1/users/search")
-                .param("q", "ub@test")
+                .param("q", "UB@test.com")
                 .header("Authorization", bearerToken(userA.getId(), userA.getEmail())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].username").value("userB"))
                 .andExpect(jsonPath("$[0].email").doesNotExist());
+    }
+
+    @Test
+    void searchUsers_emailFragmentAndWildcardsMatchNobody() throws Exception {
+        for (String q : List.of("ub@test", "@test.com", "%%%", "___")) {
+            mockMvc.perform(get("/api/v1/users/search")
+                    .param("q", q)
+                    .header("Authorization", bearerToken(userA.getId(), userA.getEmail())))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.length()").value(0));
+        }
     }
 
     @Test

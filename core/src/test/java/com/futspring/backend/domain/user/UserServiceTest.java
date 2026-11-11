@@ -4,6 +4,7 @@ import com.futspring.backend.domain.pelada.member.PeladaPlayerStarsRepository;
 import com.futspring.backend.domain.file.FileUploadService;
 import com.futspring.backend.shared.exception.AppException;
 import com.futspring.backend.domain.user.dto.ProfileDTO;
+import com.futspring.backend.domain.user.dto.PublicUserDTO;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -12,10 +13,12 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.mock.web.MockMultipartFile;
 
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -198,5 +201,42 @@ class UserServiceTest {
         userService.uploadBackgroundImage(1L, file, "test@example.com");
 
         verify(fileUploadService).deleteImageAfterCommit("old-bg.jpg");
+    }
+
+    // --- searchUsers ---
+
+    @Test
+    void searchUsers_returnsPublicFields() {
+        when(userRepository.searchByUsernameOrEmail(eq("%tes%"), eq("tes"), any())).thenReturn(List.of(user));
+
+        List<PublicUserDTO> result = userService.searchUsers("tes");
+
+        assertThat(result).extracting(PublicUserDTO::username).containsExactly("tester");
+    }
+
+    @Test
+    void searchUsers_queryTooShort_throwsBadRequest() {
+        assertThatThrownBy(() -> userService.searchUsers(" a "))
+                .isInstanceOf(AppException.class)
+                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.BAD_REQUEST));
+        verifyNoInteractions(userRepository);
+    }
+
+    @Test
+    void searchUsers_escapesWildcardsInLowerCase() {
+        when(userRepository.searchByUsernameOrEmail(any(), any(), any())).thenReturn(List.of());
+
+        assertThat(userService.searchUsers("Bob%_\\")).isEmpty();
+
+        verify(userRepository).searchByUsernameOrEmail(eq("%bob\\%\\_\\\\%"), eq("bob%_\\"), any());
+    }
+
+    @Test
+    void searchUsers_emailTrimmedAndLowerCased() {
+        when(userRepository.searchByUsernameOrEmail(any(), any(), any())).thenReturn(List.of());
+
+        userService.searchUsers("  BOB@Test.org ");
+
+        verify(userRepository).searchByUsernameOrEmail(eq("%bob@test.org%"), eq("bob@test.org"), any());
     }
 }

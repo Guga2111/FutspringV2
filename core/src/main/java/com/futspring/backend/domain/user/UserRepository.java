@@ -33,15 +33,17 @@ public interface UserRepository extends JpaRepository<User, Long> {
     // The platform's operators (SUBSCRIPTION_PIX_CLAIMED goes to them)
     List<User> findByPlatformAdminTrueAndDeletedAtIsNull();
 
-    // Matches username or email, but callers must only return public fields (PublicUserDTO); deleted accounts never match
+    // User search: `pattern` is a lower-case LIKE pattern for the username (wildcards escaped with a backslash
+    // by UserService); the e-mail only matches exactly (lower case), never a fragment, so the search can't map e-mails
+    // to accounts. Callers must only return public fields (PublicUserDTO); deleted accounts never match
     @Query("""
         SELECT u FROM User u
         WHERE u.deletedAt IS NULL
-          AND (LOWER(u.username) LIKE LOWER(CONCAT('%', :q, '%'))
-           OR LOWER(u.email) LIKE LOWER(CONCAT('%', :q, '%')))
+          AND (LOWER(u.username) LIKE :pattern ESCAPE '\\'
+           OR LOWER(u.email) = :email)
         ORDER BY u.username
         """)
-    List<User> searchByUsernameOrEmail(@Param("q") String q, Pageable pageable);
+    List<User> searchByUsernameOrEmail(@Param("pattern") String pattern, @Param("email") String email, Pageable pageable);
 
     // Conditional, so two peladas created at once by the same account can't both take the trial (the row lock of the
     // UPDATE makes the second one see trial_used_at set); 1 = the trial was taken now
