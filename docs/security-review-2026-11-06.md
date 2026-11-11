@@ -11,8 +11,8 @@ Severidade: **Alta** (exploração simples, impacto em dados ou contas), **Médi
 | 3 | IP do rate limit forjável por `X-Forwarded-For` | Alta / Média | Confirmado no nginx da VPS; corrigido (PR A2: `RemoteIpValve` + `ops/nginx/futspring.conf`, nginx aplicado à mão) |
 | 4 | Membro removido continua recebendo o chat | Média | Confirmado |
 | 5 | JWT de 7 dias em `localStorage`, sem revogação por sessão | Média | Confirmado |
-| 6 | Upload público confia no Content-Type e não remove EXIF | Média | Confirmado |
-| 7 | `/files/**` público e permanente | Média / Baixa | Confirmado |
+| 6 | Upload público confia no Content-Type e não remove EXIF | Média | Corrigido (PR A5: decodificado pelo conteúdo, tipo declarado ≠ real → 400, regravado sem EXIF/GPS/ICC com a orientação aplicada); arquivos enviados antes mantêm os metadados |
+| 7 | `/files/**` público e permanente | Média / Baixa | Risco aceito e documentado (PR A5, BACKEND.md → Uploads); fotos da pelada e de campeão apagadas na exclusão |
 | 8 | Enumeração de contas no cadastro e no login | Baixa / Média | Login corrigido (PR A3: hash BCrypt dummy); 409 do cadastro aceito (spec de lançamento) |
 | 9 | Actuator aberto com `threaddump` na rede `observability` | Baixa | Corrigido (PR A4: só `health` e `prometheus`, health sem detalhes); sem autenticação básica |
 | 10 | Senha sem tamanho máximo e e-mail sensível a maiúsculas | Baixa | Corrigido (PR A3: ≤ 72 bytes, e-mail normalizado, V22); sem limite por conta |

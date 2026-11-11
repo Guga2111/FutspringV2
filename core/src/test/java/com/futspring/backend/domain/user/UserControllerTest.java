@@ -8,6 +8,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
+import com.futspring.backend.support.TestImages;
 import org.springframework.mock.web.MockMultipartFile;
 
 import java.time.LocalDate;
@@ -147,7 +148,7 @@ class UserControllerTest extends BaseIntegrationTest {
     void uploadProfileImage_ownUser() throws Exception {
         MockMultipartFile file = new MockMultipartFile(
                 "file", "avatar.jpg", "image/jpeg",
-                new byte[]{(byte) 0xFF, (byte) 0xD8, (byte) 0xFF, (byte) 0xE0});
+                TestImages.jpeg());
 
         mockMvc.perform(multipart("/api/v1/users/" + userA.getId() + "/image")
                 .file(file)
@@ -172,7 +173,7 @@ class UserControllerTest extends BaseIntegrationTest {
     void uploadBackgroundImage_ownUser() throws Exception {
         MockMultipartFile file = new MockMultipartFile(
                 "file", "bg.jpg", "image/jpeg",
-                new byte[]{(byte) 0xFF, (byte) 0xD8, (byte) 0xFF, (byte) 0xE0});
+                TestImages.jpeg());
 
         mockMvc.perform(multipart("/api/v1/users/" + userA.getId() + "/background-image")
                 .file(file)
