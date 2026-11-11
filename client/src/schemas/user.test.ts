@@ -37,3 +37,13 @@ describe("deleteAccountSchema (DeleteAccountRequestDTO)", () => {
     expect(deleteAccountSchema.safeParse({ password: "x" }).success).toBe(true)
   })
 })
+
+describe("password limits (BcryptLength)", () => {
+  it("rejects passwords above 72 bytes", () => {
+    const accents = "é".repeat(40)
+    expect(changePasswordSchema.safeParse({ currentPassword: "senha123", newPassword: accents, confirmPassword: accents }).success).toBe(false)
+    expect(changePasswordSchema.safeParse({ currentPassword: "a".repeat(73), newPassword: "novasenha1", confirmPassword: "novasenha1" }).success).toBe(false)
+    expect(deleteAccountSchema.safeParse({ password: "a".repeat(73) }).success).toBe(false)
+    expect(deleteAccountSchema.safeParse({ password: "a".repeat(72) }).success).toBe(true)
+  })
+})

@@ -21,7 +21,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
-import java.util.Locale;
 
 @Service
 @RequiredArgsConstructor
@@ -45,7 +44,7 @@ public class UserService {
         if (q.length() < MIN_SEARCH_LENGTH) {
             throw new AppException(HttpStatus.BAD_REQUEST, "Digite pelo menos " + MIN_SEARCH_LENGTH + " caracteres para buscar");
         }
-        String lower = q.toLowerCase(Locale.ROOT);
+        String lower = User.normalizeEmail(q);
         return userRepository.searchByUsernameOrEmail("%" + escapeLike(lower) + "%", lower,
                         PageRequest.of(0, MAX_SEARCH_RESULTS)).stream()
                 .map(PublicUserDTO::from)

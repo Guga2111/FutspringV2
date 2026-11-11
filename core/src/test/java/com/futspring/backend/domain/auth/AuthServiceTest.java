@@ -200,9 +200,15 @@ class AuthServiceTest {
 
         when(userRepository.findByEmail("nobody@example.com")).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> authService.login(req))
+        PasswordEncoder spyEncoder = spy(new BCryptPasswordEncoder());
+        AuthService service = new AuthService(userRepository, spyEncoder, jwtService, CLOCK);
+
+        assertThatThrownBy(() -> service.login(req))
                 .isInstanceOf(AppException.class)
                 .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.UNAUTHORIZED));
+        // an unknown e-mail still runs BCrypt, against a real cost-10 hash, so it takes as long as a wrong password
+        verify(spyEncoder).matches("anypassword", AuthService.DUMMY_HASH);
+        assertThat(AuthService.DUMMY_HASH).startsWith("$2a$10$").hasSize(60);
     }
 
     @Test
