@@ -45,6 +45,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
+import com.futspring.backend.support.TestImages;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.transaction.TestTransaction;
@@ -387,7 +388,7 @@ class AccountSettingsTest extends BaseIntegrationTest {
         User leaving = user("Saindo" + suffix);
         Pelada committed = pelada("Pelada " + suffix, owner, leaving);
         String image = fileUploadService.uploadImage(
-                new MockMultipartFile("file", "a.png", "image/png", new byte[]{1, 2, 3}));
+                new MockMultipartFile("file", "a.png", "image/png", TestImages.png()));
         leaving.setImage(image);
         users.save(leaving);
         Path file = Path.of(uploadsDir).resolve(image);

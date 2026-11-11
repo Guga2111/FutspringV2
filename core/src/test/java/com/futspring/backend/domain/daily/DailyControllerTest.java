@@ -27,6 +27,7 @@ import org.junit.jupiter.api.Test;
 import jakarta.persistence.EntityManager;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
+import com.futspring.backend.support.TestImages;
 import org.springframework.mock.web.MockMultipartFile;
 
 import java.time.Instant;
@@ -469,8 +470,7 @@ class DailyControllerTest extends BaseIntegrationTest {
         dailyRepository.save(daily);
 
         MockMultipartFile file = new MockMultipartFile(
-                "file", "champ.jpg", "image/jpeg",
-                new byte[]{(byte) 0xFF, (byte) 0xD8, (byte) 0xFF, (byte) 0xE0});
+                "file", "champ.jpg", "image/jpeg", TestImages.jpeg());
 
         mockMvc.perform(multipart("/api/v1/dailies/" + daily.getId() + "/champion-image")
                 .file(file)

@@ -227,9 +227,16 @@ Para planejar um PR, rode o prompt dele numa sessão limpa (`/clear` antes). Ao 
 /plan-task docs/plans/2026-11-11-launch-hardening-spec.md "PR A4 — Actuator"
 ```
 
-### [ ] PR A5 — Uploads públicos (`fix/upload-sanitize`)
+### [x] PR A5 — Uploads públicos (`fix/upload-sanitize`)
 - **Entrega:** decodificação e regravação sem metadados, TwelveMonkeys para WebP, helper de validação compartilhado com o financeiro, limpeza de arquivos na exclusão, #7 documentado.
 - **Docs:** BACKEND.md (Uploads, Stack).
+- **Decisões:**
+  - **Orientação EXIF aplicada no servidor** (decisão do dono): sem ela, a foto vertical do celular sairia de lado ao perder o EXIF. Além do `imageio-webp`, entraram `imageio-jpeg` (lê também JPEG CMYK) e `contrib` (`EXIFUtilities.findImageOrientation` + `TIFFUtilities.applyOrientation`), TwelveMonkeys 3.15.3.
+  - O helper é `domain/file/ImageDecoder` (classe estática, sem bean): formato pelo conteúdo, teto de 20 Mpx lido do cabeçalho antes de decodificar, formatos permitidos por quem chama, tipo declarado ≠ real → 400, orientação aplicada. `FinanceFiles.verify` usa o mesmo helper com JPEG/PNG e **continua gravando os bytes originais** (arquivos privados, com hash); só os uploads públicos são regravados.
+  - Alfa decidido pelo `ColorModel.hasAlpha()` (PNG com canal alfa continua PNG mesmo se todos os pixels forem opacos); JPEG com qualidade 0.9. O ICC é descartado (fotos Display P3 podem perder um pouco de saturação).
+  - A limpeza na exclusão já existia (`DailyService.deleteDailyData`, `PeladaService.deletePelada`); o PR só acrescentou os testes.
+  - **Arquivos já gravados não foram reprocessados** (decisão do dono): mantêm o EXIF que tinham; `.webp` antigos continuam servidos.
+  - Sem mudança no front nem no contrato (JPEG/PNG/WebP, 5 MB); um arquivo que antes passava só pelo `Content-Type` agora recebe 400.
 
 ```
 /plan-task docs/plans/2026-11-11-launch-hardening-spec.md "PR A5 — Uploads públicos"

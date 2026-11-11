@@ -465,6 +465,7 @@ class DailyServiceTest {
         when(peladaRepository.findByIdForUpdate(pelada.getId())).thenReturn(Optional.of(pelada));
         when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(dailyRepository.findById(100L)).thenReturn(Optional.of(scheduledDaily));
+        scheduledDaily.setChampionImage("champion.jpg");
 
         when(dailyResultsService.clearResults(scheduledDaily)).thenReturn(Set.of(member));
 
@@ -476,6 +477,7 @@ class DailyServiceTest {
         verify(dailyAttendanceService).clearAttendees(scheduledDaily);
         verify(bumpRepository).deleteByDaily(scheduledDaily);
         verify(notificationRepository).deleteByDaily(scheduledDaily);
+        verify(fileUploadService).deleteImageAfterCommit("champion.jpg");
         verify(dailyRepository).delete(scheduledDaily);
     }
 

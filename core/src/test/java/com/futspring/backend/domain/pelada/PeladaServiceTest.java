@@ -551,10 +551,13 @@ class PeladaServiceTest {
     void deletePelada_success_deletesPelada() {
         when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(peladaRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(pelada));
+        pelada.setImage("cover.jpg");
 
         peladaService.deletePelada(10L, "admin@example.com");
 
         verify(peladaRepository).delete(pelada);
+        // the sessions' champion photos go through DailyService.deleteDailyData (DailyServiceTest)
+        verify(fileUploadService).deleteImageAfterCommit("cover.jpg");
     }
 
     @Test

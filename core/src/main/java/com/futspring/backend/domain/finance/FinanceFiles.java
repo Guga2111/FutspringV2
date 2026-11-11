@@ -1,5 +1,7 @@
 package com.futspring.backend.domain.finance;
 
+import com.futspring.backend.domain.file.ImageDecoder;
+import com.futspring.backend.domain.file.ImageDecoder.Format;
 import com.futspring.backend.shared.exception.AppException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -7,8 +9,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.*;
 import org.springframework.web.multipart.MultipartFile;
-import javax.imageio.ImageIO;
-import javax.imageio.stream.ImageInputStream;
 import java.io.*;
 import java.nio.file.*;
 import java.security.*;
@@ -36,22 +36,10 @@ public class FinanceFiles {
         try {
             byte[] bytes = file.getBytes();
             if (bytes.length > 5 * 1024 * 1024) throw bad("A imagem deve ter no máximo 5 MB");
-            String format;
-            try (ImageInputStream input = ImageIO.createImageInputStream(new ByteArrayInputStream(bytes))) {
-                var readers = ImageIO.getImageReaders(input);
-                if (!readers.hasNext()) throw bad("Imagem inválida");
-                var reader = readers.next();
-                try {
-                    reader.setInput(input); format = reader.getFormatName().toLowerCase(Locale.ROOT);
-                    long pixels = (long) reader.getWidth(0) * reader.getHeight(0);
-                    if (pixels > 20_000_000 || pixels <= 0) throw bad("A imagem deve ter até 20 milhões de pixels");
-                    if (!Set.of("jpeg", "png").contains(format)) throw bad("Somente JPEG e PNG são permitidos");
-                    if (reader.read(0) == null) throw bad("Imagem inválida");
-                } finally { reader.dispose(); }
-            }
-            String type = format.equals("jpeg") ? "image/jpeg" : "image/png";
-            if (!type.equals(file.getContentType())) throw bad("O conteúdo da imagem não corresponde ao tipo informado");
-            return new Verified(bytes, type, format.equals("jpeg") ? ".jpg" : ".png",
+            var decoded = ImageDecoder.decode(bytes, file.getContentType(), EnumSet.of(Format.JPEG, Format.PNG),
+                    "Somente JPEG e PNG são permitidos");
+            String type = decoded.format().contentType();
+            return new Verified(bytes, type, decoded.format() == Format.JPEG ? ".jpg" : ".png",
                     HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes)));
         } catch (IOException e) { throw bad("Imagem inválida"); }
         catch (NoSuchAlgorithmException e) { throw new IllegalStateException(e); }
