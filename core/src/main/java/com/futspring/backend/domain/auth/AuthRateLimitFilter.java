@@ -28,7 +28,8 @@ import java.util.Map;
  * per minute on each POST /api/v1/auth/ route (login, register, forgot-password, reset-password), the logged-in
  * password checks (POST /api/v1/users/me/password and /me/delete), the Web Push subscription (POST
  * /api/v1/push/subscriptions), the public e-mail link routes (notifications unsubscribe / resubscribe) and the
- * account export (GET /api/v1/users/me/export); 20 per minute on the web app's error reports
+ * account export (GET /api/v1/users/me/export); 30 per minute on the session refresh (POST /api/v1/auth/refresh);
+ * 20 per minute on the web app's error reports
  * (POST /api/v1/client-errors); 60 per minute on the public invitation preview (GET /api/v1/invite-links/{token}).
  * Routes are matched with PathPatternRequestMatcher, on the decoded path (the mechanism Spring Security and MVC use),
  * never the raw request URI, so an encoded variant such as /auth/%6Cogin hits the same limit. The bucket key is the
@@ -42,6 +43,7 @@ import java.util.Map;
 public class AuthRateLimitFilter extends OncePerRequestFilter {
 
     static final int REQUESTS_PER_MINUTE = 10;
+    static final int REFRESHES_PER_MINUTE = 30;
     static final int CLIENT_ERRORS_PER_MINUTE = 20;
     static final int INVITE_PREVIEWS_PER_MINUTE = 60;
 
@@ -52,6 +54,7 @@ public class AuthRateLimitFilter extends OncePerRequestFilter {
             limit("register", HttpMethod.POST, "/api/v1/auth/register", REQUESTS_PER_MINUTE),
             limit("forgot-password", HttpMethod.POST, "/api/v1/auth/forgot-password", REQUESTS_PER_MINUTE),
             limit("reset-password", HttpMethod.POST, "/api/v1/auth/reset-password", REQUESTS_PER_MINUTE),
+            limit("refresh", HttpMethod.POST, "/api/v1/auth/refresh", REFRESHES_PER_MINUTE),
             limit("change-password", HttpMethod.POST, "/api/v1/users/me/password", REQUESTS_PER_MINUTE),
             limit("delete-account", HttpMethod.POST, "/api/v1/users/me/delete", REQUESTS_PER_MINUTE),
             limit("push-subscribe", HttpMethod.POST, "/api/v1/push/subscriptions", REQUESTS_PER_MINUTE),

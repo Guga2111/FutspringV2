@@ -1,5 +1,7 @@
 package com.futspring.backend.domain.auth.passwordreset;
 
+import com.futspring.backend.domain.auth.SecretTokens;
+
 import com.futspring.backend.domain.notification.webpush.PushSubscriptionRepository;
 import com.futspring.backend.domain.user.TokensRevokedEvent;
 import com.futspring.backend.domain.user.User;
@@ -43,7 +45,7 @@ public class PasswordResetService {
     @Transactional
     public void resetPassword(String rawToken, String newPassword) {
         LocalDateTime now = LocalDateTime.now();
-        PasswordResetToken token = tokenRepository.findUsableForUpdate(ResetTokens.hash(rawToken), now)
+        PasswordResetToken token = tokenRepository.findUsableForUpdate(SecretTokens.hash(rawToken), now)
                 .orElseThrow(() -> new AppException(HttpStatus.BAD_REQUEST, INVALID_LINK_MESSAGE));
 
         User user = token.getUser();
@@ -68,10 +70,10 @@ public class PasswordResetService {
         LocalDateTime now = LocalDateTime.now();
         tokenRepository.invalidateActiveTokens(user, now);
 
-        String rawToken = ResetTokens.generate();
+        String rawToken = SecretTokens.generate();
         tokenRepository.save(PasswordResetToken.builder()
                 .user(user)
-                .tokenHash(ResetTokens.hash(rawToken))
+                .tokenHash(SecretTokens.hash(rawToken))
                 .expiresAt(now.plus(TOKEN_TTL))
                 .build());
         eventPublisher.publishEvent(new PasswordResetRequestedEvent(user.getEmail(), user.getUsername(), rawToken));

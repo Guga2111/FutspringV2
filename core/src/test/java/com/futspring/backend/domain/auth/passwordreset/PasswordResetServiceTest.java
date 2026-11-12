@@ -1,5 +1,7 @@
 package com.futspring.backend.domain.auth.passwordreset;
 
+import com.futspring.backend.domain.auth.SecretTokens;
+
 import com.futspring.backend.domain.notification.webpush.PushSubscriptionRepository;
 import com.futspring.backend.domain.user.TokensRevokedEvent;
 import com.futspring.backend.domain.user.User;
@@ -76,7 +78,7 @@ class PasswordResetServiceTest {
         verify(eventPublisher).publishEvent(event.capture());
 
         String rawToken = event.getValue().rawToken();
-        assertThat(saved.getValue().getTokenHash()).isEqualTo(ResetTokens.hash(rawToken)).isNotEqualTo(rawToken);
+        assertThat(saved.getValue().getTokenHash()).isEqualTo(SecretTokens.hash(rawToken)).isNotEqualTo(rawToken);
         assertThat(saved.getValue().getUser()).isEqualTo(user);
         assertThat(saved.getValue().getExpiresAt())
                 .isBetween(LocalDateTime.now().plusMinutes(29), LocalDateTime.now().plusMinutes(31));
@@ -100,8 +102,8 @@ class PasswordResetServiceTest {
     @Test
     void resetPassword_validToken_changesPasswordInvalidatesTokensAndDropsPushSubscriptions() {
         PasswordResetToken token = PasswordResetToken.builder().id(5L).user(user)
-                .tokenHash(ResetTokens.hash("raw")).expiresAt(LocalDateTime.now().plusMinutes(10)).build();
-        when(tokenRepository.findUsableForUpdate(eq(ResetTokens.hash("raw")), any())).thenReturn(Optional.of(token));
+                .tokenHash(SecretTokens.hash("raw")).expiresAt(LocalDateTime.now().plusMinutes(10)).build();
+        when(tokenRepository.findUsableForUpdate(eq(SecretTokens.hash("raw")), any())).thenReturn(Optional.of(token));
 
         service.resetPassword("raw", "newpassword");
 

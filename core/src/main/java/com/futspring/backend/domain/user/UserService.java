@@ -1,8 +1,7 @@
 package com.futspring.backend.domain.user;
 
-import com.futspring.backend.domain.auth.JwtService;
-import com.futspring.backend.domain.auth.dto.AuthResponseDTO;
-import com.futspring.backend.domain.auth.dto.UserResponseDTO;
+import com.futspring.backend.domain.auth.session.IssuedSession;
+import com.futspring.backend.domain.auth.session.RefreshSessionService;
 import com.futspring.backend.domain.file.FileUploadService;
 import com.futspring.backend.domain.notification.webpush.PushSubscriptionRepository;
 import com.futspring.backend.domain.pelada.member.PeladaPlayerStarsRepository;
@@ -35,7 +34,7 @@ public class UserService {
     private final PeladaPlayerStarsRepository playerStarsRepository;
     private final UserAuthenticationHelper userAuthHelper;
     private final PasswordEncoder passwordEncoder;
-    private final JwtService jwtService;
+    private final RefreshSessionService refreshSessionService;
     private final PushSubscriptionRepository pushSubscriptionRepository;
     private final ApplicationEventPublisher eventPublisher;
 
@@ -106,12 +105,12 @@ public class UserService {
     }
 
     /**
-     * Changes the caller's password and revokes every session opened before (tokenVersion), answering a token of the
-     * new version so this device stays logged in. Every Web Push subscription goes too: this device subscribes again
+     * Changes the caller's password and revokes every session opened before (tokenVersion, refresh sessions included),
+     * opening a new session of the new version so this device stays logged in. Every Web Push subscription goes too: this device subscribes again
      * when the app opens (the permission is still granted).
      */
     @Transactional
-    public AuthResponseDTO changePassword(ChangePasswordRequestDTO request, String callerEmail) {
+    public IssuedSession changePassword(ChangePasswordRequestDTO request, String callerEmail) {
         User user = userAuthHelper.getAuthenticatedUser(callerEmail);
         if (!passwordEncoder.matches(request.currentPassword(), user.getPassword())) {
             throw AppException.field("currentPassword", "Senha atual incorreta");
@@ -122,8 +121,7 @@ public class UserService {
         pushSubscriptionRepository.deleteAllByUserId(user.getId());
         // Open chat connections (this one included) close after the commit; this device reconnects with the new token
         eventPublisher.publishEvent(new TokensRevokedEvent(user.getEmail()));
-        String token = jwtService.generateToken(user.getId(), user.getEmail(), user.getTokenVersion());
-        return new AuthResponseDTO(token, UserResponseDTO.from(user));
+        return refreshSessionService.open(user);
     }
 
     // Profile stars: the rounded average of the user's stars in every pelada they belong to

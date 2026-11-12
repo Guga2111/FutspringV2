@@ -210,6 +210,31 @@ groups:
         execErrState: Error
         annotations:
           summary: "Mais de 10 envios de Web Push falharam nos últimos 15 minutos (400/413/429/5xx/timeout). Veja os logs do WebPushDispatcher no Loki."
+      - uid: futspring-session-store
+        title: Sessões (Redis)
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 900, to: 0 }
+            datasourceUid: prometheus
+            model:
+                refId: A
+                expr: "(sum(increase(futspring_session_refresh_total{application=\"futspring\", result=\"error\"}[5m])) or vector(0)) + (sum(increase(futspring_session_open_total{application=\"futspring\", result=\"error\"}[5m])) or vector(0))"
+                instant: true
+                range: false
+          - refId: C
+            datasourceUid: __expr__
+            model:
+                refId: C
+                type: threshold
+                expression: A
+                conditions:
+                  - evaluator: { type: gt, params: [0] }
+        for: 0s
+        noDataState: OK
+        execErrState: Error
+        annotations:
+          summary: "Sessões não foram gravadas ou renovadas no Redis nos últimos 5 minutos (Redis fora ou sem memória). Logins seguem sem cookie e ninguém renova a sessão."
       - uid: futspring-client-errors
         title: Erros do front
         condition: C

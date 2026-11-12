@@ -1,5 +1,7 @@
 package com.futspring.backend.domain.auth.passwordreset;
 
+import com.futspring.backend.domain.auth.SecretTokens;
+
 import com.futspring.backend.domain.user.User;
 import com.futspring.backend.domain.user.UserRepository;
 import com.futspring.backend.support.BaseIntegrationTest;
@@ -161,7 +163,7 @@ class PasswordResetControllerTest extends BaseIntegrationTest {
     private void saveToken(String rawToken, LocalDateTime expiresAt) {
         tokenRepository.save(PasswordResetToken.builder()
                 .user(user)
-                .tokenHash(ResetTokens.hash(rawToken))
+                .tokenHash(SecretTokens.hash(rawToken))
                 .expiresAt(expiresAt)
                 .build());
     }

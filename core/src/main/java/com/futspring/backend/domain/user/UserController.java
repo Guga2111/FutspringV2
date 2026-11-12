@@ -7,6 +7,7 @@ import com.futspring.backend.domain.stats.dto.StatsDTO;
 import com.futspring.backend.domain.stats.dto.UserMatchHistoryDTO;
 import com.futspring.backend.domain.stats.dto.UserStatsTimelineDTO;
 import com.futspring.backend.domain.auth.dto.AuthResponseDTO;
+import com.futspring.backend.domain.auth.session.SessionCookie;
 import com.futspring.backend.domain.user.dto.AccountExportDTO;
 import com.futspring.backend.domain.user.dto.ChangePasswordRequestDTO;
 import com.futspring.backend.domain.user.dto.DeleteAccountRequestDTO;
@@ -20,6 +21,7 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.CacheControl;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -38,12 +40,13 @@ public class UserController {
     private final UserService userService;
     private final AccountDeletionService accountDeletionService;
     private final AccountExportService accountExportService;
+    private final SessionCookie sessionCookie;
 
-    // Rate limited by AuthRateLimitFilter; answers a fresh token, the other sessions get 401
+    // Rate limited by AuthRateLimitFilter; answers a fresh token and refresh cookie, the other sessions get 401
     @PostMapping("/me/password")
     public ResponseEntity<AuthResponseDTO> changePassword(@Valid @RequestBody ChangePasswordRequestDTO request,
                                                           @AuthenticationPrincipal String callerEmail) {
-        return ResponseEntity.ok(userService.changePassword(request, callerEmail));
+        return sessionCookie.respond(HttpStatus.OK, userService.changePassword(request, callerEmail));
     }
 
     // LGPD access and portability: a JSON file with the caller's data (rate limited by AuthRateLimitFilter)
