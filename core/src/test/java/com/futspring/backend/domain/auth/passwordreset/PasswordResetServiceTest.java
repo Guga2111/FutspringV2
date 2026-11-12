@@ -1,6 +1,7 @@
 package com.futspring.backend.domain.auth.passwordreset;
 
 import com.futspring.backend.domain.notification.webpush.PushSubscriptionRepository;
+import com.futspring.backend.domain.user.TokensRevokedEvent;
 import com.futspring.backend.domain.user.User;
 import com.futspring.backend.domain.user.UserRepository;
 import com.futspring.backend.shared.exception.AppException;
@@ -108,6 +109,7 @@ class PasswordResetServiceTest {
         assertThat(user.getTokenVersion()).isEqualTo(1);
         verify(tokenRepository).invalidateActiveTokens(eq(user), any());
         verify(pushSubscriptionRepository).deleteAllByUserId(1L);
+        verify(eventPublisher).publishEvent(new TokensRevokedEvent(user.getEmail()));
     }
 
     @Test
@@ -121,6 +123,6 @@ class PasswordResetServiceTest {
         assertThat(user.getPassword()).isEqualTo(oldHash);
         assertThat(user.getTokenVersion()).isZero();
         verify(tokenRepository, never()).invalidateActiveTokens(any(), any());
-        verifyNoInteractions(pushSubscriptionRepository);
+        verifyNoInteractions(pushSubscriptionRepository, eventPublisher);
     }
 }

@@ -1,6 +1,7 @@
 package com.futspring.backend.domain.auth.passwordreset;
 
 import com.futspring.backend.domain.notification.webpush.PushSubscriptionRepository;
+import com.futspring.backend.domain.user.TokensRevokedEvent;
 import com.futspring.backend.domain.user.User;
 import com.futspring.backend.domain.user.UserRepository;
 import com.futspring.backend.shared.exception.AppException;
@@ -49,6 +50,8 @@ public class PasswordResetService {
         user.setPassword(passwordEncoder.encode(newPassword));
         // Revokes every JWT issued before (AccessTokenVerifier): the old sessions are logged out
         user.setTokenVersion(user.getTokenVersion() + 1);
+        // ...including open chat connections, closed after the commit (StompSessions)
+        eventPublisher.publishEvent(new TokensRevokedEvent(user.getEmail()));
         // ...and their devices stop receiving Web Push (each one subscribes again after logging in)
         pushSubscriptionRepository.deleteAllByUserId(user.getId());
         // Marks this token and any other pending one as used

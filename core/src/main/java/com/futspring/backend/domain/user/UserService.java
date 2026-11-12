@@ -13,6 +13,7 @@ import com.futspring.backend.domain.user.dto.ProfileDTO;
 import com.futspring.backend.domain.user.dto.PublicUserDTO;
 import com.futspring.backend.domain.user.dto.UpdateProfileRequest;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -36,6 +37,7 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final PushSubscriptionRepository pushSubscriptionRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     // Username containing the query (wildcards taken literally) or the exact e-mail, any case; public fields only
     @Transactional(readOnly = true)
@@ -118,6 +120,8 @@ public class UserService {
         user.setTokenVersion(user.getTokenVersion() + 1);
         userRepository.save(user);
         pushSubscriptionRepository.deleteAllByUserId(user.getId());
+        // Open chat connections (this one included) close after the commit; this device reconnects with the new token
+        eventPublisher.publishEvent(new TokensRevokedEvent(user.getEmail()));
         String token = jwtService.generateToken(user.getId(), user.getEmail(), user.getTokenVersion());
         return new AuthResponseDTO(token, UserResponseDTO.from(user));
     }
