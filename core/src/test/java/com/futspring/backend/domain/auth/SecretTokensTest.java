@@ -1,15 +1,15 @@
-package com.futspring.backend.domain.auth.passwordreset;
+package com.futspring.backend.domain.auth;
 
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-class ResetTokensTest {
+class SecretTokensTest {
 
     @Test
     void generate_returnsUrlSafeUniqueTokens() {
-        String first = ResetTokens.generate();
-        String second = ResetTokens.generate();
+        String first = SecretTokens.generate();
+        String second = SecretTokens.generate();
 
         assertThat(first).hasSize(43).matches("[A-Za-z0-9_-]+");
         assertThat(first).isNotEqualTo(second);
@@ -17,9 +17,9 @@ class ResetTokensTest {
 
     @Test
     void hash_isDeterministicHexSha256() {
-        assertThat(ResetTokens.hash("abc"))
+        assertThat(SecretTokens.hash("abc"))
                 .isEqualTo("ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad")
-                .isEqualTo(ResetTokens.hash("abc"));
-        assertThat(ResetTokens.hash("abd")).isNotEqualTo(ResetTokens.hash("abc"));
+                .isEqualTo(SecretTokens.hash("abc"));
+        assertThat(SecretTokens.hash("abd")).isNotEqualTo(SecretTokens.hash("abc"));
     }
 }

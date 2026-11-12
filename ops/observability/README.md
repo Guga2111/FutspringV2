@@ -104,6 +104,7 @@ the UI: change the YAML and redeploy (the workflow restarts Grafana, which reads
 | Container reiniciando | `changes(container_start_time_seconds{name="futspring_api"}[15m]) > 0` | — |
 | E-mail | `futspring_email_dropped_total` + `futspring_email_sent_total{result="failed"}` grew in 15 min | — |
 | Web Push | `futspring_webpush_sent_total{result="failed"}` grew by more than 10 in 15 min | — |
+| Sessões (Redis) | `futspring_session_refresh_total{result="error"}` + `futspring_session_open_total{result="error"}` grew in 5 min (Redis down: logins go out without a refresh cookie, refresh answers 503) | — |
 | Erros do front | more than 20 `event=client_error` lines in 10 min (Loki) | — |
 
 - A firing alert is repeated every 4 h (`policies.yml`); grouped by rule. A query that fails (Prometheus or Loki down)

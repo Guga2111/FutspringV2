@@ -1,9 +1,9 @@
 package com.futspring.backend.domain.auth;
 
-import com.futspring.backend.domain.auth.dto.AuthResponseDTO;
 import com.futspring.backend.domain.auth.dto.LoginRequestDTO;
 import com.futspring.backend.domain.auth.dto.RegisterRequestDTO;
-import com.futspring.backend.domain.auth.dto.UserResponseDTO;
+import com.futspring.backend.domain.auth.session.IssuedSession;
+import com.futspring.backend.domain.auth.session.RefreshSessionService;
 import com.futspring.backend.shared.exception.AppException;
 import com.futspring.backend.domain.user.User;
 import com.futspring.backend.domain.user.UserRepository;
@@ -25,10 +25,10 @@ public class AuthService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
-    private final JwtService jwtService;
+    private final RefreshSessionService refreshSessionService;
     private final Clock clock;
 
-    public AuthResponseDTO register(RegisterRequestDTO request) {
+    public IssuedSession register(RegisterRequestDTO request) {
         // A tab opened before the terms changed sends the old version: the user must read the new one first
         if (!LegalTerms.CURRENT_VERSION.equals(request.termsVersion())) {
             throw new AppException(HttpStatus.CONFLICT,
@@ -50,19 +50,15 @@ public class AuthService {
                 .termsAcceptedAt(Instant.now(clock))
                 .build();
 
-        User saved = userRepository.save(user);
-        String token = jwtService.generateToken(saved.getId(), saved.getEmail(), saved.getTokenVersion());
-        return new AuthResponseDTO(token, UserResponseDTO.from(saved));
+        return refreshSessionService.open(userRepository.save(user));
     }
 
-    public AuthResponseDTO login(LoginRequestDTO request) {
+    public IssuedSession login(LoginRequestDTO request) {
         User user = userRepository.findByEmail(request.email()).orElse(null);
         String hash = user == null ? DUMMY_HASH : user.getPassword();
         if (!passwordEncoder.matches(request.password(), hash) || user == null) {
             throw new AppException(HttpStatus.UNAUTHORIZED, "E-mail ou senha inválidos");
         }
-
-        String token = jwtService.generateToken(user.getId(), user.getEmail(), user.getTokenVersion());
-        return new AuthResponseDTO(token, UserResponseDTO.from(user));
+        return refreshSessionService.open(user);
     }
 }

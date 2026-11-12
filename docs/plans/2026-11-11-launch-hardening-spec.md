@@ -322,10 +322,20 @@ Para planejar um PR, rode o prompt dele numa sessão limpa (`/clear` antes). Ao 
 /plan-task docs/plans/2026-11-11-launch-hardening-spec.md "PR B1 — Redis"
 ```
 
-### [ ] PR B2 — API de refresh (`feat/session-refresh-api`)
+### [x] PR B2 — API de refresh (`feat/session-refresh-api`)
 - **Entrega:** sessões no Redis, cookie, `/auth/refresh`, `/auth/logout`, cookie no login/cadastro/troca de senha, métrica e alerta.
 - **Fora:** o TTL do access não muda.
 - **Docs:** BACKEND.md (Tokens, Security, CORS, Rate limiting, API reference, Known gaps), FRONTEND.md (tabela de API).
+- **Decisões:**
+  - Novo subpacote `domain/auth/session`: `RefreshSessionService` (Redis via `StringRedisTemplate`, valores JSON com o `JsonMapper`), `SessionCookie` (monta o `Set-Cookie`, `Path` derivado do caminho de `API_URL`) e `IssuedSession` (access + refresh). `AuthService.login/register` e `UserService.changePassword` passam a devolver `IssuedSession`; o controller só chama `sessionCookie.respond(...)`. O `ResetTokens` do reset de senha virou `auth/SecretTokens` (público) e gera/hasheia também o refresh token.
+  - **Redis fora no login/cadastro/troca de senha: responde o access sem cookie** (não falha). No B2 o front ainda vive do access de 7 dias, então derrubar o login por causa do Redis seria regressão; no B3 isso significa só "relogar depois que o access vencer". Conta em `futspring.session.open{result=error}` (métrica a mais que o spec: no B2 ninguém chama refresh, então só a métrica de refresh nunca dispararia o alerta).
+  - **Refresh com Redis fora → 503 mantendo o cookie** (não 401): o cliente do B3 distingue queda de sessão encerrada. Logout com Redis fora → 204 e cookie limpo; a sessão expira sozinha.
+  - O `Origin` é exigido pelo próprio serviço (ausente ou fora de `ALLOWED_ORIGINS` → 403, sem limpar o cookie): em produção app e API são a mesma origem, então o `CorsFilter` não barraria um `Origin` igual ao host. O CORS já tinha `allowCredentials(true)`.
+  - `/auth/refresh` e `/auth/logout` entram em `SecurityConfig.SESSION_COOKIE_PATHS`: o `JwtAuthFilter` ignora o `Authorization` (o cliente chama refresh justamente com o access vencido). Logout sem rate limit (só apaga).
+  - O teto de 90 dias é conferido também no relógio da aplicação (`absoluteExpiresAt` guardado na sessão), além do TTL do Redis; o `findById` do usuário confere `tokenVersion` e conta excluída.
+  - Alerta "Sessões (Redis)": `futspring_session_refresh_total{result="error"}` + `futspring_session_open_total{result="error"}` cresceram em 5 min (regra 10 do `rules.yml`; o smoke test conta as regras pelo arquivo).
+  - Testes: `RefreshSessionTest` com Redis real (Testcontainers, pulado sem Docker) e `@MockitoBean Clock` para o teto; `RefreshWithoutRedisTest` sempre roda (o `application.properties` de teste aponta o Redis para a porta 1, recusada na hora, em vez de `localhost:6379`, para não depender de um Redis local). Contract snapshots inalterados: a resposta continua `AuthResponseDTO`, o refresh token só vai no cookie.
+  - **Antes do merge no `main`:** nada novo de secret; `AUTH_COOKIE_SECURE` só existe no compose de dev.
 
 ```
 /plan-task docs/plans/2026-11-11-launch-hardening-spec.md "PR B2 — API de refresh"

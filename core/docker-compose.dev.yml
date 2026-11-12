@@ -23,6 +23,8 @@ services:
       APP_URL: ${APP_URL:-http://localhost:5173}
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:5173}
       API_URL: ${API_URL:-http://localhost:8080}
+      # the refresh cookie over plain http (production keeps Secure)
+      AUTH_COOKIE_SECURE: "false"
       # OpenAPI docs + Swagger UI (http://localhost:8080/swagger-ui.html); off in production
       API_DOCS_ENABLED: "true"
       # plain text logs in dev (production logs ECS JSON, see application.properties)

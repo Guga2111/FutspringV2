@@ -42,6 +42,12 @@ public class SecurityConfig {
      */
     public static final String CLIENT_ERRORS_PATH = "/api/v1/client-errors";
 
+    /**
+     * Routes that act on the refresh cookie, not on the caller (public under /api/v1/auth/**): JwtAuthFilter ignores the
+     * Authorization header, since the client calls them precisely when its access token expired.
+     */
+    public static final Set<String> SESSION_COOKIE_PATHS = Set.of("/api/v1/auth/refresh", "/api/v1/auth/logout");
+
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();

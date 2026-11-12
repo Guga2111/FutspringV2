@@ -3,6 +3,8 @@ package com.futspring.backend.domain.auth;
 import com.futspring.backend.domain.auth.dto.AuthResponseDTO;
 import com.futspring.backend.domain.auth.dto.LoginRequestDTO;
 import com.futspring.backend.domain.auth.dto.RegisterRequestDTO;
+import com.futspring.backend.domain.auth.session.RefreshSessionService;
+import com.futspring.backend.shared.config.CorsConfig;
 import com.futspring.backend.shared.config.JwtConfig;
 import com.futspring.backend.shared.exception.AppException;
 import com.futspring.backend.domain.user.User;
@@ -13,10 +15,14 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.util.ReflectionTestUtils;
+import tools.jackson.databind.json.JsonMapper;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -39,6 +45,7 @@ class AuthServiceTest {
 
     JwtService jwtService;
     AuthService authService;
+    RefreshSessionService refreshSessionService;
 
     @BeforeEach
     void setUp() {
@@ -47,7 +54,14 @@ class AuthServiceTest {
                 "test-secret-key-that-is-at-least-32-characters-long");
         ReflectionTestUtils.setField(jwtConfig, "expirationMs", 3600000L);
         jwtService = new JwtService(jwtConfig);
-        authService = new AuthService(userRepository, passwordEncoder, jwtService, CLOCK);
+        // the refresh session is written to a Redis stub (its behavior is in RefreshSessionTest)
+        StringRedisTemplate redis = mock(StringRedisTemplate.class);
+        @SuppressWarnings("unchecked")
+        ValueOperations<String, String> values = mock(ValueOperations.class);
+        lenient().when(redis.opsForValue()).thenReturn(values);
+        refreshSessionService = new RefreshSessionService(redis, JsonMapper.builder().build(), userRepository,
+                jwtService, new CorsConfig("http://localhost:5173"), CLOCK, new SimpleMeterRegistry());
+        authService = new AuthService(userRepository, passwordEncoder, refreshSessionService, CLOCK);
     }
 
     // --- register ---
@@ -63,7 +77,7 @@ class AuthServiceTest {
             return u;
         });
 
-        AuthResponseDTO result = authService.register(req);
+        AuthResponseDTO result = authService.register(req).auth();
 
         assertThat(result).isNotNull();
         assertThat(result.token()).isNotBlank();
@@ -74,7 +88,11 @@ class AuthServiceTest {
     void register_recordsTheAcceptedTermsVersionAndInstant() {
         RegisterRequestDTO req = new RegisterRequestDTO("alice", "alice@example.com", "password123", LegalTerms.CURRENT_VERSION);
         when(userRepository.findByEmail("alice@example.com")).thenReturn(Optional.empty());
-        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> {
+            User u = inv.getArgument(0);
+            ReflectionTestUtils.setField(u, "id", 1L);
+            return u;
+        });
 
         authService.register(req);
 
@@ -167,7 +185,7 @@ class AuthServiceTest {
             return u;
         });
 
-        AuthResponseDTO result = authService.register(req);
+        AuthResponseDTO result = authService.register(req).auth();
 
         assertThat(jwtService.extractAllClaims(result.token()).getSubject()).isEqualTo("dave@example.com");
         assertThat(jwtService.extractAllClaims(result.token()).get("userId", Long.class)).isEqualTo(99L);
@@ -188,7 +206,7 @@ class AuthServiceTest {
 
         when(userRepository.findByEmail("alice@example.com")).thenReturn(Optional.of(user));
 
-        AuthResponseDTO result = authService.login(req);
+        AuthResponseDTO result = authService.login(req).auth();
 
         assertThat(result.token()).isNotBlank();
         assertThat(result.user().email()).isEqualTo("alice@example.com");
@@ -201,7 +219,7 @@ class AuthServiceTest {
         when(userRepository.findByEmail("nobody@example.com")).thenReturn(Optional.empty());
 
         PasswordEncoder spyEncoder = spy(new BCryptPasswordEncoder());
-        AuthService service = new AuthService(userRepository, spyEncoder, jwtService, CLOCK);
+        AuthService service = new AuthService(userRepository, spyEncoder, refreshSessionService, CLOCK);
 
         assertThatThrownBy(() -> service.login(req))
                 .isInstanceOf(AppException.class)
@@ -241,7 +259,7 @@ class AuthServiceTest {
 
         when(userRepository.findByEmail("alice@example.com")).thenReturn(Optional.of(user));
 
-        AuthResponseDTO result = authService.login(req);
+        AuthResponseDTO result = authService.login(req).auth();
 
         assertThat(jwtService.extractAllClaims(result.token()).get("userId", Long.class)).isEqualTo(42L);
         assertThat(jwtService.extractAllClaims(result.token()).getSubject()).isEqualTo("alice@example.com");
