@@ -11,11 +11,14 @@ import { AuthProvider } from "./context/AuthContext.tsx"
 import { ThemedToaster } from "./components/ThemedToaster.tsx"
 import { PwaUpdater } from "./components/layout/PwaUpdater.tsx"
 import { captureInstallPrompt } from "./lib/installPrompt.ts"
+import { installErrorReporting } from "./lib/errorReporting.ts"
 
 // The theme class is applied by the inline script in index.html, before the first paint
 
 // Chrome can offer the install prompt before any page mounts
 captureInstallPrompt()
+// Uncaught errors and rejections go to the API (Loki); the ErrorBoundary reports render errors
+installErrorReporting()
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

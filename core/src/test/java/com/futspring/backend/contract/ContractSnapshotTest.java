@@ -15,6 +15,7 @@ import com.futspring.backend.domain.auth.dto.RegisterRequestDTO;
 import com.futspring.backend.domain.auth.dto.ResetPasswordRequestDTO;
 import com.futspring.backend.domain.chat.dto.MessageDTO;
 import com.futspring.backend.domain.chat.dto.SendMessageRequest;
+import com.futspring.backend.domain.telemetry.dto.ClientErrorRequestDTO;
 import com.futspring.backend.domain.daily.dto.CreateDailyRequestDTO;
 import com.futspring.backend.domain.daily.dto.DailyDetailDTO;
 import com.futspring.backend.domain.daily.dto.DailyListItemDTO;
@@ -132,7 +133,7 @@ class ContractSnapshotTest {
                 CreateDailyRequestDTO.class, SwapPlayersRequestDTO.class, UpdateDailyStatusRequestDTO.class,
                 UpdateTeamNameRequestDTO.class, UpdateTeamColorRequestDTO.class, MatchResultDTO.class,
                 FinalizeDailyRequestDTO.class, PopulateDailyRequestDTO.class, SaveTeamsRequestDTO.class,
-                UpdateProfileRequest.class, SendMessageRequest.class,
+                UpdateProfileRequest.class, SendMessageRequest.class, ClientErrorRequestDTO.class,
                 NotificationPreferenceDTO.class, UnsubscribeRequestDTO.class,
                 PushSubscriptionRequestDTO.class, RemovePushSubscriptionRequestDTO.class,
                 FinanceRequests.BulkAdjust.class,

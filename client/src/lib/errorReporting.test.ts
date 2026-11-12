@@ -1,0 +1,96 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+
+vi.mock("@/api/clientErrors", () => ({ sendClientError: vi.fn() }))
+
+import { sendClientError } from "@/api/clientErrors"
+import { buildReport, reportError, resetErrorReporting, stripUrlQueries } from "./errorReporting"
+
+const send = vi.mocked(sendClientError)
+
+function errorWith(message: string, stack: string) {
+  const error = new Error(message)
+  error.stack = stack
+  return error
+}
+
+beforeEach(() => {
+  resetErrorReporting()
+  send.mockReset()
+  send.mockResolvedValue(undefined)
+  vi.stubGlobal("window", { location: { pathname: "/reset-password", search: "?token=secret", hash: "#x" } })
+  vi.stubGlobal("navigator", { userAgent: "UA" })
+})
+
+afterEach(() => {
+  vi.unstubAllGlobals()
+})
+
+describe("stripUrlQueries", () => {
+  it("drops query and hash but keeps the frame's line and column", () => {
+    expect(stripUrlQueries("at f (https://app.test/assets/a.js?v=1#h:10:5)")).toBe("at f (https://app.test/assets/a.js:10:5)")
+    expect(stripUrlQueries("GET https://app.test/reset-password?token=secret failed")).toBe(
+      "GET https://app.test/reset-password failed",
+    )
+    expect(stripUrlQueries("at https://app.test:8080/a.js:1:2")).toBe("at https://app.test:8080/a.js:1:2")
+  })
+})
+
+describe("buildReport", () => {
+  it("sends the pathname only and strips URLs inside the stack", () => {
+    const report = buildReport(
+      errorWith("boom", "Error: boom\n    at https://app.test/auth?returnTo=%2Fhome:3:4"),
+      "BOUNDARY",
+    )
+
+    expect(report).toEqual({
+      message: "boom",
+      stack: "Error: boom\n    at https://app.test/auth:3:4",
+      path: "/reset-password",
+      release: "test",
+      userAgent: "UA",
+      source: "BOUNDARY",
+    })
+  })
+
+  it("truncates to the API's limits", () => {
+    const report = buildReport(errorWith("m".repeat(600), "s".repeat(5000)), "WINDOW")
+
+    expect(report?.message).toHaveLength(500)
+    expect(report?.stack).toHaveLength(4000)
+  })
+
+  it("describes values that aren't errors", () => {
+    expect(buildReport("texto", "PROMISE")?.message).toBe("texto")
+    expect(buildReport({ code: 1 }, "PROMISE")?.message).toBe('{"code":1}')
+    expect(buildReport(undefined, "PROMISE")?.message).toBe("undefined")
+  })
+
+  it("ignores browser noise", () => {
+    expect(buildReport("ResizeObserver loop completed with undelivered notifications.", "WINDOW")).toBeNull()
+    expect(buildReport("Script error.", "WINDOW")).toBeNull()
+    expect(buildReport("  ", "WINDOW")).toBeNull()
+  })
+})
+
+describe("reportError", () => {
+  it("sends each message + stack once", () => {
+    reportError(errorWith("boom", "stack 1"), "WINDOW")
+    reportError(errorWith("boom", "stack 1"), "PROMISE")
+    reportError(errorWith("boom", "stack 2"), "WINDOW")
+
+    expect(send).toHaveBeenCalledTimes(2)
+  })
+
+  it("sends at most 10 per page load", () => {
+    for (let i = 0; i < 15; i++) reportError(new Error(`erro ${i}`), "WINDOW")
+
+    expect(send).toHaveBeenCalledTimes(10)
+  })
+
+  it("ignores a failed send", async () => {
+    send.mockRejectedValue(new Error("Network Error"))
+
+    expect(() => reportError(new Error("boom"), "WINDOW")).not.toThrow()
+    await Promise.resolve()
+  })
+})

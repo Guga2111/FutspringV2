@@ -67,6 +67,19 @@ class StructuredLoggingTest {
         assertThat(event.path("error").path("stack_trace").asString()).contains("boom", "StructuredLoggingTest");
     }
 
+    // The client error line (domain/telemetry): key-value pairs are fields of the line, so Loki filters on them
+    @Test
+    void keyValuePairsAreFieldsOfTheLine(CapturedOutput output) throws IOException {
+        try (ConfigurableApplicationContext ignored = start(mainLoggingProperties())) {
+            log.atWarn().addKeyValue("event", "client_error").addKeyValue("client_path", "/home").log(MARKER);
+        }
+
+        String line = output.getOut().lines().filter(l -> l.contains(MARKER)).findFirst().orElseThrow();
+        JsonNode event = JsonMapper.builder().build().readTree(line);
+        assertThat(event.path("event").asString()).isEqualTo("client_error");
+        assertThat(event.path("client_path").asString()).isEqualTo("/home");
+    }
+
     @Test
     void anEmptyFormatLogsPlainText(CapturedOutput output) throws IOException {
         Map<String, Object> properties = mainLoggingProperties();

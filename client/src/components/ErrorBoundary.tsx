@@ -1,5 +1,7 @@
-import { Component } from 'react'
-import type { ReactNode } from 'react'
+import { Component } from "react"
+import type { ErrorInfo, ReactNode } from "react"
+import { Button } from "@/components/ui/button"
+import { reportError } from "@/lib/errorReporting"
 
 interface Props {
   children: ReactNode
@@ -16,8 +18,9 @@ class ErrorBoundary extends Component<Props, State> {
     return { hasError: true }
   }
 
-  componentDidCatch(error: Error, info: React.ErrorInfo) {
+  componentDidCatch(error: Error, info: ErrorInfo) {
     console.error(error, info)
+    reportError(error, "BOUNDARY")
   }
 
   render() {
@@ -25,12 +28,7 @@ class ErrorBoundary extends Component<Props, State> {
       return (
         <div className="flex flex-col items-center justify-center min-h-screen gap-4">
           <p className="text-lg font-semibold">Algo ocorreu errado</p>
-          <button
-            className="px-4 py-2 rounded-full bg-primary text-primary-foreground hover:opacity-90"
-            onClick={() => window.location.reload()}
-          >
-            Recarregue
-          </button>
+          <Button onClick={() => window.location.reload()}>Recarregue</Button>
         </div>
       )
     }
