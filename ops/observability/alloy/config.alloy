@@ -1,0 +1,54 @@
+// Collects the stdout/stderr of every container on the host and pushes it to Loki.
+// Docker is reached through docker-proxy (read-only API: containers and their logs), never the socket itself.
+
+discovery.docker "containers" {
+  host             = "tcp://docker-proxy:2375"
+  refresh_interval = "30s"
+}
+
+// Labels: the compose service ("futspring-api", "grafana"…), the compose project and the container name.
+discovery.relabel "containers" {
+  targets = discovery.docker.containers.targets
+
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+    target_label  = "service"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_project"]
+    target_label  = "project"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex         = "/(.*)"
+    target_label  = "container"
+  }
+}
+
+loki.source.docker "containers" {
+  host          = "tcp://docker-proxy:2375"
+  targets       = discovery.docker.containers.targets
+  relabel_rules = discovery.relabel.containers.rules
+  forward_to    = [loki.process.containers.receiver]
+}
+
+// The API logs ECS JSON (log.level nested): its level becomes a label. Lines that aren't JSON pass unchanged.
+loki.process "containers" {
+  stage.json {
+    expressions = { level = "log.level" }
+  }
+
+  stage.labels {
+    values = { level = "" }
+  }
+
+  forward_to = [loki.write.loki.receiver]
+}
+
+loki.write "loki" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}

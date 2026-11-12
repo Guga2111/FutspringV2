@@ -256,9 +256,17 @@ Para planejar um PR, rode o prompt dele numa sessão limpa (`/clear` antes). Ao 
 /plan-task docs/plans/2026-11-11-launch-hardening-spec.md "PR A6 — Revogação do chat"
 ```
 
-### [ ] PR C1 — Logs estruturados e Loki (`feat/logs-loki`)
+### [x] PR C1 — Logs estruturados e Loki (`feat/logs-loki`)
 - **Entrega:** logs ECS em JSON, auditoria de PII nos logs, Loki + Alloy + datasource.
 - **Docs:** BACKEND.md (Observability), `ops/observability/README.md`.
+- **Decisões:**
+  - **ECS no `application.properties`** (`logging.structured.format.console=ecs`, `logging.structured.ecs.service.name=futspring-api`: o "service" do spec é o `service.name` do ECS). Dev em texto (decisão do dono): `docker-compose.dev.yml` passa `LOGGING_STRUCTURED_FORMAT_CONSOLE: ""`; valor vazio volta ao padrão do Boot (coberto pelo teste). Os testes continuam em texto (o `application.properties` de teste não define o formato). O ECS do Boot 4.1 é aninhado (`log.level`, `service.name`, `error.stack_trace` na mesma linha).
+  - `StructuredLoggingTest` sobe uma `SpringApplication` mínima não-web com as linhas `logging.*` do arquivo principal e lê a saída com `OutputCaptureExtension`. Depois de cada caso, o logging volta a texto e é marcado como não inicializado (`cleanUp`), senão o próximo contexto da JVM não se reconfigura.
+  - **Socket proxy em vez de `docker.sock:ro`** (decisão do dono, diferente da seção C1): `:ro` não limita a API do Docker. `tecnativa/docker-socket-proxy:v0.5.0` com `CONTAINERS=1`, `NETWORKS=1` (o `discovery.docker` lê `/networks` para os labels; sem ele, 403 e nenhum alvo), `POST=0`, numa rede `internal` só com o Alloy. Conferido localmente: `POST /containers/create` e `GET /images/json` → 403.
+  - Versões: `grafana/loki:3.7.9`, `grafana/alloy:v1.21.3`. `mem_limit` Loki 384m, Alloy 192m, proxy 64m (medidos parados: ~80, ~100 e ~25 MiB).
+  - Alloy coleta **todos** os containers do host (o stack é compartilhado), labels `service` (serviço do compose), `project`, `container` e `level` (de `log.level` quando a linha é JSON). O resto do JSON é lido com `| json` no LogQL.
+  - O deploy reinicia `loki` e `alloy` junto com o `prometheus` (leem a config só no start) e o smoke test exige o `/ready` do Loki (lido de dentro do container do Prometheus).
+  - **Auditoria dos 37 `log.*`:** só o `NoopEmailSender` logava PII (destinatário; o assunto também leva nomes) → agora uma mensagem fixa. A mensagem do PgJDBC numa violação de unicidade traz `Detail: Key (lower(email))=(…)`, logada pelo Hibernate e pelo `GlobalExceptionHandler`: resolvido na origem com `spring.datasource.hikari.data-source-properties.logServerErrorDetail=false` (o nome da constraint continua). Os demais logam ids, nomes UUID e contadores. `RestClientException` do Resend (corpo de erro do provedor) fica, sem o destinatário. A regra "sem e-mail, token, senha, chave Pix ou corpo em log" entrou nas Conventions do BACKEND.md.
 
 ```
 /plan-task docs/plans/2026-11-11-launch-hardening-spec.md "PR C1 — Logs estruturados e Loki"

@@ -1,6 +1,6 @@
 # Observability stack (VPS)
 
-Prometheus, Grafana, node-exporter and cAdvisor, shared by every project on the VPS. Today only Futspring is
+Prometheus, Grafana, node-exporter, cAdvisor and the logs (Loki + Alloy), shared by every project on the VPS. Today only Futspring is
 scraped. Deployed by `.github/workflows/deploy-observability.yml` (push to `main` touching `ops/observability/**`,
 or run it by hand) to `~/observability` on the VPS; independent from the API deploy.
 
@@ -10,15 +10,20 @@ or run it by hand) to `~/observability` on the VPS; independent from the API dep
 | grafana | `grafana/grafana-oss:13.0.2` | `127.0.0.1:8088` | 384m | login only (no sign-up, no anonymous), volume `grafana_data` |
 | node-exporter | `prom/node-exporter:v1.12.1` | none | 64m | host `/proc`, `/sys`, `/` read-only |
 | cadvisor | `ghcr.io/google/cadvisor:v0.60.6` | none | 256m | Docker containers only, housekeeping 30 s, heavy metrics off (disk usage included: it walks every container's files) |
+| loki | `grafana/loki:3.7.9` | none | 384m | single binary on disk, retention 14 days, volume `loki_data` (~80 MiB idle) |
+| alloy | `grafana/alloy:v1.21.3` | none | 192m | tails every container's stdout/stderr through docker-proxy, pushes to Loki; read positions in volume `alloy_data` (~100 MiB idle) |
+| docker-proxy | `tecnativa/docker-socket-proxy:v0.5.0` | none | 64m | the only container of the logs with the Docker socket; GET `/containers/**` and `/networks` only, on an internal network with Alloy |
 
-Prometheus is never exposed. Grafana is only reachable through nginx at `https://grafana.luisgosampaio.com`.
+Prometheus and Loki are never exposed. Grafana is only reachable through nginx at `https://grafana.luisgosampaio.com`.
 
 ## Files
 
 ```
-docker-compose.yml                      the four containers, on the external "observability" network
+docker-compose.yml                      the seven containers, on the external "observability" network (docker-proxy on its own internal one)
 prometheus/prometheus.yml               scrape jobs
-grafana/provisioning/datasources/       Prometheus datasource (uid "prometheus")
+loki/loki.yml                           Loki: filesystem storage, tsdb v13, retention 336h (compactor)
+alloy/config.alloy                      Docker discovery → labels → level from the JSON → Loki
+grafana/provisioning/datasources/       Prometheus (uid "prometheus") and Loki (uid "loki") datasources
 grafana/provisioning/dashboards/        dashboards.yml + json/: Futspring (ours), JVM (Micrometer) 4701,
                                         Node Exporter Full 1860, Cadvisor exporter 14282 (grafana.com, datasource
                                         references pointed at uid "prometheus")
@@ -47,8 +52,37 @@ container name `futspring_api`: Tomcat answers 400 to a `Host` header with an un
 To add another project: attach its container to the `observability` network, expose its metrics on a port that isn't
 published, and add a job to `prometheus/prometheus.yml`.
 
-The workflow's smoke test requires Grafana's `/api/health` and the stack's own targets (prometheus, node-exporter,
+The workflow's smoke test requires Grafana's `/api/health`, Loki's `/ready` and the stack's own targets (prometheus, node-exporter,
 cadvisor). A project target that is down only warns, because on a push to `main` the API deploy runs at the same time.
+
+## Logs (Loki)
+
+Alloy discovers every container on the host (`discovery.docker`), reads its output (`loki.source.docker`) and pushes
+it to `loki:3100`. Labels, all low cardinality:
+
+| Label | From |
+|-------|------|
+| `service` | the compose service (`com.docker.compose.service`): `futspring-api`, `grafana`, `loki`… |
+| `project` | the compose project: `futspring`, `observability` |
+| `container` | the container name |
+| `level` | `log.level` of a JSON line (the API logs ECS JSON); absent on plain lines |
+
+Everything else stays in the line; read it with `| json` (dots become `_`). In Grafana → Explore → Loki:
+
+```logql
+{service="futspring-api", level="ERROR"}
+{service="futspring-api"} | json | log_logger =~ ".*WebPushDispatcher"
+sum by (level) (count_over_time({service="futspring-api"}[5m]))
+```
+
+**Why docker-proxy:** mounting `/var/run/docker.sock:ro` doesn't make the Docker API read-only (`:ro` only applies to
+file operations on the socket), and whoever talks to the socket can start a privileged container. The proxy is the
+only one with the socket and answers 403 to anything but `GET /containers/**` (list, inspect, logs) and
+`GET /networks` (discovery reads them for its labels). cAdvisor still mounts `/var/run` for its own reasons.
+
+Loki keeps 14 days (`retention_period`, applied by the compactor) and refuses lines older than 7 days. Its `/ready`
+is part of the deploy's smoke test. Docker still keeps the last 30 MB per container (`json-file`), so
+`docker logs` keeps working.
 
 ## Grafana behind nginx (manual, once)
 
@@ -87,3 +121,6 @@ GRAFANA_ADMIN_PASSWORD=local-pass docker compose up -d     # Grafana on http://l
 ```
 
 For the API target, run the API container on the `observability` network with the alias `futspring-api`.
+Logs of every local container show up in Explore → Loki after ~30 s (Alloy's discovery interval). The dev compose
+logs plain text (`LOGGING_STRUCTURED_FORMAT_CONSOLE=""`), so its lines have no `level` label; drop that variable
+to see the production JSON.
