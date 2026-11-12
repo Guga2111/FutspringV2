@@ -307,9 +307,16 @@ Para planejar um PR, rode o prompt dele numa sessão limpa (`/clear` antes). Ao 
 /plan-task docs/plans/2026-11-11-launch-hardening-spec.md "PR C3 — Alertas no Telegram"
 ```
 
-### [ ] PR B1 — Redis (`feat/session-redis`)
+### [x] PR B1 — Redis (`feat/session-redis`)
 - **Entrega:** Redis em dev/prod com AOF e senha, starter, configuração, healthcheck no deploy, Testcontainers.
 - **Docs:** BACKEND.md (Stack, Configuration, CI/CD, secrets).
+- **Decisões:**
+  - Imagem `redis:7.4.12-alpine` (último patch da 7.4 no Docker Hub em 2026-11-12). Flags: `--appendonly yes`, `--requirepass "$REDIS_PASSWORD"` lido do ambiente do container (`sh -c`, `$$` escapa a interpolação do compose), `--maxmemory 64mb` com `noeviction` (cheio recusa escrita em vez de derrubar sessões) sob `mem_limit: 128m` (folga para o fork da reescrita do AOF). Volume nomeado `redis_data`. Healthcheck `redis-cli ping` com `REDISCLI_AUTH` (a senha não vai na linha de comando do `redis-cli`). Conferido localmente: sem senha → `NOAUTH`, AOF gravando em `/data/appendonlydir`, `healthy`.
+  - **Sem `depends_on` da API no Redis:** o Redis não é necessário para subir nem para o readiness; um Redis quebrado não impede a API de subir. O `deploy.sh` espera os dois `healthy` (Redis primeiro) com uma função `wait_healthy` e falha se algum não ficar.
+  - **`management.health.redis.enabled=false`:** além de fora do readiness (já era assim por padrão), o Redis também fica fora do `/actuator/health` raiz; senão o `ActuatorExposureTest` (que exige `UP` sem Redis) e qualquer leitura do health cairiam com o Redis fora. A queda do Redis será vista pela métrica/alerta de refresh do B2.
+  - `spring.data.redis.connect-timeout` e `timeout` de 2 s (o refresh falha rápido no B2); `spring.data.redis.repositories.enabled=false` (só `RedisTemplate`; evita o Spring Data varrer os repositórios JPA de novo).
+  - **`REDIS_PASSWORD` obrigatório no `deploy.yml`** (falha cedo, como `JWT_SECRET`) e no compose de prod (`${REDIS_PASSWORD:?}`). `REDIS_HOST` vem fixo do compose (`futspring-redis`), não do `.env`. Senha em hex (`openssl rand -hex 32`): o compose interpola `$` nos valores do `.env`. **Criar o secret `REDIS_PASSWORD` antes do merge no `main`.**
+  - Teste com `GenericContainer` + `@DynamicPropertySource` (como o `FlywayMigrationTest`), sem `spring-boot-testcontainers`. Com o health do Redis ligado o teste falha (conferido).
 
 ```
 /plan-task docs/plans/2026-11-11-launch-hardening-spec.md "PR B1 — Redis"

@@ -27,12 +27,15 @@ services:
       API_DOCS_ENABLED: "true"
       # plain text logs in dev (production logs ECS JSON, see application.properties)
       LOGGING_STRUCTURED_FORMAT_CONSOLE: ""
+      REDIS_HOST: futspring-redis-dev
+      REDIS_PASSWORD: dev-redis-password
     volumes:
       - ./uploads:/app/uploads
       - ./finance-receipts:/app/finance-receipts
       - ./finance-qr:/app/finance-qr
     depends_on:
       - futspring-postgres-dev
+      - futspring-redis-dev
 
   futspring-postgres-dev:
     # same major version as production (Supabase). A volume created by Postgres 15 can't be opened:
@@ -48,5 +51,22 @@ services:
     volumes:
       - postgres_data_dev:/var/lib/postgresql/data
 
+  futspring-redis-dev:
+    # Same image and flags as production; no published port (only the API reaches it)
+    image: redis:7.4.12-alpine
+    container_name: futspring_redis_dev
+    environment:
+      REDIS_PASSWORD: dev-redis-password
+    command: ["sh", "-c", "exec redis-server --appendonly yes --requirepass \"$$REDIS_PASSWORD\" --maxmemory 64mb --maxmemory-policy noeviction"]
+    healthcheck:
+      test: ["CMD-SHELL", "REDISCLI_AUTH=\"$$REDIS_PASSWORD\" redis-cli ping | grep -q PONG"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    mem_limit: 128m
+    volumes:
+      - redis_data_dev:/data
+
 volumes:
   postgres_data_dev:
+  redis_data_dev:
