@@ -14,6 +14,7 @@ import com.futspring.backend.domain.user.dto.DeletionBlockerDTO;
 import com.futspring.backend.shared.exception.AppException;
 import com.futspring.backend.shared.helper.UserAuthenticationHelper;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -51,6 +52,7 @@ public class AccountDeletionService {
     private final PushSubscriptionRepository pushSubscriptionRepository;
     private final FileUploadService fileUploadService;
     private final Clock clock;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional(readOnly = true)
     public List<DeletionBlockerDTO> blockers(String callerEmail) {
@@ -77,6 +79,8 @@ public class AccountDeletionService {
         userTourRepository.deleteByUserId(user.getId());
         pushSubscriptionRepository.deleteAllByUserId(user.getId());
 
+        // Open chat connections close after the commit; they were opened with the e-mail replaced below
+        eventPublisher.publishEvent(new TokensRevokedEvent(user.getEmail()));
         fileUploadService.deleteImageAfterCommit(user.getImage());
         fileUploadService.deleteImageAfterCommit(user.getBackgroundImage());
         user.setEmail("deleted-" + user.getId() + "@invalid");

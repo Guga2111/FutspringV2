@@ -242,9 +242,15 @@ Para planejar um PR, rode o prompt dele numa sessão limpa (`/clear` antes). Ao 
 /plan-task docs/plans/2026-11-11-launch-hardening-spec.md "PR A5 — Uploads públicos"
 ```
 
-### [ ] PR A6 — Revogação do chat (`fix/stomp-revocation`)
+### [x] PR A6 — Revogação do chat (`fix/stomp-revocation`)
 - **Entrega:** registro de sessões, fechamento na remoção de membro e na mudança de `tokenVersion`.
 - **Docs:** BACKEND.md (WebSocket, Known gaps).
+- **Decisões:**
+  - **Na remoção de membro a conexão não é fechada** (decisão do dono, diferente da seção A6): o servidor manda um `UNSUBSCRIBE` ao broker para as inscrições do removido em `/topic/pelada/{id}`. O Spring responde a um SUBSCRIBE recusado com ERROR e fecha a conexão, e o `RealtimeProvider` zera as tentativas a cada CONNECT. Fechando, um removido ainda na página da pelada reconectaria em loop a cada 1–4 s e ficaria sem o sino. Assim o sino continua, o `REMOVED_FROM_PELADA` chega ao vivo e o envio ao chat já dá 403 no `ChatService`. Sem mudança no front.
+  - **Mudança de `tokenVersion`** fecha todas as conexões do usuário (`POLICY_VIOLATION`), como no spec. O evento é `TokensRevokedEvent(email)` em `domain/user` (ao lado de `User`, dono do `tokenVersion`; dois dos três publicadores estão lá). É publicado no reset, na troca de senha e na exclusão; a exclusão publica **antes** de trocar o e-mail, porque as sessões foram abertas com o original. A troca de senha fecha também a conexão de quem trocou, que reconecta com o token novo.
+  - Uma classe só, `domain/auth/StompSessions` (auth passa de 9 para 10 classes): o decorator guarda `sessionId → WebSocketSession`. Sessões e inscrições do usuário vêm do `SimpUserRegistry` do Spring (chave = e-mail), sem mapa próprio. Os dois listeners são `@TransactionalEventListener`, então um rollback não mexe em nada. `SimpUserRegistry` e `SimpMessagingTemplate` entram por `ObjectProvider` para quebrar o ciclo com `WebSocketConfig`.
+  - O `UNSUBSCRIBE` do servidor não atualiza o `DefaultSimpUserRegistry` (ele só acompanha frames do cliente); a entrada velha é inofensiva. Um removido e reconvidado com a página aberta só volta a receber o tópico quando o chat se inscreve de novo (ao abrir a pelada ou reconectar).
+  - `StompRevocationTest` usa um cliente SockJS/STOMP real, sem transação de teste, e apaga o que gravou (o H2 é compartilhado entre contextos). Com os listeners desligados, os 4 testes de revogação falham.
 
 ```
 /plan-task docs/plans/2026-11-11-launch-hardening-spec.md "PR A6 — Revogação do chat"

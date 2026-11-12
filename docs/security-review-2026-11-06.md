@@ -9,7 +9,7 @@ Severidade: **Alta** (exploração simples, impacto em dados ou contas), **Médi
 | 1 | Busca de usuários lista todas as contas e funciona como oráculo de e-mail | Alta | Corrigido (PR A1) |
 | 2 | Rate limit de login contornável com variação de URL | Alta | Confirmado e corrigido (PR A2) |
 | 3 | IP do rate limit forjável por `X-Forwarded-For` | Alta / Média | Confirmado no nginx da VPS; corrigido (PR A2: `RemoteIpValve` + `ops/nginx/futspring.conf`, nginx aplicado à mão) |
-| 4 | Membro removido continua recebendo o chat | Média | Confirmado |
+| 4 | Membro removido continua recebendo o chat | Média | Corrigido (PR A6: após o commit, o removido perde a inscrição em `/topic/pelada/{id}` sem fechar a conexão; reset de senha, troca de senha e exclusão de conta fecham as conexões do usuário) |
 | 5 | JWT de 7 dias em `localStorage`, sem revogação por sessão | Média | Confirmado |
 | 6 | Upload público confia no Content-Type e não remove EXIF | Média | Corrigido (PR A5: decodificado pelo conteúdo, tipo declarado ≠ real → 400, regravado sem EXIF/GPS/ICC com a orientação aplicada); arquivos enviados antes mantêm os metadados |
 | 7 | `/files/**` público e permanente | Média / Baixa | Risco aceito e documentado (PR A5, BACKEND.md → Uploads); fotos da pelada e de campeão apagadas na exclusão |
