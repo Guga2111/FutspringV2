@@ -290,9 +290,18 @@ Para planejar um PR, rode o prompt dele numa sessão limpa (`/clear` antes). Ao 
 /plan-task docs/plans/2026-11-11-launch-hardening-spec.md "PR C2 — Erros do frontend"
 ```
 
-### [ ] PR C3 — Alertas no Telegram (`feat/grafana-alerts`)
+### [x] PR C3 — Alertas no Telegram (`feat/grafana-alerts`)
 - **Entrega:** contact point e regras provisionadas, secrets no workflow.
 - **Docs:** `ops/observability/README.md`, BACKEND.md (Observability, tabela de secrets).
+- **Decisões:**
+  - Três arquivos em `grafana/provisioning/alerting/`: `contact-points.yml`, `policies.yml` (tudo → Telegram, agrupado por regra, repete a cada 4 h) e `rules.yml` (grupo `futspring`, pasta Futspring, avaliação a cada 1 min). Cada regra: query A instantânea + threshold C (`__expr__`), uid fixo, `summary` estático em pt-BR. Sem template de mensagem próprio: o padrão do Telegram já traz valor, labels e `summary`. Nada de `$` nas anotações (o provisioning expande `$VARS`).
+  - **O job é `futspring-api`**, não `futspring` como na tabela acima: `up{job="futspring-api"}`. As métricas da API filtram por `application="futspring"`, as do cAdvisor por `name="futspring_api"` (como o dashboard).
+  - **Chat id escrito no arquivo pelo workflow**, não por variável de ambiente: o Grafana relê como YAML o valor expandido de `$VAR`, então um id numérico vira número e o contact point é recusado (aspas não resolvem; testado no Grafana 13.0.2). O `contact-points.yml` versionado tem `__TELEGRAM_CHAT_ID__`; o workflow valida `^-?[0-9]+$` e troca com `sed` antes do rsync. O token vai pelo `.env` (`TELEGRAM_BOT_TOKEN`, sempre string por ter `:`). Os dois secrets são obrigatórios: sem eles o deploy falha cedo (um Telegram sem token derruba o Grafana). **Criar o bot e os secrets antes do merge no `main`.**
+  - O deploy reinicia também o `grafana` (provisioning de alerting só é lido no start) e o smoke test exige todas as regras de `rules.yml` carregadas (`/api/v1/provisioning/alert-rules`, senha lida do `.env` da VPS).
+  - **Container reiniciando ignora deploys:** `changes(container_start_time_seconds{name="futspring_api"}[15m]) > 0`. Um `restart` mantém o id do container (mesma série muda); o deploy recria (série nova, `id` diferente). **Não deu para verificar localmente** (o cAdvisor no OrbStack não enxerga containers) nem na VPS (leitura de produção negada nesta sessão): conferir depois de um deploy no Explore; se disparar a cada deploy, aceitar ou trocar a regra.
+  - **Disco** por tipo de filesystem (`ext4|xfs|btrfs`, fora `/boot`) em vez de `mountpoint="/"`: sem o `/` a regra ficaria vazia e calada. Duração 10 min (o spec não dava).
+  - 5xx com `rate[5m]` e mínimo de 0,2 req/s; heap dividido só pelos pools com máximo > 0 (G1 informa −1 em Eden/Survivor). "Sem dados" só alerta em "API fora"; erro de consulta (Prometheus/Loki fora) notifica como erro.
+  - Validado com o stack local: Grafana sobe, 9 regras carregadas e avaliando sem erro, "API fora" dispara sem a API, 21 linhas `event=client_error` enviadas ao Loki disparam "Erros do front" e o Grafana tenta entregar ao Telegram (falha esperada com token falso). **A entrega real no celular fica para o dono** (Contact points → telegram → Test depois do deploy).
 
 ```
 /plan-task docs/plans/2026-11-11-launch-hardening-spec.md "PR C3 — Alertas no Telegram"

@@ -54,21 +54,33 @@ jobs:
             StrictHostKeyChecking yes
           EOF2
 
-      - name: Write .env from secrets
+      - name: Write .env and the Telegram chat id from secrets
         env:
           GRAFANA_ADMIN_PASSWORD: ${{ secrets.GRAFANA_ADMIN_PASSWORD }}
           GRAFANA_ROOT_URL: ${{ vars.GRAFANA_ROOT_URL || 'https://grafana.luisgosampaio.com' }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
           set -euo pipefail
           umask 077
-          if [[ -z "${GRAFANA_ADMIN_PASSWORD}" ]]; then
-            echo "Missing required secret: GRAFANA_ADMIN_PASSWORD"
+          # without the Telegram pair the contact point is invalid and Grafana refuses to start
+          for name in GRAFANA_ADMIN_PASSWORD TELEGRAM_BOT_TOKEN TELEGRAM_CHAT_ID; do
+            if [[ -z "${!name}" ]]; then
+              echo "Missing required secret: ${name}"
+              exit 1
+            fi
+          done
+          if [[ ! "${TELEGRAM_CHAT_ID}" =~ ^-?[0-9]+$ ]]; then
+            echo "TELEGRAM_CHAT_ID must be the numeric chat id (README → Alerts)"
             exit 1
           fi
           {
             printf 'GRAFANA_ADMIN_PASSWORD=%s\n' "$GRAFANA_ADMIN_PASSWORD"
             printf 'GRAFANA_ROOT_URL=%s\n' "$GRAFANA_ROOT_URL"
+            printf 'TELEGRAM_BOT_TOKEN=%s\n' "$TELEGRAM_BOT_TOKEN"
           } > ops/observability/.env
+          # Grafana re-types an env-expanded numeric value, so the chat id goes into the file (contact-points.yml)
+          sed -i "s/__TELEGRAM_CHAT_ID__/${TELEGRAM_CHAT_ID}/" ops/observability/grafana/provisioning/alerting/contact-points.yml
 
       - name: Upload and start the stack
         run: |
@@ -82,8 +94,9 @@ jobs:
           chmod 600 .env
           docker network create observability >/dev/null 2>&1 || true
           docker compose up -d --remove-orphans
-          # they read their config files only at start (a bind-mounted file change doesn't recreate the container)
-          docker compose restart prometheus loki alloy
+          # they read their config files only at start (a bind-mounted file change doesn't recreate the container);
+          # Grafana reloads dashboards by itself but reads the alerting provisioning only at start
+          docker compose restart prometheus loki alloy grafana
           ENDSSH
 
       # Grafana answers on 127.0.0.1:8088 only, so it is checked over SSH. The stack's own targets must be up; a
@@ -93,6 +106,7 @@ jobs:
         run: |
           set -uo pipefail
           STACK_JOBS="prometheus node-exporter cadvisor"
+          EXPECTED_RULES=$(grep -c '^      - uid: ' ops/observability/grafana/provisioning/alerting/rules.yml)
           for attempt in $(seq 1 12); do
             grafana=$(ssh "${VPS_USER}@${VPS_IP}" "curl -s -o /dev/null -w '%{http_code}' --max-time 5 http://127.0.0.1:8088/api/health" || true)
             targets=$(ssh "${VPS_USER}@${VPS_IP}" "docker exec prometheus wget -qO- localhost:9090/api/v1/targets" || true)
@@ -103,14 +117,17 @@ jobs:
             done
             # Loki isn't scraped: its /ready is read from the Prometheus container (same network, has wget)
             loki=$(ssh "${VPS_USER}@${VPS_IP}" "docker exec prometheus wget -qO- http://loki:3100/ready" 2>/dev/null || true)
-            if [[ "$grafana" == "200" && -z "$stack_down" && "$loki" == ready* ]]; then
-              echo "Grafana 200, Loki ready and the stack's targets up (attempt ${attempt})."
+            # the provisioned alert rules (grafana/provisioning/alerting/rules.yml) must all be loaded
+            rules=$(ssh "${VPS_USER}@${VPS_IP}" 'pw=$(grep "^GRAFANA_ADMIN_PASSWORD=" ~/observability/.env | cut -d= -f2-); curl -s --max-time 5 -u "admin:${pw}" http://127.0.0.1:8088/api/v1/provisioning/alert-rules' \
+              | python3 -c "import sys,json; print(len(json.load(sys.stdin)))" 2>/dev/null || echo "unreadable")
+            if [[ "$grafana" == "200" && -z "$stack_down" && "$loki" == ready* && "$rules" == "$EXPECTED_RULES" ]]; then
+              echo "Grafana 200, ${rules} alert rules, Loki ready and the stack's targets up (attempt ${attempt})."
               if [[ -n "${down// /}" ]]; then
                 echo "::warning::Prometheus targets still down: ${down} (a project deploy may still be running)."
               fi
               exit 0
             fi
-            echo "Not ready yet: grafana=${grafana} loki=${loki:-no} down=${down:-none} (attempt ${attempt}/12), retrying in 10s..."
+            echo "Not ready yet: grafana=${grafana} rules=${rules} loki=${loki:-no} down=${down:-none} (attempt ${attempt}/12), retrying in 10s..."
             sleep 10
           done
           echo "Smoke test failed after 2 minutes."

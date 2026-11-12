@@ -1,0 +1,11 @@
+# Every alert goes to Telegram. Provisioning replaces the whole policy tree (there is no other one).
+apiVersion: 1
+
+policies:
+  - orgId: 1
+    receiver: telegram
+    group_by: [grafana_folder, alertname]
+    group_wait: 30s
+    group_interval: 5m
+    # a problem that keeps firing is repeated every 4 hours
+    repeat_interval: 4h
