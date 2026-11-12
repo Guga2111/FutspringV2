@@ -31,6 +31,8 @@ services:
       BILLING_PIX_NAME: ${BILLING_PIX_NAME:-}
       BILLING_PIX_MERCHANT_NAME: ${BILLING_PIX_MERCHANT_NAME:-}
       BILLING_PIX_CITY: ${BILLING_PIX_CITY:-}
+      REDIS_HOST: futspring-redis
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
       # DDL_AUTO is intentionally absent: Flyway owns the schema, Hibernate validates it
     volumes:
       # owned by uid 10001 (the image's user); deploy.sh chowns it
@@ -47,6 +49,38 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+    # No depends_on: Redis is not needed to start or be ready (only refreshing sessions uses it).
+    # deploy.sh waits for both containers to be healthy
+
+  futspring-redis:
+    # Refresh-token sessions. AOF on, so a restart doesn't log everyone out; no published port,
+    # only on the project network (the API's default network)
+    image: redis:7.4.12-alpine
+    container_name: futspring_redis
+    restart: unless-stopped
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
+    # The password is read from the container's env ($$ escapes compose interpolation).
+    # maxmemory below mem_limit leaves room for the AOF rewrite fork; noeviction (the default) never drops a session
+    command: ["sh", "-c", "exec redis-server --appendonly yes --requirepass \"$$REDIS_PASSWORD\" --maxmemory 64mb --maxmemory-policy noeviction"]
+    healthcheck:
+      test: ["CMD-SHELL", "REDISCLI_AUTH=\"$$REDIS_PASSWORD\" redis-cli ping | grep -q PONG"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    mem_limit: 128m
+    volumes:
+      - redis_data:/data
+    networks:
+      - default
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  redis_data:
 
 networks:
   observability:

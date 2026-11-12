@@ -85,6 +85,7 @@ jobs:
           DB_USERNAME: ${{ secrets.DB_USERNAME }}
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
           PG_DUMP_URL: ${{ secrets.PG_DUMP_URL }}
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           VAPID_PUBLIC_KEY: ${{ secrets.VAPID_PUBLIC_KEY }}
@@ -102,7 +103,7 @@ jobs:
           set -euo pipefail
           umask 077
 
-          for var in DB_URL DB_USERNAME DB_PASSWORD JWT_SECRET; do
+          for var in DB_URL DB_USERNAME DB_PASSWORD JWT_SECRET REDIS_PASSWORD; do
             if [[ -z "${!var}" ]]; then
               echo "Missing required secret: ${var}"
               echo "   Configure in Settings > Secrets and variables > Actions > Repository secrets."
@@ -133,6 +134,8 @@ jobs:
             printf 'DB_PASSWORD=%s\n' "$DB_PASSWORD"
             printf 'JWT_SECRET=%s\n' "$JWT_SECRET"
             printf 'JWT_EXPIRATION_MS=%s\n' "$JWT_EXPIRATION_MS"
+            # The Redis container (requirepass) and the API read the same value
+            printf 'REDIS_PASSWORD=%s\n' "$REDIS_PASSWORD"
             printf 'ALLOWED_ORIGINS=%s\n' "$ALLOWED_ORIGINS"
             printf 'API_PORT=%s\n' "$API_PORT"
             printf 'PG_DUMP_URL=%s\n' "$PG_DUMP_URL"
