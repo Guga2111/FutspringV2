@@ -1,0 +1,8 @@
+{
+  "message": "TypeError: Cannot read properties of undefined (reading 'id')",
+  "stack": "TypeError: Cannot read properties of undefined (reading 'id')\n    at https://futspring.luisgosampaio.com/assets/index-abc123.js:1:2048",
+  "path": "/pelada/1/ranking",
+  "release": "abc1234",
+  "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)",
+  "source": "BOUNDARY"
+}

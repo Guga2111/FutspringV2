@@ -44,7 +44,7 @@ A second CI job, `visual`, runs the Playwright visual regression in `mcr.microso
 
 - `VITE_API_URL` — backend base URL, read at build time (production: `https://futspring.luisgosampaio.com/api` — nginx strips `/api` before proxying, so requests go to `/api/api/v1/...`; locally it is unset). Falls back to `http://localhost:8080`. The only place that reads it is `src/lib/config.ts` (`API_BASE`), used by `api/client.ts` and `getFileUrl`.
 - `RealtimeProvider` (`components/layout/`) opens one `new SockJS("/ws")` connection per logged-in user (relative), shared by the chat and the notifications: it works through the Vite dev proxy (`vite.config.ts`) and in production because the app and the API share an origin behind the reverse proxy.
-- `vite.config.ts` defines `global: 'globalThis'` (needed by sockjs-client).
+- `vite.config.ts` defines `global: 'globalThis'` (needed by sockjs-client) and `__APP_VERSION__`, the short git sha of the build (`git rev-parse --short HEAD`, `"dev"` without git; `"test"` in `vitest.config.ts`), sent as `release` with the error reports.
 - The backend's CORS allows `ALLOWED_ORIGINS` (default `http://localhost:5173`), so keep the dev server on that port or set `ALLOWED_ORIGINS` for the API.
 - The connection needs a valid token (CONNECT without one is rejected); only members can subscribe to a pelada's topic; chat send errors arrive on `/user/queue/errors`, notifications on `/user/queue/notifications`.
 
@@ -56,13 +56,14 @@ client/
 ├── e2e/                  Playwright visual regression: visual.spec.ts, mockApi.ts (route table of mocked GETs), fixtures.ts (typed with src/types), __screenshots__/<project>/, docker.sh, own tsconfig.json
 ├── public/               static files (PWA icons `pwa-192.png`, `pwa-512.png`, `pwa-maskable-512.png`, `apple-touch-icon.png` (180, see [PWA](#pwa)), `pwa-badge-96.png` (the push notification's Android status bar icon: a white ball silhouette on transparency), gerrard.webp favicon (192 px), logo-64.webp (in-app logo), pele.jpg (auth), ronaldo.jpg (home banner), landing/ (the owner's pelada photos for the landing page; README with names and ratios))
 └── src/
-    ├── main.tsx          font imports, `captureInstallPrompt()` (before the render), StrictMode > BrowserRouter > AuthProvider > App + <ThemedToaster/> (Sonner `position="top-center"`, bottom-right would cover the chat button; `theme` from `useTheme`) + <PwaUpdater/>
+    ├── main.tsx          font imports, `captureInstallPrompt()` and `installErrorReporting()` (before the render), StrictMode > BrowserRouter > AuthProvider > App + <ThemedToaster/> (Sonner `position="top-center"`, bottom-right would cover the chat button; `theme` from `useTheme`) + <PwaUpdater/>
     ├── sw.ts             the PWA service worker (own `tsconfig.sw.json`, WebWorker lib; excluded from `tsconfig.app.json`): precache, navigation, `push` and `notificationclick`; see [PWA](#pwa)
+    ├── globals.d.ts      `declare const __APP_VERSION__` (the build's git sha)
     ├── App.tsx           routes, React.lazy pages, one <Suspense>, an <ErrorBoundary> per route
     ├── index.css         Tailwind layers, design tokens (primitives + semantic, :root / .dark), composite classes, reduced-motion block, landing motion (`.reveal-armed`/`.reveal-in`, `.landing-shutter`, `.landing-rise`)
     ├── api/              one module per backend domain; typed async functions returning response.data
     │   ├── client.ts     the axios instance (interceptors are added by AuthContext)
-    │   ├── auth.ts, peladas.ts, invitations.ts, dailies.ts, users.ts, chat.ts, notifications.ts, tours.ts, push.ts, platform.ts
+    │   ├── auth.ts, peladas.ts, invitations.ts, dailies.ts, users.ts, chat.ts, notifications.ts, tours.ts, push.ts, platform.ts, clientErrors.ts
     │   └── *.test.ts     vitest tests for api modules
     ├── components/
     │   ├── ui/           shadcn primitives (owned code, see shadcn rules)
@@ -96,7 +97,7 @@ client/
     │   │   └── hooks/    useReveal (+ `revealAt`)
     │   ├── PeladaAvatar.tsx   pelada photo or a solid avatar color (`getPeladaColor`) with initials (sidebar, cards, banner)
     │   ├── PlayerAvatar.tsx, PositionBadge.tsx, StarRow.tsx   round player avatar (photo, or initials on the player's own `--avatar-*` color from `userId`, the same on every screen; `null` only for finance guests, and `deleted` (a deleted account, "Ex-jogador") draws the same neutral avatar), the position tag (labels from `positionLabel` in `types/user.ts`) and ★ rating
-    │   ├── PrivateRoute.tsx, ErrorBoundary.tsx, ScrollToTop.tsx, ThemedToaster.tsx
+    │   ├── PrivateRoute.tsx, ErrorBoundary.tsx (reports the render error through `reportError(error, "BOUNDARY")`), ScrollToTop.tsx, ThemedToaster.tsx
     │   ├── pelada-settings/  settings page of a pelada (SettingsNav, InfoCard, ScheduleCard, LocationCard, SlotsCard, AutomationCard, DangerZone + TransferPeladaDialog / DeletePeladaDialog, ConfirmNameField)
     │   │   └── hooks/    usePeladaSettings, useSettingsSubmit
     │   ├── platform/     the platform admin's panel (`/admin*`): PlatformPageHeader (breadcrumb, title, the areas as underlined links), OverviewKpis, AttentionList ("Precisa de você"), RevenueChart, PeladasTable, PlatformPaymentsList, PlatformUsersList, SubscriptionStatusBadge, PlatformSearch, PlatformLoadError; `subscription/`: SubscriptionCard (state, founder `Switch`, actions), RecordPaymentSheet, SubscriptionActionDialog, VoidPaymentDialog, SubscriptionEventList
@@ -114,6 +115,7 @@ client/
     │   ├── mobileApps.ts MOBILE_APPS: App Store / Google Play page per platform (`null` = not published yet)
     │   ├── push.ts       Web Push in the browser: `pushSupported`, `currentPushSubscription`, `base64UrlToBytes`, `sameServerKey`, `subscriptionRequest`, `setAppBadge` (the installed app's icon count)
     │   ├── installPrompt.ts the captured `beforeinstallprompt` (module store: `captureInstallPrompt`, `subscribeInstallPrompt`, `getInstallPrompt`, `showInstallPrompt`, `appinstalled`)
+    │   ├── errorReporting.ts uncaught errors to the API: `installErrorReporting()` (window `error` + `unhandledrejection` listeners), `reportError(error, source)`, `buildReport`, `stripUrlQueries`; see [Error reporting](#error-reporting)
     │   ├── utils.ts      cn(), getFileUrl(), getInitials(), normalizeSearch() (accent/case-insensitive search key, the only one), getAvatarColor() / getPeladaColor() (the six `--avatar-*` tokens, by id / by name)
     │   ├── errors.ts     getErrorMessage(), getErrorStatus(), getApiErrorBody()
     │   ├── form-errors.ts applyServerErrors() for react-hook-form
@@ -207,6 +209,7 @@ Each module exports typed async functions that return `response.data`, plus the 
 | `push.ts` | `/api/v1/push/vapid-public-key` (`getVapidPublicKey`, 204 → `null`), `/subscriptions` (`subscribePush`, the parsed `PushSubscription.toJSON()`), `/subscriptions/remove` (`unsubscribePush(endpoint, {token, timeout})`: the logout sends the closing session's token, since the stored one is already gone) |
 | `platform.ts` | `/api/v1/platform/**` (platform admin): `getPlatformOverview`, `getPlatformPeladas(page, {state, q})`, `getPlatformPelada`, `recordPlatformPayment` (`RecordPaymentBody`), `changePlatformSubscription` (`ChangeSubscriptionBody`), `voidPlatformPayment(paymentId, reason)`, `getPlatformPayments(page, {from, to})`, `getPlatformUsers(page, q)`; lists send only the filters that are set, pages of `PLATFORM_PAGE_SIZE` = 20 |
 | `subscription.ts` | `/api/v1/peladas/{id}/subscription` (`getPeladaSubscription`, creator only), `/pix-claim` (`claimPix(peladaId, {plan})`) |
+| `clientErrors.ts` | `/api/v1/client-errors` (`sendClientError(report)`, `ClientErrorReport` mirroring `ClientErrorRequestDTO`; public, 204) |
 | `notifications.ts` | `/api/v1/notifications` (`getNotifications({page, size, unread})`, pages of `NOTIFICATIONS_PAGE_SIZE` = 20), `unread-count` (`getUnreadNotificationCount`), `{id}/read` (`markNotificationRead`), `read-all` (`markAllNotificationsRead`), `preferences` (`getNotificationPreferences`, `updateNotificationPreferences`: partial, send only the changed category; items are `NotificationPreferenceChange` with `emailEnabled` and/or `pushEnabled`, the response carries both channels (the Push column of the settings comes with the web push client)), the public `unsubscribe` / `resubscribe` (`unsubscribeFromEmails(token)`, `resubscribeToEmails(token)`) |
 
 When an endpoint or DTO changes, update the module, `src/types/*` and this table in the same change as the backend.
@@ -253,6 +256,14 @@ Data flows **api → hook → page/component**. A hook owns the request state; t
 - `usePlayerPeladaHistory(peladaId, userId | null, limit | null)` — loads `getPlayerPeladaHistory` (`?limit=`, server-side) for the player history dialog; returns `{ rows, totalSessions, loading, fetching, error, retry }` (rows newest first). `loading` is only true until the first response for that player; changing the limit keeps the previous rows on screen with `fetching` (the dialog dims them). The dialog's period selector (last 5 / 10 / 20 / all, default 5) sets the limit, and the summary tiles, chart and table are derived from the returned rows. Results are keyed by request (no `setState` in the effect body), so switching player never shows the previous player's data. Reference for new fetch hooks under the `react-hooks/set-state-in-effect` lint rule.
 
 Mutations: `try { await api…; toast.success(…) } catch (error) { toast.error(getErrorMessage(error, "…")) }`, keep an `isPending` flag that disables the button, then either merge the returned DTO into state (`setDaily`) or refetch. Prefer merging when the endpoint returns the updated resource.
+
+### Error reporting
+
+`lib/errorReporting.ts` sends uncaught errors to `POST /api/v1/client-errors`, which writes one log line (Loki, `event=client_error`; see Observability in `BACKEND.md`). No third party, no SDK. Sources: window `error` and `unhandledrejection` (listeners added by `installErrorReporting()` in `main.tsx`) and every route's `ErrorBoundary` (`componentDidCatch`). Errors the code catches (toasts, error states) are not reported.
+- `path` is `location.pathname` only; the query and hash of every URL inside the message and the stack are removed too (`stripUrlQueries`; a reset link carries its token in the query), keeping a frame's `:line:column`.
+- Each field is cut to the API's limit; `release` is `__APP_VERSION__`.
+- Each message + stack is sent once and at most 10 per page load; "ResizeObserver loop…" and "Script error." without a stack (cross-origin scripts) are ignored; a failed send is ignored.
+- In the visual tests a report is a POST without a fixture, so an uncaught error on a screen fails the test.
 
 ## Auth & permissions in the UI
 

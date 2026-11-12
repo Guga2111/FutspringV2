@@ -272,9 +272,19 @@ Para planejar um PR, rode o prompt dele numa sessão limpa (`/clear` antes). Ao 
 /plan-task docs/plans/2026-11-11-launch-hardening-spec.md "PR C1 — Logs estruturados e Loki"
 ```
 
-### [ ] PR C2 — Erros do frontend (`feat/client-errors`)
+### [x] PR C2 — Erros do frontend (`feat/client-errors`)
 - **Entrega:** `POST /client-errors`, `errorReporting` no front, `__APP_VERSION__`.
 - **Docs:** BACKEND.md (API reference, Security, Rate limiting, Package layout), FRONTEND.md (api, lib, ErrorBoundary). Política de privacidade só se o texto atual não cobrir registros técnicos de erro.
+- **Decisões:**
+  - **Política de privacidade sem mudança** (decisão do dono): "registros do servidor" em Dados técnicos já cobre os registros de erro; sem bump de `LEGAL_VERSION` / `CURRENT_VERSION`.
+  - **Campo `source` a mais no DTO** (`WINDOW | PROMISE | BOUNDARY`, enum `ClientErrorSource`, opcional): o `reportError(error, source)` do spec já recebia a origem e ela ajuda a ler o log. `message` e `path` obrigatórios, o resto opcional.
+  - **A linha de log:** WARN de `ClientErrorService`, mensagem "Erro no cliente em {path}: {message}" e key-value pairs do SLF4J (`event=client_error`, `client_path`, `client_source`, `client_release`, `client_user_agent`, `client_stack`), que o ECS do Boot 4.1 escreve como campos da linha (coberto no `StructuredLoggingTest`). Consulta do C3: `{service="futspring-api"} | json | event="client_error"`. Sem userId, sem IP.
+  - **413 lendo o corpo**, não só o `Content-Length`: `ClientErrorBodyLimitFilter` (servlet filter, depois da cadeia de segurança, então o 429 vem antes) lê até 8 KB + 1 byte e repassa os bytes; um corpo chunked também fica limitado.
+  - O servidor também corta o `path` no primeiro `?`/`#` (defesa contra cliente antigo ou forjado); o front já manda só o `pathname` e tira query/hash das URLs da mensagem e do stack, mantendo `:linha:coluna`.
+  - Ruído ignorado no front: "ResizeObserver loop…" e "Script error." sem stack (scripts de outra origem, extensões).
+  - `__APP_VERSION__` = `git rev-parse --short HEAD` no `vite.config.ts`, `"dev"` sem git (Docker do visual test), `"test"` no Vitest; declarado em `src/globals.d.ts`.
+  - Envio pelo `apiClient` (o token vai junto e é ignorado); `sendBeacon` descartado porque fugiria de `src/api`. Nenhuma fixture nova no e2e: um erro real numa tela vira um POST sem fixture e derruba o visual test.
+  - O `<button>` cru do `ErrorBoundary` virou `Button` (antipattern #2, arquivo já tocado).
 
 ```
 /plan-task docs/plans/2026-11-11-launch-hardening-spec.md "PR C2 — Erros do frontend"

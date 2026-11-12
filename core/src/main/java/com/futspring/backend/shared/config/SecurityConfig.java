@@ -36,6 +36,12 @@ public class SecurityConfig {
     public static final Set<String> EMAIL_LINK_PATHS = Set.of(
             "/api/v1/notifications/unsubscribe", "/api/v1/notifications/resubscribe");
 
+    /**
+     * Errors reported by the web app (domain/telemetry): public, and JwtAuthFilter ignores the Authorization header,
+     * so an error with an expired session still arrives.
+     */
+    public static final String CLIENT_ERRORS_PATH = "/api/v1/client-errors";
+
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
@@ -76,7 +82,8 @@ public class SecurityConfig {
                     .requestMatchers("/ws/**").permitAll()
                     // liveness / readiness probes (management.endpoint.health.probes.add-additional-paths)
                     .requestMatchers(HttpMethod.GET, "/livez", "/readyz", "/api/v1/invite-links/*").permitAll()
-                    .requestMatchers(HttpMethod.POST, EMAIL_LINK_PATHS.toArray(String[]::new)).permitAll();
+                    .requestMatchers(HttpMethod.POST, EMAIL_LINK_PATHS.toArray(String[]::new)).permitAll()
+                    .requestMatchers(HttpMethod.POST, CLIENT_ERRORS_PATH).permitAll();
                 // OpenAPI docs and Swagger UI: public only where they are served (API_DOCS_ENABLED, dev)
                 if (apiDocsEnabled) {
                     auth.requestMatchers(HttpMethod.GET, "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html")

@@ -28,8 +28,8 @@ import java.util.Map;
  * per minute on each POST /api/v1/auth/ route (login, register, forgot-password, reset-password), the logged-in
  * password checks (POST /api/v1/users/me/password and /me/delete), the Web Push subscription (POST
  * /api/v1/push/subscriptions), the public e-mail link routes (notifications unsubscribe / resubscribe) and the
- * account export (GET /api/v1/users/me/export); 60 per minute on the public invitation preview
- * (GET /api/v1/invite-links/{token}).
+ * account export (GET /api/v1/users/me/export); 20 per minute on the web app's error reports
+ * (POST /api/v1/client-errors); 60 per minute on the public invitation preview (GET /api/v1/invite-links/{token}).
  * Routes are matched with PathPatternRequestMatcher, on the decoded path (the mechanism Spring Security and MVC use),
  * never the raw request URI, so an encoded variant such as /auth/%6Cogin hits the same limit. The bucket key is the
  * route's logical name plus the client IP ("login:203.0.113.7"), never the URI received. The client IP is
@@ -42,6 +42,7 @@ import java.util.Map;
 public class AuthRateLimitFilter extends OncePerRequestFilter {
 
     static final int REQUESTS_PER_MINUTE = 10;
+    static final int CLIENT_ERRORS_PER_MINUTE = 20;
     static final int INVITE_PREVIEWS_PER_MINUTE = 60;
 
     private record Limit(String name, RequestMatcher matcher, int capacity) {}
@@ -57,6 +58,7 @@ public class AuthRateLimitFilter extends OncePerRequestFilter {
             limit("unsubscribe", HttpMethod.POST, "/api/v1/notifications/unsubscribe", REQUESTS_PER_MINUTE),
             limit("resubscribe", HttpMethod.POST, "/api/v1/notifications/resubscribe", REQUESTS_PER_MINUTE),
             limit("export", HttpMethod.GET, "/api/v1/users/me/export", REQUESTS_PER_MINUTE),
+            limit("client-errors", HttpMethod.POST, "/api/v1/client-errors", CLIENT_ERRORS_PER_MINUTE),
             limit("invite-preview", HttpMethod.GET, "/api/v1/invite-links/{token}", INVITE_PREVIEWS_PER_MINUTE));
 
     private static Limit limit(String name, HttpMethod method, String pattern, int capacity) {
