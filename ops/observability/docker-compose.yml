@@ -1,4 +1,5 @@
-# Observability stack shared by every project on the VPS: Prometheus, Grafana, node-exporter and cAdvisor.
+# Observability stack shared by every project on the VPS: Prometheus, Grafana, node-exporter, cAdvisor, and the logs
+# (Loki, Alloy, docker-proxy).
 # Deployed by .github/workflows/deploy-observability.yml to ~/observability; see README.md.
 # Nothing is published except Grafana on 127.0.0.1:8088 (nginx serves it as grafana.luisgosampaio.com).
 name: observability
@@ -46,7 +47,7 @@ services:
       - grafana_data:/var/lib/grafana
     # ~160 MiB idle; headroom for the larger community dashboards
     mem_limit: 384m
-    depends_on: [prometheus]
+    depends_on: [prometheus, loki]
     networks: [observability]
     logging: *logging
 
@@ -94,11 +95,60 @@ services:
     networks: [observability]
     logging: *logging
 
+  loki:
+    image: grafana/loki:3.7.9
+    container_name: loki
+    restart: unless-stopped
+    command: [-config.file=/etc/loki/loki.yml]
+    volumes:
+      - ./loki/loki.yml:/etc/loki/loki.yml:ro
+      - loki_data:/loki
+    mem_limit: 384m
+    networks: [observability]
+    logging: *logging
+
+  alloy:
+    image: grafana/alloy:v1.21.3
+    container_name: alloy
+    restart: unless-stopped
+    command: [run, /etc/alloy/config.alloy, --storage.path=/var/lib/alloy/data, --disable-reporting]
+    volumes:
+      - ./alloy/config.alloy:/etc/alloy/config.alloy:ro
+      # read positions, so a restart doesn't ship the same lines again
+      - alloy_data:/var/lib/alloy/data
+    mem_limit: 192m
+    depends_on: [loki, docker-proxy]
+    networks: [observability, docker-proxy]
+    logging: *logging
+
+  docker-proxy:
+    # The only container with the Docker socket. ":ro" on a socket doesn't restrict the API, so the proxy does:
+    # only GET /containers/** (list, inspect, logs) and GET /networks (Alloy's discovery labels) are allowed;
+    # every other path and every POST/PUT/DELETE gets 403. On an internal network shared with Alloy alone
+    image: tecnativa/docker-socket-proxy:v0.5.0
+    container_name: docker-proxy
+    restart: unless-stopped
+    environment:
+      CONTAINERS: 1
+      NETWORKS: 1
+      POST: 0
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    # HAProxy, ~25 MiB idle
+    mem_limit: 64m
+    networks: [docker-proxy]
+    logging: *logging
+
 volumes:
   prometheus_data:
   grafana_data:
+  loki_data:
+  alloy_data:
 
 networks:
   observability:
     # created by both deploys: docker network create observability; every scraped project joins it
     external: true
+  docker-proxy:
+    # Alloy ↔ docker-proxy only; no route out
+    internal: true

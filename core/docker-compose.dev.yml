@@ -25,6 +25,8 @@ services:
       API_URL: ${API_URL:-http://localhost:8080}
       # OpenAPI docs + Swagger UI (http://localhost:8080/swagger-ui.html); off in production
       API_DOCS_ENABLED: "true"
+      # plain text logs in dev (production logs ECS JSON, see application.properties)
+      LOGGING_STRUCTURED_FORMAT_CONSOLE: ""
     volumes:
       - ./uploads:/app/uploads
       - ./finance-receipts:/app/finance-receipts

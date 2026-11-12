@@ -5,15 +5,15 @@ import lombok.extern.slf4j.Slf4j;
 import java.util.List;
 import java.util.Map;
 
-// Used when RESEND_API_KEY is empty (tests, local runs without a key). Logs only the recipient and the
-// subject: the body may contain a password reset link
+// Used when RESEND_API_KEY is empty (tests, local runs without a key). Logs neither the recipient nor the
+// subject nor the body: they carry e-mails, names and password reset links
 @Slf4j
 public class NoopEmailSender implements EmailSender {
 
     @Override
     public void send(String to, String subject, String html, List<InlineImage> inlineImages,
                      Map<String, String> headers) {
-        log.warn("E-mail not sent (RESEND_API_KEY is not set): to={} subject={}", to, subject);
+        log.warn("E-mail not sent (RESEND_API_KEY is not set)");
     }
 
     @Override

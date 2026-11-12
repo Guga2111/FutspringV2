@@ -1,6 +1,6 @@
 name: CD - Deploy observability stack
 
-# The shared Prometheus + Grafana stack of the VPS (ops/observability). Independent from the API deploy.
+# The shared Prometheus + Grafana + Loki stack of the VPS (ops/observability). Independent from the API deploy.
 on:
   push:
     branches: [main]
@@ -82,8 +82,8 @@ jobs:
           chmod 600 .env
           docker network create observability >/dev/null 2>&1 || true
           docker compose up -d --remove-orphans
-          # Prometheus reads its config only at start
-          docker compose restart prometheus
+          # they read their config files only at start (a bind-mounted file change doesn't recreate the container)
+          docker compose restart prometheus loki alloy
           ENDSSH
 
       # Grafana answers on 127.0.0.1:8088 only, so it is checked over SSH. The stack's own targets must be up; a
@@ -101,14 +101,16 @@ jobs:
             for job in $STACK_JOBS unreadable; do
               [[ " ${down} " == *" ${job} "* ]] && stack_down="${stack_down} ${job}"
             done
-            if [[ "$grafana" == "200" && -z "$stack_down" ]]; then
-              echo "Grafana 200 and the stack's targets up (attempt ${attempt})."
+            # Loki isn't scraped: its /ready is read from the Prometheus container (same network, has wget)
+            loki=$(ssh "${VPS_USER}@${VPS_IP}" "docker exec prometheus wget -qO- http://loki:3100/ready" 2>/dev/null || true)
+            if [[ "$grafana" == "200" && -z "$stack_down" && "$loki" == ready* ]]; then
+              echo "Grafana 200, Loki ready and the stack's targets up (attempt ${attempt})."
               if [[ -n "${down// /}" ]]; then
                 echo "::warning::Prometheus targets still down: ${down} (a project deploy may still be running)."
               fi
               exit 0
             fi
-            echo "Not ready yet: grafana=${grafana} down=${down:-none} (attempt ${attempt}/12), retrying in 10s..."
+            echo "Not ready yet: grafana=${grafana} loki=${loki:-no} down=${down:-none} (attempt ${attempt}/12), retrying in 10s..."
             sleep 10
           done
           echo "Smoke test failed after 2 minutes."
