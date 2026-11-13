@@ -46,7 +46,7 @@ class VirtualThreadsTest {
     @Test
     void httpRequest_runsOnAVirtualThread() {
         // A real socket request: MockMvc executes on the test thread and cannot verify Tomcat's executor.
-        var response = http.getForEntity("/api/v1/files/__thread-probe", Boolean.class);
+        var response = http.getForEntity("/api/v1/auth/__thread-probe", Boolean.class);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).isTrue();
     }
@@ -103,7 +103,7 @@ class VirtualThreadsTest {
     @RestController
     @TestComponent
     static class HttpProbe {
-        @GetMapping("/api/v1/files/__thread-probe")
+        @GetMapping("/api/v1/auth/__thread-probe")
         boolean isVirtual() {
             return Thread.currentThread().isVirtual();
         }

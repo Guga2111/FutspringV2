@@ -181,7 +181,8 @@ export const PRIVACY: LegalDocument = {
       blocks: [
         [
           "Os membros das peladas de que você participa veem seu nome, foto, posição, presença, estatísticas e mensagens no chat.",
-          "Seu perfil só aparece para quem divide uma pelada com você. Dentro do app, o seu e-mail só você vê.",
+          "Seu perfil e sua foto só podem ser acessados por você e por quem divide uma pelada com você, após entrar na conta. Fotos de peladas e campeões exigem que você seja membro da pelada. Ter o endereço de uma imagem não dá acesso a ela. Quem já viu uma foto pode ter guardado uma cópia.",
+          "O link de convite mostra apenas o nome, o dia e o horário da pelada, sem a foto. Dentro do app, o seu e-mail só você vê.",
           "A área Assinatura de uma pelada (situação, planos e pagamentos) só é vista pelo criador.",
           "Nós, que mantemos o Futspring, temos um painel de administração restrito, usado para dar suporte e cobrar as assinaturas. Nele vemos o nome, o e-mail e a data de cadastro de cada conta, as peladas que ela criou, de quantas participa e se já usou o teste grátis, e a assinatura, os pagamentos e o histórico de alterações da assinatura de cada pelada.",
           "No financeiro em modo individual, cada membro vê só as próprias cobranças. No modo transparente, os membros veem participantes, totais e o caixa. Comprovantes só são vistos por você e pelos responsáveis financeiros.",

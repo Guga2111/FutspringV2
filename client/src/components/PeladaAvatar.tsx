@@ -1,4 +1,5 @@
-import { cn, getFileUrl, getInitials, getPeladaColor } from "@/lib/utils"
+import { useImageUrl } from "@/hooks/useImageUrl"
+import { cn, getInitials, getPeladaColor } from "@/lib/utils"
 
 interface PeladaAvatarProps {
   name: string
@@ -11,10 +12,11 @@ interface PeladaAvatarProps {
 
 // Pelada photo, or its gradient with initials when there is none
 export function PeladaAvatar({ name, image, className, objectPosition = "center 18%" }: PeladaAvatarProps) {
-  if (image) {
+  const photo = useImageUrl(image)
+  if (photo) {
     return (
       <img
-        src={getFileUrl(image)}
+        src={photo}
         alt=""
         loading="lazy"
         className={cn("shrink-0 object-cover", className)}

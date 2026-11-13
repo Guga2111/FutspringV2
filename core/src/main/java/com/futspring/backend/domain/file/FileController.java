@@ -1,63 +1,30 @@
 package com.futspring.backend.domain.file;
 
-import com.futspring.backend.shared.exception.AppException;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
-import org.springframework.core.io.UrlResource;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
+import org.springframework.http.CacheControl;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
-
-import java.net.MalformedURLException;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.util.Locale;
 
 @RestController
 @RequestMapping("/api/v1/files")
 @RequiredArgsConstructor
 public class FileController {
-
-    @Value("${app.uploads.dir:uploads}")
-    private String uploadsDir;
+    private final FileReadService service;
 
     @GetMapping("/{filename:.+}")
-    public ResponseEntity<Resource> serveFile(@PathVariable String filename) {
-        try {
-            // Null-byte guard (must come first)
-            if (filename.contains("\0")) {
-                throw new AppException(HttpStatus.BAD_REQUEST, "Invalid filename: " + filename);
-            }
-            Path uploadPath = Paths.get(uploadsDir).toAbsolutePath().normalize();
-            Path filePath = uploadPath.resolve(filename).normalize();
-            // Containment check — reject paths that escape the uploads directory
-            if (!filePath.startsWith(uploadPath)) {
-                throw new AppException(HttpStatus.BAD_REQUEST, "Invalid filename: " + filename);
-            }
-            Resource resource = new UrlResource(filePath.toUri());
-
-            if (!resource.exists() || !resource.isReadable()) {
-                throw new AppException(HttpStatus.NOT_FOUND, "File not found: " + filename);
-            }
-
-            String contentType = MediaType.APPLICATION_OCTET_STREAM_VALUE;
-            String lower = filename.toLowerCase();
-            if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) {
-                contentType = MediaType.IMAGE_JPEG_VALUE;
-            } else if (lower.endsWith(".png")) {
-                contentType = MediaType.IMAGE_PNG_VALUE;
-            } else if (lower.endsWith(".webp")) {
-                contentType = "image/webp";
-            }
-
-            return ResponseEntity.ok()
-                    .contentType(MediaType.parseMediaType(contentType))
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + filename + "\"")
-                    .body(resource);
-        } catch (MalformedURLException e) {
-            throw new AppException(HttpStatus.BAD_REQUEST, "Invalid filename: " + filename);
-        }
+    public ResponseEntity<Resource> serveFile(@PathVariable String filename, @AuthenticationPrincipal String email) {
+        Resource resource = service.read(filename, email);
+        String type = switch (filename.substring(filename.lastIndexOf('.') + 1).toLowerCase(Locale.ROOT)) {
+            case "jpg", "jpeg" -> MediaType.IMAGE_JPEG_VALUE;
+            case "png" -> MediaType.IMAGE_PNG_VALUE;
+            case "webp" -> "image/webp";
+            default -> MediaType.APPLICATION_OCTET_STREAM_VALUE;
+        };
+        return ResponseEntity.ok().contentType(MediaType.parseMediaType(type))
+                .cacheControl(CacheControl.noStore()).header("X-Content-Type-Options", "nosniff").body(resource);
     }
 }

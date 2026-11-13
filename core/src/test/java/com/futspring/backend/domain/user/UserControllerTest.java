@@ -233,6 +233,13 @@ class UserControllerTest extends BaseIntegrationTest {
     }
 
     @Test
+    void getProfile_unrelatedAccountIsForbidden() throws Exception {
+        mockMvc.perform(get("/api/v1/users/" + userB.getId())
+                .header("Authorization", bearerToken(stranger.getId(), stranger.getEmail())))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
     void getProfile_self_includesEmail() throws Exception {
         mockMvc.perform(get("/api/v1/users/" + userA.getId())
                 .header("Authorization", bearerToken(userA.getId(), userA.getEmail())))

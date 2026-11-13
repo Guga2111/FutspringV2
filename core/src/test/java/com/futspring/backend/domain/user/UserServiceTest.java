@@ -33,13 +33,15 @@ class UserServiceTest {
     @Mock
     PeladaPlayerStarsRepository playerStarsRepository;
 
+    @Mock com.futspring.backend.domain.pelada.PeladaRepository peladaRepository;
+
     UserService userService;
 
     User user;
 
     @BeforeEach
     void setUp() {
-        userService = new UserService(userRepository, fileUploadService, playerStarsRepository, null, null, null, null, null);
+        userService = new UserService(userRepository, peladaRepository, fileUploadService, playerStarsRepository, new com.futspring.backend.shared.helper.UserAuthenticationHelper(userRepository), null, null, null, null);
 
         user = User.builder()
                 .id(1L)
