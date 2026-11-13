@@ -47,6 +47,9 @@ public class User {
     private Instant emailVerificationExpiresAt;
     @Column(name = "email_verification_sent_at")
     private Instant emailVerificationSentAt;
+    @Column(name = "email_link_version", nullable = false)
+    @Builder.Default
+    private int emailLinkVersion = 0;
 
     // Incremented to revoke every JWT issued before (password reset); see AccessTokenVerifier
     @Column(name = "token_version", nullable = false)

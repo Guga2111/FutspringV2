@@ -13,9 +13,8 @@ import java.util.Base64;
 import java.util.Optional;
 
 /**
- * The one-click unsubscribe token of a user and a category: base64url("userId:CATEGORY") + "." + HMAC-SHA256 of it.
- * The key is derived from JWT_SECRET with its own context, so it is never the JWT key itself. Not stored and no
- * expiry: it only turns that one category of that one user off or on.
+ * Expiring unsubscribe capability for one user/category, HMAC-SHA256 signed with a context-derived key.
+ * Payload: userId:category:preferenceVersion:expiresAt. Legacy permanent tokens are rejected.
  */
 @Component
 public class UnsubscribeTokens {
@@ -25,17 +24,20 @@ public class UnsubscribeTokens {
     private static final Base64.Encoder ENCODER = Base64.getUrlEncoder().withoutPadding();
     private static final Base64.Decoder DECODER = Base64.getUrlDecoder();
 
-    public record Target(Long userId, NotificationCategory category) { }
+    public record Target(Long userId, NotificationCategory category, int version) { }
 
     private final SecretKeySpec key;
+    private final java.time.Clock clock;
 
-    public UnsubscribeTokens(JwtConfig jwtConfig) {
+    public UnsubscribeTokens(JwtConfig jwtConfig, java.time.Clock clock) {
+        this.clock = clock;
         this.key = new SecretKeySpec(hmac(new SecretKeySpec(jwtConfig.getSecret().getBytes(StandardCharsets.UTF_8),
                 ALGORITHM), CONTEXT.getBytes(StandardCharsets.UTF_8)), ALGORITHM);
     }
 
-    public String create(Long userId, NotificationCategory category) {
-        byte[] payload = (userId + ":" + category.name()).getBytes(StandardCharsets.UTF_8);
+    public String create(Long userId, NotificationCategory category, int version) {
+        long expires = clock.instant().plus(java.time.Duration.ofDays(30)).getEpochSecond();
+        byte[] payload = (userId + ":" + category.name() + ":" + version + ":" + expires).getBytes(StandardCharsets.UTF_8);
         return ENCODER.encodeToString(payload) + "." + ENCODER.encodeToString(hmac(key, payload));
     }
 
@@ -50,14 +52,18 @@ public class UnsubscribeTokens {
         }
         try {
             byte[] payload = DECODER.decode(parts[0]);
-            if (!MessageDigest.isEqual(hmac(key, payload), DECODER.decode(parts[1]))) {
+            byte[] signature = DECODER.decode(parts[1]);
+            // Reject alternative Base64 spellings whose unused padding bits decode to the same bytes.
+            if (!ENCODER.encodeToString(payload).equals(parts[0]) || !ENCODER.encodeToString(signature).equals(parts[1])
+                    || !MessageDigest.isEqual(hmac(key, payload), signature)) {
                 return Optional.empty();
             }
             String[] fields = new String(payload, StandardCharsets.UTF_8).split(":", -1);
-            if (fields.length != 2) {
+            if (fields.length != 4) {
                 return Optional.empty();
             }
-            return Optional.of(new Target(Long.parseLong(fields[0]), NotificationCategory.valueOf(fields[1])));
+            if (clock.instant().getEpochSecond() >= Long.parseLong(fields[3])) return Optional.empty();
+            return Optional.of(new Target(Long.parseLong(fields[0]), NotificationCategory.valueOf(fields[1]), Integer.parseInt(fields[2])));
         } catch (IllegalArgumentException e) {
             // bad base64, number or category name
             return Optional.empty();

@@ -43,14 +43,18 @@ public class NotificationPreferenceService {
     // Partial: only the categories sent change; the response has all four
     @Transactional
     public List<NotificationPreferenceDTO> update(List<NotificationPreferenceDTO> changes, String currentUserEmail) {
-        User caller = userAuthHelper.getAuthenticatedUser(currentUserEmail);
+        User caller = userRepository.findByEmailForUpdate(currentUserEmail).orElseThrow(NotificationPreferenceService::invalidLink);
         if (changes.stream().map(NotificationPreferenceDTO::category).distinct().count() != changes.size()) {
             throw new AppException(HttpStatus.BAD_REQUEST, "Categorias repetidas");
         }
         if (changes.stream().anyMatch(c -> c.emailEnabled() == null && c.pushEnabled() == null)) {
             throw new AppException(HttpStatus.BAD_REQUEST, "Informe e-mail ou push");
         }
-        changes.forEach(change -> set(caller, change.category(), change.emailEnabled(), change.pushEnabled()));
+        User locked = caller;
+        if (changes.stream().anyMatch(change -> change.emailEnabled() != null)) {
+            locked.setEmailLinkVersion(locked.getEmailLinkVersion() + 1);
+        }
+        changes.forEach(change -> set(locked, change.category(), change.emailEnabled(), change.pushEnabled()));
         return toDTOs(preferenceRepository.findByIdUserId(caller.getId()));
     }
 
@@ -80,14 +84,10 @@ public class NotificationPreferenceService {
         return setByToken(token, false);
     }
 
-    @Transactional
-    public NotificationPreferenceDTO resubscribe(String token) {
-        return setByToken(token, true);
-    }
-
     private NotificationPreferenceDTO setByToken(String token, boolean emailEnabled) {
         UnsubscribeTokens.Target target = unsubscribeTokens.verify(token).orElseThrow(NotificationPreferenceService::invalidLink);
-        User user = userRepository.findById(target.userId()).orElseThrow(NotificationPreferenceService::invalidLink);
+        User user = userRepository.findByIdForUpdate(target.userId()).orElseThrow(NotificationPreferenceService::invalidLink);
+        if (target.version() != user.getEmailLinkVersion()) throw invalidLink();
         NotificationPreference row = set(user, target.category(), emailEnabled, null);
         return new NotificationPreferenceDTO(target.category(), emailEnabled,
                 row != null ? row.pushEnabledOrDefault() : target.category().defaultPush());
