@@ -27,3 +27,10 @@ The frontend and backend documentation below is imported into every session and 
 ## Keeping the docs current
 
 These documents are the source of truth for how the project is built. When a change alters anything they describe (endpoints, DTOs, entities, migrations, routes, hooks, services, permissions, security, configuration, conventions, commands), update the matching document in the same change. When you fix an item from an "Antipatterns" table or a "Known gaps" list, remove it from the "Found in" column. If the code and the docs disagree, point it out to the user instead of silently following either one.
+
+## Mandatory security review for pull requests
+
+- Every PR must assess its security impact. Before opening or marking ready a PR with security impact, and before merging it, use **`differential-review` from `trailofbits/skills`**. Read and follow [the security review workflow](docs/SECURITY_REVIEW.md), including its triggers, evidence, remediation and merge requirements. A small diff or a refactor is not an exemption.
+- Look for newly introduced vulnerabilities, regressions and **pre-existing vulnerabilities in the changed code and reachable related flows**. Fix confirmed findings in that scope before merge, in this PR or a prerequisite fix PR; do not hide them as unrelated technical debt. Record unrelated findings separately with ownership and priority; critical/high findings block the affected release until fixed.
+- Review the final code against the current target branch, rerun affected analysis after fixes or relevant base/head changes, and include a sanitized summary, reviewed commit IDs, regression-test results and report reference in the PR. CI success alone does not satisfy this requirement. If the skill or required validation is unavailable, state the blocker; never claim the review passed.
+- **`security-audit` from `cloudflare/security-audit-skill`** complements this workflow for explicit broader audits. It does not replace the mandatory Trail of Bits review. Installing either skill does not itself perform an audit.

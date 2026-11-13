@@ -31,6 +31,9 @@ uploads/
 # Logs
 *.log
 
+# Local security-review reports and reproduction artifacts; share through restricted channels.
+.security-reviews/
+
 # Private docs
 docs/analise-de-mercado.md
 
