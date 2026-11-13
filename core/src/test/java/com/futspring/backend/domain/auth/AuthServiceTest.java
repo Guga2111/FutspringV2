@@ -44,6 +44,7 @@ class AuthServiceTest {
     PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     JwtService jwtService;
+    @Mock com.futspring.backend.domain.auth.verification.EmailVerificationService verification;
     AuthService authService;
     RefreshSessionService refreshSessionService;
 
@@ -61,7 +62,7 @@ class AuthServiceTest {
         lenient().when(redis.opsForValue()).thenReturn(values);
         refreshSessionService = new RefreshSessionService(redis, JsonMapper.builder().build(), userRepository,
                 jwtService, new CorsConfig("http://localhost:5173"), CLOCK, new SimpleMeterRegistry());
-        authService = new AuthService(userRepository, passwordEncoder, refreshSessionService, CLOCK);
+        authService = new AuthService(userRepository, passwordEncoder, refreshSessionService, CLOCK, verification);
     }
 
     // --- register ---
@@ -77,11 +78,8 @@ class AuthServiceTest {
             return u;
         });
 
-        AuthResponseDTO result = authService.register(req).auth();
-
-        assertThat(result).isNotNull();
-        assertThat(result.token()).isNotBlank();
-        assertThat(result.user().email()).isEqualTo("alice@example.com");
+        authService.register(req);
+        verify(verification).request("alice@example.com");
     }
 
     @Test
@@ -113,22 +111,18 @@ class AuthServiceTest {
     }
 
     @Test
-    void register_emailAlreadyRegistered_throwsConflict() {
+    void register_emailAlreadyRegistered_doesNotExposeItOrChangeTheAccount() {
         RegisterRequestDTO req = new RegisterRequestDTO("alice", "alice@example.com", "password123", LegalTerms.CURRENT_VERSION);
-
-        when(userRepository.findByEmail("alice@example.com"))
-                .thenReturn(Optional.of(User.builder().email("alice@example.com").build()));
-
-        assertThatThrownBy(() -> authService.register(req))
-                .isInstanceOf(AppException.class)
-                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.CONFLICT));
+        when(userRepository.findByEmail(req.email())).thenReturn(Optional.of(User.builder().email(req.email()).build()));
+        authService.register(req);
+        verify(verification).request(req.email());
+        verify(userRepository, never()).save(any());
     }
 
     @Test
     void register_usernameTakenInAnotherCase_throwsConflict() {
         RegisterRequestDTO req = new RegisterRequestDTO(" Alice ", "new@example.com", "password123", LegalTerms.CURRENT_VERSION);
 
-        when(userRepository.findByEmail("new@example.com")).thenReturn(Optional.empty());
         when(userRepository.existsByUsernameIgnoreCase("Alice")).thenReturn(true);
 
         assertThatThrownBy(() -> authService.register(req))
@@ -185,17 +179,15 @@ class AuthServiceTest {
             return u;
         });
 
-        AuthResponseDTO result = authService.register(req).auth();
-
-        assertThat(jwtService.extractAllClaims(result.token()).getSubject()).isEqualTo("dave@example.com");
-        assertThat(jwtService.extractAllClaims(result.token()).get("userId", Long.class)).isEqualTo(99L);
+        authService.register(req);
+        verify(verification).request("dave@example.com");
     }
 
     // --- login ---
 
     @Test
     void login_success_returnsTokenAndUserDTO() {
-        User user = User.builder()
+        User user = User.builder().emailVerifiedAt(java.time.Instant.EPOCH)
                 .id(1L)
                 .email("alice@example.com")
                 .username("alice")
@@ -219,7 +211,7 @@ class AuthServiceTest {
         when(userRepository.findByEmail("nobody@example.com")).thenReturn(Optional.empty());
 
         PasswordEncoder spyEncoder = spy(new BCryptPasswordEncoder());
-        AuthService service = new AuthService(userRepository, spyEncoder, refreshSessionService, CLOCK);
+        AuthService service = new AuthService(userRepository, spyEncoder, refreshSessionService, CLOCK, verification);
 
         assertThatThrownBy(() -> service.login(req))
                 .isInstanceOf(AppException.class)
@@ -231,7 +223,7 @@ class AuthServiceTest {
 
     @Test
     void login_wrongPassword_throwsUnauthorized() {
-        User user = User.builder()
+        User user = User.builder().emailVerifiedAt(java.time.Instant.EPOCH)
                 .id(1L)
                 .email("alice@example.com")
                 .password(passwordEncoder.encode("correctPassword"))
@@ -248,7 +240,7 @@ class AuthServiceTest {
 
     @Test
     void login_correctCredentials_generatesTokenWithUserId() {
-        User user = User.builder()
+        User user = User.builder().emailVerifiedAt(java.time.Instant.EPOCH)
                 .id(42L)
                 .email("alice@example.com")
                 .username("alice")

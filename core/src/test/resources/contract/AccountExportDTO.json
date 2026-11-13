@@ -11,7 +11,8 @@
     "createdAt" : "2026-10-31T23:00:00Z",
     "termsVersion" : "termsVersion",
     "termsAcceptedAt" : "2026-10-31T23:00:00Z",
-    "trialUsedAt" : "2026-10-31T23:00:00Z"
+    "trialUsedAt" : "2026-10-31T23:00:00Z",
+    "emailVerifiedAt" : "2026-10-31T23:00:00Z"
   },
   "peladas" : [ {
     "peladaId" : 995,

@@ -51,7 +51,7 @@ class PeladaSubscriptionServiceTest {
 
     @BeforeEach
     void setUp() {
-        creator = User.builder().id(1L).username("criador").email("c@test").build();
+        creator = User.builder().emailVerifiedAt(java.time.Instant.EPOCH).id(1L).username("criador").email("c@test").build();
         pelada = Pelada.builder().id(7L).name("Pelada").creator(creator).build();
         service = new PeladaSubscriptionService(userAuthHelper, new PeladaAccessHelper(peladaRepository),
                 peladaRepository, subscriptionRepository, paymentRepository, subscriptionService,

@@ -44,8 +44,8 @@ class SubscriptionReadModelTest extends BaseIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        creator = userRepository.save(User.builder().email("rm-creator@test.com").username("rmcreator").password("hash").build());
-        member = userRepository.save(User.builder().email("rm-member@test.com").username("rmmember").password("hash").build());
+        creator = userRepository.save(User.builder().emailVerifiedAt(java.time.Instant.EPOCH).email("rm-creator@test.com").username("rmcreator").password("hash").build());
+        member = userRepository.save(User.builder().emailVerifiedAt(java.time.Instant.EPOCH).email("rm-member@test.com").username("rmmember").password("hash").build());
     }
 
     @Test

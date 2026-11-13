@@ -122,7 +122,7 @@ class DailySchedulerTransactionTest {
     }
 
     private User user(String name) {
-        return userRepository.save(User.builder().email(name + "@test.com").username(name).password("hash").build());
+        return userRepository.save(User.builder().emailVerifiedAt(java.time.Instant.EPOCH).email(name + "@test.com").username(name).password("hash").build());
     }
 
     private Pelada pelada(String name, User creator, User member) {

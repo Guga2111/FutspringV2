@@ -40,7 +40,7 @@ class UserServiceProfileTest {
     void setUp() {
         userService = new UserService(userRepository, peladaRepository, fileUploadService, playerStarsRepository, new com.futspring.backend.shared.helper.UserAuthenticationHelper(userRepository), null, null, null, null);
 
-        user = User.builder()
+        user = User.builder().emailVerifiedAt(java.time.Instant.EPOCH)
                 .id(1L)
                 .email("alice@example.com")
                 .username("alice")

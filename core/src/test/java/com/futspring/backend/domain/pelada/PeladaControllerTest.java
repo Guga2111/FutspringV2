@@ -65,11 +65,11 @@ class PeladaControllerTest extends BaseIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        admin = userRepository.save(User.builder()
+        admin = userRepository.save(User.builder().emailVerifiedAt(java.time.Instant.EPOCH)
                 .email("padmin@test.com").username("padmin").password("hash").build());
-        member = userRepository.save(User.builder()
+        member = userRepository.save(User.builder().emailVerifiedAt(java.time.Instant.EPOCH)
                 .email("pmember@test.com").username("pmember").password("hash").build());
-        outsider = userRepository.save(User.builder()
+        outsider = userRepository.save(User.builder().emailVerifiedAt(java.time.Instant.EPOCH)
                 .email("pout@test.com").username("pout").password("hash").build());
 
         pelada = peladaRepository.save(Pelada.builder()
@@ -971,7 +971,7 @@ class PeladaControllerTest extends BaseIntegrationTest {
     }
 
     private User joinedMember(String username) {
-        User user = userRepository.save(User.builder()
+        User user = userRepository.save(User.builder().emailVerifiedAt(java.time.Instant.EPOCH)
                 .email(username + "@test.com").username(username).password("hash").build());
         pelada.getMembers().add(user);
         peladaRepository.save(pelada);

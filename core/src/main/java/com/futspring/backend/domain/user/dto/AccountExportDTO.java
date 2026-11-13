@@ -49,7 +49,8 @@ public record AccountExportDTO(
             Instant createdAt,
             String termsVersion,
             Instant termsAcceptedAt,
-            Instant trialUsedAt) {
+            Instant trialUsedAt,
+            Instant emailVerifiedAt) {
     }
 
     public record Membership(Long peladaId, String peladaName, boolean isCreator, boolean isAdmin,

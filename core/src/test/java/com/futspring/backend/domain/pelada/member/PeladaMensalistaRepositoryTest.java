@@ -27,8 +27,8 @@ class PeladaMensalistaRepositoryTest {
 
     @BeforeEach
     void setUp() {
-        ana = userRepository.save(User.builder().email("ana@test.com").username("ana").password("hash").build());
-        bia = userRepository.save(User.builder().email("bia@test.com").username("bia").password("hash").build());
+        ana = userRepository.save(User.builder().emailVerifiedAt(java.time.Instant.EPOCH).email("ana@test.com").username("ana").password("hash").build());
+        bia = userRepository.save(User.builder().emailVerifiedAt(java.time.Instant.EPOCH).email("bia@test.com").username("bia").password("hash").build());
         first = pelada("A");
         second = pelada("B");
     }

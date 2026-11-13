@@ -35,7 +35,7 @@ class FileControllerTest extends BaseIntegrationTest {
         for (String file : List.of("avatar.jpg", "group.png", "champion.jpg", "orphan.jpg")) Files.write(DIRECTORY.resolve(file), new byte[]{1,2,3});
     }
     private User save(String name, String image) {
-        return users.save(User.builder().username(name).email(name+"@test.com").password("hash").image(image).build());
+        return users.save(User.builder().emailVerifiedAt(Instant.EPOCH).username(name).email(name+"@test.com").password("hash").image(image).build());
     }
     @Test void anonymousIsRejected() throws Exception {
         mockMvc.perform(get("/api/v1/files/avatar.jpg")).andExpect(status().isUnauthorized());

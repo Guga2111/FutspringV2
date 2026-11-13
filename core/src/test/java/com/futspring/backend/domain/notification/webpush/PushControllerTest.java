@@ -35,8 +35,8 @@ class PushControllerTest extends BaseIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        ana = userRepository.save(User.builder().email("push-ana@test.com").username("push-ana").password("hash").build());
-        bia = userRepository.save(User.builder().email("push-bia@test.com").username("push-bia").password("hash").build());
+        ana = userRepository.save(User.builder().emailVerifiedAt(java.time.Instant.EPOCH).email("push-ana@test.com").username("push-ana").password("hash").build());
+        bia = userRepository.save(User.builder().emailVerifiedAt(java.time.Instant.EPOCH).email("push-bia@test.com").username("push-bia").password("hash").build());
     }
 
     @Test

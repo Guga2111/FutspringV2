@@ -81,7 +81,7 @@ class FinanceServiceTest extends BaseIntegrationTest {
     }
     void appoint(User user) { var m = new FinanceManager(); m.setPeladaId(id()); m.setUserId(user.getId()); managerRows.saveAndFlush(m); }
     FinanceRequests.Managers managers(User... users) { return new FinanceRequests.Managers(command(), Arrays.stream(users).map(User::getId).toList()); }
-    User user(String name) { return users.save(User.builder().username(name + UUID.randomUUID()).email(UUID.randomUUID() + "@finance.test").password("hash").build()); }
+    User user(String name) { return users.save(User.builder().emailVerifiedAt(java.time.Instant.EPOCH).username(name + UUID.randomUUID()).email(UUID.randomUUID() + "@finance.test").password("hash").build()); }
     Long id() { return pelada.getId(); }
     FinanceRequests.Command command() { return command("Correção justificada"); }
     FinanceRequests.Command command(String reason) { return new FinanceRequests.Command(accounts.findByPeladaId(id()).map(FinanceAccount::getRevision).orElse(0L), UUID.randomUUID(), reason); }

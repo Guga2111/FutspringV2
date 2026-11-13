@@ -372,7 +372,7 @@ class AccountSettingsTest extends BaseIntegrationTest {
                         .content(json(Map.of("username", "Novo" + UUID.randomUUID().toString().substring(0, 8),
                                 "email", oldEmail, "password", "outra-senha-123",
                                 "termsVersion", com.futspring.backend.domain.auth.LegalTerms.CURRENT_VERSION))))
-                .andExpect(status().isCreated());
+                .andExpect(status().isNoContent());
     }
 
     @Test
@@ -458,7 +458,7 @@ class AccountSettingsTest extends BaseIntegrationTest {
     }
 
     private User user(String name) {
-        return users.save(User.builder().username(name + UUID.randomUUID().toString().substring(0, 8))
+        return users.save(User.builder().emailVerifiedAt(java.time.Instant.EPOCH).username(name + UUID.randomUUID().toString().substring(0, 8))
                 .email(UUID.randomUUID() + "@account.test").password(passwordEncoder.encode(PASSWORD)).build());
     }
 

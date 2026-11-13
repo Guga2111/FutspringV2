@@ -92,6 +92,10 @@ public class AccountDeletionService {
         // Every token dies: the version no longer matches and the e-mail in it no longer exists
         user.setTokenVersion(user.getTokenVersion() + 1);
         user.setDeletedAt(clock.instant());
+        user.setEmailVerifiedAt(null);
+        user.setEmailVerificationHash(null);
+        user.setEmailVerificationExpiresAt(null);
+        user.setEmailVerificationSentAt(null);
         userRepository.save(user);
     }
 

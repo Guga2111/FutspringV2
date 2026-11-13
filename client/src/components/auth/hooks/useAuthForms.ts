@@ -32,7 +32,6 @@ export function useLoginForm(returnTo: string) {
 // Registration: field errors from RegisterRequestDTO go to their fields, the rest (e-mail in use) to root
 export function useRegisterForm(returnTo: string) {
   const navigate = useNavigate()
-  const { login } = useAuth()
   const form = useForm<RegisterValues>({
     resolver: zodResolver(registerSchema),
     defaultValues: { username: "", email: "", password: "", confirmPassword: "", terms: false },
@@ -41,14 +40,13 @@ export function useRegisterForm(returnTo: string) {
   async function onSubmit(values: RegisterValues) {
     try {
       // the checkbox is required by the schema; the server records the version the user accepted (409 if outdated)
-      const response = await registerUser({
+      await registerUser({
         username: values.username,
         email: values.email,
         password: values.password,
         termsVersion: LEGAL_VERSION,
       })
-      login(response.token, response.user)
-      navigate(returnTo, { replace: true })
+      navigate(`/verification-email?returnTo=${encodeURIComponent(returnTo)}`, { replace: true, state: { email: values.email, sent: true } })
     } catch (error) {
       applyServerErrors(form, error, "Não foi possível criar a conta. Tente novamente.")
     }

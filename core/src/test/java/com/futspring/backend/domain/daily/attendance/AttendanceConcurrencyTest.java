@@ -113,7 +113,7 @@ class AttendanceConcurrencyTest {
     private List<User> users(String prefix, int count) {
         List<User> users = new ArrayList<>();
         for (int i = 0; i < count; i++) {
-            users.add(userRepository.save(User.builder()
+            users.add(userRepository.save(User.builder().emailVerifiedAt(java.time.Instant.EPOCH)
                     .email(prefix + i + "@test.com").username(prefix + i).password("hash").build()));
         }
         return users;

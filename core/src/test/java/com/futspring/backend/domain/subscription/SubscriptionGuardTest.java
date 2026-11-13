@@ -106,7 +106,7 @@ class SubscriptionGuardTest {
 
     private static Pelada peladaWith(int members) {
         Set<User> users = new HashSet<>();
-        for (long id = 1; id <= members; id++) users.add(User.builder().id(id).build());
+        for (long id = 1; id <= members; id++) users.add(User.builder().emailVerifiedAt(java.time.Instant.EPOCH).id(id).build());
         return Pelada.builder().id(7L).name("Pelada").members(users).build();
     }
 }
