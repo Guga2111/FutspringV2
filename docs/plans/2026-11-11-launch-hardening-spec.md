@@ -341,10 +341,19 @@ Para planejar um PR, rode o prompt dele numa sessão limpa (`/clear` antes). Ao 
 /plan-task docs/plans/2026-11-11-launch-hardening-spec.md "PR B2 — API de refresh"
 ```
 
-### [ ] PR B3 — Sessão no cliente (`feat/session-refresh-client`)
+### [x] PR B3 — Sessão no cliente (`feat/session-refresh-client`)
 - **Entrega:** token em memória, refresh no boot e no 401, STOMP com token atual, logout no servidor, e2e.
 - **Depois do merge no `main`:** `JWT_EXPIRATION_MS=900000`.
 - **Docs:** FRONTEND.md (API client and auth, Environment, Visual regression), BACKEND.md (Tokens).
+- **Decisões:**
+  - Novo `client/src/lib/session.ts` (sem React): o access token em memória, o refresh *single-flight* por aba, `freshAccessToken` (STOMP) e `installSessionInterceptors`, chamado quando o `AuthContext` carrega (como o interceptor de request de antes). O `AuthContext` só guarda o estado (usuário, `restoring`) e assina `onSessionRefreshed` / `onSessionExpired`; o `token` **saiu do contexto** (ninguém mais lia depois do STOMP). Assim o single-flight e a repetição são testados com uma instância real do axios (`session.test.ts`), sem React.
+  - **Boot com falha que não é 401 (PWA sem rede, 503 com o Redis fora) mantém o usuário em cache** (escolha do dono): o shell abre sem token, as telas mostram o erro / "Sem conexão" e o próximo 401 tenta o refresh de novo. Só um 401 do refresh desloga. Sem usuário em cache o boot não chama o refresh (visitante da landing não gera 401).
+  - Interceptor: um 401 fora de `/auth/*` e da remoção do push → refresh compartilhado → repete **uma vez** (`config.sessionRetry`); refresh 401 ou repetição com 401 → logout + `/auth?expired=1&returnTo=…`; refresh com outra falha rejeita com o erro original sem deslogar. Um refresh que volta depois de um logout é descartado (contador de geração). O request interceptor não sobrescreve um `Authorization` explícito (a remoção do push com o token da sessão que fecha).
+  - STOMP: `beforeConnect` usa `freshAccessToken()`, que lê o `exp` do JWT (sem validar a assinatura, só para decidir) e renova antes se faltam < 30 s; o efeito depende do `user.id`, não do token, então renovar o access não derruba a conexão. Sem isso, uma reconexão depois de 15 min seria recusada no CONNECT (não há 401 para repetir).
+  - `withCredentials` por chamada (`WITH_SESSION_COOKIE` em `api/auth.ts`) em login, cadastro, refresh, logout **e na troca de senha** (`api/users.ts`, que também grava o cookie), em vez de um interceptor por URL.
+  - `PrivateRoute` mostra um skeleton no formato do shell enquanto `restoring`; o boot com 401 manda para `/auth` com `state.from` (já aceito pelo login), sem `expired=1` (não havia sessão ativa na aba). Páginas públicas (landing, 404, `/join/:token`) passam a olhar `user`; o `useInvitePreview` é chaveado pelo `user.id` em vez do token (senão rebuscaria a cada renovação).
+  - `logout()` chama `POST /auth/logout` (melhor esforço, sem esperar) além de soltar o push; o reset de senha e a exclusão de conta continuam chamando `logout()`.
+  - e2e: `login()` grava só o `futspring_user`; o `mockApi` responde `POST /auth/refresh` com um token em formato JWT válido até 2100 (o STOMP não pede outro). Visual regression verde sem snapshot novo.
 
 ```
 /plan-task docs/plans/2026-11-11-launch-hardening-spec.md "PR B3 — Sessão no cliente"

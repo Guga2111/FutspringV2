@@ -58,6 +58,10 @@ const routes: [RegExp, Handler][] = [
   [/^\/platform\/users$/, () => f.platformUsers],
 ]
 
+// The session the boot refresh restores (the access token lives in memory): a JWT-shaped token valid until 2100,
+// so the STOMP connection never asks for another one
+const SESSION_TOKEN = `h.${Buffer.from(JSON.stringify({ sub: "visual-test", exp: 4_102_444_800 })).toString("base64url")}.s`
+
 // What a test can set in window.__pushState (an init script added after mockApi's) for the device's Web Push
 export interface PushState {
   permission?: NotificationPermission
@@ -70,6 +74,9 @@ export async function mockApi(page: Page): Promise<string[]> {
     const request = route.request()
     const url = new URL(request.url())
     const path = url.pathname.replace(/^.*\/api\/v1/, "")
+    if (request.method() === "POST" && path === "/auth/refresh") {
+      return route.fulfill({ status: 200, json: { token: SESSION_TOKEN, user: f.me } })
+    }
     if (request.method() === "GET") {
       for (const [pattern, handler] of routes) {
         const match = path.match(pattern)
@@ -90,9 +97,9 @@ export async function mockApi(page: Page): Promise<string[]> {
   return unmatched
 }
 
+// Logged in = a cached session user; the app restores the session with POST /auth/refresh (answered above)
 export async function login(page: Page) {
   await page.addInitScript((user) => {
-    localStorage.setItem("futspring_token", "visual-test-token")
     localStorage.setItem("futspring_user", JSON.stringify(user))
   }, f.me)
 }

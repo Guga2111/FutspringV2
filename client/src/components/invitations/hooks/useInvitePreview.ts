@@ -3,13 +3,13 @@ import { getInvitePreview } from "@/api/invitations"
 import { getMyPeladas } from "@/api/peladas"
 import type { PeladaPreview } from "@/types/invitation"
 
-// The public preview of a share link (/join/:token), keyed by token. With a session it also checks whether
+// The public preview of a share link (/join/:token), keyed by token. Logged in, it also checks whether
 // the caller already belongs to the pelada (the page outside the shell has no MyPeladasContext); joining
 // is checked again on the server.
-export function useInvitePreview(token: string, session: string | null) {
+export function useInvitePreview(token: string, userId: number | null) {
   const [attempt, setAttempt] = useState(0)
   const [result, setResult] = useState<{ token: string; preview?: PeladaPreview; error?: unknown } | null>(null)
-  const [member, setMember] = useState<{ token: string; session: string; id: number } | null>(null)
+  const [member, setMember] = useState<{ token: string; userId: number; id: number } | null>(null)
 
   useEffect(() => {
     let active = true
@@ -23,19 +23,19 @@ export function useInvitePreview(token: string, session: string | null) {
   const preview = current?.preview ?? null
 
   useEffect(() => {
-    if (!session || !preview) return
+    if (userId === null || !preview) return
     let active = true
     getMyPeladas()
-      .then((peladas) => { if (active && peladas.some((p) => p.id === preview.id)) setMember({ token, session, id: preview.id }) })
+      .then((peladas) => { if (active && peladas.some((p) => p.id === preview.id)) setMember({ token, userId, id: preview.id }) })
       .catch(() => { /* joining still checks membership on the server */ })
     return () => { active = false }
-  }, [session, preview, token])
+  }, [userId, preview, token])
 
   return {
     preview,
     loading: !current,
     error: current?.error ?? null,
-    memberPeladaId: member?.token === token && member.session === session ? member.id : null,
+    memberPeladaId: member?.token === token && member.userId === userId ? member.id : null,
     retry: useCallback(() => setAttempt((v) => v + 1), []),
   }
 }
