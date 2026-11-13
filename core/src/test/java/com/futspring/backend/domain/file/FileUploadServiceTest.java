@@ -73,6 +73,14 @@ class FileUploadServiceTest {
     }
 
     @Test
+    void largePhoto_isStoredAtMost2048PxOnTheLongSide() throws IOException {
+        String filename = upload(TestImages.jpeg(3000, 1500), "image/jpeg");
+        BufferedImage image = stored(filename);
+        assertThat(image.getWidth()).isEqualTo(FileUploadService.MAX_SIDE);
+        assertThat(image.getHeight()).isEqualTo(1024);
+    }
+
+    @Test
     void rotatedJpeg_isStoredUpright() throws IOException {
         String filename = upload(TestImages.jpegWithExif(40, 20, 6, false), "image/jpeg");
         BufferedImage image = stored(filename);

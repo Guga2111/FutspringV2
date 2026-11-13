@@ -45,6 +45,11 @@ public final class TestImages {
         return resource("/images/opaque.webp");
     }
 
+    /** 3000×1500 lossy WebP (no alpha), made with {@code cwebp -q 30} from a generated PNG of 50-px blocks. */
+    public static byte[] largeWebp() {
+        return resource("/images/large-3000x1500.webp");
+    }
+
     /** 8×8 lossless WebP with half-transparent pixels, made with {@code cwebp -lossless -exact}. */
     public static byte[] webpWithAlpha() {
         return resource("/images/alpha.webp");
