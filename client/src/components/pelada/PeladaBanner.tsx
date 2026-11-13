@@ -16,9 +16,10 @@ interface PeladaBannerProps {
 const overlayButton = "size-[34px] rounded-full bg-black/35 text-white hover:bg-black/55 hover:text-white [&_svg]:size-[15px]"
 
 export function PeladaBanner({ pelada, isCurrentUserAdmin }: PeladaBannerProps) {
-  const imageUrl = useImageUrl(pelada.image)
+  const { url: imageUrl, ref } = useImageUrl(pelada.image)
   return (
     <section
+      ref={ref}
       className={cn(
         "relative flex min-h-[190px] flex-col justify-end overflow-hidden rounded-tile md:min-h-[230px]",
         !imageUrl && getPeladaColor(pelada.name),

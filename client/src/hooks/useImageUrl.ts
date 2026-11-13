@@ -1,26 +1,33 @@
-import { useEffect, useState } from "react"
-import { getImage } from "@/api/files"
+import { useCallback, useEffect, useState, useSyncExternalStore } from "react"
 import { useAuth } from "@/hooks/useAuth"
+import { imageSnapshot, subscribeImage } from "@/lib/privateImages"
 
-// Private bytes travel through the Bearer interceptor. Object URLs live only while this account/image is mounted.
-export function useImageUrl(filename: string | null | undefined): string | undefined {
+// Attach ref to the photo's visible frame (including its fallback), not a hidden parent/list row.
+// No HTTP request starts until this element approaches the viewport. Bytes stay shared only while in use.
+export function useImageUrl(filename: string | null | undefined) {
   const { user } = useAuth()
   const userId = user?.id
-  const key = `${userId}:${filename}`
-  const [result, setResult] = useState<{ key: string; url: string } | null>(null)
+  const [element, ref] = useState<HTMLElement | null>(null)
+  const [visible, setVisible] = useState(() => typeof IntersectionObserver === "undefined")
   useEffect(() => {
-    if (!filename || !userId) return
-    let canceled = false
-    let url: string | undefined
-    getImage(filename).then((blob) => {
-      if (canceled) return
-      url = URL.createObjectURL(blob)
-      setResult({ key, url })
-    }).catch(() => { /* An inaccessible or deleted image uses the component's fallback. */ })
-    return () => {
-      canceled = true
-      if (url) URL.revokeObjectURL(url)
-    }
-  }, [filename, userId, key])
-  return userId && filename && result?.key === key ? result.url : undefined
+    if (!element || visible) return
+    const observer = new IntersectionObserver((entries) => {
+      if (entries.some((entry) => entry.isIntersecting)) {
+        setVisible(true)
+        observer.disconnect()
+      }
+    }, { rootMargin: "200px" })
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [element, visible])
+
+  const subscribe = useCallback((notify: () => void) => {
+    if (!visible || !filename || !userId) return () => {}
+    return subscribeImage(userId, filename, notify)
+  }, [visible, filename, userId])
+  const snapshot = useCallback(() => (
+    visible && filename && userId ? imageSnapshot(userId, filename) : undefined
+  ), [visible, filename, userId])
+  const url = useSyncExternalStore(subscribe, snapshot, () => undefined)
+  return { url, ref }
 }

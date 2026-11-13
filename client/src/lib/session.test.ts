@@ -80,13 +80,83 @@ describe("refreshAccessToken", () => {
     mockRefresh.mockReturnValue(new Promise((resolve) => { answer = resolve }))
     const pending = refreshAccessToken()
     setAccessToken(null)
+    expect(mockRefresh.mock.calls[0][0]?.aborted).toBe(true)
     answer({ token: "novo", user })
-    await pending
+    await expect(pending).rejects.toMatchObject({ name: "SessionChangedError" })
     expect(getAccessToken()).toBeNull()
   })
 })
 
 describe("installSessionInterceptors", () => {
+  it("does not retry a mutation after logout while its refresh is pending", async () => {
+    let answer: (session: { token: string; user: typeof user }) => void = () => undefined
+    mockRefresh.mockReturnValue(new Promise((resolve) => { answer = resolve }))
+    const { instance, seen } = client()
+    const pending = instance.post("/api/v1/peladas/1/players/remove", { userIds: [3] })
+    const rejected = expect(pending).rejects.toMatchObject({ name: "SessionChangedError" })
+    await vi.waitFor(() => expect(mockRefresh).toHaveBeenCalledTimes(1))
+    setAccessToken(null)
+    expect(mockRefresh.mock.calls[0][0]?.aborted).toBe(true)
+    answer({ token: "novo", user })
+    await rejected
+    expect(seen).toEqual(["Bearer velho"])
+    expect(getAccessToken()).toBeNull()
+    expect(expired).not.toHaveBeenCalled()
+  })
+
+  it("an old refresh failure cannot log out a new account", async () => {
+    let fail: (error: unknown) => void = () => undefined
+    mockRefresh.mockReturnValue(new Promise((_resolve, reject) => { fail = reject }))
+    const { instance, seen } = client()
+    const pending = instance.get("/api/v1/peladas/my")
+    const rejected = expect(pending).rejects.toMatchObject({ name: "SessionChangedError" })
+    await vi.waitFor(() => expect(mockRefresh).toHaveBeenCalledTimes(1))
+    setAccessToken("other-account")
+    fail(statusError(401))
+    await rejected
+    expect(seen).toEqual(["Bearer velho"])
+    expect(getAccessToken()).toBe("other-account")
+    expect(expired).not.toHaveBeenCalled()
+  })
+
+  it("a delayed 401 of an old account cannot refresh or replay under a new one", async () => {
+    let finish: () => void = () => undefined
+    const sent: string[] = []
+    const instance = axios.create({ adapter: async (config) => {
+      sent.push(String(config.headers.get("Authorization")))
+      await new Promise<void>((resolve) => { finish = resolve })
+      return respond(config, 401)
+    } })
+    installSessionInterceptors(instance)
+    const pending = instance.post("/api/v1/peladas/1/players/remove", { userIds: [3] })
+    const rejected = expect(pending).rejects.toMatchObject({ name: "SessionChangedError" })
+    await vi.waitFor(() => expect(sent).toHaveLength(1))
+    setAccessToken("other-account")
+    finish()
+    await rejected
+    expect(sent).toEqual(["Bearer velho"])
+    expect(mockRefresh).not.toHaveBeenCalled()
+    expect(expired).not.toHaveBeenCalled()
+  })
+
+  it("an old refresh finalizer does not clear the new account's refresh flight", async () => {
+    let oldAnswer: (session: { token: string; user: typeof user }) => void = () => undefined
+    let newAnswer: (session: { token: string; user: typeof user }) => void = () => undefined
+    mockRefresh.mockReturnValueOnce(new Promise((resolve) => { oldAnswer = resolve }))
+      .mockReturnValueOnce(new Promise((resolve) => { newAnswer = resolve }))
+    const oldPending = refreshAccessToken()
+    const rejected = expect(oldPending).rejects.toMatchObject({ name: "SessionChangedError" })
+    setAccessToken("other-account")
+    const newPending = refreshAccessToken()
+    oldAnswer({ token: "obsolete", user })
+    await rejected
+    expect(refreshAccessToken()).toBe(newPending)
+    expect(mockRefresh).toHaveBeenCalledTimes(2)
+    newAnswer({ token: "current", user: { ...user, id: 2 } })
+    await newPending
+    expect(getAccessToken()).toBe("current")
+  })
+
   it("sends the current token, unless the call set its own", async () => {
     setAccessToken("novo")
     const { instance, seen } = client()

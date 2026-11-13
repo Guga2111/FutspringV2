@@ -137,7 +137,7 @@ function GalleryGrid({ children }: { children: React.ReactNode }) {
 }
 
 function SessionGalleryCard({ daily }: { daily: DailyListItem }) {
-  const photo = useImageUrl(daily.championImage)
+  const { url: photo, ref } = useImageUrl(daily.championImage)
   const date = parseLocalDate(daily.dailyDate)
   return (
     <li>
@@ -145,7 +145,7 @@ function SessionGalleryCard({ daily }: { daily: DailyListItem }) {
         to={`/daily/${daily.id}`}
         className="group flex flex-col gap-2.5 rounded-tile outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
       >
-        <div className="relative aspect-[4/3] overflow-hidden rounded-tile bg-card-elevated">
+        <div ref={ref} className="relative aspect-[4/3] overflow-hidden rounded-tile bg-card-elevated">
           {photo ? (
             <img
               src={photo}

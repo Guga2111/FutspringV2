@@ -12,10 +12,11 @@ interface PeladaAvatarProps {
 
 // Pelada photo, or its gradient with initials when there is none
 export function PeladaAvatar({ name, image, className, objectPosition = "center 18%" }: PeladaAvatarProps) {
-  const photo = useImageUrl(image)
+  const { url: photo, ref } = useImageUrl(image)
   if (photo) {
     return (
       <img
+        ref={ref}
         src={photo}
         alt=""
         loading="lazy"
@@ -26,6 +27,7 @@ export function PeladaAvatar({ name, image, className, objectPosition = "center 
   }
   return (
     <div
+      ref={ref}
       aria-hidden
       className={cn(
         "flex shrink-0 select-none items-center justify-center font-bold text-white",
