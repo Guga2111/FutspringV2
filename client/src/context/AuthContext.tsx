@@ -2,11 +2,24 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 import type { ReactNode } from "react"
 import type { UserResponseDTO } from "@/types/auth"
 import apiClient from "@/api/client"
-import { PUSH_REMOVE_PATH, unsubscribePush } from "@/api/push"
+import { logoutSession } from "@/api/auth"
+import { unsubscribePush } from "@/api/push"
+import { getErrorStatus } from "@/lib/errors"
 import { currentPushSubscription, setAppBadge } from "@/lib/push"
+import {
+  getAccessToken,
+  installSessionInterceptors,
+  onSessionExpired,
+  onSessionRefreshed,
+  refreshAccessToken,
+  setAccessToken,
+} from "@/lib/session"
 import { AuthContext } from "./auth-context-value"
 
-const TOKEN_KEY = "futspring_token"
+// The access token of the 7-day sessions, before the refresh cookie: no longer read, removed on boot (those users
+// log in once more)
+const LEGACY_TOKEN_KEY = "futspring_token"
+// The session user, cached to know on boot that there is a session to restore and to paint the shell
 const USER_KEY = "futspring_user"
 // how long a logout waits for the server to forget this device's push subscription
 const PUSH_REMOVE_TIMEOUT_MS = 2000
@@ -26,29 +39,34 @@ async function releasePushDevice(token: string | null) {
   }
 }
 
-// Registered once when the module loads, not in an effect: child effects (AppLayout's first fetch) run before
-// the provider's own effects, so an effect-registered interceptor would miss the first requests.
-apiClient.interceptors.request.use((config) => {
-  const storedToken = localStorage.getItem(TOKEN_KEY)
-  if (storedToken) {
-    config.headers.Authorization = `Bearer ${storedToken}`
-  }
-  return config
-})
-
-export function AuthProvider({ children }: { children: ReactNode }) {
-  const [token, setToken] = useState<string | null>(() => localStorage.getItem(TOKEN_KEY))
-  const [user, setUser] = useState<UserResponseDTO | null>(() => {
+function readCachedUser(): UserResponseDTO | null {
+  try {
     const stored = localStorage.getItem(USER_KEY)
     return stored ? (JSON.parse(stored) as UserResponseDTO) : null
-  })
+  } catch {
+    return null
+  }
+}
 
-  const login = useCallback((newToken: string, newUser: UserResponseDTO) => {
-    setToken(newToken)
+installSessionInterceptors(apiClient)
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<UserResponseDTO | null>(readCachedUser)
+  // a cached user whose session the boot refresh is still restoring; PrivateRoute waits for it
+  const [restoring, setRestoring] = useState(() => user !== null)
+
+  const applySession = useCallback((newUser: UserResponseDTO) => {
     setUser(newUser)
-    localStorage.setItem(TOKEN_KEY, newToken)
     localStorage.setItem(USER_KEY, JSON.stringify(newUser))
   }, [])
+
+  const login = useCallback(
+    (newToken: string, newUser: UserResponseDTO) => {
+      setAccessToken(newToken)
+      applySession(newUser)
+    },
+    [applySession],
+  )
 
   const updateUser = useCallback((patch: Partial<UserResponseDTO>) => {
     setUser((current) => {
@@ -59,41 +77,58 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     })
   }, [])
 
-  // `sessionValid`: false after a 401, when the server would refuse the push removal anyway
+  // `sessionValid`: false when the server already ended it (a 401), so neither the push removal nor the logout
+  // would be accepted or needed
   const endSession = useCallback((sessionValid: boolean) => {
-    void releasePushDevice(sessionValid ? localStorage.getItem(TOKEN_KEY) : null)
-    setToken(null)
+    const closing = getAccessToken()
+    void releasePushDevice(sessionValid ? closing : null)
+    if (sessionValid) void logoutSession().catch(() => undefined)
+    setAccessToken(null)
     setUser(null)
-    localStorage.removeItem(TOKEN_KEY)
+    setRestoring(false)
     localStorage.removeItem(USER_KEY)
   }, [])
 
   const logout = useCallback(() => endSession(true), [endSession])
 
-  // The 401 interceptor lives inside the provider so it has access to logout
+  // Every refresh (boot, a 401, the STOMP reconnect) updates the state; an ended session goes to the login,
+  // keeping the full destination
   useEffect(() => {
-    const responseInterceptor = apiClient.interceptors.response.use(
-      (response) => response,
-      (error) => {
-        // A 401 from login/register is a wrong password or similar, shown by the form, not an expired session;
-        // one from the logout's push removal (a password reset or deletion already revoked the token) is ignored
-        const url: string | undefined = error.config?.url
-        const isAuthRequest = url?.startsWith("/api/v1/auth/") || url === PUSH_REMOVE_PATH
-        if (error.response?.status === 401 && !isAuthRequest) {
-          endSession(false)
-          const destination = window.location.pathname + window.location.search + window.location.hash
-          window.location.href = `/auth?expired=1&returnTo=${encodeURIComponent(destination)}`
-        }
-        return Promise.reject(error)
-      }
-    )
-
+    const stopRefreshed = onSessionRefreshed((session) => applySession(session.user))
+    const stopExpired = onSessionExpired(() => {
+      endSession(false)
+      const destination = window.location.pathname + window.location.search + window.location.hash
+      window.location.href = `/auth?expired=1&returnTo=${encodeURIComponent(destination)}`
+    })
     return () => {
-      apiClient.interceptors.response.eject(responseInterceptor)
+      stopRefreshed()
+      stopExpired()
     }
-  }, [endSession])
+  }, [applySession, endSession])
 
-  const value = useMemo(() => ({ user, token, login, logout, updateUser }), [user, token, login, logout, updateUser])
+  // Boot: the cookie gives a new access token. 401 → no session (PrivateRoute sends to the login); any other
+  // failure (offline PWA, the server can't renew now) keeps the cached user: the screens show their error states
+  // and the next 401 tries again
+  useEffect(() => {
+    localStorage.removeItem(LEGACY_TOKEN_KEY)
+    if (!restoring) return
+    let active = true
+    refreshAccessToken()
+      .catch((error: unknown) => {
+        if (active && getErrorStatus(error) === 401) endSession(false)
+      })
+      .finally(() => {
+        if (active) setRestoring(false)
+      })
+    return () => {
+      active = false
+    }
+  }, [restoring, endSession])
+
+  const value = useMemo(
+    () => ({ user, restoring, login, logout, updateUser }),
+    [user, restoring, login, logout, updateUser],
+  )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

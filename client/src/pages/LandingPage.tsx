@@ -12,9 +12,9 @@ import { useAuth } from "@/hooks/useAuth"
 // Colour chapters: each section is a full-bleed field that follows a match day
 // (list → draw → score → ranking), then the management tools, the champions, the FAQ
 export default function LandingPage() {
-  const { token } = useAuth()
+  const { user } = useAuth()
 
-  if (token) {
+  if (user) {
     return <Navigate to="/home" replace />
   }
 

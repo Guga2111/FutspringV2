@@ -412,14 +412,14 @@ New status-like fields must be Java enums stored with `@Enumerated(EnumType.STRI
 ### Tokens (`S/domain/auth/JwtService.java`)
 
 - HS256 JWT, claims `sub` = email, `userId`, `email`, `ver` (the user's `tokenVersion`; tokens without it count as 0), `iat`, `exp`; TTL 7 days by default.
-- Returned in the body (`AuthResponseDTO {token, user}`); the frontend keeps it in `localStorage` (until the client moves to the refresh cookie, launch hardening B3; then the access TTL goes down to 15 min).
+- Returned in the body (`AuthResponseDTO {token, user}`); the web app keeps it only in memory and renews it with `POST /auth/refresh` on boot and on a 401 (see "API client and auth" in `FRONTEND.md`). The access TTL is `JWT_EXPIRATION_MS`: 15 min (`900000`, the GitHub variable) once the cookie client is in production; the default stays 7 days.
 - Revocation is per user: incrementing `User.tokenVersion` (a password reset, a password change, the account deletion) invalidates every access token and every refresh session issued before; a deleted user's tokens stop working too.
 
 **Refresh sessions** (`domain/auth/session`, `RefreshSessionService`, stored in Redis):
 - Login, registration and the password change open a session and set the refresh token in the cookie `futspring_refresh` (`SessionCookie`): `HttpOnly; Secure; SameSite=Strict`, `Path` = the path of `API_URL` + `/api/v1/auth` (production `/api/api/v1/auth`, because nginx strips `/api`; dev `/api/v1/auth`; 5173 and 8080 on `localhost` are the same site, so `Strict` works in dev), `Max-Age` = the session's TTL. `Secure` comes from `AUTH_COOKIE_SECURE` (only the dev compose turns it off). The token is 256 random bits (`SecretTokens`); only its SHA-256 is stored.
 - Keys: `rt:{sha256(token)}` → `{userId, sessionId, tokenVersion}` and `sess:{sessionId}` → `{userId, createdAt, absoluteExpiresAt, lastUsedAt}` (JSON), both with TTL = min(30 days, `absoluteExpiresAt` − now); each refresh renews the session's TTL (30 days sliding), never past `absoluteExpiresAt` (opened + 90 days, also checked against the application clock).
 - `POST /auth/refresh`: valid when `rt` and `sess` exist, the session hasn't passed its ceiling and the stored `tokenVersion` equals the user's (one `findById`; a deleted account fails too). Answers a new access token and a **new** refresh token; the previous one stays valid until its own TTL (no reuse detection: two tabs, or the PWA and the browser, refreshing together must not log anyone out). Needs an `Origin` header listed in `ALLOWED_ORIGINS` (403 otherwise: the app and the API share an origin in production, so CORS alone wouldn't check it). Invalid → 401 "Sessão expirada. Entre novamente." clearing the cookie. The `Authorization` header is ignored.
-- `POST /auth/logout`: deletes the session of the cookie (every refresh token of it stops; the user's other sessions stay) and clears the cookie; idempotent, 204. The access token of that session keeps working until it expires (7 days today, 15 min after B3).
+- `POST /auth/logout`: deletes the session of the cookie (every refresh token of it stops; the user's other sessions stay) and clears the cookie; idempotent, 204. The access token of that session keeps working until it expires (up to `JWT_EXPIRATION_MS`, 15 min in production).
 - **Redis down:** login, registration and password change still answer the access token, without a cookie (`futspring.session.open{result=error}`, logged); refresh answers 503 "Não foi possível renovar a sessão agora…" keeping the cookie (`futspring.session.refresh{result=error}`), so the client can tell an outage from an ended session; logout clears the cookie and leaves the session to expire. Both counters feed the "Sessões (Redis)" alert.
 
 ### CORS
@@ -551,7 +551,7 @@ Relationships: **creator** (`pelada.creator`), **admin** (`pelada.admins`), **me
 |-----|-------|
 | No unique constraint on `user_daily_stats(daily_id, user_id)` / `player_match_stats(match_id, user_id)` (the code never writes duplicates, but the database doesn't enforce it). Check production for duplicates before adding them | `V1__baseline.sql` |
 | `nextDaily`'s "from today" (and the attendance ranking's period) still use the server's zone, not the pelada's `timeZone` | `PeladaService.toSummaries`, `AttendanceService` |
-| The access JWT is still valid for 7 days (the refresh API exists, the client moves to it in launch hardening B3 and then `JWT_EXPIRATION_MS` drops to 15 min); a logout ends the refresh session, not the access token already issued | `JwtService`, `JWT_EXPIRATION_MS` |
+| A logout ends the refresh session, not the access token already issued: it stays valid until it expires (`JWT_EXPIRATION_MS`; the default is still 7 days, production sets 15 min through the GitHub variable) | `JwtService`, `JWT_EXPIRATION_MS` |
 
 ## Pelada finance (`domain/finance`)
 

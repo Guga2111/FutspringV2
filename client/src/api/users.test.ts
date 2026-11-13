@@ -49,7 +49,7 @@ describe('account settings', () => {
   it('changes the password and returns the new session', async () => {
     mockPost.mockResolvedValue({ data: { token: 't', user: { id: 1 } } })
     const result = await changePassword({ currentPassword: 'velha', newPassword: 'nova-senha' })
-    expect(mockPost).toHaveBeenCalledWith('/api/v1/users/me/password', { currentPassword: 'velha', newPassword: 'nova-senha' })
+    expect(mockPost).toHaveBeenCalledWith('/api/v1/users/me/password', { currentPassword: 'velha', newPassword: 'nova-senha' }, { withCredentials: true })
     expect(result.token).toBe('t')
   })
 
