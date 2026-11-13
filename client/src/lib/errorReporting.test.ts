@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 vi.mock("@/api/clientErrors", () => ({ sendClientError: vi.fn() }))
 
 import { sendClientError } from "@/api/clientErrors"
-import { buildReport, buildViolationReport, reportError, resetErrorReporting, stripUrlQueries } from "./errorReporting"
+import { redactErrorText, buildReport, buildViolationReport, reportError, resetErrorReporting, stripUrlQueries } from "./errorReporting"
 
 const send = vi.mocked(sendClientError)
 
@@ -132,5 +132,13 @@ describe("buildViolationReport", () => {
     expect(buildViolationReport({ ...font, effectiveDirective: "style-src-elem", blockedURI: "https://fonts.googleapis.com/css2?family=Inter" })).toBeNull()
     // any other host is still reported
     expect(buildViolationReport({ ...font, blockedURI: "https://cdn.example.com/a.woff2" })?.source).toBe("CSP")
+  })
+})
+
+describe("credential redaction", () => {
+  it("redacts invite paths, bearer values, JSON tokens and URL queries", () => {
+    for (const value of ["/join/secret-value", "/api/v1/invite-links/secret-value/join", "Bearer secret-value", '{"token":"secret-value"}', "https://app/verify-email?token=secret-value"]) {
+      expect(redactErrorText(value)).not.toContain("secret-value")
+    }
   })
 })

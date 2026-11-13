@@ -993,3 +993,7 @@ Don't introduce these. Some exist already ("Found in"); fix them when the change
 | 21 | Editing a migration that already ran | New migration | — |
 | 22 | Seeding known-password users whenever the profile isn't `prod` | Seed only with an explicit `dev` profile | — |
 | 23 | Dead code left around | Delete it | — |
+
+## Error-report credential redaction (2026-11-13)
+
+`ClientErrorRedaction` sanitizes every untrusted telemetry field before logging: path, message, stack, release and user agent. It removes invitation token segments (`/join/{token}` and `/invite-links/{token}`, including encoded separators), URL queries/fragments, Bearer values, named token/password/authorization/cookie fields and JWTs. Diagnostic filenames and stack line numbers remain. The server independently sanitizes direct/forged reports and never relies on browser redaction. Limits remain 8 KB and 20 reports/min/IP; Loki retention is 14 days. This applies to client-error telemetry, not every infrastructure log. `ClientErrorRedactionTest` and browser report tests cover recognized credential shapes.

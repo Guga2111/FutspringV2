@@ -214,6 +214,7 @@ export const PRIVACY: LegalDocument = {
           "Notificações: as lidas são apagadas após 90 dias e todas após 180 dias.",
           "Pagamentos de assinatura: guardados pelo prazo exigido pela lei, inclusive a fiscal, mesmo depois que a pelada ou a conta é excluída, com o nome da pelada e de quem pagou.",
           "Links de troca de senha: valem 30 minutos.",
+          "Relatórios de erros do navegador: guardados nos registros de observabilidade por até 14 dias, com remoção de credenciais e tokens reconhecidos antes do registro.",
           "Cópias de segurança do banco: mantemos as 10 mais recentes.",
         ],
         "Quando você exclui a conta, seus dados pessoais são apagados e, nas sessões passadas, você aparece como “Ex-jogador”. Registros que a pelada precisa manter, como resultados das partidas e lançamentos do financeiro, continuam existindo sem os seus dados pessoais. A exceção são os pagamentos de assinatura, guardados como descrito acima.",
