@@ -24,8 +24,8 @@ export async function loginUser(data: LoginRequest): Promise<AuthResponse> {
 
 // A new access token and a new refresh cookie from the cookie alone. 401: the session ended (cookie cleared);
 // 503: the server can't renew now (Redis down), the session may still be valid
-export async function refreshSession(): Promise<AuthResponse> {
-  const response = await apiClient.post<AuthResponse>("/api/v1/auth/refresh", null, WITH_SESSION_COOKIE)
+export async function refreshSession(signal?: AbortSignal): Promise<AuthResponse> {
+  const response = await apiClient.post<AuthResponse>("/api/v1/auth/refresh", null, { ...WITH_SESSION_COOKIE, ...(signal ? { signal } : {}) })
   return response.data
 }
 

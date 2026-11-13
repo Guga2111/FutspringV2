@@ -16,9 +16,9 @@ interface PlayerAvatarProps {
 
 // Round player avatar: photo, or initials on the player's own color
 export function PlayerAvatar({ userId, username, image, className, deleted = false }: PlayerAvatarProps) {
-  const photo = useImageUrl(image)
+  const { url: photo, ref } = useImageUrl(image)
   return (
-    <Avatar className={cn("size-7 shrink-0 text-[11px]", className)}>
+    <Avatar ref={ref} className={cn("size-7 shrink-0 text-[11px]", className)}>
       {image && <AvatarImage src={photo} alt="" loading="lazy" className="object-cover" />}
       <AvatarFallback
         className={userId != null && !deleted ? cn(getAvatarColor(userId), "font-bold text-white") : "bg-avatar-fallback font-semibold"}

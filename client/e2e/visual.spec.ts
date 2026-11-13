@@ -67,6 +67,15 @@ async function settle(page: Page) {
   await page.mouse.move(0, 0)
   await page.waitForLoadState("networkidle")
   await expect(page.locator(".animate-pulse")).toHaveCount(0)
+  const scroll = await page.evaluate(() => ({ x: window.scrollX, y: window.scrollY }))
+  await page.evaluate(async () => {
+    for (let y = 0; y < document.documentElement.scrollHeight; y += window.innerHeight) {
+      window.scrollTo(0, y)
+      await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())))
+    }
+  })
+  await page.evaluate(({ x, y }) => window.scrollTo(x, y), scroll)
+  await page.waitForLoadState("networkidle")
   await page.evaluate(async () => {
     const images = Array.from(document.images)
     for (const image of images) image.loading = "eager"
