@@ -359,9 +359,16 @@ Para planejar um PR, rode o prompt dele numa sessão limpa (`/clear` antes). Ao 
 /plan-task docs/plans/2026-11-11-launch-hardening-spec.md "PR B3 — Sessão no cliente"
 ```
 
-### [ ] PR B4 — Content-Security-Policy (`feat/csp`)
+### [x] PR B4 — Content-Security-Policy (`feat/csp`)
 - **Entrega:** política no nginx (Report-Only, depois valendo), teste do hash do script inline.
 - **Docs:** BACKEND.md (CI/CD → nginx), FRONTEND.md (Styling / index.html).
+- **Decisões:**
+  - O cabeçalho fica em `location = /index.html`, não no `server`: todo documento da SPA cai ali (o fallback de `location /` e o `index` de `/`), e um `add_header` dentro de uma `location` descarta os do `server`. As respostas da API (JSON) e os arquivos estáticos ficam sem CSP.
+  - Sobe como `Content-Security-Policy-Report-Only`. **Depois de alguns dias sem violação em produção**, um PR de uma linha renomeia o cabeçalho para `Content-Security-Policy` (e aplica o nginx à mão). Sem `report-to`: o endpoint do C2 espera outro formato (`ClientErrorRequestDTO`) e o console basta para a checagem manual.
+  - `connect-src 'self' wss://futspring.luisgosampaio.com` (o host explícito para Safari antigo); `img-src` com `blob:` pelas imagens do financeiro (object URLs) e `data:`; `font-src` herda `'self'` (nenhuma fonte vira `data:` no build, conferido).
+  - **zod 4** testa `new Function("")` ao construir o primeiro schema de objeto (JIT); o erro é capturado, mas o navegador reporta a violação. `src/lib/zodConfig.ts` faz `z.config({ jitless: true })` e é o primeiro import do `main.tsx`, antes de qualquer schema. Nenhum outro `eval`/`new Function` no bundle.
+  - `src/lib/csp.test.ts` calcula o `sha256` dos scripts inline do `client/index.html` (o Vite copia o script sem mudança para o `dist`, conferido) e exige que sejam exatamente os hashes do `script-src` do nginx; também trava `default-src 'self'`, sem `unsafe-inline`/`unsafe-eval` em scripts, `frame-ancestors 'none'` e `object-src 'none'`.
+  - Verificação: o `dist` servido com a política **valendo** (connect-src trocado para o host local) no Chromium da imagem do Playwright: `/`, `/auth` (as duas abas, com submit), `/termos`, `/instalar`, `/forgot-password` sem violação e o tema escuro aplicado pelo script inline; com o hash adulterado, a violação aparece (o teste pega). Telas logadas (WebSocket, imagens do financeiro) ficam para a checagem manual em produção no período Report-Only.
 
 ```
 /plan-task docs/plans/2026-11-11-launch-hardening-spec.md "PR B4 — Content-Security-Policy"
