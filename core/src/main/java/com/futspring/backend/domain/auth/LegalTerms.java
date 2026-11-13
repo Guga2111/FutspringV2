@@ -4,7 +4,7 @@ package com.futspring.backend.domain.auth;
 // Change both, and the text in client/src/components/legal/content.ts, in the same change.
 public final class LegalTerms {
 
-    public static final String CURRENT_VERSION = "2026-11-09";
+    public static final String CURRENT_VERSION = "2026-11-13";
 
     private LegalTerms() {
     }

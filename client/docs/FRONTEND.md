@@ -618,3 +618,7 @@ Don't introduce these. Some exist already ("Found in", paths under `src/`); fix 
 | 25 | `npm install` / a second lockfile | `bun install`; delete `package-lock.json` | — |
 | 26 | Prop-drilling plain imports | Import the helper where it's used | — |
 | 27 | Chart configs that disagree with the data colors | One color source (tokens) for config and data | — |
+
+## Error-report credential redaction (2026-11-13)
+
+`redactErrorText` sanitizes error messages, stacks and pathname before `sendClientError`: invitation token path segments, URL queries, Bearer values, named secrets and JWTs. Reports from `/join/:token` contain `/join/[REDACTED]`, never the invitation credential. The server independently redacts every logged field. The privacy notice now describes telemetry retention/redaction; frontend `LEGAL_VERSION` and backend `LegalTerms.CURRENT_VERSION` are 2026-11-13.

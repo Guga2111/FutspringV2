@@ -22,6 +22,15 @@ export function stripUrlQueries(text: string): string {
   })
 }
 
+// Tokens may live in route segments too. Keep the same server-side redaction as the final trust boundary.
+export function redactErrorText(value: string): string {
+  return stripUrlQueries(value)
+    .replace(/(?:\/|%2f)(join|invite-links)(?:\/|%2f)[^\s/?#"<>]+/gi, "/$1/[REDACTED]")
+    .replace(/Bearer\s+[A-Za-z0-9._~+/=%-]+/gi, "Bearer [REDACTED]")
+    .replace(/(["']?(?:token|refreshToken|password|authorization|cookie)["']?\s*[:=]\s*["']?)[^\s,;"'}]+/gi, "$1[REDACTED]")
+    .replace(/\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b/g, "[REDACTED]")
+}
+
 function describe(error: unknown): { message: string; stack: string | null } {
   if (error instanceof Error) return { message: error.message || error.name, stack: error.stack ?? null }
   if (typeof error === "string") return { message: error, stack: null }
@@ -36,10 +45,10 @@ function toReport(message: string, stack: string | null, source: ClientErrorSour
   const trimmed = message.trim()
   if (!trimmed || (!stack && IGNORED.some((pattern) => pattern.test(trimmed)))) return null
   return {
-    message: stripUrlQueries(trimmed).slice(0, LIMITS.message),
-    stack: stack ? stripUrlQueries(stack).slice(0, LIMITS.stack) : null,
+    message: redactErrorText(trimmed).slice(0, LIMITS.message),
+    stack: stack ? redactErrorText(stack).slice(0, LIMITS.stack) : null,
     // pathname only: never the query or the hash
-    path: window.location.pathname.slice(0, LIMITS.path),
+    path: redactErrorText(window.location.pathname).slice(0, LIMITS.path),
     release: __APP_VERSION__.slice(0, LIMITS.release),
     userAgent: navigator.userAgent.slice(0, LIMITS.userAgent),
     source,
