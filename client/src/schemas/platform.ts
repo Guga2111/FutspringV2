@@ -1,4 +1,4 @@
-import { z } from "zod"
+import { z } from "@/lib/zod"
 import { normalizeFinanceAmount } from "@/utils/finance"
 
 const note = z.string().max(500, "Máximo de 500 caracteres")

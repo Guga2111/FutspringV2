@@ -1,4 +1,4 @@
-import { z } from "zod"
+import { z } from "@/lib/zod"
 
 // RegisterRequestDTO.password, ResetPasswordRequestDTO.newPassword and ChangePasswordRequestDTO.newPassword
 export const PASSWORD_MIN_LENGTH = 8

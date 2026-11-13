@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 import path from 'path'
 import { execSync } from 'child_process'
+import { contentSecurityPolicyMeta } from './src/lib/csp'
 
 // The build's short git sha, sent as `release` with the error reports; "dev" where git isn't available
 function gitSha(): string {
@@ -32,6 +33,8 @@ export default defineConfig({
   plugins: [
     react(),
     preloadInter(),
+    // the Content-Security-Policy as a <meta> of dist/index.html, with the theme script's hash (src/lib/csp.ts)
+    contentSecurityPolicyMeta(),
     // Installable app: our own service worker (src/sw.ts) with the build in precache; registered by
     // PwaUpdater, which asks before activating a new version (no reload in the middle of a form)
     VitePWA({
