@@ -29,6 +29,7 @@ public class FinanceFiles {
         if (this.receipts.startsWith(publicPath) || this.qr.startsWith(publicPath) || this.qr.startsWith(this.receipts)
                 || this.receipts.startsWith(this.qr)) throw new IllegalStateException("Financial files need separate private directories");
     }
+    private static final int VALIDATION_SIDE = 256;
     record Verified(byte[] bytes, String contentType, String extension, String hash) {}
     Verified verify(MultipartFile file) {
         if (file == null || file.isEmpty()) throw bad("Selecione uma imagem JPEG ou PNG");
@@ -36,8 +37,9 @@ public class FinanceFiles {
         try {
             byte[] bytes = file.getBytes();
             if (bytes.length > 5 * 1024 * 1024) throw bad("A imagem deve ter no máximo 5 MB");
-            var decoded = ImageDecoder.decode(bytes, file.getContentType(), EnumSet.of(Format.JPEG, Format.PNG),
-                    "Somente JPEG e PNG são permitidos");
+            // decoded only to check it is a real image (the original bytes are stored): small, under the image permits
+            var decoded = ImageDecoder.withPermit(() -> ImageDecoder.decode(bytes, file.getContentType(),
+                    EnumSet.of(Format.JPEG, Format.PNG), "Somente JPEG e PNG são permitidos", VALIDATION_SIDE));
             String type = decoded.format().contentType();
             return new Verified(bytes, type, decoded.format() == Format.JPEG ? ".jpg" : ".png",
                     HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes)));

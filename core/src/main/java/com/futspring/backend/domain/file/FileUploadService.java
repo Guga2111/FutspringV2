@@ -32,6 +32,8 @@ import java.util.UUID;
 public class FileUploadService {
 
     static final long MAX_SIZE_BYTES = 5L * 1024 * 1024;
+    /** Longest side of a stored public image (avatars, pelada and champion photos are shown well below it). */
+    static final int MAX_SIDE = 2048;
     private static final float JPEG_QUALITY = 0.9f;
 
     @Value("${app.uploads.dir:uploads}")
@@ -45,19 +47,9 @@ public class FileUploadService {
             throw new AppException(HttpStatus.BAD_REQUEST, "A imagem deve ter no máximo 5 MB");
         }
 
-        byte[] content;
-        String filename;
-        try {
-            ImageDecoder.Decoded decoded = ImageDecoder.decode(file.getBytes(), file.getContentType(),
-                    EnumSet.allOf(ImageDecoder.Format.class), "Somente imagens JPEG, PNG ou WebP são permitidas");
-            // Re-encoded from the pixels: EXIF (GPS included), ICC and anything appended to the file are dropped
-            boolean alpha = decoded.image().getColorModel().hasAlpha();
-            content = alpha ? encodePng(decoded.image()) : encodeJpeg(decoded.image());
-            filename = UUID.randomUUID() + (alpha ? ".png" : ".jpg");
-        } catch (IOException e) {
-            log.error("Failed to re-encode an upload", e);
-            throw new AppException(HttpStatus.INTERNAL_SERVER_ERROR, "Não foi possível salvar o arquivo");
-        }
+        Encoded encoded = ImageDecoder.withPermit(() -> encode(file));
+        byte[] content = encoded.content();
+        String filename = UUID.randomUUID() + encoded.extension();
 
         try {
             Path uploadPath = Paths.get(uploadsDir);
@@ -73,6 +65,23 @@ public class FileUploadService {
         return filename;
     }
 
+    private record Encoded(byte[] content, String extension) {}
+
+    // Re-encoded from the pixels: EXIF (GPS included), ICC and anything appended to the file are dropped
+    private static Encoded encode(MultipartFile file) {
+        try {
+            ImageDecoder.Decoded decoded = ImageDecoder.decode(file.getBytes(), file.getContentType(),
+                    EnumSet.allOf(ImageDecoder.Format.class), "Somente imagens JPEG, PNG ou WebP são permitidas",
+                    MAX_SIDE);
+            boolean alpha = decoded.image().getColorModel().hasAlpha();
+            return alpha ? new Encoded(encodePng(decoded.image()), ".png")
+                    : new Encoded(encodeJpeg(decoded.image()), ".jpg");
+        } catch (IOException e) {
+            log.error("Failed to re-encode an upload", e);
+            throw new AppException(HttpStatus.INTERNAL_SERVER_ERROR, "Não foi possível salvar o arquivo");
+        }
+    }
+
     private static byte[] encodePng(BufferedImage image) throws IOException {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         if (!ImageIO.write(image, "png", out)) {
@@ -82,13 +91,17 @@ public class FileUploadService {
     }
 
     private static byte[] encodeJpeg(BufferedImage source) throws IOException {
-        // The JPEG writer takes plain RGB: grayscale, indexed and CMYK sources are drawn onto one first
-        BufferedImage rgb = new BufferedImage(source.getWidth(), source.getHeight(), BufferedImage.TYPE_INT_RGB);
-        Graphics2D graphics = rgb.createGraphics();
-        try {
-            graphics.drawImage(source, 0, 0, null);
-        } finally {
-            graphics.dispose();
+        // The JPEG writer takes plain RGB: grayscale, indexed and CMYK sources are drawn onto one first (a scaled image
+        // already is one, so no second copy)
+        BufferedImage rgb = source;
+        if (source.getType() != BufferedImage.TYPE_INT_RGB) {
+            rgb = new BufferedImage(source.getWidth(), source.getHeight(), BufferedImage.TYPE_INT_RGB);
+            Graphics2D graphics = rgb.createGraphics();
+            try {
+                graphics.drawImage(source, 0, 0, null);
+            } finally {
+                graphics.dispose();
+            }
         }
         ImageWriter writer = ImageIO.getImageWritersByFormatName("jpeg").next();
         ByteArrayOutputStream out = new ByteArrayOutputStream();
