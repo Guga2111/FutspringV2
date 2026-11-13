@@ -42,21 +42,21 @@ class AccessTokenVerifierTest {
 
     @Test
     void verify_currentVersion_returnsTheEmail() {
-        when(userRepository.findTokenVersionByEmail(EMAIL)).thenReturn(Optional.of(2));
+        when(userRepository.findTokenVersionByIdAndEmail(1L, EMAIL)).thenReturn(Optional.of(2));
 
         assertThat(verifier.verify(jwtService.generateToken(1L, EMAIL, 2))).contains(EMAIL);
     }
 
     @Test
     void verify_tokenIssuedBeforeAPasswordReset_isRejected() {
-        when(userRepository.findTokenVersionByEmail(EMAIL)).thenReturn(Optional.of(3));
+        when(userRepository.findTokenVersionByIdAndEmail(1L, EMAIL)).thenReturn(Optional.of(3));
 
         assertThat(verifier.verify(jwtService.generateToken(1L, EMAIL, 2))).isEmpty();
     }
 
     @Test
     void verify_deletedUser_isRejected() {
-        when(userRepository.findTokenVersionByEmail(EMAIL)).thenReturn(Optional.empty());
+        when(userRepository.findTokenVersionByIdAndEmail(1L, EMAIL)).thenReturn(Optional.empty());
 
         assertThat(verifier.verify(jwtService.generateToken(1L, EMAIL, 0))).isEmpty();
     }
@@ -66,12 +66,28 @@ class AccessTokenVerifierTest {
     void verify_tokenWithoutVersionClaim_countsAsVersionZero() {
         String legacyToken = Jwts.builder()
                 .setSubject(EMAIL)
+                .claim("userId", 1L)
                 .setExpiration(new Date(System.currentTimeMillis() + 60_000))
                 .signWith(Keys.hmacShaKeyFor(SECRET.getBytes(StandardCharsets.UTF_8)), SignatureAlgorithm.HS256)
                 .compact();
-        when(userRepository.findTokenVersionByEmail(EMAIL)).thenReturn(Optional.of(0));
+        when(userRepository.findTokenVersionByIdAndEmail(1L, EMAIL)).thenReturn(Optional.of(0));
 
         assertThat(verifier.verify(legacyToken)).contains(EMAIL);
+    }
+
+    @Test
+    void verify_reusedEmailDoesNotAcceptTheDeletedAccountId() {
+        // The new account has the same e-mail and tokenVersion, but a different immutable id.
+        when(userRepository.findTokenVersionByIdAndEmail(1L, EMAIL)).thenReturn(Optional.empty());
+        assertThat(verifier.verify(jwtService.generateToken(1L, EMAIL, 1))).isEmpty();
+    }
+
+    @Test
+    void verify_missingUserIdIsRejectedWithoutQueryingTheDatabase() {
+        String token = Jwts.builder().subject(EMAIL).expiration(new Date(System.currentTimeMillis() + 60_000))
+                .signWith(Keys.hmacShaKeyFor(SECRET.getBytes(StandardCharsets.UTF_8)), Jwts.SIG.HS256).compact();
+        assertThat(verifier.verify(token)).isEmpty();
+        verifyNoInteractions(userRepository);
     }
 
     @Test

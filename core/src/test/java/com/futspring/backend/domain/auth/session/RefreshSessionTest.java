@@ -66,7 +66,8 @@ class RefreshSessionTest extends BaseIntegrationTest {
     }
 
     @MockitoBean Clock clock;
-    @Autowired UserRepository users;
+    @org.springframework.test.context.bean.override.mockito.MockitoSpyBean UserRepository users;
+    @Autowired RefreshSessionService sessions;
     @Autowired PasswordEncoder passwordEncoder;
     @Autowired PasswordResetTokenRepository resetTokens;
     @Autowired StringRedisTemplate redis;
@@ -300,6 +301,28 @@ class RefreshSessionTest extends BaseIntegrationTest {
                 .andExpect(status().isNoContent());
 
         refresh(refreshToken).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void logoutAfterSessionReadCannotBeUndoneByTheInFlightRotation() throws Exception {
+        String first = valueOf(login().getHeader(HttpHeaders.SET_COOKIE));
+        org.mockito.Mockito.doAnswer(invocation -> {
+            sessions.close(first); // rotate has already read rt and sess, but has not written them yet
+            return java.util.Optional.of(user);
+        }).when(users).findById(user.getId());
+
+        refresh(first).andExpect(status().isUnauthorized());
+        assertThat(redis.hasKey("rt:" + SecretTokens.hash(first))).isFalse();
+        refresh(first).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void logoutAfterRotationInvalidatesBothTokens() throws Exception {
+        String first = valueOf(login().getHeader(HttpHeaders.SET_COOKIE));
+        String next = valueOf(refresh(first).andExpect(status().isOk()).andReturn().getResponse().getHeader(HttpHeaders.SET_COOKIE));
+        sessions.close(first);
+        refresh(first).andExpect(status().isUnauthorized());
+        refresh(next).andExpect(status().isUnauthorized());
     }
 
     // --- helpers ---

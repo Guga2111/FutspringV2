@@ -60,6 +60,7 @@ class AuthServiceTest {
         @SuppressWarnings("unchecked")
         ValueOperations<String, String> values = mock(ValueOperations.class);
         lenient().when(redis.opsForValue()).thenReturn(values);
+        lenient().when(redis.execute(any(org.springframework.data.redis.core.script.RedisScript.class), anyList(), any(Object[].class))).thenReturn(1L);
         refreshSessionService = new RefreshSessionService(redis, JsonMapper.builder().build(), userRepository,
                 jwtService, new CorsConfig("http://localhost:5173"), CLOCK, new SimpleMeterRegistry());
         authService = new AuthService(userRepository, passwordEncoder, refreshSessionService, CLOCK, verification);

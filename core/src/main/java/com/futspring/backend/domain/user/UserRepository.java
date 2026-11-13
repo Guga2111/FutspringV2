@@ -31,8 +31,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByIdForUpdate(@Param("id") Long id);
 
     // Runs on every authenticated request (AccessTokenVerifier): reads one column through the unique email index
-    @Query("SELECT u.tokenVersion FROM User u WHERE u.email = :email AND u.emailVerifiedAt IS NOT NULL AND u.deletedAt IS NULL")
-    Optional<Integer> findTokenVersionByEmail(@Param("email") String email);
+    @Query("SELECT u.tokenVersion FROM User u WHERE u.id = :id AND u.email = :email AND u.emailVerifiedAt IS NOT NULL AND u.deletedAt IS NULL")
+    Optional<Integer> findTokenVersionByIdAndEmail(@Param("id") Long id, @Param("email") String email);
 
     // Usernames aren't unique in the database (production has legacy duplicates), so check with exists, never a single-result find
     boolean existsByUsernameIgnoreCase(String username);
@@ -62,7 +62,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
     // Conditional, so two peladas created at once by the same account can't both take the trial (the row lock of the
     // UPDATE makes the second one see trial_used_at set); 1 = the trial was taken now
     @Modifying
-    @Query("UPDATE User u SET u.trialUsedAt = :now WHERE u.id = :id AND u.trialUsedAt IS NULL")
+    @Query("UPDATE User u SET u.trialUsedAt = :now, u.rowVersion = u.rowVersion + 1 WHERE u.id = :id AND u.trialUsedAt IS NULL")
     int markTrialUsed(@Param("id") Long id, @Param("now") Instant now);
 
     // The platform admin's user list: deleted accounts included, newest first; `q` (lower case) matches name or e-mail

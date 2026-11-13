@@ -106,7 +106,7 @@ class StompRevocationTest {
         stompClient.stop();
         resetTokenRepository.deleteAll();
         peladaService.deletePelada(pelada.getId(), admin.getEmail());
-        userRepository.deleteAll(List.of(admin, member));
+        userRepository.deleteAllById(List.of(admin.getId(), member.getId()));
     }
 
     @Test

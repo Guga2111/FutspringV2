@@ -32,7 +32,9 @@ public class AccessTokenVerifier {
 
     // Empty when the user no longer exists, so a deleted account's token stops working too
     private boolean hasCurrentVersion(Claims claims) {
-        return userRepository.findTokenVersionByEmail(claims.getSubject())
+        Long userId = claims.get("userId", Long.class);
+        if (userId == null || userId <= 0) return false;
+        return userRepository.findTokenVersionByIdAndEmail(userId, claims.getSubject())
                 .filter(current -> current == versionOf(claims))
                 .isPresent();
     }
