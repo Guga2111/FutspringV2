@@ -60,10 +60,22 @@ type Violation = Pick<
 // Browser extensions inject scripts and styles the policy refuses: nothing of ours to fix
 const EXTENSION = /^(?:chrome|moz|safari-web)-extension:/
 
+// Hosts the app never loads from (fonts are self-hosted with @fontsource), but extensions inject into the page itself,
+// so the violation names the page, not the extension: Google Fonts stylesheets and their font files
+const FOREIGN_HOSTS = new Set(["fonts.googleapis.com", "fonts.gstatic.com"])
+
+function foreignHost(uri: string): boolean {
+  try {
+    return FOREIGN_HOSTS.has(new URL(uri).hostname)
+  } catch {
+    return false // "inline", "eval", "data", "blob": not a URL
+  }
+}
+
 // A Content-Security-Policy violation ("report" while the header is Report-Only, "enforce" after), so the
 // violations of every user reach Loki, not only the ones in the developer's console
 export function buildViolationReport(event: Violation): ClientErrorReport | null {
-  if (EXTENSION.test(event.blockedURI) || EXTENSION.test(event.sourceFile)) return null
+  if (EXTENSION.test(event.blockedURI) || EXTENSION.test(event.sourceFile) || foreignHost(event.blockedURI)) return null
   const message = `CSP ${event.disposition} ${event.effectiveDirective}: ${event.blockedURI || "(sem URI)"}`
   const stack = event.sourceFile ? `at ${event.sourceFile}:${event.lineNumber}:${event.columnNumber}` : null
   return toReport(message, stack, "CSP")
