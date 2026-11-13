@@ -125,4 +125,12 @@ describe("buildViolationReport", () => {
     expect(buildViolationReport({ ...violation, blockedURI: "chrome-extension://abc/x.js" })).toBeNull()
     expect(buildViolationReport({ ...violation, sourceFile: "moz-extension://abc/content.js" })).toBeNull()
   })
+
+  it("ignores Google Fonts, which only extensions load (the app self-hosts its fonts)", () => {
+    const font = { ...violation, effectiveDirective: "font-src", sourceFile: "https://app.test/home" }
+    expect(buildViolationReport({ ...font, blockedURI: "https://fonts.gstatic.com/s/inter/v20/a.woff2" })).toBeNull()
+    expect(buildViolationReport({ ...font, effectiveDirective: "style-src-elem", blockedURI: "https://fonts.googleapis.com/css2?family=Inter" })).toBeNull()
+    // any other host is still reported
+    expect(buildViolationReport({ ...font, blockedURI: "https://cdn.example.com/a.woff2" })?.source).toBe("CSP")
+  })
 })

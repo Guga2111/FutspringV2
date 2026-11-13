@@ -28,8 +28,9 @@ import java.util.UUID;
  * Refresh-token sessions, stored in Redis. A session (sess:{id}) lives 30 days after its last use, never more than 90
  * after it was opened; each refresh token (rt:{sha256}) points at its session and carries the user's tokenVersion, so a
  * password reset, a password change or an account deletion invalidates every session without an index per user.
- * A refresh hands out a new refresh token; the previous one stays valid until its own TTL (no reuse detection: two tabs
- * or the PWA and the browser refreshing together must not log anyone out). Logout deletes the session, so every
+ * A refresh hands out a new refresh token; the previous one stays valid for ROTATED_GRACE more (no reuse detection: two
+ * tabs refreshing together must not log anyone out), then expires, so a session holds at most a few rt keys however
+ * often it refreshes (Redis is capped at 64 MB with noeviction). Logout deletes the session, so every
  * refresh token of it stops working. Redis down: login still answers an access token (no cookie), refresh answers 503.
  */
 @Slf4j
@@ -39,6 +40,7 @@ public class RefreshSessionService {
 
     static final Duration IDLE_TTL = Duration.ofDays(30);
     static final Duration ABSOLUTE_TTL = Duration.ofDays(90);
+    static final Duration ROTATED_GRACE = Duration.ofMinutes(1);
     static final String TOKEN_KEY = "rt:";
     static final String SESSION_KEY = "sess:";
 
@@ -110,7 +112,8 @@ public class RefreshSessionService {
 
     private Optional<IssuedSession> rotate(String refreshToken) {
         if (refreshToken == null || refreshToken.isBlank()) return Optional.empty();
-        StoredToken stored = read(TOKEN_KEY + SecretTokens.hash(refreshToken), StoredToken.class);
+        String tokenKey = TOKEN_KEY + SecretTokens.hash(refreshToken);
+        StoredToken stored = read(tokenKey, StoredToken.class);
         if (stored == null) return Optional.empty();
         StoredSession session = read(SESSION_KEY + stored.sessionId(), StoredSession.class);
         Instant now = clock.instant();
@@ -123,7 +126,10 @@ public class RefreshSessionService {
         if (user.isEmpty()) return Optional.empty();
 
         StoredSession used = new StoredSession(session.userId(), session.createdAt(), session.absoluteExpiresAt(), now);
-        return Optional.of(issue(accessFor(user.get()), stored.sessionId(), used, stored.tokenVersion(), now));
+        IssuedSession issued = issue(accessFor(user.get()), stored.sessionId(), used, stored.tokenVersion(), now);
+        // the replaced token only covers a request already in flight (another tab); then it goes away
+        redis.expire(tokenKey, ROTATED_GRACE);
+        return Optional.of(issued);
     }
 
     // Writes the session (TTL renewed) and a new refresh token pointing at it, both until min(30 days, the ceiling)
