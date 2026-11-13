@@ -89,8 +89,17 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  // also the proxy of `bun run preview` (preview.proxy defaults to it)
   server: {
     proxy: {
+      // the API under the page's own origin, as nginx does in production (`location /api/` strips /api): a build with
+      // VITE_API_URL=<page origin>/api, served through a tunnel, is then same-origin, so the SameSite=Strict refresh
+      // cookie is sent (two tunnels are two different sites). `bun run dev` calls :8080 directly and never uses it
+      '/api': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, ''),
+      },
       '/ws': {
         target: 'http://localhost:8080',
         changeOrigin: true,

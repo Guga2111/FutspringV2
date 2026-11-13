@@ -130,9 +130,25 @@ class RefreshSessionTest extends BaseIntegrationTest {
         String accessToken = objectMapper.readTree(response.getContentAsString()).get("token").asText();
         mockMvc.perform(get("/api/v1/users/" + user.getId()).header("Authorization", "Bearer " + accessToken))
                 .andExpect(status().isOk());
-        // no reuse detection: the previous refresh token keeps working until its own TTL
+        // no reuse detection: the previous refresh token keeps working for a request already in flight (another tab)
         refresh(first).andExpect(status().isOk());
         refresh(second).andExpect(status().isOk());
+    }
+
+    @Test
+    void refresh_leavesTheReplacedTokenOnlyAMinute_soKeysDoNotPileUp() throws Exception {
+        String token = valueOf(login().getHeader(HttpHeaders.SET_COOKIE));
+        String first = RefreshSessionService.TOKEN_KEY + SecretTokens.hash(token);
+
+        for (int i = 0; i < 5; i++) {
+            token = valueOf(refresh(token).andExpect(status().isOk())
+                    .andReturn().getResponse().getHeader(HttpHeaders.SET_COOKIE));
+        }
+
+        assertThat(redis.getExpire(first, TimeUnit.SECONDS)).isBetween(1L, 60L);
+        // the current token keeps the session's full TTL
+        assertThat(redis.getExpire(RefreshSessionService.TOKEN_KEY + SecretTokens.hash(token), TimeUnit.DAYS))
+                .isBetween(29L, 30L);
     }
 
     @Test
