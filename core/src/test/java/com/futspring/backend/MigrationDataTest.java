@@ -344,6 +344,20 @@ class MigrationDataTest {
         }
     }
 
+    @Test
+    void v24_addsRevocableLinkVersionWithoutChangingVerificationOrSessions() throws SQLException {
+        flyway("23").migrate();
+        execute("INSERT INTO users(id,email,username,password,token_version,email_verified_at) VALUES(1,'links@migration.test','Links','hash',7,'2026-11-13T00:00:00Z')");
+        flyway(null).migrate();
+        try(Connection c=connect(); Statement st=c.createStatement(); ResultSet rs=st.executeQuery(
+                "SELECT token_version,email_verified_at,email_link_version FROM users WHERE id=1")) {
+            assertThat(rs.next()).isTrue();
+            assertThat(rs.getInt(1)).isEqualTo(7);
+            assertThat(rs.getObject(2)).isNotNull();
+            assertThat(rs.getInt(3)).isZero();
+        }
+    }
+
     private static Flyway flyway(String target) {
         var config = Flyway.configure()
                 .dataSource(POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword())

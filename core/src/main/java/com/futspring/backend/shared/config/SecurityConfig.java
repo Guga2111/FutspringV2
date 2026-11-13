@@ -34,7 +34,7 @@ public class SecurityConfig {
      * session: JwtAuthFilter ignores the Authorization header on them and AuthRateLimitFilter limits them.
      */
     public static final Set<String> EMAIL_LINK_PATHS = Set.of(
-            "/api/v1/notifications/unsubscribe", "/api/v1/notifications/resubscribe");
+            "/api/v1/notifications/unsubscribe");
 
     /**
      * Errors reported by the web app (domain/telemetry): public, and JwtAuthFilter ignores the Authorization header,

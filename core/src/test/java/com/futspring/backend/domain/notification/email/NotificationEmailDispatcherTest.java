@@ -63,7 +63,7 @@ class NotificationEmailDispatcherTest {
     void setUp() {
         JwtConfig jwtConfig = new JwtConfig();
         ReflectionTestUtils.setField(jwtConfig, "secret", "test-secret-key-that-is-at-least-32-characters-long-for-hmac");
-        tokens = new UnsubscribeTokens(jwtConfig);
+        tokens = new UnsubscribeTokens(jwtConfig, java.time.Clock.systemUTC());
         MailConfig mailConfig = new MailConfig();
         ReflectionTestUtils.setField(mailConfig, "frontendUrl", "https://app.example.com");
         ReflectionTestUtils.setField(mailConfig, "apiUrl", "https://app.example.com/api");
@@ -208,7 +208,7 @@ class NotificationEmailDispatcherTest {
                 eq(List.of(NotificationEmail.LOGO)), headers.capture());
         verify(pacer).acquire();
 
-        String token = tokens.create(ana.getId(), NotificationCategory.ATTENDANCE);
+        String token = tokens.create(ana.getId(), NotificationCategory.ATTENDANCE, 0);
         assertThat(html.getValue())
                 .contains("href=\"https://app.example.com/daily/100\"")
                 .contains("href=\"https://app.example.com/settings/notifications\"")

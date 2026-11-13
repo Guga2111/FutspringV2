@@ -546,7 +546,7 @@ class NotificationControllerTest extends BaseIntegrationTest {
 
     @Test
     void unsubscribe_withoutSession_turnsOnlyThatUsersCategoryOff() throws Exception {
-        String token = unsubscribeTokens.create(member.getId(), NotificationCategory.ATTENDANCE);
+        String token = unsubscribeTokens.create(member.getId(), NotificationCategory.ATTENDANCE, 0);
 
         mockMvc.perform(post("/api/v1/notifications/unsubscribe").with(freshIp())
                         .contentType(MediaType.APPLICATION_JSON).content(tokenBody(token)))
@@ -563,7 +563,7 @@ class NotificationControllerTest extends BaseIntegrationTest {
     void unsubscribe_changesOnlyTheEmail_neverThePush() throws Exception {
         preferenceRepository.save(new NotificationPreference(member, NotificationCategory.ATTENDANCE, true, false));
         flushAndClear();
-        String token = unsubscribeTokens.create(member.getId(), NotificationCategory.ATTENDANCE);
+        String token = unsubscribeTokens.create(member.getId(), NotificationCategory.ATTENDANCE, 0);
 
         mockMvc.perform(post("/api/v1/notifications/unsubscribe").with(freshIp())
                         .contentType(MediaType.APPLICATION_JSON).content(tokenBody(token)))
@@ -572,8 +572,7 @@ class NotificationControllerTest extends BaseIntegrationTest {
                 .andExpect(jsonPath("$.pushEnabled").value(false));
         mockMvc.perform(post("/api/v1/notifications/resubscribe").with(freshIp())
                         .contentType(MediaType.APPLICATION_JSON).content(tokenBody(token)))
-                .andExpect(jsonPath("$.emailEnabled").value(true))
-                .andExpect(jsonPath("$.pushEnabled").value(false));
+                .andExpect(status().isUnauthorized());
 
         flushAndClear();
         assertThat(preferenceService.pushEnabled(List.of(member.getId())).get(member.getId()))
@@ -583,7 +582,7 @@ class NotificationControllerTest extends BaseIntegrationTest {
     // The browser may still hold an expired or revoked session: the route ignores it instead of answering 401
     @Test
     void unsubscribe_withAStaleSessionHeader_stillWorks() throws Exception {
-        String token = unsubscribeTokens.create(member.getId(), NotificationCategory.MEMBERSHIP);
+        String token = unsubscribeTokens.create(member.getId(), NotificationCategory.MEMBERSHIP, 0);
 
         mockMvc.perform(post("/api/v1/notifications/unsubscribe").with(freshIp())
                         .header("Authorization", "Bearer not-a-valid-jwt")
@@ -596,7 +595,7 @@ class NotificationControllerTest extends BaseIntegrationTest {
     // RFC 8058: the mail provider POSTs "List-Unsubscribe=One-Click" to the header's URL, token in the query
     @Test
     void unsubscribe_oneClickFromTheMailProvider() throws Exception {
-        String token = unsubscribeTokens.create(member.getId(), NotificationCategory.ATTENDANCE);
+        String token = unsubscribeTokens.create(member.getId(), NotificationCategory.ATTENDANCE, 0);
 
         mockMvc.perform(post("/api/v1/notifications/unsubscribe").with(freshIp()).queryParam("token", token)
                         .contentType(MediaType.APPLICATION_FORM_URLENCODED).content("List-Unsubscribe=One-Click"))
@@ -607,24 +606,25 @@ class NotificationControllerTest extends BaseIntegrationTest {
     }
 
     @Test
-    void resubscribe_turnsTheCategoryBackOn() throws Exception {
-        String token = unsubscribeTokens.create(member.getId(), NotificationCategory.SESSION);
-
-        mockMvc.perform(post("/api/v1/notifications/resubscribe").with(freshIp())
+    void resubscribeRequiresAuthenticatedPreferencesAndRevokesOldLinks() throws Exception {
+        String token = unsubscribeTokens.create(member.getId(), NotificationCategory.ATTENDANCE, 0);
+        mockMvc.perform(put("/api/v1/notifications/preferences").with(freshIp())
+                        .header("Authorization", bearerToken(member.getId(), member.getEmail()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("[{\"category\":\"ATTENDANCE\",\"emailEnabled\":true}]"))
+                .andExpect(status().isOk());
+        mockMvc.perform(post("/api/v1/notifications/unsubscribe").with(freshIp())
                         .contentType(MediaType.APPLICATION_JSON).content(tokenBody(token)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.category").value("SESSION"))
-                .andExpect(jsonPath("$.emailEnabled").value(true));
-
-        assertThat(emailOf(member)).containsEntry(NotificationCategory.SESSION, true);
+                .andExpect(status().isBadRequest());
+        assertThat(emailOf(member)).containsEntry(NotificationCategory.ATTENDANCE, true);
     }
 
     @Test
     void unsubscribe_invalidTokens_returnBadRequest() throws Exception {
-        String valid = unsubscribeTokens.create(member.getId(), NotificationCategory.ATTENDANCE);
+        String valid = unsubscribeTokens.create(member.getId(), NotificationCategory.ATTENDANCE, 0);
         String swapped = java.util.Base64.getUrlEncoder().withoutPadding()
                 .encodeToString((member.getId() + ":SESSION").getBytes()) + "." + valid.split("\\.")[1];
-        String unknownUser = unsubscribeTokens.create(999_999L, NotificationCategory.ATTENDANCE);
+        String unknownUser = unsubscribeTokens.create(999_999L, NotificationCategory.ATTENDANCE, 0);
 
         for (String token : List.of(valid + "x", swapped, unknownUser, "garbage")) {
             mockMvc.perform(post("/api/v1/notifications/unsubscribe").with(freshIp())
@@ -642,7 +642,7 @@ class NotificationControllerTest extends BaseIntegrationTest {
 
     @Test
     void unsubscribe_isRateLimitedPerIp() throws Exception {
-        String token = unsubscribeTokens.create(member.getId(), NotificationCategory.ATTENDANCE);
+        String token = unsubscribeTokens.create(member.getId(), NotificationCategory.ATTENDANCE, 0);
         RequestPostProcessor sameIp = freshIp();
 
         for (int i = 0; i < 10; i++) {

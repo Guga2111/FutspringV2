@@ -61,7 +61,6 @@ public class AuthRateLimitFilter extends OncePerRequestFilter {
             limit("delete-account", HttpMethod.POST, "/api/v1/users/me/delete", REQUESTS_PER_MINUTE),
             limit("push-subscribe", HttpMethod.POST, "/api/v1/push/subscriptions", REQUESTS_PER_MINUTE),
             limit("unsubscribe", HttpMethod.POST, "/api/v1/notifications/unsubscribe", REQUESTS_PER_MINUTE),
-            limit("resubscribe", HttpMethod.POST, "/api/v1/notifications/resubscribe", REQUESTS_PER_MINUTE),
             limit("export", HttpMethod.GET, "/api/v1/users/me/export", REQUESTS_PER_MINUTE),
             limit("client-errors", HttpMethod.POST, "/api/v1/client-errors", CLIENT_ERRORS_PER_MINUTE),
             limit("invite-preview", HttpMethod.GET, "/api/v1/invite-links/{token}", INVITE_PREVIEWS_PER_MINUTE));

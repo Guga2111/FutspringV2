@@ -96,6 +96,7 @@ public class AccountDeletionService {
         user.setEmailVerificationHash(null);
         user.setEmailVerificationExpiresAt(null);
         user.setEmailVerificationSentAt(null);
+        user.setEmailLinkVersion(user.getEmailLinkVersion() + 1);
         userRepository.save(user);
     }
 

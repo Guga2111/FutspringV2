@@ -27,7 +27,7 @@ function ManagePreferencesButton({ variant }: { variant: "brand" | "ghost" }) {
 }
 
 function UnsubscribeCard({ token }: { token: string }) {
-  const { preference, loading, error, pending, resubscribe, unsubscribe } = useEmailUnsubscribe(token)
+  const { preference, loading, error, pending, unsubscribe } = useEmailUnsubscribe(token)
 
   if (loading) {
     return (
@@ -82,8 +82,8 @@ function UnsubscribeCard({ token }: { token: string }) {
             Desativar de novo
           </Button>
         ) : (
-          <Button variant="brand" className="w-full" disabled={pending} onClick={resubscribe}>
-            Reativar
+          <Button asChild variant="brand" className="w-full">
+            <Link to="/settings#notificacoes">Entrar para reativar e-mails</Link>
           </Button>
         )}
         <ManagePreferencesButton variant="ghost" />

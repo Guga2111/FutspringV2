@@ -148,7 +148,7 @@ public class NotificationEmailDispatcher {
     private OutgoingEmail toEmail(Notification n) {
         NotificationCategory category = n.getType().category();
         NotificationContent content = NotificationContent.of(n);
-        String token = unsubscribeTokens.create(n.getRecipient().getId(), category);
+        String token = unsubscribeTokens.create(n.getRecipient().getId(), category, n.getRecipient().getEmailLinkVersion());
         String appUrl = mailConfig.getFrontendUrl();
         String html = NotificationEmail.html(content, category, appUrl,
                 UriComponentsBuilder.fromUriString(appUrl).path(content.ctaPath()).toUriString(),
