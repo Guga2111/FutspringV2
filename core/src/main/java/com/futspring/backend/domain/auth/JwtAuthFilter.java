@@ -32,7 +32,9 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     // logout, which read the refresh cookie and are called with an expired access token
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        return SecurityConfig.EMAIL_LINK_PATHS.contains(request.getRequestURI())
+        return request.getRequestURI().equals("/api/v1/auth/verify-email")
+                || request.getRequestURI().equals("/api/v1/auth/verification-email")
+                || SecurityConfig.EMAIL_LINK_PATHS.contains(request.getRequestURI())
                 || SecurityConfig.SESSION_COOKIE_PATHS.contains(request.getRequestURI())
                 || SecurityConfig.CLIENT_ERRORS_PATH.equals(request.getRequestURI())
                 || ("GET".equals(request.getMethod()) && request.getRequestURI().matches("/api/v1/invite-links/[^/]+"));

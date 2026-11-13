@@ -240,7 +240,7 @@ class StompRevocationTest {
 
     private User user(String name) {
         String unique = name + "-" + UUID.randomUUID().toString().substring(0, 8);
-        return userRepository.save(User.builder().username(unique).email(unique + "@stomp.test")
+        return userRepository.save(User.builder().emailVerifiedAt(java.time.Instant.EPOCH).username(unique).email(unique + "@stomp.test")
                 .password(passwordEncoder.encode(PASSWORD)).build());
     }
 

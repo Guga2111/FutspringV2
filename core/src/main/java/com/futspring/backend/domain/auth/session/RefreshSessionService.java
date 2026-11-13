@@ -60,6 +60,9 @@ public class RefreshSessionService {
 
     /** A new session for a user who just proved who they are (login, registration, password change). */
     public IssuedSession open(User user) {
+        if (user.isDeleted() || user.getEmailVerifiedAt() == null) {
+            throw new AppException(HttpStatus.FORBIDDEN, "Verifique seu e-mail antes de entrar.");
+        }
         AuthResponseDTO auth = accessFor(user);
         Instant now = clock.instant();
         StoredSession session = new StoredSession(user.getId(), now, now.plus(ABSOLUTE_TTL), now);
@@ -122,7 +125,7 @@ public class RefreshSessionService {
             return Optional.empty();
         }
         Optional<User> user = userRepository.findById(stored.userId())
-                .filter(u -> !u.isDeleted() && u.getTokenVersion() == stored.tokenVersion());
+                .filter(u -> !u.isDeleted() && u.getEmailVerifiedAt() != null && u.getTokenVersion() == stored.tokenVersion());
         if (user.isEmpty()) return Optional.empty();
 
         StoredSession used = new StoredSession(session.userId(), session.createdAt(), session.absoluteExpiresAt(), now);

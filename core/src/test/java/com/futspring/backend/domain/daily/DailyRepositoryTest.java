@@ -34,7 +34,7 @@ class DailyRepositoryTest {
 
     @BeforeEach
     void setUp() {
-        User creator = userRepository.save(User.builder()
+        User creator = userRepository.save(User.builder().emailVerifiedAt(java.time.Instant.EPOCH)
                 .email("creator@example.com")
                 .username("creator")
                 .password("hash")

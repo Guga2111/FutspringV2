@@ -34,11 +34,11 @@ class UserControllerTest extends BaseIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        userA = userRepository.save(User.builder()
+        userA = userRepository.save(User.builder().emailVerifiedAt(java.time.Instant.EPOCH)
                 .email("ua@test.com").username("userA").password("hash").build());
-        userB = userRepository.save(User.builder()
+        userB = userRepository.save(User.builder().emailVerifiedAt(java.time.Instant.EPOCH)
                 .email("ub@test.com").username("userB").password("hash").build());
-        stranger = userRepository.save(User.builder()
+        stranger = userRepository.save(User.builder().emailVerifiedAt(java.time.Instant.EPOCH)
                 .email("stranger@test.com").username("stranger").password("hash").build());
         // userA and userB share a pelada; stranger shares none
         shared = peladaRepository.save(Pelada.builder()

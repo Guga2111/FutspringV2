@@ -97,9 +97,9 @@ class DailyServiceTest {
                 new DailyListItemAssembler(attendanceRepository, teamRepository, matchRepository, mensalistaRepository, userDailyStatsRepository),
                 notificationRepository, eventPublisher, org.mockito.Mockito.mock(com.futspring.backend.domain.subscription.SubscriptionGuard.class));
 
-        admin = User.builder().id(1L).email("admin@example.com").username("admin").password("hash").build();
-        member = User.builder().id(2L).email("member@example.com").username("member").password("hash").build();
-        outsider = User.builder().id(3L).email("out@example.com").username("out").password("hash").build();
+        admin = User.builder().emailVerifiedAt(java.time.Instant.EPOCH).id(1L).email("admin@example.com").username("admin").password("hash").build();
+        member = User.builder().emailVerifiedAt(java.time.Instant.EPOCH).id(2L).email("member@example.com").username("member").password("hash").build();
+        outsider = User.builder().emailVerifiedAt(java.time.Instant.EPOCH).id(3L).email("out@example.com").username("out").password("hash").build();
 
         pelada = Pelada.builder()
                 .id(10L)
@@ -341,7 +341,7 @@ class DailyServiceTest {
         when(dailyRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         // one team short (1 of 2) and a confirmed player without a team never block the start
-        User extraPlayer = User.builder().id(9L).email("x@example.com").username("x").password("hash").build();
+        User extraPlayer = User.builder().emailVerifiedAt(java.time.Instant.EPOCH).id(9L).email("x@example.com").username("x").password("hash").build();
         attendance.confirm(scheduledDaily, admin, member, extraPlayer);
         when(teamRepository.findByDailyWithPlayers(scheduledDaily)).thenReturn(List.of(
                 team(1L, "Time 1", admin), team(2L, "Time 2", member)));

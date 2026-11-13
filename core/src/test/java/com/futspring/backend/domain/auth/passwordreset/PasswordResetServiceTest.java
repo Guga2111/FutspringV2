@@ -49,7 +49,7 @@ class PasswordResetServiceTest {
     void setUp() {
         service = new PasswordResetService(userRepository, tokenRepository, passwordEncoder, eventPublisher,
                 pushSubscriptionRepository);
-        user = User.builder().id(1L).username("alice").email("alice@example.com")
+        user = User.builder().emailVerifiedAt(java.time.Instant.EPOCH).id(1L).username("alice").email("alice@example.com")
                 .password(passwordEncoder.encode("oldpassword")).build();
     }
 

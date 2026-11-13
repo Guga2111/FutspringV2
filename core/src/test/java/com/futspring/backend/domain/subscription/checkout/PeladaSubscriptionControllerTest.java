@@ -216,7 +216,7 @@ class PeladaSubscriptionControllerTest extends BaseIntegrationTest {
     }
 
     private User user(String name) {
-        return users.save(User.builder().username(name).email(name + "@assinatura.test").password("hash").build());
+        return users.save(User.builder().emailVerifiedAt(java.time.Instant.EPOCH).username(name).email(name + "@assinatura.test").password("hash").build());
     }
 
     private Pelada pelada(SubscriptionKind kind, Instant validUntil, Set<User> extraMembers) {

@@ -150,7 +150,7 @@ export const PRIVACY: LegalDocument = {
       title: "Dados que tratamos",
       blocks: [
         [
-          "Conta: nome de usuário, e-mail, senha (guardada só de forma criptografada, impossível de ler), posição e foto.",
+          "Conta: nome de usuário, e-mail, data de verificação do endereço, senha (guardada só de forma criptografada, impossível de ler), posição e foto.",
           "Peladas: de quais você participa, se é admin ou mensalista, presença e horário da confirmação, times, gols, assistências, vitórias, prêmios, as estrelas que os admins dão a você, mensagens do chat e fotos.",
           "Financeiro: cobranças, valores, pagamentos, avisos de pagamento, comprovantes enviados, chave Pix e QR Code de quem recebe e o histórico de alterações.",
           "Assinatura das peladas que você criou: plano, validade, situação, quando você avisou que fez o Pix e os pagamentos registrados (valor, data, plano, nome da pelada e de quem pagou). Também guardamos se a sua conta já usou o teste grátis.",
@@ -214,7 +214,7 @@ export const PRIVACY: LegalDocument = {
           "Comprovantes de pagamento: ficam disponíveis por 7 dias (cobranças de sessão) ou 30 dias (mensalidades e outras) e depois o arquivo é apagado.",
           "Notificações: as lidas são apagadas após 90 dias e todas após 180 dias.",
           "Pagamentos de assinatura: guardados pelo prazo exigido pela lei, inclusive a fiscal, mesmo depois que a pelada ou a conta é excluída, com o nome da pelada e de quem pagou.",
-          "Links de troca de senha: valem 30 minutos.",
+          "Links de troca de senha e de verificação de e-mail: valem 30 minutos. Guardamos apenas o hash dos tokens de verificação, até serem usados, substituídos ou a conta ser excluída. Links expirados não permitem verificar a conta.",
           "Relatórios de erros do navegador: guardados nos registros de observabilidade por até 14 dias, com remoção de credenciais e tokens reconhecidos antes do registro.",
           "Cópias de segurança do banco: mantemos as 10 mais recentes.",
         ],

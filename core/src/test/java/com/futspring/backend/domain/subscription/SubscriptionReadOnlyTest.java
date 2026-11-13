@@ -68,9 +68,9 @@ class SubscriptionReadOnlyTest extends BaseIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        admin = userRepository.save(User.builder().email("ro-admin@test.com").username("roadmin").password("hash").build());
-        member = userRepository.save(User.builder().email("ro-member@test.com").username("romember").password("hash").build());
-        outsider = userRepository.save(User.builder().email("ro-out@test.com").username("roout").password("hash").build());
+        admin = userRepository.save(User.builder().emailVerifiedAt(java.time.Instant.EPOCH).email("ro-admin@test.com").username("roadmin").password("hash").build());
+        member = userRepository.save(User.builder().emailVerifiedAt(java.time.Instant.EPOCH).email("ro-member@test.com").username("romember").password("hash").build());
+        outsider = userRepository.save(User.builder().emailVerifiedAt(java.time.Instant.EPOCH).email("ro-out@test.com").username("roout").password("hash").build());
         pelada = peladaRepository.save(Pelada.builder().name("Pelada travada").dayOfWeek("FRIDAY").timeOfDay("18:00")
                 .duration(2f).creator(admin).members(new HashSet<>(Set.of(admin, member)))
                 .admins(new HashSet<>(Set.of(admin))).numberOfTeams(2).playersPerTeam(5).build());

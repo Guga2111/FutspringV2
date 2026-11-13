@@ -50,7 +50,7 @@ class DailyResultsQueryCountTest extends BaseIntegrationTest {
 
     User user() {
         String name = "p" + UUID.randomUUID();
-        return userRepository.save(User.builder().email(name + "@count.test").username(name).password("hash").build());
+        return userRepository.save(User.builder().emailVerifiedAt(java.time.Instant.EPOCH).email(name + "@count.test").username(name).password("hash").build());
     }
 
     record Session(Daily daily, Team team1, Team team2) {}

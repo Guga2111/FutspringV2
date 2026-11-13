@@ -50,7 +50,7 @@ class PeladaInvitationTest extends BaseIntegrationTest {
         pelada = peladas.save(Pelada.builder().name("Pelada de sábado").dayOfWeek("SATURDAY").timeOfDay("19:00")
                 .duration(1f).creator(admin).members(new HashSet<>(Set.of(admin))).admins(new HashSet<>(Set.of(admin))).build());
     }
-    User user(String name) { return users.save(User.builder().username(name).email(name + "@invite.test").password("hash").build()); }
+    User user(String name) { return users.save(User.builder().emailVerifiedAt(java.time.Instant.EPOCH).username(name).email(name + "@invite.test").password("hash").build()); }
     Long invite() { return service.invite(pelada.getId(), recipient.getId(), admin.getEmail()).id(); }
     String link() { return service.replaceLink(pelada.getId(), admin.getEmail()).token(); }
     void fails(Runnable action, HttpStatus status) { assertThatThrownBy(action::run).isInstanceOfSatisfying(AppException.class, e -> assertThat(e.getStatus()).isEqualTo(status)); }

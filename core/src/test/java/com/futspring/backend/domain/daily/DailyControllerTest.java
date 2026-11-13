@@ -63,11 +63,11 @@ class DailyControllerTest extends BaseIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        admin = userRepository.save(User.builder()
+        admin = userRepository.save(User.builder().emailVerifiedAt(java.time.Instant.EPOCH)
                 .email("dadmin@test.com").username("dadmin").password("hash").build());
-        member = userRepository.save(User.builder()
+        member = userRepository.save(User.builder().emailVerifiedAt(java.time.Instant.EPOCH)
                 .email("dmember@test.com").username("dmember").password("hash").build());
-        outsider = userRepository.save(User.builder()
+        outsider = userRepository.save(User.builder().emailVerifiedAt(java.time.Instant.EPOCH)
                 .email("dout@test.com").username("dout").password("hash").build());
 
         pelada = peladaRepository.save(Pelada.builder()
@@ -273,7 +273,7 @@ class DailyControllerTest extends BaseIntegrationTest {
     void sortTeams_asAdmin() throws Exception {
         // Create exactly numberOfTeams × playersPerTeam = 10 confirmed players
         for (int i = 0; i < 10; i++) {
-            User player = userRepository.save(User.builder()
+            User player = userRepository.save(User.builder().emailVerifiedAt(java.time.Instant.EPOCH)
                     .email("sp" + i + "@test.com").username("sp" + i).password("hash").build());
             attendanceRepository.save(new DailyAttendance(daily, player, Instant.now()));
         }
@@ -295,9 +295,9 @@ class DailyControllerTest extends BaseIntegrationTest {
 
     @Test
     void swapPlayers_asAdmin() throws Exception {
-        User p1 = userRepository.save(User.builder()
+        User p1 = userRepository.save(User.builder().emailVerifiedAt(java.time.Instant.EPOCH)
                 .email("swap1@test.com").username("swap1").password("hash").build());
-        User p2 = userRepository.save(User.builder()
+        User p2 = userRepository.save(User.builder().emailVerifiedAt(java.time.Instant.EPOCH)
                 .email("swap2@test.com").username("swap2").password("hash").build());
 
         teamRepository.save(Team.builder().daily(daily).name("T1")
@@ -549,7 +549,7 @@ class DailyControllerTest extends BaseIntegrationTest {
 
     @Test
     void markBumpsSeen_onlyTouchesTheCallersBumps() throws Exception {
-        User other = userRepository.save(User.builder().email("dother@test.com").username("dother").password("hash").build());
+        User other = userRepository.save(User.builder().emailVerifiedAt(java.time.Instant.EPOCH).email("dother@test.com").username("dother").password("hash").build());
         pelada.getMembers().add(other);
         peladaRepository.save(pelada);
         DailyAttendanceBump mine = bumpRepository.save(DailyAttendanceBump.builder().daily(daily).user(member).bumpedBy(admin)
@@ -602,7 +602,7 @@ class DailyControllerTest extends BaseIntegrationTest {
     }
 
     private User confirmedPlayer(String name) {
-        User player = userRepository.save(User.builder()
+        User player = userRepository.save(User.builder().emailVerifiedAt(java.time.Instant.EPOCH)
                 .email(name + "@test.com").username(name).password("hash").build());
         pelada.getMembers().add(player);
         attendanceRepository.save(new DailyAttendance(daily, player, Instant.now()));

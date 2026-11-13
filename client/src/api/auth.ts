@@ -5,9 +5,16 @@ import type { AuthResponse, LoginRequest, RegisterRequest } from "@/types/auth"
 // (5173 → 8080, same site), and without them the browser neither stores nor sends the cookie
 export const WITH_SESSION_COOKIE = { withCredentials: true } as const
 
-export async function registerUser(data: RegisterRequest): Promise<AuthResponse> {
-  const response = await apiClient.post<AuthResponse>("/api/v1/auth/register", data, WITH_SESSION_COOKIE)
-  return response.data
+export async function registerUser(data: RegisterRequest): Promise<void> {
+  await apiClient.post("/api/v1/auth/register", data)
+}
+
+export async function requestVerificationEmail(email: string): Promise<void> {
+  await apiClient.post("/api/v1/auth/verification-email", { email })
+}
+
+export async function verifyEmail(data: import("@/types/auth").VerifyEmailRequest): Promise<void> {
+  await apiClient.post("/api/v1/auth/verify-email", data)
 }
 
 export async function loginUser(data: LoginRequest): Promise<AuthResponse> {

@@ -41,8 +41,8 @@ class SubscriptionCreationTest extends BaseIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        ana = userRepository.save(User.builder().email("ana@sub.test").username("ana").password("hash").build());
-        bia = userRepository.save(User.builder().email("bia@sub.test").username("bia").password("hash").build());
+        ana = userRepository.save(User.builder().emailVerifiedAt(java.time.Instant.EPOCH).email("ana@sub.test").username("ana").password("hash").build());
+        bia = userRepository.save(User.builder().emailVerifiedAt(java.time.Instant.EPOCH).email("bia@sub.test").username("bia").password("hash").build());
     }
 
     @Test

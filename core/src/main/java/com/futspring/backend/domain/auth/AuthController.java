@@ -31,10 +31,24 @@ public class AuthController {
     private final PasswordResetService passwordResetService;
     private final RefreshSessionService refreshSessionService;
     private final SessionCookie sessionCookie;
+    private final com.futspring.backend.domain.auth.verification.EmailVerificationService verification;
 
     @PostMapping("/register")
-    public ResponseEntity<AuthResponseDTO> register(@Valid @RequestBody RegisterRequestDTO request) {
-        return sessionCookie.respond(HttpStatus.CREATED, authService.register(request));
+    public ResponseEntity<Void> register(@Valid @RequestBody RegisterRequestDTO request) {
+        authService.register(request);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/verification-email")
+    public ResponseEntity<Void> verificationEmail(@Valid @RequestBody ForgotPasswordRequestDTO request) {
+        verification.request(request.email());
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/verify-email")
+    public ResponseEntity<Void> verifyEmail(@Valid @RequestBody com.futspring.backend.domain.auth.dto.VerifyEmailRequestDTO request) {
+        verification.verify(request.token(), request.password());
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/login")

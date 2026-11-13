@@ -72,9 +72,9 @@ class NotificationControllerTest extends BaseIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        admin = userRepository.save(User.builder().email("nadmin@test.com").username("nadmin").password("hash").build());
-        member = userRepository.save(User.builder().email("nmember@test.com").username("nmember").password("hash").build());
-        other = userRepository.save(User.builder().email("nother@test.com").username("nother").password("hash").build());
+        admin = userRepository.save(User.builder().emailVerifiedAt(java.time.Instant.EPOCH).email("nadmin@test.com").username("nadmin").password("hash").build());
+        member = userRepository.save(User.builder().emailVerifiedAt(java.time.Instant.EPOCH).email("nmember@test.com").username("nmember").password("hash").build());
+        other = userRepository.save(User.builder().emailVerifiedAt(java.time.Instant.EPOCH).email("nother@test.com").username("nother").password("hash").build());
         pelada = peladaRepository.save(Pelada.builder()
                 .name("Pelada do Fut")
                 .dayOfWeek("SATURDAY")

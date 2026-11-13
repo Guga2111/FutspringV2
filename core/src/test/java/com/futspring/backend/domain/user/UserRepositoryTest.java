@@ -27,13 +27,13 @@ class UserRepositoryTest {
 
     @BeforeEach
     void setUp() {
-        alice = userRepository.save(User.builder()
+        alice = userRepository.save(User.builder().emailVerifiedAt(java.time.Instant.EPOCH)
                 .email("alice@example.com")
                 .username("alice_user")
                 .password("hash1")
                 .build());
 
-        bob = userRepository.save(User.builder()
+        bob = userRepository.save(User.builder().emailVerifiedAt(java.time.Instant.EPOCH)
                 .email("bob@test.org")
                 .username("bob_player")
                 .password("hash2")
@@ -66,7 +66,7 @@ class UserRepositoryTest {
 
     @Test
     void existsByUsernameIgnoreCase_withDuplicateUsernames_doesNotThrow() {
-        userRepository.save(User.builder().username("bob_player").email("bob2@test.org").password("x").build());
+        userRepository.save(User.builder().emailVerifiedAt(java.time.Instant.EPOCH).username("bob_player").email("bob2@test.org").password("x").build());
 
         assertThat(userRepository.existsByUsernameIgnoreCase("bob_player")).isTrue();
     }
@@ -108,8 +108,8 @@ class UserRepositoryTest {
         assertThat(search("%%%")).isEmpty();
         assertThat(search("___")).isEmpty();
 
-        userRepository.save(User.builder().email("ab@test.org").username("a_b").password("x").build());
-        userRepository.save(User.builder().email("axb@test.org").username("axb").password("x").build());
+        userRepository.save(User.builder().emailVerifiedAt(java.time.Instant.EPOCH).email("ab@test.org").username("a_b").password("x").build());
+        userRepository.save(User.builder().emailVerifiedAt(java.time.Instant.EPOCH).email("axb@test.org").username("axb").password("x").build());
         assertThat(search("a_b")).extracting(User::getUsername).containsExactly("a_b");
     }
 

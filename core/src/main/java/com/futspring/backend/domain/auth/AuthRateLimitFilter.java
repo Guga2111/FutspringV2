@@ -54,6 +54,8 @@ public class AuthRateLimitFilter extends OncePerRequestFilter {
             limit("register", HttpMethod.POST, "/api/v1/auth/register", REQUESTS_PER_MINUTE),
             limit("forgot-password", HttpMethod.POST, "/api/v1/auth/forgot-password", REQUESTS_PER_MINUTE),
             limit("reset-password", HttpMethod.POST, "/api/v1/auth/reset-password", REQUESTS_PER_MINUTE),
+            limit("verification-email", HttpMethod.POST, "/api/v1/auth/verification-email", REQUESTS_PER_MINUTE),
+            limit("verify-email", HttpMethod.POST, "/api/v1/auth/verify-email", REQUESTS_PER_MINUTE),
             limit("refresh", HttpMethod.POST, "/api/v1/auth/refresh", REFRESHES_PER_MINUTE),
             limit("change-password", HttpMethod.POST, "/api/v1/users/me/password", REQUESTS_PER_MINUTE),
             limit("delete-account", HttpMethod.POST, "/api/v1/users/me/delete", REQUESTS_PER_MINUTE),

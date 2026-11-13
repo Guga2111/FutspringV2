@@ -69,9 +69,9 @@ class DailyTeamManagementServiceTest {
                 playerStarsRepository, userRepository, dailyDTOMapper, eventPublisher,
                 org.mockito.Mockito.mock(com.futspring.backend.domain.subscription.SubscriptionGuard.class));
 
-        admin = User.builder().id(1L).email("admin@example.com").username("admin").password("hash").build();
-        member = User.builder().id(2L).email("member@example.com").username("member").password("hash").build();
-        outsider = User.builder().id(3L).email("out@example.com").username("out").password("hash").build();
+        admin = User.builder().emailVerifiedAt(java.time.Instant.EPOCH).id(1L).email("admin@example.com").username("admin").password("hash").build();
+        member = User.builder().emailVerifiedAt(java.time.Instant.EPOCH).id(2L).email("member@example.com").username("member").password("hash").build();
+        outsider = User.builder().emailVerifiedAt(java.time.Instant.EPOCH).id(3L).email("out@example.com").username("out").password("hash").build();
 
         pelada = Pelada.builder()
                 .id(10L)
@@ -192,8 +192,8 @@ class DailyTeamManagementServiceTest {
     @SuppressWarnings("unchecked")
     void sortTeams_balancesByTheStarsInThisPelada() {
         // 5 + 1 vs 4 + 3: player3 has no row, so the default 3 stars
-        User player3 = User.builder().id(4L).email("p3@example.com").username("p3").password("hash").build();
-        User player4 = User.builder().id(5L).email("p4@example.com").username("p4").password("hash").build();
+        User player3 = User.builder().emailVerifiedAt(java.time.Instant.EPOCH).id(4L).email("p3@example.com").username("p3").password("hash").build();
+        User player4 = User.builder().emailVerifiedAt(java.time.Instant.EPOCH).id(5L).email("p4@example.com").username("p4").password("hash").build();
         pelada.setPlayersPerTeam(2);
         attendance.confirm(scheduledDaily, admin, member, player3, player4);
 
@@ -337,7 +337,7 @@ class DailyTeamManagementServiceTest {
     // --- saveTeams ---
 
     private User extra(long id, String name) {
-        User user = User.builder().id(id).email(name + "@example.com").username(name).password("hash").build();
+        User user = User.builder().emailVerifiedAt(java.time.Instant.EPOCH).id(id).email(name + "@example.com").username(name).password("hash").build();
         pelada.getMembers().add(user);
         return user;
     }

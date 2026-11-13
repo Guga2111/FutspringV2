@@ -416,7 +416,7 @@ class PlatformControllerTest extends BaseIntegrationTest {
     }
 
     private User user(String name) {
-        return users.save(User.builder().username(name).email(name + "@platform.test").password("hash").build());
+        return users.save(User.builder().emailVerifiedAt(java.time.Instant.EPOCH).username(name).email(name + "@platform.test").password("hash").build());
     }
 
     private Pelada pelada(String name, SubscriptionKind kind, Instant validUntil) {

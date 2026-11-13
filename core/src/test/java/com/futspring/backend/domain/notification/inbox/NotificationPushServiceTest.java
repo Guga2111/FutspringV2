@@ -48,9 +48,9 @@ class NotificationPushServiceTest {
         meterRegistry = new SimpleMeterRegistry();
         service = new NotificationPushService(notificationRepository, new NotificationDTOAssembler(teamRepository),
                 messagingTemplate, meterRegistry);
-        admin = User.builder().id(1L).email("admin@example.com").username("admin").password("hash").build();
-        member = User.builder().id(2L).email("member@example.com").username("member").password("hash").build();
-        other = User.builder().id(3L).email("other@example.com").username("other").password("hash").build();
+        admin = User.builder().emailVerifiedAt(java.time.Instant.EPOCH).id(1L).email("admin@example.com").username("admin").password("hash").build();
+        member = User.builder().emailVerifiedAt(java.time.Instant.EPOCH).id(2L).email("member@example.com").username("member").password("hash").build();
+        other = User.builder().emailVerifiedAt(java.time.Instant.EPOCH).id(3L).email("other@example.com").username("other").password("hash").build();
         pelada = Pelada.builder().id(10L).name("Pelada do Fut").creator(admin).build();
         daily = Daily.builder().id(100L).pelada(pelada).dailyDate(LocalDate.of(2026, 10, 31)).dailyTime("20:00").build();
     }
