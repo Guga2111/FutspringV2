@@ -16,6 +16,8 @@ import java.util.Optional;
 
 public interface DailyRepository extends JpaRepository<Daily, Long> {
 
+    boolean existsByChampionImageAndPelada_Members_Id(String image, Long userId);
+
     // Row lock on the session: confirmations of the same session wait for each other (capacity count and
     // bump victim never race), other sessions don't block. Held until the transaction commits
     @Lock(LockModeType.PESSIMISTIC_WRITE)

@@ -118,6 +118,10 @@ class PlatformControllerTest extends BaseIntegrationTest {
         mockMvc.perform(get("/api/v1/users/" + creator.getId())
                         .header("Authorization", bearerToken(creator.getId(), creator.getEmail())))
                 .andExpect(jsonPath("$.isPlatformAdmin").value(false));
+        // Shared group members can view the profile, but never the operator flag.
+        Pelada shared = pelada("Shared profile", SubscriptionKind.EXEMPT, null);
+        shared.getMembers().add(operator);
+        peladas.saveAndFlush(shared);
         // someone else's profile never says it
         mockMvc.perform(get("/api/v1/users/" + operator.getId())
                         .header("Authorization", bearerToken(creator.getId(), creator.getEmail())))

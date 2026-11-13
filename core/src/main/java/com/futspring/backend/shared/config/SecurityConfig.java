@@ -84,7 +84,6 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> {
                 auth
                     .requestMatchers("/api/v1/auth/**").permitAll()
-                    .requestMatchers("/api/v1/files/**").permitAll()
                     .requestMatchers("/ws/**").permitAll()
                     // liveness / readiness probes (management.endpoint.health.probes.add-additional-paths)
                     .requestMatchers(HttpMethod.GET, "/livez", "/readyz", "/api/v1/invite-links/*").permitAll()

@@ -13,7 +13,7 @@ export const invitationStatusStyle: Record<InvitationStatus, string> = {
   EXPIRED: "bg-secondary text-secondary-foreground",
 }
 
-// Public metadata only. The id is for routing; the preview displays name, image, day and time.
+// Public metadata only. The id is for routing; the public preview displays name, day and time; image is null.
 export interface PeladaPreview {
   id: number
   name: string

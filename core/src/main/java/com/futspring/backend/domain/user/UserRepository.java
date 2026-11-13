@@ -16,6 +16,8 @@ import java.util.Optional;
 public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByEmail(String email);
 
+    List<User> findByImageOrBackgroundImage(String image, String backgroundImage);
+
     // Runs on every authenticated request (AccessTokenVerifier): reads one column through the unique email index
     @Query("SELECT u.tokenVersion FROM User u WHERE u.email = :email")
     Optional<Integer> findTokenVersionByEmail(@Param("email") String email);
