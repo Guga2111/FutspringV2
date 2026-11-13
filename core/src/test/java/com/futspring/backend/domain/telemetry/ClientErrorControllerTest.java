@@ -76,6 +76,14 @@ class ClientErrorControllerTest extends BaseIntegrationTest {
     }
 
     @Test
+    void acceptsAContentSecurityPolicyViolation() throws Exception {
+        Map<String, Object> body = report();
+        body.put("message", "CSP report script-src-elem bloqueou inline");
+        body.put("source", "CSP");
+        send(body, nextIp()).andExpect(status().isNoContent());
+    }
+
+    @Test
     void validatesTheFields() throws Exception {
         Map<String, Object> blank = report();
         blank.put("message", " ");
