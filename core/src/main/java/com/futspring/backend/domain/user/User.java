@@ -24,6 +24,11 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    // Persistence concurrency version, independent of credential/link revocation counters.
+    @Version
+    @Column(name = "row_version", nullable = false)
+    private long rowVersion;
+
     @Column(unique = true, nullable = false)
     private String email;
 

@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataAccessException;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import tools.jackson.databind.json.JsonMapper;
@@ -44,6 +45,20 @@ public class RefreshSessionService {
     static final String TOKEN_KEY = "rt:";
     static final String SESSION_KEY = "sess:";
 
+    // Redis serializes the existence check and both writes with logout's DEL. Only open can create a session.
+    private static final DefaultRedisScript<Long> ISSUE = new DefaultRedisScript<>("""
+            if #KEYS == 3 and (redis.call('EXISTS', KEYS[1]) == 0 or redis.call('EXISTS', KEYS[3]) == 0) then
+                return 0
+            end
+            redis.call('PSETEX', KEYS[1], ARGV[1], ARGV[2])
+            redis.call('PSETEX', KEYS[2], ARGV[1], ARGV[3])
+            if #KEYS == 3 then
+                local remaining = redis.call('PTTL', KEYS[3])
+                redis.call('PEXPIRE', KEYS[3], math.min(remaining, tonumber(ARGV[4])))
+            end
+            return 1
+            """, Long.class);
+
     record StoredToken(long userId, String sessionId, int tokenVersion) {
     }
 
@@ -67,7 +82,7 @@ public class RefreshSessionService {
         Instant now = clock.instant();
         StoredSession session = new StoredSession(user.getId(), now, now.plus(ABSOLUTE_TTL), now);
         try {
-            IssuedSession issued = issue(auth, UUID.randomUUID().toString(), session, user.getTokenVersion(), now);
+            IssuedSession issued = issue(auth, UUID.randomUUID().toString(), session, user.getTokenVersion(), now, null).orElseThrow();
             count("futspring.session.open", "ok");
             return issued;
         } catch (DataAccessException e) {
@@ -129,21 +144,24 @@ public class RefreshSessionService {
         if (user.isEmpty()) return Optional.empty();
 
         StoredSession used = new StoredSession(session.userId(), session.createdAt(), session.absoluteExpiresAt(), now);
-        IssuedSession issued = issue(accessFor(user.get()), stored.sessionId(), used, stored.tokenVersion(), now);
-        // the replaced token only covers a request already in flight (another tab); then it goes away
-        redis.expire(tokenKey, ROTATED_GRACE);
-        return Optional.of(issued);
+        return issue(accessFor(user.get()), stored.sessionId(), used, stored.tokenVersion(), now, tokenKey);
     }
 
     // Writes the session (TTL renewed) and a new refresh token pointing at it, both until min(30 days, the ceiling)
-    private IssuedSession issue(AuthResponseDTO auth, String sessionId, StoredSession session, int tokenVersion,
-                                Instant now) {
+    private Optional<IssuedSession> issue(AuthResponseDTO auth, String sessionId, StoredSession session, int tokenVersion,
+                                          Instant now, String previousTokenKey) {
         Duration untilCeiling = Duration.between(now, session.absoluteExpiresAt());
         Duration ttl = untilCeiling.compareTo(IDLE_TTL) < 0 ? untilCeiling : IDLE_TTL;
         String refreshToken = SecretTokens.generate();
-        write(SESSION_KEY + sessionId, session, ttl);
-        write(TOKEN_KEY + SecretTokens.hash(refreshToken), new StoredToken(session.userId(), sessionId, tokenVersion), ttl);
-        return new IssuedSession(auth, refreshToken, ttl);
+        String sessionKey = SESSION_KEY + sessionId;
+        String newTokenKey = TOKEN_KEY + SecretTokens.hash(refreshToken);
+        List<String> keys = previousTokenKey == null ? List.of(sessionKey, newTokenKey)
+                : List.of(sessionKey, newTokenKey, previousTokenKey);
+        Long stored = redis.execute(ISSUE, keys, Long.toString(ttl.toMillis()), jsonMapper.writeValueAsString(session),
+                jsonMapper.writeValueAsString(new StoredToken(session.userId(), sessionId, tokenVersion)),
+                Long.toString(ROTATED_GRACE.toMillis()));
+        return Long.valueOf(1).equals(stored)
+                ? Optional.of(new IssuedSession(auth, refreshToken, ttl)) : Optional.empty();
     }
 
     private AuthResponseDTO accessFor(User user) {
@@ -154,10 +172,6 @@ public class RefreshSessionService {
     private <T> T read(String key, Class<T> type) {
         String value = redis.opsForValue().get(key);
         return value == null ? null : jsonMapper.readValue(value, type);
-    }
-
-    private void write(String key, Object value, Duration ttl) {
-        redis.opsForValue().set(key, jsonMapper.writeValueAsString(value), ttl);
     }
 
     private void count(String metric, String result) {

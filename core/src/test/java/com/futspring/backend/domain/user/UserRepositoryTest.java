@@ -43,6 +43,14 @@ class UserRepositoryTest {
     // --- findByEmail ---
 
     @Test
+    void accessTokenVersionIsScopedToTheImmutableAccountId() {
+        User current = userRepository.save(User.builder().username("Recreated").email("recreated@repo.test")
+                .password("hash").emailVerifiedAt(java.time.Instant.EPOCH).tokenVersion(1).build());
+        assertThat(userRepository.findTokenVersionByIdAndEmail(current.getId(), current.getEmail())).contains(1);
+        assertThat(userRepository.findTokenVersionByIdAndEmail(current.getId() + 1000, current.getEmail())).isEmpty();
+    }
+
+    @Test
     void findByEmail_existingEmail_returnsUser() {
         Optional<User> result = userRepository.findByEmail("alice@example.com");
         assertThat(result).isPresent();

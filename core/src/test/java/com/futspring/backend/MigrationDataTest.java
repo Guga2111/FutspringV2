@@ -32,6 +32,21 @@ class MigrationDataTest {
     }
 
     @Test
+    void v25_backfillsTheUserPersistenceVersionWithoutChangingCredentials() throws SQLException {
+        flyway("24").migrate();
+        execute("INSERT INTO users(id,email,username,password,token_version,email_link_version) VALUES(1,'version@migration.test','Player','hash',7,3)");
+        flyway(null).migrate();
+        try (Connection c = connect(); Statement statement = c.createStatement();
+             ResultSet rows = statement.executeQuery("SELECT row_version,password,token_version,email_link_version FROM users WHERE id=1")) {
+            rows.next();
+            assertThat(rows.getLong(1)).isZero();
+            assertThat(rows.getString(2)).isEqualTo("hash");
+            assertThat(rows.getInt(3)).isEqualTo(7);
+            assertThat(rows.getInt(4)).isEqualTo(3);
+        }
+    }
+
+    @Test
     void v12_isAdditiveAndProtectsFinancialHistoryFromPreviousBinaries() throws SQLException {
         flyway("11").migrate();
         execute("INSERT INTO users(id,email,username,password) VALUES(1,'finance@migration.test','Gestor','hash')");

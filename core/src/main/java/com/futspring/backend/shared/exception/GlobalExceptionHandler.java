@@ -92,6 +92,11 @@ public class GlobalExceptionHandler {
         return error(HttpStatus.PAYLOAD_TOO_LARGE, "Arquivo muito grande");
     }
 
+    @ExceptionHandler(org.springframework.dao.OptimisticLockingFailureException.class)
+    public ResponseEntity<ErrorResponse> handleConcurrentUpdate(org.springframework.dao.OptimisticLockingFailureException ex) {
+        return error(HttpStatus.CONFLICT, "Os dados foram alterados em outra operação. Recarregue e tente novamente.");
+    }
+
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ErrorResponse> handleDataIntegrity(DataIntegrityViolationException ex) {
         log.warn("Data integrity violation", ex);
