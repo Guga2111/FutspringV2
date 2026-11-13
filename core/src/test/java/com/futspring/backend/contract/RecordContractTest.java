@@ -186,7 +186,7 @@ class RecordContractTest {
 
     @Test
     void nullableResponses_preserveOmissionAndExplicitNulls() {
-        User user = User.builder().id(1L).username("Jogador").email("owner@example.com").build();
+        User user = User.builder().emailVerifiedAt(java.time.Instant.EPOCH).id(1L).username("Jogador").email("owner@example.com").build();
         JsonNode publicProfile = mapper.valueToTree(ProfileDTO.from(user, false, null));
         assertThat(publicProfile.has("email")).isFalse();
         assertThat(publicProfile.has("stars")).isFalse();

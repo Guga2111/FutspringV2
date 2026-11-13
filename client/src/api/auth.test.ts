@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 vi.mock("./client", () => ({ default: { post: vi.fn() } }))
 
 import apiClient from "./client"
-import { registerUser, requestPasswordReset, resetPassword } from "./auth"
+import { loginUser, logoutSession, refreshSession, registerUser, requestPasswordReset, resetPassword } from "./auth"
 
 const mockPost = vi.mocked(apiClient.post)
 
@@ -38,5 +38,18 @@ describe("registerUser", () => {
       password: "senha123",
       termsVersion: "2026-11-09",
     })
+  })
+})
+
+describe("session cookie routes", () => {
+  it("sends credentials on login, refresh and logout", async () => {
+    mockPost.mockResolvedValue({ data: { token: "t", user: { id: 1 } } })
+    await loginUser({ email: "leal@futspring.com", password: "senha123" })
+    await expect(refreshSession()).resolves.toEqual({ token: "t", user: { id: 1 } })
+    await logoutSession()
+
+    expect(mockPost).toHaveBeenNthCalledWith(1, "/api/v1/auth/login", { email: "leal@futspring.com", password: "senha123" }, { withCredentials: true })
+    expect(mockPost).toHaveBeenNthCalledWith(2, "/api/v1/auth/refresh", null, { withCredentials: true })
+    expect(mockPost).toHaveBeenNthCalledWith(3, "/api/v1/auth/logout", null, { withCredentials: true })
   })
 })

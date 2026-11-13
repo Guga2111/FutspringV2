@@ -1,0 +1,261 @@
+# Alert rules of the Futspring API, evaluated by Grafana every minute and sent to Telegram (policies.yml).
+# Each rule: A = an instant query, C = the threshold on A (the condition). Edit here and redeploy: provisioned rules
+# are read-only in the UI. No "$" in the annotations: provisioning expands $VARS from the environment.
+# Table and how to silence one: README.md → Alerts.
+apiVersion: 1
+
+groups:
+  - orgId: 1
+    name: futspring
+    folder: Futspring
+    interval: 1m
+    rules:
+      - uid: futspring-api-down
+        title: API fora
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 900, to: 0 }
+            datasourceUid: prometheus
+            model:
+                refId: A
+                expr: "up{job=\"futspring-api\"}"
+                instant: true
+                range: false
+          - refId: C
+            datasourceUid: __expr__
+            model:
+                refId: C
+                type: threshold
+                expression: A
+                conditions:
+                  - evaluator: { type: lt, params: [1] }
+        for: 2m
+        noDataState: Alerting
+        execErrState: Error
+        annotations:
+          summary: "A API não responde ao Prometheus há 2 minutos (container parado, travado ou fora da rede observability)."
+      - uid: futspring-http-5xx
+        title: Erros 5xx
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 900, to: 0 }
+            datasourceUid: prometheus
+            model:
+                refId: A
+                expr: "(sum(rate(http_server_requests_seconds_count{application=\"futspring\", outcome=\"SERVER_ERROR\"}[5m])) or vector(0)) / sum(rate(http_server_requests_seconds_count{application=\"futspring\"}[5m])) and on() sum(rate(http_server_requests_seconds_count{application=\"futspring\"}[5m])) > 0.2"
+                instant: true
+                range: false
+          - refId: C
+            datasourceUid: __expr__
+            model:
+                refId: C
+                type: threshold
+                expression: A
+                conditions:
+                  - evaluator: { type: gt, params: [0.01] }
+        for: 5m
+        noDataState: OK
+        execErrState: Error
+        annotations:
+          summary: "Mais de 1% das requisições da API terminaram em 5xx nos últimos 5 minutos (com ao menos 0,2 req/s). Veja os logs ERROR no Loki."
+      - uid: futspring-db-pool
+        title: Pool do banco
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 900, to: 0 }
+            datasourceUid: prometheus
+            model:
+                refId: A
+                expr: "max(hikaricp_connections_pending{application=\"futspring\"})"
+                instant: true
+                range: false
+          - refId: C
+            datasourceUid: __expr__
+            model:
+                refId: C
+                type: threshold
+                expression: A
+                conditions:
+                  - evaluator: { type: gt, params: [0] }
+        for: 5m
+        noDataState: OK
+        execErrState: Error
+        annotations:
+          summary: "Requisições esperando conexão do Hikari há 5 minutos: pool de 10 esgotado, banco lento ou lock preso."
+      - uid: vps-disk-usage
+        title: Disco
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 900, to: 0 }
+            datasourceUid: prometheus
+            model:
+                refId: A
+                expr: "max(1 - node_filesystem_avail_bytes{job=\"node-exporter\", fstype=~\"ext4|xfs|btrfs\", mountpoint!~\"/boot.*\"} / node_filesystem_size_bytes{job=\"node-exporter\", fstype=~\"ext4|xfs|btrfs\", mountpoint!~\"/boot.*\"})"
+                instant: true
+                range: false
+          - refId: C
+            datasourceUid: __expr__
+            model:
+                refId: C
+                type: threshold
+                expression: A
+                conditions:
+                  - evaluator: { type: gt, params: [0.85] }
+        for: 10m
+        noDataState: OK
+        execErrState: Error
+        annotations:
+          summary: "Um disco da VPS (ext4/xfs/btrfs, fora /boot) passou de 85% de uso. Veja volumes do Docker, logs e backups em ~/projects/futspring/backups."
+      - uid: futspring-jvm-heap
+        title: Memória da JVM
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 900, to: 0 }
+            datasourceUid: prometheus
+            model:
+                refId: A
+                expr: "sum(jvm_memory_used_bytes{application=\"futspring\", area=\"heap\"}) / sum(jvm_memory_max_bytes{application=\"futspring\", area=\"heap\"} > 0)"
+                instant: true
+                range: false
+          - refId: C
+            datasourceUid: __expr__
+            model:
+                refId: C
+                type: threshold
+                expression: A
+                conditions:
+                  - evaluator: { type: gt, params: [0.9] }
+        for: 10m
+        noDataState: OK
+        execErrState: Error
+        annotations:
+          summary: "O heap da API está acima de 90% do máximo há 10 minutos; um OutOfMemoryError reinicia o container."
+      - uid: futspring-api-restart
+        title: Container reiniciando
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 900, to: 0 }
+            datasourceUid: prometheus
+            model:
+                refId: A
+                expr: "max(changes(container_start_time_seconds{name=\"futspring_api\"}[15m]))"
+                instant: true
+                range: false
+          - refId: C
+            datasourceUid: __expr__
+            model:
+                refId: C
+                type: threshold
+                expression: A
+                conditions:
+                  - evaluator: { type: gt, params: [0] }
+        for: 0s
+        noDataState: OK
+        execErrState: Error
+        annotations:
+          summary: "O container futspring_api reiniciou nos últimos 15 minutos (crash ou OutOfMemoryError; um deploy recria o container e não conta)."
+      - uid: futspring-email-failures
+        title: E-mail
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 900, to: 0 }
+            datasourceUid: prometheus
+            model:
+                refId: A
+                expr: "sum(increase(futspring_email_dropped_total{application=\"futspring\"}[15m])) + sum(increase(futspring_email_sent_total{application=\"futspring\", result=\"failed\"}[15m]))"
+                instant: true
+                range: false
+          - refId: C
+            datasourceUid: __expr__
+            model:
+                refId: C
+                type: threshold
+                expression: A
+                conditions:
+                  - evaluator: { type: gt, params: [0] }
+        for: 0s
+        noDataState: OK
+        execErrState: Error
+        annotations:
+          summary: "E-mails de notificação falharam no Resend ou foram descartados com a fila cheia nos últimos 15 minutos (cota diária?)."
+      - uid: futspring-webpush-failures
+        title: Web Push
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 900, to: 0 }
+            datasourceUid: prometheus
+            model:
+                refId: A
+                expr: "sum(increase(futspring_webpush_sent_total{application=\"futspring\", result=\"failed\"}[15m])) or vector(0)"
+                instant: true
+                range: false
+          - refId: C
+            datasourceUid: __expr__
+            model:
+                refId: C
+                type: threshold
+                expression: A
+                conditions:
+                  - evaluator: { type: gt, params: [10] }
+        for: 0s
+        noDataState: OK
+        execErrState: Error
+        annotations:
+          summary: "Mais de 10 envios de Web Push falharam nos últimos 15 minutos (400/413/429/5xx/timeout). Veja os logs do WebPushDispatcher no Loki."
+      - uid: futspring-session-store
+        title: Sessões (Redis)
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 900, to: 0 }
+            datasourceUid: prometheus
+            model:
+                refId: A
+                expr: "(sum(increase(futspring_session_refresh_total{application=\"futspring\", result=\"error\"}[5m])) or vector(0)) + (sum(increase(futspring_session_open_total{application=\"futspring\", result=\"error\"}[5m])) or vector(0))"
+                instant: true
+                range: false
+          - refId: C
+            datasourceUid: __expr__
+            model:
+                refId: C
+                type: threshold
+                expression: A
+                conditions:
+                  - evaluator: { type: gt, params: [0] }
+        for: 0s
+        noDataState: OK
+        execErrState: Error
+        annotations:
+          summary: "Sessões não foram gravadas ou renovadas no Redis nos últimos 5 minutos (Redis fora ou sem memória). Logins seguem sem cookie e ninguém renova a sessão."
+      - uid: futspring-client-errors
+        title: Erros do front
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 900, to: 0 }
+            datasourceUid: loki
+            model:
+                refId: A
+                expr: "sum(count_over_time({service=\"futspring-api\"} |= \"client_error\" | json | event=\"client_error\" [10m]))"
+                queryType: instant
+          - refId: C
+            datasourceUid: __expr__
+            model:
+                refId: C
+                type: threshold
+                expression: A
+                conditions:
+                  - evaluator: { type: gt, params: [20] }
+        for: 0s
+        noDataState: OK
+        execErrState: Error
+        annotations:
+          summary: "Mais de 20 erros do web app em 10 minutos. Loki: {service=\"futspring-api\"} | json | event=\"client_error\"."

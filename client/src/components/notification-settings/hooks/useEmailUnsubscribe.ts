@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"
-import { resubscribeToEmails, unsubscribeFromEmails } from "@/api/notifications"
+import { unsubscribeFromEmails } from "@/api/notifications"
 import { getErrorMessage } from "@/lib/errors"
 import type { NotificationPreference } from "@/types/notification"
 
@@ -17,7 +17,6 @@ export interface EmailUnsubscribeState {
   loading: boolean
   error: string | null
   pending: boolean
-  resubscribe: () => Promise<void>
   unsubscribe: () => Promise<void>
 }
 
@@ -56,7 +55,6 @@ export function useEmailUnsubscribe(token: string): EmailUnsubscribeState {
     [token],
   )
 
-  const resubscribe = useCallback(() => change(resubscribeToEmails), [change])
   const unsubscribe = useCallback(() => change(unsubscribeFromEmails), [change])
 
   const current = result?.token === token ? result : null
@@ -65,7 +63,6 @@ export function useEmailUnsubscribe(token: string): EmailUnsubscribeState {
     loading: current === null,
     error: current?.error ?? null,
     pending,
-    resubscribe,
     unsubscribe,
   }
 }

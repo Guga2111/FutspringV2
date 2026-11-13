@@ -1,9 +1,10 @@
+import { useImageUrl } from "@/hooks/useImageUrl"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { Bookmark01Icon, Calendar03Icon, Clock01Icon, Location01Icon, Settings01Icon } from "@hugeicons/core-free-icons"
 import { Link } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { dayOfWeekLabel } from "@/lib/constants"
-import { cn, getFileUrl, getInitials, getPeladaColor } from "@/lib/utils"
+import { cn, getInitials, getPeladaColor } from "@/lib/utils"
 import type { PeladaDetail } from "@/types/pelada"
 
 interface PeladaBannerProps {
@@ -15,7 +16,7 @@ interface PeladaBannerProps {
 const overlayButton = "size-[34px] rounded-full bg-black/35 text-white hover:bg-black/55 hover:text-white [&_svg]:size-[15px]"
 
 export function PeladaBanner({ pelada, isCurrentUserAdmin }: PeladaBannerProps) {
-  const imageUrl = getFileUrl(pelada.image)
+  const imageUrl = useImageUrl(pelada.image)
   return (
     <section
       className={cn(

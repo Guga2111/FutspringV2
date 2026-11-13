@@ -16,8 +16,22 @@ import java.util.Optional;
 public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByEmail(String email);
 
+    List<User> findByImageOrBackgroundImage(String image, String backgroundImage);
+
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT u FROM User u WHERE u.email = :email AND u.deletedAt IS NULL")
+    Optional<User> findByEmailForUpdate(@Param("email") String email);
+
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT u FROM User u WHERE u.emailVerificationHash = :hash AND u.deletedAt IS NULL")
+    Optional<User> findByVerificationHashForUpdate(@Param("hash") String hash);
+
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT u FROM User u WHERE u.id = :id AND u.deletedAt IS NULL")
+    Optional<User> findByIdForUpdate(@Param("id") Long id);
+
     // Runs on every authenticated request (AccessTokenVerifier): reads one column through the unique email index
-    @Query("SELECT u.tokenVersion FROM User u WHERE u.email = :email")
+    @Query("SELECT u.tokenVersion FROM User u WHERE u.email = :email AND u.emailVerifiedAt IS NOT NULL AND u.deletedAt IS NULL")
     Optional<Integer> findTokenVersionByEmail(@Param("email") String email);
 
     // Usernames aren't unique in the database (production has legacy duplicates), so check with exists, never a single-result find
@@ -33,15 +47,17 @@ public interface UserRepository extends JpaRepository<User, Long> {
     // The platform's operators (SUBSCRIPTION_PIX_CLAIMED goes to them)
     List<User> findByPlatformAdminTrueAndDeletedAtIsNull();
 
-    // Matches username or email, but callers must only return public fields (PublicUserDTO); deleted accounts never match
+    // User search: `pattern` is a lower-case LIKE pattern for the username (wildcards escaped with a backslash
+    // by UserService); the e-mail only matches exactly (lower case), never a fragment, so the search can't map e-mails
+    // to accounts. Callers must only return public fields (PublicUserDTO); deleted accounts never match
     @Query("""
         SELECT u FROM User u
         WHERE u.deletedAt IS NULL
-          AND (LOWER(u.username) LIKE LOWER(CONCAT('%', :q, '%'))
-           OR LOWER(u.email) LIKE LOWER(CONCAT('%', :q, '%')))
+          AND (LOWER(u.username) LIKE :pattern ESCAPE '\\'
+           OR LOWER(u.email) = :email)
         ORDER BY u.username
         """)
-    List<User> searchByUsernameOrEmail(@Param("q") String q, Pageable pageable);
+    List<User> searchByUsernameOrEmail(@Param("pattern") String pattern, @Param("email") String email, Pageable pageable);
 
     // Conditional, so two peladas created at once by the same account can't both take the trial (the row lock of the
     // UPDATE makes the second one see trial_used_at set); 1 = the trial was taken now

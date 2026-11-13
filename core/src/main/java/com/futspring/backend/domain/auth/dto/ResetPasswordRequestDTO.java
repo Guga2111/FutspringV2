@@ -1,5 +1,6 @@
 package com.futspring.backend.domain.auth.dto;
 
+import com.futspring.backend.domain.auth.BcryptLength;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
@@ -10,5 +11,6 @@ public record ResetPasswordRequestDTO(
         // same rule as RegisterRequestDTO.password
         @NotBlank(message = "A senha é obrigatória")
         @Size(min = 8, message = "A senha deve ter pelo menos 8 caracteres")
+        @BcryptLength
         String newPassword) {
 }

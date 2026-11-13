@@ -28,10 +28,15 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     private final JsonMapper objectMapper;
 
     // The e-mail link routes act on the user in their own token, so a stale session in the browser (or none) must
-    // not turn them into a 401
+    // not turn them into a 401; neither may the web app's error report, which never reads the caller, nor refresh and
+    // logout, which read the refresh cookie and are called with an expired access token
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        return SecurityConfig.EMAIL_LINK_PATHS.contains(request.getRequestURI())
+        return request.getRequestURI().equals("/api/v1/auth/verify-email")
+                || request.getRequestURI().equals("/api/v1/auth/verification-email")
+                || SecurityConfig.EMAIL_LINK_PATHS.contains(request.getRequestURI())
+                || SecurityConfig.SESSION_COOKIE_PATHS.contains(request.getRequestURI())
+                || SecurityConfig.CLIENT_ERRORS_PATH.equals(request.getRequestURI())
                 || ("GET".equals(request.getMethod()) && request.getRequestURI().matches("/api/v1/invite-links/[^/]+"));
     }
 

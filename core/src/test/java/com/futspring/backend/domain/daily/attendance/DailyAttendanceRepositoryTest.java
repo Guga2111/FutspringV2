@@ -39,8 +39,8 @@ class DailyAttendanceRepositoryTest {
 
     @BeforeEach
     void setUp() {
-        ana = userRepository.save(User.builder().email("ana@test.com").username("ana").password("hash").build());
-        bia = userRepository.save(User.builder().email("bia@test.com").username("bia").password("hash").build());
+        ana = userRepository.save(User.builder().emailVerifiedAt(java.time.Instant.EPOCH).email("ana@test.com").username("ana").password("hash").build());
+        bia = userRepository.save(User.builder().emailVerifiedAt(java.time.Instant.EPOCH).email("bia@test.com").username("bia").password("hash").build());
         pelada = peladaRepository.save(Pelada.builder()
                 .name("P").dayOfWeek("FRIDAY").timeOfDay("18:00").duration(1f).creator(ana).build());
         first = dailyRepository.save(Daily.builder().pelada(pelada).dailyDate(LocalDate.of(2026, 10, 6)).dailyTime("18:00").build());
@@ -129,6 +129,6 @@ class DailyAttendanceRepositoryTest {
     }
 
     private User user(String name) {
-        return userRepository.save(User.builder().email(name + "@test.com").username(name).password("hash").build());
+        return userRepository.save(User.builder().emailVerifiedAt(java.time.Instant.EPOCH).email(name + "@test.com").username(name).password("hash").build());
     }
 }

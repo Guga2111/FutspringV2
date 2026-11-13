@@ -19,6 +19,8 @@ public interface PeladaRepository extends JpaRepository<Pelada, Long> {
     @Query("SELECT p FROM Pelada p WHERE p.id = :id")
     Optional<Pelada> findByIdForUpdate(@Param("id") Long id);
 
+    boolean existsByImageAndMembers_Id(String image, Long userId);
+
     List<Pelada> findByMembersContaining(User user);
 
     List<Pelada> findByAutoCreateDailyEnabledTrue();

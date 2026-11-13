@@ -64,9 +64,9 @@ class RankingServiceTest {
     void setUp() {
         rankingService = new RankingService(peladaRepository, userAuthHelper, new PeladaAccessHelper(peladaRepository), rankingRepository, dailyAwardRepository, userRepository, userDailyStatsRepository, playerStarsRepository);
 
-        admin = User.builder().id(1L).email("admin@example.com").username("admin").password("hash").build();
-        player = User.builder().id(2L).email("player@example.com").username("player").password("hash").build();
-        outsider = User.builder().id(3L).email("out@example.com").username("out").password("hash").build();
+        admin = User.builder().emailVerifiedAt(java.time.Instant.EPOCH).id(1L).email("admin@example.com").username("admin").password("hash").build();
+        player = User.builder().emailVerifiedAt(java.time.Instant.EPOCH).id(2L).email("player@example.com").username("player").password("hash").build();
+        outsider = User.builder().emailVerifiedAt(java.time.Instant.EPOCH).id(3L).email("out@example.com").username("out").password("hash").build();
 
         pelada = Pelada.builder()
                 .id(10L)

@@ -1,4 +1,4 @@
-import { z } from "zod"
+import { z } from "@/lib/zod"
 import { normalizeFinanceAmount, sumFinanceAmounts } from "@/utils/finance"
 
 export const financeMoneySchema = z.string().regex(/^\d{1,12}\.\d{2}$/, "Use duas casas decimais, por exemplo 45.00")

@@ -22,6 +22,11 @@ export interface RegisterRequest {
   termsVersion: string
 }
 
+export interface VerifyEmailRequest {
+  token: string
+  password: string
+}
+
 export interface LoginRequest {
   email: string
   password: string

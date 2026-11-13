@@ -63,7 +63,7 @@ class NotificationEmailDispatcherTest {
     void setUp() {
         JwtConfig jwtConfig = new JwtConfig();
         ReflectionTestUtils.setField(jwtConfig, "secret", "test-secret-key-that-is-at-least-32-characters-long-for-hmac");
-        tokens = new UnsubscribeTokens(jwtConfig);
+        tokens = new UnsubscribeTokens(jwtConfig, java.time.Clock.systemUTC());
         MailConfig mailConfig = new MailConfig();
         ReflectionTestUtils.setField(mailConfig, "frontendUrl", "https://app.example.com");
         ReflectionTestUtils.setField(mailConfig, "apiUrl", "https://app.example.com/api");
@@ -75,9 +75,9 @@ class NotificationEmailDispatcherTest {
         dispatcher = new NotificationEmailDispatcher(notificationRepository, preferenceService, tokens, emailSender,
                 mailConfig, TransactionOperations.withoutTransaction(), pacer, executor, meterRegistry);
 
-        leal = User.builder().id(1L).email("leal@example.com").username("Leal").password("hash").build();
-        ana = User.builder().id(2L).email("ana@example.com").username("ana").password("hash").build();
-        bia = User.builder().id(3L).email("bia@example.com").username("bia").password("hash").build();
+        leal = User.builder().emailVerifiedAt(java.time.Instant.EPOCH).id(1L).email("leal@example.com").username("Leal").password("hash").build();
+        ana = User.builder().emailVerifiedAt(java.time.Instant.EPOCH).id(2L).email("ana@example.com").username("ana").password("hash").build();
+        bia = User.builder().emailVerifiedAt(java.time.Instant.EPOCH).id(3L).email("bia@example.com").username("bia").password("hash").build();
         pelada = Pelada.builder().id(10L).name("Pelada do Fut").build();
         daily = Daily.builder().id(100L).pelada(pelada).dailyDate(LocalDate.of(2026, 10, 31)).dailyTime("20:00").build();
     }
@@ -208,7 +208,7 @@ class NotificationEmailDispatcherTest {
                 eq(List.of(NotificationEmail.LOGO)), headers.capture());
         verify(pacer).acquire();
 
-        String token = tokens.create(ana.getId(), NotificationCategory.ATTENDANCE);
+        String token = tokens.create(ana.getId(), NotificationCategory.ATTENDANCE, 0);
         assertThat(html.getValue())
                 .contains("href=\"https://app.example.com/daily/100\"")
                 .contains("href=\"https://app.example.com/settings/notifications\"")

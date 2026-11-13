@@ -71,7 +71,7 @@ public class AccountExportService {
                 now,
                 new AccountExportDTO.Account(userId, user.getUsername(), user.getEmail(), user.getPosition(),
                         user.getImage(), user.getBackgroundImage(), user.getCreatedAt(), user.getTermsVersion(),
-                        user.getTermsAcceptedAt(), user.getTrialUsedAt()),
+                        user.getTermsAcceptedAt(), user.getTrialUsedAt(), user.getEmailVerifiedAt()),
                 memberships(userId, created),
                 statsService.getStats(userId, callerEmail),
                 statsService.getMatchHistory(userId, callerEmail),

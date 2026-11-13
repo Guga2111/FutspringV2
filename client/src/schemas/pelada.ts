@@ -1,4 +1,4 @@
-import { z } from "zod"
+import { z } from "@/lib/zod"
 import { DAYS_OF_WEEK } from "@/lib/constants"
 
 const DAY_VALUES = DAYS_OF_WEEK.map((d) => d.value) as [string, ...string[]]

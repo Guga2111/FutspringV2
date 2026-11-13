@@ -1,6 +1,5 @@
 import { type ClassValue, clsx } from "clsx"
 import { extendTailwindMerge } from "tailwind-merge"
-import { API_BASE } from "@/lib/config"
 
 // The named font sizes of tailwind.config.js (keep both lists equal). Without them tailwind-merge
 // reads `text-score` as a color and drops it when a color class such as `text-white` follows.
@@ -16,10 +15,7 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export function getFileUrl(filename: string | null | undefined): string | undefined {
-  if (!filename) return undefined
-  return `${API_BASE}/api/v1/files/${filename}`
-}
+
 
 // Case- and accent-insensitive search key: "  André " -> "andre"
 export function normalizeSearch(value: string): string {

@@ -21,6 +21,14 @@ export default defineConfig([
     },
   },
   {
+    // zod's jitless setting must run before any schema is defined (src/lib/zod.ts)
+    files: ['src/**/*.{ts,tsx}'],
+    ignores: ['src/lib/zod.ts'],
+    rules: {
+      'no-restricted-imports': ['error', { paths: [{ name: 'zod', message: 'Import { z } from "@/lib/zod".' }] }],
+    },
+  },
+  {
     files: ['src/sw.ts'],
     languageOptions: { globals: globals.serviceworker },
   },

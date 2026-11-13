@@ -1,6 +1,9 @@
 package com.futspring.backend.domain.auth.passwordreset;
 
+import com.futspring.backend.domain.auth.SecretTokens;
+
 import com.futspring.backend.domain.notification.webpush.PushSubscriptionRepository;
+import com.futspring.backend.domain.user.TokensRevokedEvent;
 import com.futspring.backend.domain.user.User;
 import com.futspring.backend.domain.user.UserRepository;
 import com.futspring.backend.shared.exception.AppException;
@@ -42,13 +45,15 @@ public class PasswordResetService {
     @Transactional
     public void resetPassword(String rawToken, String newPassword) {
         LocalDateTime now = LocalDateTime.now();
-        PasswordResetToken token = tokenRepository.findUsableForUpdate(ResetTokens.hash(rawToken), now)
+        PasswordResetToken token = tokenRepository.findUsableForUpdate(SecretTokens.hash(rawToken), now)
                 .orElseThrow(() -> new AppException(HttpStatus.BAD_REQUEST, INVALID_LINK_MESSAGE));
 
         User user = token.getUser();
         user.setPassword(passwordEncoder.encode(newPassword));
         // Revokes every JWT issued before (AccessTokenVerifier): the old sessions are logged out
         user.setTokenVersion(user.getTokenVersion() + 1);
+        // ...including open chat connections, closed after the commit (StompSessions)
+        eventPublisher.publishEvent(new TokensRevokedEvent(user.getEmail()));
         // ...and their devices stop receiving Web Push (each one subscribes again after logging in)
         pushSubscriptionRepository.deleteAllByUserId(user.getId());
         // Marks this token and any other pending one as used
@@ -65,10 +70,10 @@ public class PasswordResetService {
         LocalDateTime now = LocalDateTime.now();
         tokenRepository.invalidateActiveTokens(user, now);
 
-        String rawToken = ResetTokens.generate();
+        String rawToken = SecretTokens.generate();
         tokenRepository.save(PasswordResetToken.builder()
                 .user(user)
-                .tokenHash(ResetTokens.hash(rawToken))
+                .tokenHash(SecretTokens.hash(rawToken))
                 .expiresAt(now.plus(TOKEN_TTL))
                 .build());
         eventPublisher.publishEvent(new PasswordResetRequestedEvent(user.getEmail(), user.getUsername(), rawToken));

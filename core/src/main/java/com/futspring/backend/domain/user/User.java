@@ -7,6 +7,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.Instant;
+import java.util.Locale;
 
 @Entity
 @Table(name = "users")
@@ -37,6 +38,18 @@ public class User {
     private String backgroundImage;
 
     private String position;
+
+    @Column(name = "email_verified_at")
+    private Instant emailVerifiedAt;
+    @Column(name = "email_verification_hash", length = 64, unique = true)
+    private String emailVerificationHash;
+    @Column(name = "email_verification_expires_at")
+    private Instant emailVerificationExpiresAt;
+    @Column(name = "email_verification_sent_at")
+    private Instant emailVerificationSentAt;
+    @Column(name = "email_link_version", nullable = false)
+    @Builder.Default
+    private int emailLinkVersion = 0;
 
     // Incremented to revoke every JWT issued before (password reset); see AccessTokenVerifier
     @Column(name = "token_version", nullable = false)
@@ -72,6 +85,12 @@ public class User {
     @UpdateTimestamp
     @Column(name = "updated_at")
     private Instant updatedAt;
+
+    // The stored form of an e-mail (V22 keeps the column unique on LOWER(email)): every e-mail the client sends
+    // to look up or create an account goes through it, so "Ana@X.com " finds ana@x.com
+    public static String normalizeEmail(String email) {
+        return email == null ? null : email.trim().toLowerCase(Locale.ROOT);
+    }
 
     public boolean isDeleted() {
         return deletedAt != null;

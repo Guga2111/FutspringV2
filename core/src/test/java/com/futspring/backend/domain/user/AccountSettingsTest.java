@@ -45,6 +45,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
+import com.futspring.backend.support.TestImages;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.transaction.TestTransaction;
@@ -128,6 +129,23 @@ class AccountSettingsTest extends BaseIntegrationTest {
                         .content(json(Map.of("currentPassword", PASSWORD, "newPassword", "curta"))))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.errors.newPassword").exists());
+    }
+
+    // BCrypt takes 72 bytes: above that the encoder throws, in encode and matches alike (a 400, never a 500)
+    @Test
+    void changePassword_passwordsOver72Bytes_are400() throws Exception {
+        mockMvc.perform(as(post("/api/v1/users/me/password"), player)
+                        .content(json(Map.of("currentPassword", PASSWORD, "newPassword", "é".repeat(40)))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.newPassword").value("A senha é longa demais (até 72 caracteres; letras com acento contam em dobro)"));
+        mockMvc.perform(as(post("/api/v1/users/me/password"), player)
+                        .content(json(Map.of("currentPassword", "a".repeat(73), "newPassword", "nova-senha-123"))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.currentPassword").value("A senha é longa demais (até 72 caracteres; letras com acento contam em dobro)"));
+        mockMvc.perform(as(post("/api/v1/users/me/delete"), player).content(json(Map.of("password", "a".repeat(73)))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.password").value("A senha é longa demais (até 72 caracteres; letras com acento contam em dobro)"));
+        assertThat(users.findById(player.getId()).orElseThrow().getTokenVersion()).isZero();
     }
 
     @Test
@@ -354,7 +372,7 @@ class AccountSettingsTest extends BaseIntegrationTest {
                         .content(json(Map.of("username", "Novo" + UUID.randomUUID().toString().substring(0, 8),
                                 "email", oldEmail, "password", "outra-senha-123",
                                 "termsVersion", com.futspring.backend.domain.auth.LegalTerms.CURRENT_VERSION))))
-                .andExpect(status().isCreated());
+                .andExpect(status().isNoContent());
     }
 
     @Test
@@ -370,7 +388,7 @@ class AccountSettingsTest extends BaseIntegrationTest {
         User leaving = user("Saindo" + suffix);
         Pelada committed = pelada("Pelada " + suffix, owner, leaving);
         String image = fileUploadService.uploadImage(
-                new MockMultipartFile("file", "a.png", "image/png", new byte[]{1, 2, 3}));
+                new MockMultipartFile("file", "a.png", "image/png", TestImages.png()));
         leaving.setImage(image);
         users.save(leaving);
         Path file = Path.of(uploadsDir).resolve(image);
@@ -440,7 +458,7 @@ class AccountSettingsTest extends BaseIntegrationTest {
     }
 
     private User user(String name) {
-        return users.save(User.builder().username(name + UUID.randomUUID().toString().substring(0, 8))
+        return users.save(User.builder().emailVerifiedAt(java.time.Instant.EPOCH).username(name + UUID.randomUUID().toString().substring(0, 8))
                 .email(UUID.randomUUID() + "@account.test").password(passwordEncoder.encode(PASSWORD)).build());
     }
 

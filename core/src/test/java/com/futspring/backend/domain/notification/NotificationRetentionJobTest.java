@@ -23,7 +23,7 @@ class NotificationRetentionJobTest {
 
     @Test
     void deletes_readOlderThan90Days_andAnyOlderThan180Days() {
-        User user = userRepository.save(User.builder().email("ana@test.com").username("ana").password("hash").build());
+        User user = userRepository.save(User.builder().emailVerifiedAt(java.time.Instant.EPOCH).email("ana@test.com").username("ana").password("hash").build());
         Notification readOld = save(user, 91, true);
         Notification readRecent = save(user, 89, true);
         Notification unreadOld = save(user, 179, false);

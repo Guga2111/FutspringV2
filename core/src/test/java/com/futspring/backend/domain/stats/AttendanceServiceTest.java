@@ -54,10 +54,10 @@ class AttendanceServiceTest {
         attendanceService = new AttendanceService(peladaRepository, userAuthHelper,
                 new PeladaAccessHelper(peladaRepository), dailyRepository, userDailyStatsRepository, mensalistaRepository);
 
-        ana = User.builder().id(1L).email("ana@example.com").username("ana").password("hash").build();
-        bruno = User.builder().id(2L).email("bruno@example.com").username("Bruno").password("hash").build();
-        carla = User.builder().id(3L).email("carla@example.com").username("carla").password("hash").build();
-        outsider = User.builder().id(4L).email("out@example.com").username("out").password("hash").build();
+        ana = User.builder().emailVerifiedAt(java.time.Instant.EPOCH).id(1L).email("ana@example.com").username("ana").password("hash").build();
+        bruno = User.builder().emailVerifiedAt(java.time.Instant.EPOCH).id(2L).email("bruno@example.com").username("Bruno").password("hash").build();
+        carla = User.builder().emailVerifiedAt(java.time.Instant.EPOCH).id(3L).email("carla@example.com").username("carla").password("hash").build();
+        outsider = User.builder().emailVerifiedAt(java.time.Instant.EPOCH).id(4L).email("out@example.com").username("out").password("hash").build();
 
         pelada = Pelada.builder()
                 .id(10L)

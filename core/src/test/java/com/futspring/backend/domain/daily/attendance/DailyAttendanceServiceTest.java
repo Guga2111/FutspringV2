@@ -80,9 +80,9 @@ class DailyAttendanceServiceTest {
         attendanceService = serviceAt(NOW);
         attendance = InMemoryAttendance.stub(attendanceRepository);
 
-        admin = User.builder().id(1L).email("admin@example.com").username("admin").password("hash").build();
-        member = User.builder().id(2L).email("member@example.com").username("member").password("hash").build();
-        outsider = User.builder().id(3L).email("out@example.com").username("out").password("hash").build();
+        admin = User.builder().emailVerifiedAt(java.time.Instant.EPOCH).id(1L).email("admin@example.com").username("admin").password("hash").build();
+        member = User.builder().emailVerifiedAt(java.time.Instant.EPOCH).id(2L).email("member@example.com").username("member").password("hash").build();
+        outsider = User.builder().emailVerifiedAt(java.time.Instant.EPOCH).id(3L).email("out@example.com").username("out").password("hash").build();
 
         pelada = Pelada.builder()
                 .id(10L)
@@ -618,7 +618,7 @@ class DailyAttendanceServiceTest {
     }
 
     private User addMember(long id) {
-        User user = User.builder().id(id).email("d" + id + "@example.com").username("d" + id).password("hash").build();
+        User user = User.builder().emailVerifiedAt(java.time.Instant.EPOCH).id(id).email("d" + id + "@example.com").username("d" + id).password("hash").build();
         pelada.getMembers().add(user);
         return user;
     }

@@ -45,10 +45,10 @@ class AwardsServiceTest {
     void setUp() {
         awardsService = new AwardsService(peladaRepository, userAuthHelper, new PeladaAccessHelper(peladaRepository), dailyAwardRepository);
 
-        admin = User.builder().id(1L).email("admin@example.com").username("admin").password("hash").build();
-        player1 = User.builder().id(2L).email("player1@example.com").username("player1").password("hash").build();
-        player2 = User.builder().id(3L).email("player2@example.com").username("player2").password("hash").build();
-        outsider = User.builder().id(4L).email("out@example.com").username("out").password("hash").build();
+        admin = User.builder().emailVerifiedAt(java.time.Instant.EPOCH).id(1L).email("admin@example.com").username("admin").password("hash").build();
+        player1 = User.builder().emailVerifiedAt(java.time.Instant.EPOCH).id(2L).email("player1@example.com").username("player1").password("hash").build();
+        player2 = User.builder().emailVerifiedAt(java.time.Instant.EPOCH).id(3L).email("player2@example.com").username("player2").password("hash").build();
+        outsider = User.builder().emailVerifiedAt(java.time.Instant.EPOCH).id(4L).email("out@example.com").username("out").password("hash").build();
 
         pelada = Pelada.builder()
                 .id(10L)
@@ -124,8 +124,8 @@ class AwardsServiceTest {
     void getAwards_returnsEveryWinner() {
         Daily daily = Daily.builder().id(1L).pelada(pelada).dailyDate(java.time.LocalDate.now()).dailyTime("18:00").build();
 
-        User u4 = User.builder().id(5L).email("u4@e.com").username("u4").password("h").build();
-        User u5 = User.builder().id(6L).email("u5@e.com").username("u5").password("h").build();
+        User u4 = User.builder().emailVerifiedAt(java.time.Instant.EPOCH).id(5L).email("u4@e.com").username("u4").password("h").build();
+        User u5 = User.builder().emailVerifiedAt(java.time.Instant.EPOCH).id(6L).email("u5@e.com").username("u5").password("h").build();
 
         DailyAward award = DailyAward.builder()
                 .id(1L)

@@ -51,11 +51,11 @@ export function InvitePlayerDialog({
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>Convidar jogador</DialogTitle>
-          <DialogDescription>Busque pelo nome de usuário ou pelo e-mail.</DialogDescription>
+          <DialogDescription>Busque pelo nome de usuário ou pelo e-mail completo.</DialogDescription>
         </DialogHeader>
         <Input
           aria-label="Buscar jogador"
-          placeholder="Nome de usuário ou e-mail"
+          placeholder="Nome ou e-mail completo"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           autoFocus

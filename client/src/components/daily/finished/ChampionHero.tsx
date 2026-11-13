@@ -1,9 +1,10 @@
+import { useImageUrl } from "@/hooks/useImageUrl"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { ChampionIcon, Upload01Icon } from "@hugeicons/core-free-icons"
 import { Button } from "@/components/ui/button"
 import { PlayerAvatar } from "@/components/PlayerAvatar"
 import { TeamColorDot } from "@/components/daily/teams/TeamColorDot"
-import { getFileUrl } from "@/lib/utils"
+
 import { championSummary } from "@/utils/finishedSession"
 import type { DailyDetail } from "@/types/daily"
 import { isWritable } from "@/utils/subscription"
@@ -17,7 +18,7 @@ interface ChampionHeroProps {
 
 // Champion photo and the champion team card (stacks below 1100 px)
 export function ChampionHero({ daily, uploadLoading, onChangePhoto }: ChampionHeroProps) {
-  const photo = getFileUrl(daily.championImage)
+  const photo = useImageUrl(daily.championImage)
   const champion = championSummary(daily)
   const statsById = new Map(daily.playerStats.map((s) => [s.userId, s]))
 

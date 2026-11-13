@@ -1,3 +1,4 @@
+import { useImageUrl } from "@/hooks/useImageUrl"
 import { useMemo, useState } from "react"
 import { Link } from "react-router-dom"
 import { format } from "date-fns"
@@ -9,7 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { DateRangeFilter } from "@/components/DateRangeFilter"
-import { getFileUrl } from "@/lib/utils"
+
 import { formatWeekdayDayMonth, parseLocalDate, type DateRange } from "@/utils/dates"
 import {
   GALLERY_RESULTS,
@@ -136,7 +137,7 @@ function GalleryGrid({ children }: { children: React.ReactNode }) {
 }
 
 function SessionGalleryCard({ daily }: { daily: DailyListItem }) {
-  const photo = getFileUrl(daily.championImage)
+  const photo = useImageUrl(daily.championImage)
   const date = parseLocalDate(daily.dailyDate)
   return (
     <li>

@@ -2,6 +2,17 @@ import { defineConfig, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 import path from 'path'
+import { execSync } from 'child_process'
+import { contentSecurityPolicyMeta } from './src/lib/csp'
+
+// The build's short git sha, sent as `release` with the error reports; "dev" where git isn't available
+function gitSha(): string {
+  try {
+    return execSync('git rev-parse --short HEAD', { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim()
+  } catch {
+    return 'dev'
+  }
+}
 
 // Preloads the Latin Inter file (the text font of the first paint), so it starts downloading
 // with the HTML instead of after the CSS is parsed. Its name is hashed, so it is found in the bundle.
@@ -22,6 +33,8 @@ export default defineConfig({
   plugins: [
     react(),
     preloadInter(),
+    // the Content-Security-Policy as a <meta> of dist/index.html, with the theme script's hash (src/lib/csp.ts)
+    contentSecurityPolicyMeta(),
     // Installable app: our own service worker (src/sw.ts) with the build in precache; registered by
     // PwaUpdater, which asks before activating a new version (no reload in the middle of a form)
     VitePWA({
@@ -62,16 +75,31 @@ export default defineConfig({
       },
     }),
   ],
+  build: {
+    // a font under 4 KB would be inlined as a data: URI, which the Content-Security-Policy's font-src ('self',
+    // from default-src) refuses; fonts always stay files
+    assetsInlineLimit: (file) => (/\.(woff2?|ttf|otf)$/.test(file) ? false : undefined),
+  },
   define: {
     global: 'globalThis',
+    __APP_VERSION__: JSON.stringify(gitSha()),
   },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
     },
   },
+  // also the proxy of `bun run preview` (preview.proxy defaults to it)
   server: {
     proxy: {
+      // the API under the page's own origin, as nginx does in production (`location /api/` strips /api): a build with
+      // VITE_API_URL=<page origin>/api, served through a tunnel, is then same-origin, so the SameSite=Strict refresh
+      // cookie is sent (two tunnels are two different sites). `bun run dev` calls :8080 directly and never uses it
+      '/api': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, ''),
+      },
       '/ws': {
         target: 'http://localhost:8080',
         changeOrigin: true,

@@ -19,8 +19,8 @@ import java.util.regex.Pattern;
 
 /**
  * Authenticates and authorizes STOMP frames:
- * CONNECT needs a Bearer token that opens a session (AccessTokenVerifier); a session already connected
- * when the token is revoked stays open until it disconnects; SUBSCRIBE is only allowed to /topic/pelada/{id} for members of that
+ * CONNECT needs a Bearer token that opens a session (AccessTokenVerifier); what was authorized here is taken back
+ * after a member removal or a token revocation by StompSessions; SUBSCRIBE is only allowed to /topic/pelada/{id} for members of that
  * pelada and to the user's own error and notification queues (/user/... resolves to the session's principal); SEND needs an authenticated session and an /app destination
  * (a SEND straight to /topic or /queue would reach the broker's subscribers without going through ChatService).
  */

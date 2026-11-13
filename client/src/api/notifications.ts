@@ -63,8 +63,3 @@ export async function unsubscribeFromEmails(token: string): Promise<Notification
   const response = await apiClient.post<NotificationPreference>("/api/v1/notifications/unsubscribe", { token })
   return response.data
 }
-
-export async function resubscribeToEmails(token: string): Promise<NotificationPreference> {
-  const response = await apiClient.post<NotificationPreference>("/api/v1/notifications/resubscribe", { token })
-  return response.data
-}

@@ -312,6 +312,52 @@ class MigrationDataTest {
                 .isInstanceOf(SQLException.class).hasMessageContaining("notifications_type_check");
     }
 
+    @Test
+    void v22_normalizesEmails_andRejectsOneDifferingOnlyByCase() throws SQLException {
+        flyway("21").migrate();
+        execute("INSERT INTO users(id,email,username,password) VALUES(1,' Ana@X.com','Ana','hash'),(2,'bruno@x.com','Bruno','hash')");
+        flyway(null).migrate();
+        try (Connection c = connect(); Statement st = c.createStatement();
+             ResultSet rs = st.executeQuery("SELECT email FROM users ORDER BY id")) {
+            rs.next(); assertThat(rs.getString(1)).isEqualTo("ana@x.com");
+            rs.next(); assertThat(rs.getString(1)).isEqualTo("bruno@x.com");
+        }
+        assertThatThrownBy(() -> execute("INSERT INTO users(id,email,username,password) VALUES(3,'ANA@X.COM','Outra','hash')"))
+                .isInstanceOf(SQLException.class).hasMessageContaining("uq_users_email_lower");
+    }
+
+    @Test
+    void v23_requiresVerificationForExistingAccountsAndRevokesOldSessions() throws SQLException {
+        flyway("22").migrate();
+        execute("INSERT INTO users(id,email,username,password,token_version) VALUES(1,'verify@migration.test','Verify','hash',4)");
+        flyway(null).migrate();
+        try(Connection c=connect(); Statement st=c.createStatement(); ResultSet rs=st.executeQuery(
+                "SELECT token_version,email_verified_at,email_verification_hash FROM users WHERE id=1")) {
+            assertThat(rs.next()).isTrue();
+            assertThat(rs.getInt(1)).isEqualTo(5);
+            assertThat(rs.getObject(2)).isNull();
+            assertThat(rs.getObject(3)).isNull();
+        }
+        execute("INSERT INTO users(id,email,username,password) VALUES(2,'new@migration.test','New','hash')");
+        try(Connection c=connect(); Statement st=c.createStatement(); ResultSet rs=st.executeQuery("SELECT email_verified_at FROM users WHERE id=2")) {
+            assertThat(rs.next()).isTrue(); assertThat(rs.getObject(1)).isNull();
+        }
+    }
+
+    @Test
+    void v24_addsRevocableLinkVersionWithoutChangingVerificationOrSessions() throws SQLException {
+        flyway("23").migrate();
+        execute("INSERT INTO users(id,email,username,password,token_version,email_verified_at) VALUES(1,'links@migration.test','Links','hash',7,'2026-11-13T00:00:00Z')");
+        flyway(null).migrate();
+        try(Connection c=connect(); Statement st=c.createStatement(); ResultSet rs=st.executeQuery(
+                "SELECT token_version,email_verified_at,email_link_version FROM users WHERE id=1")) {
+            assertThat(rs.next()).isTrue();
+            assertThat(rs.getInt(1)).isEqualTo(7);
+            assertThat(rs.getObject(2)).isNotNull();
+            assertThat(rs.getInt(3)).isZero();
+        }
+    }
+
     private static Flyway flyway(String target) {
         var config = Flyway.configure()
                 .dataSource(POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword())

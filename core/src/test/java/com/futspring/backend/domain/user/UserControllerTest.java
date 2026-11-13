@@ -8,10 +8,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
+import com.futspring.backend.support.TestImages;
 import org.springframework.mock.web.MockMultipartFile;
 
 import java.time.LocalDate;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -32,11 +34,11 @@ class UserControllerTest extends BaseIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        userA = userRepository.save(User.builder()
+        userA = userRepository.save(User.builder().emailVerifiedAt(java.time.Instant.EPOCH)
                 .email("ua@test.com").username("userA").password("hash").build());
-        userB = userRepository.save(User.builder()
+        userB = userRepository.save(User.builder().emailVerifiedAt(java.time.Instant.EPOCH)
                 .email("ub@test.com").username("userB").password("hash").build());
-        stranger = userRepository.save(User.builder()
+        stranger = userRepository.save(User.builder().emailVerifiedAt(java.time.Instant.EPOCH)
                 .email("stranger@test.com").username("stranger").password("hash").build());
         // userA and userB share a pelada; stranger shares none
         shared = peladaRepository.save(Pelada.builder()
@@ -146,7 +148,7 @@ class UserControllerTest extends BaseIntegrationTest {
     void uploadProfileImage_ownUser() throws Exception {
         MockMultipartFile file = new MockMultipartFile(
                 "file", "avatar.jpg", "image/jpeg",
-                new byte[]{(byte) 0xFF, (byte) 0xD8, (byte) 0xFF, (byte) 0xE0});
+                TestImages.jpeg());
 
         mockMvc.perform(multipart("/api/v1/users/" + userA.getId() + "/image")
                 .file(file)
@@ -171,7 +173,7 @@ class UserControllerTest extends BaseIntegrationTest {
     void uploadBackgroundImage_ownUser() throws Exception {
         MockMultipartFile file = new MockMultipartFile(
                 "file", "bg.jpg", "image/jpeg",
-                new byte[]{(byte) 0xFF, (byte) 0xD8, (byte) 0xFF, (byte) 0xE0});
+                TestImages.jpeg());
 
         mockMvc.perform(multipart("/api/v1/users/" + userA.getId() + "/background-image")
                 .file(file)
@@ -195,11 +197,22 @@ class UserControllerTest extends BaseIntegrationTest {
     @Test
     void searchUsers_matchesEmailButNeverReturnsIt() throws Exception {
         mockMvc.perform(get("/api/v1/users/search")
-                .param("q", "ub@test")
+                .param("q", "UB@test.com")
                 .header("Authorization", bearerToken(userA.getId(), userA.getEmail())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].username").value("userB"))
                 .andExpect(jsonPath("$[0].email").doesNotExist());
+    }
+
+    @Test
+    void searchUsers_emailFragmentAndWildcardsMatchNobody() throws Exception {
+        for (String q : List.of("ub@test", "@test.com", "%%%", "___")) {
+            mockMvc.perform(get("/api/v1/users/search")
+                    .param("q", q)
+                    .header("Authorization", bearerToken(userA.getId(), userA.getEmail())))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.length()").value(0));
+        }
     }
 
     @Test
@@ -217,6 +230,13 @@ class UserControllerTest extends BaseIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.username").value("userB"))
                 .andExpect(jsonPath("$.email").doesNotExist());
+    }
+
+    @Test
+    void getProfile_unrelatedAccountIsForbidden() throws Exception {
+        mockMvc.perform(get("/api/v1/users/" + userB.getId())
+                .header("Authorization", bearerToken(stranger.getId(), stranger.getEmail())))
+                .andExpect(status().isForbidden());
     }
 
     @Test

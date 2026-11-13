@@ -27,10 +27,8 @@ import com.futspring.backend.domain.subscription.SubscriptionService;
 import com.futspring.backend.domain.subscription.dto.SubscriptionSummaryDTO;
 import com.futspring.backend.domain.user.User;
 import com.futspring.backend.domain.user.UserRepository;
-import com.futspring.backend.domain.user.dto.PublicUserDTO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -54,8 +52,6 @@ import com.futspring.backend.domain.pelada.member.PeladaPlayerStarsRepository;
 @RequiredArgsConstructor
 public class PeladaService {
 
-    static final int MIN_SEARCH_LENGTH = 3;
-    static final int MAX_SEARCH_RESULTS = 10;
     private static final Set<DailyStatus> UPCOMING_STATUSES = Set.of(DailyStatus.SCHEDULED, DailyStatus.CONFIRMED);
 
     private final FinancePreservation financePreservation;
@@ -330,18 +326,6 @@ public class PeladaService {
         eventPublisher.publishEvent(new AdminsChangedEvent(pelada, caller, changed, isAdmin));
 
         return toMemberDTOs(pelada, targets);
-    }
-
-    // Matches username or email, but only returns public fields (no email)
-    @Transactional(readOnly = true)
-    public List<PublicUserDTO> searchUsers(String query) {
-        String q = query == null ? "" : query.trim();
-        if (q.length() < MIN_SEARCH_LENGTH) {
-            throw new AppException(HttpStatus.BAD_REQUEST, "Digite pelo menos " + MIN_SEARCH_LENGTH + " caracteres para buscar");
-        }
-        return userRepository.searchByUsernameOrEmail(q, PageRequest.of(0, MAX_SEARCH_RESULTS)).stream()
-                .map(PublicUserDTO::from)
-                .toList();
     }
 
     @Transactional

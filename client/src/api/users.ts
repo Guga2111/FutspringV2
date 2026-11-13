@@ -1,4 +1,5 @@
 import apiClient from "./client"
+import { WITH_SESSION_COOKIE } from "./auth"
 import type { StatsDTO, UserStatsTimelineDTO, UserMatchHistoryDTO } from "@/types/stats"
 import type { PeladaResponse } from "@/types/pelada"
 import type { AuthResponse } from "@/types/auth"
@@ -59,9 +60,9 @@ export interface ChangePasswordData {
   newPassword: string
 }
 
-// Answers a token of the new version: the other sessions are logged out
+// Answers a token of the new version and a new refresh cookie: the other sessions are logged out
 export async function changePassword(data: ChangePasswordData): Promise<AuthResponse> {
-  const response = await apiClient.post<AuthResponse>("/api/v1/users/me/password", data)
+  const response = await apiClient.post<AuthResponse>("/api/v1/users/me/password", data, WITH_SESSION_COOKIE)
   return response.data
 }
 
