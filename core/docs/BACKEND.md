@@ -24,6 +24,8 @@ Futspring manages amateur soccer groups ("peladas"): members and admins, match-d
 
 ## Commands
 
+PRs with security impact must follow the mandatory [security review workflow](../../docs/SECURITY_REVIEW.md), using Trail of Bits `differential-review` before opening/marking ready and before merge. Fix confirmed new and pre-existing vulnerabilities in the reviewed flows, include regression tests/migrations as needed, and record review evidence. Passing backend CI does not replace that review.
+
 Run from `core/`:
 
 ```bash

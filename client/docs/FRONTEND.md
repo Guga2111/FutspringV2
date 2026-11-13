@@ -23,6 +23,8 @@ React single-page app in `client/`. UI text is in Portuguese (pt-BR); code ident
 
 ## Commands
 
+PRs with security impact must follow the mandatory [security review workflow](../../docs/SECURITY_REVIEW.md), using Trail of Bits `differential-review` before opening/marking ready and before merge. Include session handling, private photos, browser storage, CSP and service-worker changes in the impact assessment. Passing frontend CI does not replace that review.
+
 Run from `client/`:
 
 ```bash
