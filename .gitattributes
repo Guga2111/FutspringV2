@@ -1,0 +1,2 @@
+# The CSP allows the inline theme script of client/index.html by the sha256 of its bytes: CRLF would change it
+client/index.html text eol=lf

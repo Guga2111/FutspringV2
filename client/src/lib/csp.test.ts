@@ -1,13 +1,16 @@
 import { createHash } from "node:crypto"
-import { readFileSync } from "node:fs"
+import { existsSync, readdirSync, readFileSync } from "node:fs"
 import { join } from "node:path"
 import { describe, expect, it } from "vitest"
 
 // The Content-Security-Policy of the app lives in the nginx site (ops/nginx/futspring.conf) and allows the inline
-// theme script of index.html by its hash. Vite copies that script to dist/index.html unchanged, so its hash is
-// computed from the source here: editing the script without updating nginx would block it in production.
+// theme script of index.html by its hash: editing the script without updating nginx would block it in production.
+// The source is checked always; the build (dist/, what is deployed) too when it exists, and CI builds before testing,
+// so a script Vite or a plugin adds or rewrites at build time is caught as well.
 const CLIENT = join(__dirname, "..", "..")
+const DIST = join(CLIENT, "dist")
 const indexHtml = readFileSync(join(CLIENT, "index.html"), "utf8")
+const built = existsSync(join(DIST, "index.html"))
 const nginx = readFileSync(join(CLIENT, "..", "ops", "nginx", "futspring.conf"), "utf8")
 
 function inlineScriptHashes(html: string): string[] {
@@ -38,6 +41,19 @@ describe("Content-Security-Policy", () => {
     expect(policies).toHaveLength(1)
     const allowedHashes = directive(policies[0], "script-src").filter((source) => source.startsWith("'sha256-"))
     expect(allowedHashes.sort()).toEqual(inlineScriptHashes(indexHtml).sort())
+  })
+
+  it.runIf(built || process.env.CI)("the built index.html has the same inline scripts", () => {
+    const distHtml = readFileSync(join(DIST, "index.html"), "utf8")
+    expect(inlineScriptHashes(distHtml).sort()).toEqual(inlineScriptHashes(indexHtml).sort())
+  })
+
+  it.runIf(built || process.env.CI)("the built CSS loads no font from a data: URI (font-src is 'self')", () => {
+    const css = readdirSync(join(DIST, "assets"))
+      .filter((file) => file.endsWith(".css"))
+      .map((file) => readFileSync(join(DIST, "assets", file), "utf8"))
+    expect(css.length).toBeGreaterThan(0)
+    for (const sheet of css) expect(sheet).not.toMatch(/url\(\s*["']?data:(?:font|application\/(?:x-)?font)/)
   })
 
   it("keeps scripts to the origin and the page out of frames", () => {

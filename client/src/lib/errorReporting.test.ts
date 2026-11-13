@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 vi.mock("@/api/clientErrors", () => ({ sendClientError: vi.fn() }))
 
 import { sendClientError } from "@/api/clientErrors"
-import { buildReport, reportError, resetErrorReporting, stripUrlQueries } from "./errorReporting"
+import { buildReport, buildViolationReport, reportError, resetErrorReporting, stripUrlQueries } from "./errorReporting"
 
 const send = vi.mocked(sendClientError)
 
@@ -32,6 +32,7 @@ describe("stripUrlQueries", () => {
       "GET https://app.test/reset-password failed",
     )
     expect(stripUrlQueries("at https://app.test:8080/a.js:1:2")).toBe("at https://app.test:8080/a.js:1:2")
+    expect(stripUrlQueries("wss://app.test/ws/1/abc/websocket?t=1")).toBe("wss://app.test/ws/1/abc/websocket")
   })
 })
 
@@ -92,5 +93,36 @@ describe("reportError", () => {
 
     expect(() => reportError(new Error("boom"), "WINDOW")).not.toThrow()
     await Promise.resolve()
+  })
+})
+
+describe("buildViolationReport", () => {
+  const violation = {
+    disposition: "report" as const,
+    effectiveDirective: "script-src-elem",
+    blockedURI: "inline",
+    sourceFile: "https://app.test/home?x=1",
+    lineNumber: 12,
+    columnNumber: 3,
+  }
+
+  it("names the directive and the blocked source, with where it happened", () => {
+    expect(buildViolationReport(violation)).toMatchObject({
+      message: "CSP report script-src-elem: inline",
+      stack: "at https://app.test/home:12:3",
+      path: "/reset-password",
+      source: "CSP",
+    })
+  })
+
+  it("strips the query of a blocked URL", () => {
+    const report = buildViolationReport({ ...violation, blockedURI: "https://cdn.test/a.js?token=secret", sourceFile: "" })
+    expect(report?.message).toBe("CSP report script-src-elem: https://cdn.test/a.js")
+    expect(report?.stack).toBeNull()
+  })
+
+  it("ignores browser extensions", () => {
+    expect(buildViolationReport({ ...violation, blockedURI: "chrome-extension://abc/x.js" })).toBeNull()
+    expect(buildViolationReport({ ...violation, sourceFile: "moz-extension://abc/content.js" })).toBeNull()
   })
 })

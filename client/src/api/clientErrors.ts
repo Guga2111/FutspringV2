@@ -1,6 +1,6 @@
 import apiClient from "./client"
 
-export type ClientErrorSource = "WINDOW" | "PROMISE" | "BOUNDARY"
+export type ClientErrorSource = "WINDOW" | "PROMISE" | "BOUNDARY" | "CSP"
 
 // mirrors ClientErrorRequestDTO (message ≤ 500, stack ≤ 4000, path ≤ 200, release ≤ 40, userAgent ≤ 300)
 export interface ClientErrorReport {

@@ -72,6 +72,11 @@ export default defineConfig({
       },
     }),
   ],
+  build: {
+    // a font under 4 KB would be inlined as a data: URI, which the Content-Security-Policy's font-src ('self',
+    // from default-src) refuses; fonts always stay files
+    assetsInlineLimit: (file) => (/\.(woff2?|ttf|otf)$/.test(file) ? false : undefined),
+  },
   define: {
     global: 'globalThis',
     __APP_VERSION__: JSON.stringify(gitSha()),
