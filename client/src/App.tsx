@@ -7,6 +7,8 @@ import { AppLayout } from "@/components/layout/AppLayout"
 
 const LandingPage = lazy(() => import("@/pages/LandingPage"))
 const AuthPage = lazy(() => import("@/pages/AuthPage"))
+const VerifyEmailPage = lazy(() => import("@/pages/VerifyEmailPage"))
+const VerificationEmailPage = lazy(() => import("@/pages/VerificationEmailPage"))
 const ForgotPasswordPage = lazy(() => import("@/pages/ForgotPasswordPage"))
 const ResetPasswordPage = lazy(() => import("@/pages/ResetPasswordPage"))
 const HomePage = lazy(() => import("@/pages/HomePage"))
@@ -46,6 +48,8 @@ function App() {
         <Routes>
           <Route path="/" element={<ErrorBoundary><LandingPage /></ErrorBoundary>} />
           <Route path="/auth" element={<ErrorBoundary><AuthPage /></ErrorBoundary>} />
+          <Route path="/verify-email" element={<ErrorBoundary><VerifyEmailPage /></ErrorBoundary>} />
+          <Route path="/verification-email" element={<ErrorBoundary><VerificationEmailPage /></ErrorBoundary>} />
           <Route path="/forgot-password" element={<ErrorBoundary><ForgotPasswordPage /></ErrorBoundary>} />
           <Route path="/reset-password" element={<ErrorBoundary><ResetPasswordPage /></ErrorBoundary>} />
           <Route path="/notifications/unsubscribe" element={<ErrorBoundary><NotificationUnsubscribePage /></ErrorBoundary>} />

@@ -17,8 +17,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class NotificationEmailTest {
 
-    private final User leal = User.builder().id(1L).email("leal@example.com").username("Leal").password("hash").build();
-    private final User member = User.builder().id(2L).email("m@example.com").username("member").password("hash").build();
+    private final User leal = User.builder().emailVerifiedAt(java.time.Instant.EPOCH).id(1L).email("leal@example.com").username("Leal").password("hash").build();
+    private final User member = User.builder().emailVerifiedAt(java.time.Instant.EPOCH).id(2L).email("m@example.com").username("member").password("hash").build();
     private final Pelada pelada = Pelada.builder().id(10L).name("Pelada do Fut").timeZone("America/Sao_Paulo").build();
     private final Daily daily = Daily.builder().id(100L).pelada(pelada)
             .dailyDate(LocalDate.of(2026, 10, 31)).dailyTime("20:00").build();

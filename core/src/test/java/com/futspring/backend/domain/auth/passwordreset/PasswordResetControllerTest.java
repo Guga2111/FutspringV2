@@ -38,7 +38,7 @@ class PasswordResetControllerTest extends BaseIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        user = userRepository.save(User.builder()
+        user = userRepository.save(User.builder().emailVerifiedAt(java.time.Instant.EPOCH)
                 .username("resetuser")
                 .email("reset@example.com")
                 .password(passwordEncoder.encode("oldpassword"))

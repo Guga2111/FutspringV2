@@ -248,7 +248,7 @@ public class DataInitializer implements CommandLineRunner {
     }
 
     private SeedUser seedUser(String email, String username, String password, String position, int stars) {
-        User user = User.builder()
+        User user = User.builder().emailVerifiedAt(Instant.now())
                 .email(email)
                 .username(username)
                 .password(password)

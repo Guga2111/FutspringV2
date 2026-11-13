@@ -13,15 +13,15 @@ import org.springframework.stereotype.Service;
 public class ClientErrorService {
 
     public void record(ClientErrorRequestDTO error) {
-        String path = withoutQuery(error.path());
+        String path = ClientErrorRedaction.redact(error.path());
         log.atWarn()
                 .addKeyValue("event", "client_error")
                 .addKeyValue("client_path", path)
                 .addKeyValue("client_source", error.source())
-                .addKeyValue("client_release", error.release())
-                .addKeyValue("client_user_agent", error.userAgent())
-                .addKeyValue("client_stack", error.stack())
-                .log("Erro no cliente em {}: {}", path, error.message());
+                .addKeyValue("client_release", ClientErrorRedaction.redact(error.release()))
+                .addKeyValue("client_user_agent", ClientErrorRedaction.redact(error.userAgent()))
+                .addKeyValue("client_stack", ClientErrorRedaction.redact(error.stack()))
+                .log("Erro no cliente em {}: {}", path, ClientErrorRedaction.redact(error.message()));
     }
 
     // The client already drops them (a reset link carries its token in the query); this covers an old or forged one

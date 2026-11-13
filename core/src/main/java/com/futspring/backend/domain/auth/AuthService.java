@@ -27,30 +27,36 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final RefreshSessionService refreshSessionService;
     private final Clock clock;
+    private final com.futspring.backend.domain.auth.verification.EmailVerificationService verification;
 
-    public IssuedSession register(RegisterRequestDTO request) {
+    @org.springframework.transaction.annotation.Transactional
+    public void register(RegisterRequestDTO request) {
         // A tab opened before the terms changed sends the old version: the user must read the new one first
         if (!LegalTerms.CURRENT_VERSION.equals(request.termsVersion())) {
             throw new AppException(HttpStatus.CONFLICT,
                     "Os termos foram atualizados. Recarregue a página para ler a nova versão.");
         }
-        if (userRepository.findByEmail(request.email()).isPresent()) {
-            throw new AppException(HttpStatus.CONFLICT, "Este e-mail já está cadastrado");
-        }
-        // Usernames are unique (case-insensitive), as UserService.updateProfile already enforces
+        // Username conflicts must behave the same for known and unknown emails (otherwise they form an email oracle).
         if (userRepository.existsByUsernameIgnoreCase(request.username().trim())) {
             throw new AppException(HttpStatus.CONFLICT, "Este nome de usuário já está em uso");
+        }
+        // Run BCrypt for either email outcome; never overwrite a pre-existing account's credentials.
+        String encodedPassword = passwordEncoder.encode(request.password());
+        if (userRepository.findByEmail(request.email()).isPresent()) {
+            verification.request(request.email());
+            return;
         }
 
         User user = User.builder()
                 .username(request.username().trim())
                 .email(request.email())
-                .password(passwordEncoder.encode(request.password()))
+                .password(encodedPassword)
                 .termsVersion(LegalTerms.CURRENT_VERSION)
                 .termsAcceptedAt(Instant.now(clock))
                 .build();
 
-        return refreshSessionService.open(userRepository.save(user));
+        userRepository.save(user);
+        verification.request(user.getEmail());
     }
 
     public IssuedSession login(LoginRequestDTO request) {
@@ -58,6 +64,11 @@ public class AuthService {
         String hash = user == null ? DUMMY_HASH : user.getPassword();
         if (!passwordEncoder.matches(request.password(), hash) || user == null) {
             throw new AppException(HttpStatus.UNAUTHORIZED, "E-mail ou senha inválidos");
+        }
+        if (user.isDeleted()) throw new AppException(HttpStatus.UNAUTHORIZED, "E-mail ou senha inválidos");
+        if (user.getEmailVerifiedAt() == null) {
+            verification.request(user.getEmail());
+            throw new AppException(HttpStatus.FORBIDDEN, "Verifique seu e-mail antes de entrar. Enviamos um link de confirmação.");
         }
         return refreshSessionService.open(user);
     }

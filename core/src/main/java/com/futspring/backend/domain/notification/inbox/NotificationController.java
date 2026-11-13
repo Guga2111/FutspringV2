@@ -80,8 +80,4 @@ public class NotificationController {
         return ResponseEntity.ok(preferenceService.unsubscribe(token));
     }
 
-    @PostMapping(value = "/resubscribe", consumes = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<NotificationPreferenceDTO> resubscribe(@Valid @RequestBody UnsubscribeRequestDTO request) {
-        return ResponseEntity.ok(preferenceService.resubscribe(request.token()));
-    }
 }

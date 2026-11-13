@@ -40,6 +40,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 
 // Refresh-token sessions against a real Redis (the production image, with a password); skipped without Docker.
 // The no-Redis behavior (login without a cookie, refresh 503) is in RefreshWithoutRedisTest.
@@ -79,7 +80,7 @@ class RefreshSessionTest extends BaseIntegrationTest {
         now = Instant.now();
         when(clock.instant()).thenAnswer(invocation -> now);
         when(clock.getZone()).thenReturn(ZoneOffset.UTC);
-        user = users.save(User.builder()
+        user = users.save(User.builder().emailVerifiedAt(java.time.Instant.EPOCH)
                 .username("sessao" + IP.incrementAndGet())
                 .email("sessao" + IP.get() + "@example.com")
                 .password(passwordEncoder.encode(PASSWORD))
@@ -104,17 +105,12 @@ class RefreshSessionTest extends BaseIntegrationTest {
     }
 
     @Test
-    void register_setsTheRefreshCookie() throws Exception {
-        String setCookie = mockMvc.perform(fromNewIp(post("/api/v1/auth/register"))
-                        .content(json(Map.of("username", "novato", "email", "novato@example.com",
-                                "password", PASSWORD, "termsVersion", LegalTerms.CURRENT_VERSION))))
-                .andExpect(status().isCreated())
-                .andReturn().getResponse().getHeader(HttpHeaders.SET_COOKIE);
-
-        refresh(valueOf(setCookie)).andExpect(status().isOk());
+    void register_doesNotIssueASessionBeforeVerification() throws Exception {
+        mockMvc.perform(fromNewIp(post("/api/v1/auth/register"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"username\":\"New User\",\"email\":\"new@example.com\",\"password\":\"password123\",\"termsVersion\":\"" + com.futspring.backend.domain.auth.LegalTerms.CURRENT_VERSION + "\"}"))
+                .andExpect(status().isNoContent()).andExpect(header().doesNotExist("Set-Cookie"));
     }
-
-    // --- refresh ---
 
     @Test
     void refresh_rotatesTheCookieAndAnswersAWorkingAccessToken() throws Exception {

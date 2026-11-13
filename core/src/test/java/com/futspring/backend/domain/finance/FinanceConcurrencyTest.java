@@ -57,8 +57,8 @@ class FinanceConcurrencyTest {
     record Fixture(User admin, User player, Long pelada, Long list, Long charge) {}
     Fixture fixture() {
         String key = UUID.randomUUID().toString();
-        User admin = users.save(User.builder().email(key + "a@finance.test").username("Gestor" + key).password("hash").build());
-        User player = users.save(User.builder().email(key + "p@finance.test").username("Jogador" + key).password("hash").build());
+        User admin = users.save(User.builder().emailVerifiedAt(java.time.Instant.EPOCH).email(key + "a@finance.test").username("Gestor" + key).password("hash").build());
+        User player = users.save(User.builder().emailVerifiedAt(java.time.Instant.EPOCH).email(key + "p@finance.test").username("Jogador" + key).password("hash").build());
         Pelada p = peladas.save(Pelada.builder().name("Concorrência financeira").dayOfWeek("SUNDAY").timeOfDay("18:00").duration(1f)
                 .creator(admin).members(new HashSet<>(Set.of(admin, player))).admins(new HashSet<>(Set.of(admin))).build());
         preservation.appointCreator(p);

@@ -126,6 +126,7 @@ class ContractSnapshotTest {
         return Stream.of(
                 LoginRequestDTO.class, RegisterRequestDTO.class, ForgotPasswordRequestDTO.class,
                 ResetPasswordRequestDTO.class,
+                com.futspring.backend.domain.auth.dto.VerifyEmailRequestDTO.class,
                 CreatePeladaRequestDTO.class, UpdatePeladaRequestDTO.class, InvitePlayerRequestDTO.class,
                 SetAdminRequestDTO.class, SetMensalistaRequestDTO.class, UpdatePlayerStarsRequestDTO.class,
                 BulkSetAdminRequestDTO.class, BulkSetMensalistaRequestDTO.class, BulkSetStarsRequestDTO.class,

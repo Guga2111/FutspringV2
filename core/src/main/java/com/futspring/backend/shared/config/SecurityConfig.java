@@ -34,7 +34,7 @@ public class SecurityConfig {
      * session: JwtAuthFilter ignores the Authorization header on them and AuthRateLimitFilter limits them.
      */
     public static final Set<String> EMAIL_LINK_PATHS = Set.of(
-            "/api/v1/notifications/unsubscribe", "/api/v1/notifications/resubscribe");
+            "/api/v1/notifications/unsubscribe");
 
     /**
      * Errors reported by the web app (domain/telemetry): public, and JwtAuthFilter ignores the Authorization header,
@@ -84,7 +84,6 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> {
                 auth
                     .requestMatchers("/api/v1/auth/**").permitAll()
-                    .requestMatchers("/api/v1/files/**").permitAll()
                     .requestMatchers("/ws/**").permitAll()
                     // liveness / readiness probes (management.endpoint.health.probes.add-additional-paths)
                     .requestMatchers(HttpMethod.GET, "/livez", "/readyz", "/api/v1/invite-links/*").permitAll()

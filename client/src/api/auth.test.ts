@@ -37,7 +37,7 @@ describe("registerUser", () => {
       email: "leal@futspring.com",
       password: "senha123",
       termsVersion: "2026-11-09",
-    }, { withCredentials: true })
+    })
   })
 })
 

@@ -60,7 +60,7 @@ class AccountDeletionConcurrencyTest {
     @Autowired JdbcTemplate jdbc;
 
     User user(String name) {
-        return users.save(User.builder().email(UUID.randomUUID() + "@account.test").username(name)
+        return users.save(User.builder().emailVerifiedAt(java.time.Instant.EPOCH).email(UUID.randomUUID() + "@account.test").username(name)
                 .password(passwordEncoder.encode(PASSWORD)).build());
     }
 

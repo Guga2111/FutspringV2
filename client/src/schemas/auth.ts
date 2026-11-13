@@ -50,6 +50,10 @@ export const registerSchema = z
   })
 export type RegisterValues = z.infer<typeof registerSchema>
 
+// mirrors VerifyEmailRequestDTO (the token comes from the link)
+export const verifyEmailSchema = z.object({ password: passwordField("Informe a senha da sua conta") })
+export type VerifyEmailValues = z.infer<typeof verifyEmailSchema>
+
 // mirrors ForgotPasswordRequestDTO
 export const forgotPasswordSchema = z.object({
   email: z.string().trim().min(1, "O e-mail é obrigatório").email("E-mail inválido"),

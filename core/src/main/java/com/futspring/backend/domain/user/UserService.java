@@ -30,6 +30,7 @@ public class UserService {
     static final int MAX_SEARCH_RESULTS = 10;
 
     private final UserRepository userRepository;
+    private final com.futspring.backend.domain.pelada.PeladaRepository peladaRepository;
     private final FileUploadService fileUploadService;
     private final PeladaPlayerStarsRepository playerStarsRepository;
     private final UserAuthenticationHelper userAuthHelper;
@@ -61,7 +62,11 @@ public class UserService {
     @Transactional(readOnly = true)
     public ProfileDTO getProfile(Long id, String callerEmail) {
         User user = findUser(id);
-        return toProfile(user, user.getEmail().equals(callerEmail));
+        User caller = userAuthHelper.getAuthenticatedUser(callerEmail);
+        if (!user.getId().equals(caller.getId()) && !peladaRepository.existsSharedPelada(id, caller.getId())) {
+            throw new AppException(HttpStatus.FORBIDDEN, "Você não compartilha uma pelada com este jogador");
+        }
+        return toProfile(user, user.getId().equals(caller.getId()));
     }
 
     @Transactional

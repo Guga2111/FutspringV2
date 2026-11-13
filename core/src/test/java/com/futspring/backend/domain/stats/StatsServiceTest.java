@@ -60,9 +60,9 @@ class StatsServiceTest {
     void setUp() {
         statsService = new StatsService(userRepository, peladaRepository, statsRepository, userDailyStatsRepository, dailyAwardRepository, userAuthHelper);
 
-        user = User.builder().id(1L).email("user@example.com").username("user").password("hash").build();
-        teammate = User.builder().id(2L).email("teammate@example.com").username("teammate").password("hash").build();
-        stranger = User.builder().id(3L).email("stranger@example.com").username("stranger").password("hash").build();
+        user = User.builder().emailVerifiedAt(java.time.Instant.EPOCH).id(1L).email("user@example.com").username("user").password("hash").build();
+        teammate = User.builder().emailVerifiedAt(java.time.Instant.EPOCH).id(2L).email("teammate@example.com").username("teammate").password("hash").build();
+        stranger = User.builder().emailVerifiedAt(java.time.Instant.EPOCH).id(3L).email("stranger@example.com").username("stranger").password("hash").build();
         pelada = Pelada.builder().id(10L).name("Pelada").dayOfWeek("FRIDAY").timeOfDay("18:00").duration(2f)
                 .members(new HashSet<>(Set.of(user, teammate))).build();
         MembershipStubs.stubMembership(peladaRepository, pelada);

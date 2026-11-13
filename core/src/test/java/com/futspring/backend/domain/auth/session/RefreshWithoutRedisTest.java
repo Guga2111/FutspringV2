@@ -27,7 +27,7 @@ class RefreshWithoutRedisTest extends BaseIntegrationTest {
 
     @Test
     void loginAnswersAnAccessTokenWithoutACookie() throws Exception {
-        users.save(User.builder().username("semredis").email("semredis@example.com")
+        users.save(User.builder().emailVerifiedAt(java.time.Instant.EPOCH).username("semredis").email("semredis@example.com")
                 .password(passwordEncoder.encode("senha-123")).build());
         double errors = count("futspring.session.open");
 

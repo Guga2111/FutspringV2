@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { cn, getAvatarColor, getFileUrl, getInitials, getPeladaColor, normalizeSearch } from "./utils"
+import { cn, getAvatarColor, getInitials, getPeladaColor, normalizeSearch } from "./utils"
 import { dayOfWeekLabel } from "./constants"
 
 describe("getInitials", () => {
@@ -16,12 +16,7 @@ describe("getInitials", () => {
   })
 })
 
-describe("getFileUrl", () => {
-  it("builds the files URL and ignores empty names", () => {
-    expect(getFileUrl("a.png")).toMatch(/\/api\/v1\/files\/a\.png$/)
-    expect(getFileUrl(null)).toBeUndefined()
-  })
-})
+
 
 describe("dayOfWeekLabel", () => {
   it("translates API values and keeps unknown ones", () => {

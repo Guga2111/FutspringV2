@@ -96,8 +96,8 @@ class DailyResultsServiceTest {
                 new DailyListItemAssembler(attendanceRepository, teamRepository, matchRepository, mensalistaRepository, userDailyStatsRepository),
                 eventPublisher, org.mockito.Mockito.mock(com.futspring.backend.domain.subscription.SubscriptionGuard.class));
 
-        admin = User.builder().id(1L).email("admin@example.com").username("admin").password("hash").build();
-        member = User.builder().id(2L).email("member@example.com").username("member").password("hash").build();
+        admin = User.builder().emailVerifiedAt(java.time.Instant.EPOCH).id(1L).email("admin@example.com").username("admin").password("hash").build();
+        member = User.builder().emailVerifiedAt(java.time.Instant.EPOCH).id(2L).email("member@example.com").username("member").password("hash").build();
 
         pelada = Pelada.builder()
                 .id(10L)
@@ -176,7 +176,7 @@ class DailyResultsServiceTest {
 
     @Test
     void submitResults_statsForPlayerOutsideTheMatch_throwsBadRequest() {
-        User stranger = User.builder().id(9L).email("x@example.com").username("x").password("hash").build();
+        User stranger = User.builder().emailVerifiedAt(java.time.Instant.EPOCH).id(9L).email("x@example.com").username("x").password("hash").build();
         when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(dailyRepository.findById(100L)).thenReturn(Optional.of(inCourseDaily));
         when(teamRepository.findByDailyWithPlayers(inCourseDaily)).thenReturn(List.of(team1, team2));
@@ -205,7 +205,7 @@ class DailyResultsServiceTest {
     @Test
     @SuppressWarnings("unchecked")
     void submitResults_savesStatsOnlyForPlayersOfTheTwoTeams() {
-        User benched = User.builder().id(3L).email("bench@example.com").username("bench").password("hash").build();
+        User benched = User.builder().emailVerifiedAt(java.time.Instant.EPOCH).id(3L).email("bench@example.com").username("bench").password("hash").build();
         Team team3 = Team.builder().id(3L).name("Green").color("#00FF00").players(new HashSet<>(Set.of(benched))).build();
         attendance.confirm(inCourseDaily, benched);
 
@@ -392,7 +392,7 @@ class DailyResultsServiceTest {
     @Test
     void finalizeDaily_usesTeamPlayersNotTheConfirmedList() {
         // member is on team2 but un-confirmed after the sort; bench confirmed after the sort and is on no team
-        User bench = User.builder().id(3L).email("bench@example.com").username("bench").password("hash").build();
+        User bench = User.builder().emailVerifiedAt(java.time.Instant.EPOCH).id(3L).email("bench@example.com").username("bench").password("hash").build();
         attendance.confirm(inCourseDaily, admin, bench);
         when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(dailyRepository.findById(100L)).thenReturn(Optional.of(inCourseDaily));
@@ -456,7 +456,7 @@ class DailyResultsServiceTest {
 
     @Test
     void finalizeDaily_puskasWinnerNotOnATeam_throwsBadRequest() {
-        User bench = User.builder().id(3L).email("bench@example.com").username("bench").password("hash").build();
+        User bench = User.builder().emailVerifiedAt(java.time.Instant.EPOCH).id(3L).email("bench@example.com").username("bench").password("hash").build();
         attendance.confirm(inCourseDaily, bench);
         when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(dailyRepository.findById(100L)).thenReturn(Optional.of(inCourseDaily));
@@ -473,7 +473,7 @@ class DailyResultsServiceTest {
 
     @Test
     void finalizeDaily_again_rebuildsPlayersOfThePreviousFinalize() {
-        User former = User.builder().id(4L).email("former@example.com").username("former").password("hash").build();
+        User former = User.builder().emailVerifiedAt(java.time.Instant.EPOCH).id(4L).email("former@example.com").username("former").password("hash").build();
         when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(dailyRepository.findById(100L)).thenReturn(Optional.of(inCourseDaily));
         Match match = Match.builder().id(50L).daily(inCourseDaily).team1(team1).team2(team2)

@@ -90,9 +90,9 @@ class WebPushDispatcherTest {
     void setUp() {
         sender = new FakeSender();
         meterRegistry = new SimpleMeterRegistry();
-        leal = User.builder().id(1L).email("leal@example.com").username("Leal").password("hash").build();
-        ana = User.builder().id(2L).email("ana@example.com").username("ana").password("hash").build();
-        bia = User.builder().id(3L).email("bia@example.com").username("bia").password("hash").build();
+        leal = User.builder().emailVerifiedAt(java.time.Instant.EPOCH).id(1L).email("leal@example.com").username("Leal").password("hash").build();
+        ana = User.builder().emailVerifiedAt(java.time.Instant.EPOCH).id(2L).email("ana@example.com").username("ana").password("hash").build();
+        bia = User.builder().emailVerifiedAt(java.time.Instant.EPOCH).id(3L).email("bia@example.com").username("bia").password("hash").build();
         pelada = Pelada.builder().id(10L).name("Pelada do Fut").build();
         daily = Daily.builder().id(100L).pelada(pelada).dailyDate(LocalDate.of(2026, 10, 31)).dailyTime("20:00").build();
         subscriptions = new ArrayList<>();

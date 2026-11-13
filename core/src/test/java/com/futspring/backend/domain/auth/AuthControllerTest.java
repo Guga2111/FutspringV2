@@ -36,8 +36,8 @@ class AuthControllerTest extends BaseIntegrationTest {
         mockMvc.perform(post("/api/v1/auth/register")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(req)))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.token").exists());
+                .andExpect(status().isNoContent())
+                .andExpect(header().doesNotExist("Set-Cookie"));
 
         User saved = userRepository.findByEmail("newuser@example.com").orElseThrow();
         assertThat(saved.getTermsVersion()).isEqualTo(LegalTerms.CURRENT_VERSION);
@@ -69,7 +69,7 @@ class AuthControllerTest extends BaseIntegrationTest {
 
     @Test
     void register_duplicateEmail() throws Exception {
-        userRepository.save(User.builder()
+        userRepository.save(User.builder().emailVerifiedAt(java.time.Instant.EPOCH)
                 .username("existing")
                 .email("dup@example.com")
                 .password(passwordEncoder.encode("password123"))
@@ -80,7 +80,18 @@ class AuthControllerTest extends BaseIntegrationTest {
         mockMvc.perform(post("/api/v1/auth/register")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(req)))
-                .andExpect(status().isConflict());
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void usernameConflictDoesNotDiscloseWhetherTheEmailExists() throws Exception {
+        saveUser("taken-name", "known@example.com");
+        for (String email : java.util.List.of("known@example.com", "unknown@example.com")) {
+            mockMvc.perform(auth("/api/v1/auth/register").content(objectMapper.writeValueAsString(
+                            new RegisterRequestDTO("taken-name", email, "password123", LegalTerms.CURRENT_VERSION))))
+                    .andExpect(status().isConflict())
+                    .andExpect(jsonPath("$.message").value("Este nome de usuário já está em uso"));
+        }
     }
 
     @Test
@@ -93,7 +104,7 @@ class AuthControllerTest extends BaseIntegrationTest {
 
     @Test
     void login_success() throws Exception {
-        userRepository.save(User.builder()
+        userRepository.save(User.builder().emailVerifiedAt(java.time.Instant.EPOCH)
                 .username("loginuser")
                 .email("login@example.com")
                 .password(passwordEncoder.encode("password123"))
@@ -110,7 +121,7 @@ class AuthControllerTest extends BaseIntegrationTest {
 
     @Test
     void login_wrongPassword() throws Exception {
-        userRepository.save(User.builder()
+        userRepository.save(User.builder().emailVerifiedAt(java.time.Instant.EPOCH)
                 .username("wrongpw")
                 .email("wrongpw@example.com")
                 .password(passwordEncoder.encode("password123"))
@@ -136,7 +147,7 @@ class AuthControllerTest extends BaseIntegrationTest {
 
     @Test
     void login_rateLimited() throws Exception {
-        userRepository.save(User.builder()
+        userRepository.save(User.builder().emailVerifiedAt(java.time.Instant.EPOCH)
                 .username("rateuser")
                 .email("rate@example.com")
                 .password(passwordEncoder.encode("password123"))
@@ -191,8 +202,7 @@ class AuthControllerTest extends BaseIntegrationTest {
         mockMvc.perform(auth("/api/v1/auth/register").content("""
                         {"username": "Ana", "email": "  Ana@X.com ", "password": "password123", "termsVersion": "%s"}
                         """.formatted(LegalTerms.CURRENT_VERSION)))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.user.email").value("ana@x.com"));
+                .andExpect(status().isNoContent());
         assertThat(userRepository.findByEmail("ana@x.com")).isPresent();
     }
 
@@ -202,8 +212,7 @@ class AuthControllerTest extends BaseIntegrationTest {
 
         mockMvc.perform(auth("/api/v1/auth/register").content(objectMapper.writeValueAsString(
                         new RegisterRequestDTO("outra", "ANA@x.com", "password123", LegalTerms.CURRENT_VERSION))))
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.message").value("Este e-mail já está cadastrado"));
+                .andExpect(status().isNoContent());
     }
 
     @Test
@@ -228,7 +237,7 @@ class AuthControllerTest extends BaseIntegrationTest {
     }
 
     private void saveUser(String username, String email) {
-        userRepository.save(User.builder()
+        userRepository.save(User.builder().emailVerifiedAt(java.time.Instant.EPOCH)
                 .username(username)
                 .email(email)
                 .password(passwordEncoder.encode("password123"))

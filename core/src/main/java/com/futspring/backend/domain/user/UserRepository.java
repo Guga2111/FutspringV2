@@ -16,8 +16,22 @@ import java.util.Optional;
 public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByEmail(String email);
 
+    List<User> findByImageOrBackgroundImage(String image, String backgroundImage);
+
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT u FROM User u WHERE u.email = :email AND u.deletedAt IS NULL")
+    Optional<User> findByEmailForUpdate(@Param("email") String email);
+
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT u FROM User u WHERE u.emailVerificationHash = :hash AND u.deletedAt IS NULL")
+    Optional<User> findByVerificationHashForUpdate(@Param("hash") String hash);
+
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT u FROM User u WHERE u.id = :id AND u.deletedAt IS NULL")
+    Optional<User> findByIdForUpdate(@Param("id") Long id);
+
     // Runs on every authenticated request (AccessTokenVerifier): reads one column through the unique email index
-    @Query("SELECT u.tokenVersion FROM User u WHERE u.email = :email")
+    @Query("SELECT u.tokenVersion FROM User u WHERE u.email = :email AND u.emailVerifiedAt IS NOT NULL AND u.deletedAt IS NULL")
     Optional<Integer> findTokenVersionByEmail(@Param("email") String email);
 
     // Usernames aren't unique in the database (production has legacy duplicates), so check with exists, never a single-result find

@@ -94,9 +94,9 @@ class PeladaServiceTest {
                 notificationRepository, eventPublisher, invitationService, subscriptionService,
                 mock(com.futspring.backend.domain.subscription.SubscriptionGuard.class));
 
-        admin = User.builder().id(1L).email("admin@example.com").username("admin").password("hash").build();
-        member = User.builder().id(2L).email("member@example.com").username("member").password("hash").build();
-        outsider = User.builder().id(3L).email("outsider@example.com").username("outsider").password("hash").build();
+        admin = User.builder().emailVerifiedAt(java.time.Instant.EPOCH).id(1L).email("admin@example.com").username("admin").password("hash").build();
+        member = User.builder().emailVerifiedAt(java.time.Instant.EPOCH).id(2L).email("member@example.com").username("member").password("hash").build();
+        outsider = User.builder().emailVerifiedAt(java.time.Instant.EPOCH).id(3L).email("outsider@example.com").username("outsider").password("hash").build();
 
         Set<User> members = new HashSet<>(Set.of(admin, member));
         Set<User> admins = new HashSet<>(Set.of(admin));
