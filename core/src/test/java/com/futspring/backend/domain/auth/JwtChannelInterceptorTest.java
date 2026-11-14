@@ -27,12 +27,13 @@ class JwtChannelInterceptorTest {
     @Mock AccessTokenVerifier tokenVerifier;
     @Mock PeladaRepository peladaRepository;
     @Mock MessageChannel channel;
+    @Mock StompSessions sessions;
 
     JwtChannelInterceptor interceptor;
 
     @BeforeEach
     void setUp() {
-        interceptor = new JwtChannelInterceptor(tokenVerifier, peladaRepository);
+        interceptor = new JwtChannelInterceptor(tokenVerifier, peladaRepository, sessions);
     }
 
     @Test
@@ -43,7 +44,7 @@ class JwtChannelInterceptorTest {
 
     @Test
     void connect_withInvalidToken_isRejected() {
-        when(tokenVerifier.verify("bad")).thenReturn(Optional.empty());
+        when(tokenVerifier.verifyConnection("bad")).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> interceptor.preSend(frame(StompCommand.CONNECT, "Bearer bad", null, null), channel))
                 .isInstanceOf(MessageDeliveryException.class);
@@ -51,13 +52,14 @@ class JwtChannelInterceptorTest {
 
     @Test
     void connect_withValidToken_setsUser() {
-        when(tokenVerifier.verify("good")).thenReturn(Optional.of("member@example.com"));
+        when(tokenVerifier.verifyConnection("good")).thenReturn(Optional.of(new AccessTokenVerifier.VerifiedToken("member@example.com", java.time.Instant.now().plusSeconds(60))));
 
         Message<?> result = interceptor.preSend(frame(StompCommand.CONNECT, "Bearer good", null, null), channel);
 
         StompHeaderAccessor accessor = StompHeaderAccessor.wrap(result);
         assertThat(accessor.getUser()).isNotNull();
         assertThat(accessor.getUser().getName()).isEqualTo("member@example.com");
+        verify(sessions).authenticate(eq("test-session"), any(java.time.Instant.class));
     }
 
     @Test
@@ -151,6 +153,7 @@ class JwtChannelInterceptorTest {
 
     private static Message<byte[]> frame(StompCommand command, String authorization, String destination, String userEmail) {
         StompHeaderAccessor accessor = StompHeaderAccessor.create(command);
+        accessor.setSessionId("test-session");
         if (authorization != null) {
             accessor.setNativeHeader("Authorization", authorization);
         }

@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.util.Optional;
+import java.time.Instant;
 
 /**
  * Decides whether a JWT still opens a session: signed, not expired, the user still exists and the token
@@ -25,9 +26,21 @@ public class AccessTokenVerifier {
 
     // The caller's e-mail when the token opens a session, empty otherwise
     public Optional<String> verify(String token) {
-        return jwtService.parseClaims(token)
-                .filter(this::hasCurrentVersion)
+        return verifiedClaims(token)
                 .map(Claims::getSubject);
+    }
+
+    public record VerifiedToken(String email, Instant expiresAt) {}
+
+    /** STOMP needs the signed deadline too: a token without exp cannot open an unlimited connection. */
+    public Optional<VerifiedToken> verifyConnection(String token) {
+        return verifiedClaims(token)
+                .filter(claims -> claims.getExpiration() != null)
+                .map(claims -> new VerifiedToken(claims.getSubject(), claims.getExpiration().toInstant()));
+    }
+
+    private Optional<Claims> verifiedClaims(String token) {
+        return jwtService.parseClaims(token).filter(this::hasCurrentVersion);
     }
 
     // Empty when the user no longer exists, so a deleted account's token stops working too

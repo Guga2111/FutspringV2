@@ -48,6 +48,39 @@ class AccessTokenVerifierTest {
     }
 
     @Test
+    void verifyConnection_returnsOnlyTheVerifiedSignedDeadline() {
+        when(userRepository.findTokenVersionByIdAndEmail(1L, EMAIL)).thenReturn(Optional.of(2));
+        String token = jwtService.generateToken(1L, EMAIL, 2);
+        assertThat(verifier.verifyConnection(token)).contains(new AccessTokenVerifier.VerifiedToken(
+                EMAIL, jwtService.extractAllClaims(token).getExpiration().toInstant()));
+    }
+
+    @Test
+    void verifyConnection_withoutExpirationIsRejected() {
+        when(userRepository.findTokenVersionByIdAndEmail(1L, EMAIL)).thenReturn(Optional.of(0));
+        String token = Jwts.builder().subject(EMAIL).claim("userId", 1L)
+                .signWith(Keys.hmacShaKeyFor(SECRET.getBytes(StandardCharsets.UTF_8)), Jwts.SIG.HS256).compact();
+        assertThat(verifier.verifyConnection(token)).isEmpty();
+        // Preserve the existing HTTP entry point; the stricter deadline requirement belongs to STOMP.
+        assertThat(verifier.verify(token)).contains(EMAIL);
+    }
+
+    @Test
+    void verifyConnection_expiredTokenIsRejectedWithoutQueryingTheDatabase() {
+        String token = Jwts.builder().subject(EMAIL).claim("userId", 1L)
+                .expiration(new Date(System.currentTimeMillis() - 10_000))
+                .signWith(Keys.hmacShaKeyFor(SECRET.getBytes(StandardCharsets.UTF_8)), Jwts.SIG.HS256).compact();
+        assertThat(verifier.verifyConnection(token)).isEmpty();
+        verifyNoInteractions(userRepository);
+    }
+
+    @Test
+    void verifyConnection_revokedAccountIsRejected() {
+        when(userRepository.findTokenVersionByIdAndEmail(1L, EMAIL)).thenReturn(Optional.of(3));
+        assertThat(verifier.verifyConnection(jwtService.generateToken(1L, EMAIL, 2))).isEmpty();
+    }
+
+    @Test
     void verify_tokenIssuedBeforeAPasswordReset_isRejected() {
         when(userRepository.findTokenVersionByIdAndEmail(1L, EMAIL)).thenReturn(Optional.of(3));
 

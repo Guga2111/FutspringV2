@@ -15,6 +15,8 @@ import com.futspring.backend.shared.exception.AppException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
@@ -32,11 +34,17 @@ import org.springframework.web.socket.client.standard.StandardWebSocketClient;
 import org.springframework.web.socket.messaging.WebSocketStompClient;
 import org.springframework.web.socket.sockjs.client.SockJsClient;
 import org.springframework.web.socket.sockjs.client.WebSocketTransport;
+import org.springframework.web.socket.sockjs.client.RestClientXhrTransport;
 
 import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.time.LocalDateTime;
+import java.time.Instant;
+import java.util.Date;
+import com.futspring.backend.shared.config.JwtConfig;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.security.Keys;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.HexFormat;
@@ -64,6 +72,7 @@ class StompRevocationTest {
 
     @LocalServerPort private int port;
     @Autowired private JwtService jwtService;
+    @Autowired private JwtConfig jwtConfig;
     @Autowired private UserRepository userRepository;
     @Autowired private PeladaRepository peladaRepository;
     @Autowired private PeladaService peladaService;
@@ -107,6 +116,43 @@ class StompRevocationTest {
         resetTokenRepository.deleteAll();
         peladaService.deletePelada(pelada.getId(), admin.getEmail());
         userRepository.deleteAllById(List.of(admin.getId(), member.getId()));
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void expiredConnection_closesWhileIdle_andFreshConnectionStillWorks(boolean xhr) throws Exception {
+        if (xhr) {
+            stompClient.stop();
+            stompClient = new WebSocketStompClient(new SockJsClient(List.of(new RestClientXhrTransport())));
+            stompClient.setMessageConverter(new StringMessageConverter());
+        }
+        String token = shortLivedToken(member);
+        Client expiring = connect(token);
+        Client sibling = connect(member);
+        BlockingQueue<String> expiredTopic = expiring.subscribe(topic);
+        BlockingQueue<String> expiredNotifications = expiring.subscribe("/user/queue/notifications");
+        awaitSubscribed(expiredTopic);
+        awaitSubscribed(expiredNotifications,
+                () -> messagingTemplate.convertAndSendToUser(member.getEmail(), "/queue/notifications", "antes"));
+        expiring.awaitClosed();
+        assertThat(sibling.session().isConnected()).isTrue();
+        assertThatThrownBy(() -> connect(token)).isInstanceOf(java.util.concurrent.ExecutionException.class);
+
+        Client renewed = connect(member);
+        BlockingQueue<String> received = renewed.subscribe(topic);
+        awaitSubscribed(received);
+        messagingTemplate.convertAndSend(topic, "renovado");
+        messagingTemplate.convertAndSendToUser(member.getEmail(), "/queue/notifications", "depois");
+        awaitMessage(received, "renovado"::equals);
+        assertNoMessage(expiredTopic, "renovado"::equals);
+        assertNoMessage(expiredNotifications, "depois"::equals);
+    }
+
+    private String shortLivedToken(User user) {
+        return Jwts.builder().subject(user.getEmail()).claim("userId", user.getId()).claim("ver", 0)
+                .expiration(Date.from(Instant.now().plusSeconds(3)))
+                .signWith(Keys.hmacShaKeyFor(jwtConfig.getSecret().getBytes(StandardCharsets.UTF_8)), Jwts.SIG.HS256)
+                .compact();
     }
 
     @Test
@@ -228,8 +274,12 @@ class StompRevocationTest {
     }
 
     private Client connect(User user) throws Exception {
+        return connect(jwtService.generateToken(user.getId(), user.getEmail(), 0));
+    }
+
+    private Client connect(String token) throws Exception {
         StompHeaders connectHeaders = new StompHeaders();
-        connectHeaders.add("Authorization", "Bearer " + jwtService.generateToken(user.getId(), user.getEmail(), 0));
+        connectHeaders.add("Authorization", "Bearer " + token);
         Client client = new Client();
         StompSession session = stompClient.connectAsync("http://localhost:" + port + "/ws", new WebSocketHttpHeaders(),
                 connectHeaders, client).get(WAIT_SECONDS, TimeUnit.SECONDS);
