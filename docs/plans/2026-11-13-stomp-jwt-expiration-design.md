@@ -1,6 +1,6 @@
 # STOMP JWT expiration: approved design and implementation plan
 
-Status: design approved in conversation; implementation and validation pending.
+Status: implemented and locally validated; changes remain in the worktree for review.
 
 Reviewed baseline: `dev` at `dced41aed7ed36a8aefab797c52b8ce5bd5244f4`.
 
@@ -10,7 +10,7 @@ Reviewed baseline: `dev` at `dced41aed7ed36a8aefab797c52b8ce5bd5244f4`.
 
 A connection must stop authorizing application traffic when the JWT used to establish it expires. The server should close an expired connection even when it is idle. The browser can reconnect using the existing refresh flow and restore its subscriptions.
 
-The finding is supported by source inspection; a running-server reproduction has not been performed. Establish that regression before implementing the fix.
+The running-server regression was established before the fix: the new idle-expiration test failed because the old connection stayed open. It passes after the fix over native WebSocket and SockJS XHR.
 
 ## Approved scope
 
@@ -141,3 +141,14 @@ Done means expiration closes idle connections, application traffic is denied aft
 No migration or token/cookie-format rollout is planned. Existing connections on an old process retain its behavior until that process is replaced. Deploy using the normal application restart, which drops existing connections so they reconnect through the corrected authentication path. Assess existing reconnect behavior with the production TTL; do not introduce a new lifetime setting or alter the configured TTL for this fix.
 
 Rolling back the application would restore the expiration flaw. Retain the additive internal design and prefer a forward fix if deployment uncovers an issue. This plan does not authorize deployment, PR publication or merge.
+
+
+## Implementation evidence
+
+- `AccessTokenVerifier.verifyConnection` returns verified email/expiration while the HTTP verifier retains its existing behavior.
+- `StompSessions` owns per-transport deadlines, one scheduled callback, inbound/outbound enqueue and execution checks, and cleanup. `WebSocketConfig` registers it on both client channels.
+- The existing frontend runtime required no change. A new browser regression exercises renewal, subscription restoration and bounded failure retries against a simulated SockJS/STOMP server.
+- Java 25: `./mvnw -o test` passed: 1,254 tests, zero failures/errors/skips, including PostgreSQL/Redis Testcontainers and STOMP transport tests. The focused authentication/STOMP run passed 48 tests.
+- `bun run lint`, `bun run build`, and `bun run test` passed; 551 unit tests. Lint retains the documented TanStack React Compiler warning. Build retains existing chunk-size/deprecation warnings.
+- The two new browser regressions passed on desktop-light using the installed Chromium (Playwright cache revision 1254), selected through a temporary configuration because the default expected browser revision 1248 is not installed. No browser/dependency download or committed runner configuration change was needed.
+- Differential security review evidence is stored locally in ignored `.security-reviews/FUTSPRING_DIFFERENTIAL_REVIEW_2026-11-13.md`. Recheck recorded source hashes and target/head refs before publishing or merging a PR.

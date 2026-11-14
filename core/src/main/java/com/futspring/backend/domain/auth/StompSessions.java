@@ -3,7 +3,17 @@ package com.futspring.backend.domain.auth;
 import com.futspring.backend.domain.pelada.MembersRemovedEvent;
 import com.futspring.backend.domain.user.TokensRevokedEvent;
 import com.futspring.backend.domain.user.User;
-import lombok.RequiredArgsConstructor;
+import jakarta.annotation.PreDestroy;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.messaging.Message;
+import org.springframework.messaging.MessageChannel;
+import org.springframework.messaging.MessageHandler;
+import org.springframework.messaging.MessageDeliveryException;
+import org.springframework.messaging.support.ExecutorChannelInterceptor;
+import org.springframework.scheduling.TaskScheduler;
+import java.time.Clock;
+import java.time.Instant;
+import java.util.concurrent.ScheduledFuture;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
@@ -35,28 +45,137 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 @Slf4j
 @Component
-@RequiredArgsConstructor
-public class StompSessions {
+public class StompSessions implements ExecutorChannelInterceptor {
 
     private static final String PELADA_TOPIC = "/topic/pelada/";
 
     // Lazy: both live in the broker configuration, which reads WebSocketConfig, which needs this bean
     private final ObjectProvider<SimpUserRegistry> userRegistry;
     private final ObjectProvider<SimpMessagingTemplate> messagingTemplate;
-    private final Map<String, WebSocketSession> sessions = new ConcurrentHashMap<>();
+    private final Map<String, Connection> sessions = new ConcurrentHashMap<>();
+    private final ObjectProvider<TaskScheduler> scheduler;
+    private final Clock clock;
+    private volatile boolean stopping;
+
+    public StompSessions(ObjectProvider<SimpUserRegistry> userRegistry,
+                         ObjectProvider<SimpMessagingTemplate> messagingTemplate,
+                         @Qualifier("taskScheduler") ObjectProvider<TaskScheduler> scheduler, Clock clock) {
+        this.userRegistry = userRegistry;
+        this.messagingTemplate = messagingTemplate;
+        this.scheduler = scheduler;
+        this.clock = clock;
+    }
+
+    private static final class Connection {
+        final WebSocketSession transport;
+        Instant expiresAt;
+        ScheduledFuture<?> task;
+        boolean blocked;
+
+        Connection(WebSocketSession transport) { this.transport = transport; }
+
+        synchronized void block() {
+            blocked = true;
+            if (task != null) {
+                task.cancel(false);
+                task = null;
+            }
+        }
+    }
+
+    /** Called only with a deadline from AccessTokenVerifier, never from native client headers. */
+    public void authenticate(String sessionId, Instant expiresAt) {
+        Connection connection = sessionId == null ? null : sessions.get(sessionId);
+        if (connection == null) throw invalid();
+        try {
+            synchronized (connection) {
+                if (stopping || connection.blocked || connection.expiresAt != null
+                        || expiresAt == null || !clock.instant().isBefore(expiresAt)) throw invalid();
+                connection.expiresAt = expiresAt;
+                connection.task = scheduler.getObject().schedule(() -> close(connection), expiresAt);
+                if (connection.task == null) throw invalid();
+                // Also handles an inline callback or a disconnect during registration.
+                if (connection.blocked) {
+                    connection.task.cancel(false);
+                    connection.task = null;
+                    throw invalid();
+                }
+            }
+        } catch (RuntimeException ex) {
+            close(connection);
+            throw new MessageDeliveryException(null, "Não foi possível autenticar a conexão", ex);
+        }
+    }
+
+    @Override
+    public Message<?> preSend(Message<?> message, MessageChannel channel) { return authorize(message); }
+
+    @Override
+    public Message<?> beforeHandle(Message<?> message, MessageChannel channel, MessageHandler handler) {
+        // Executor channels may queue a frame while its credentials are still valid.
+        return authorize(message);
+    }
+
+    private Message<?> authorize(Message<?> message) {
+        SimpMessageType type = SimpMessageHeaderAccessor.getMessageType(message.getHeaders());
+        if (type != SimpMessageType.MESSAGE && type != SimpMessageType.SUBSCRIBE
+                && type != SimpMessageType.CONNECT_ACK) return message;
+        String sessionId = SimpMessageHeaderAccessor.getSessionId(message.getHeaders());
+        Connection connection = sessionId == null ? null : sessions.get(sessionId);
+        if (connection == null) return null;
+        synchronized (connection) {
+            if (!connection.blocked && connection.expiresAt != null
+                    && clock.instant().isBefore(connection.expiresAt)) return message;
+        }
+        close(connection);
+        return null;
+    }
+
+    private void close(Connection connection) {
+        connection.block(); // Deny traffic even when physical closure fails.
+        try {
+            connection.transport.close(CloseStatus.POLICY_VIOLATION);
+        } catch (Exception ex) {
+            log.warn("Could not close STOMP session {}", connection.transport.getId(), ex);
+        }
+    }
+
+    private void forget(String id) {
+        Connection connection = sessions.remove(id);
+        if (connection != null) connection.block();
+    }
+
+    @PreDestroy
+    void shutdown() {
+        stopping = true;
+        sessions.values().forEach(this::close);
+        sessions.clear();
+    }
+
+    private static MessageDeliveryException invalid() {
+        return new MessageDeliveryException("Sessão inválida ou expirada");
+    }
 
     /** Keeps every open WebSocketSession by id (the STOMP simpSessionId). */
     public WebSocketHandler decorate(WebSocketHandler handler) {
         return new WebSocketHandlerDecorator(handler) {
             @Override
             public void afterConnectionEstablished(WebSocketSession session) throws Exception {
-                sessions.put(session.getId(), session);
-                super.afterConnectionEstablished(session);
+                Connection connection = new Connection(session);
+                sessions.put(session.getId(), connection);
+                try {
+                    if (stopping) throw invalid();
+                    super.afterConnectionEstablished(session);
+                } catch (Exception ex) {
+                    forget(session.getId());
+                    close(connection);
+                    throw ex;
+                }
             }
 
             @Override
             public void afterConnectionClosed(WebSocketSession session, CloseStatus closeStatus) throws Exception {
-                sessions.remove(session.getId());
+                forget(session.getId());
                 super.afterConnectionClosed(session, closeStatus);
             }
         };
@@ -79,13 +198,8 @@ public class StompSessions {
     @TransactionalEventListener
     public void onTokensRevoked(TokensRevokedEvent event) {
         for (SimpSession session : sessionsOf(event.email())) {
-            WebSocketSession webSocketSession = sessions.get(session.getId());
-            if (webSocketSession == null) continue;
-            try {
-                webSocketSession.close(CloseStatus.POLICY_VIOLATION);
-            } catch (Exception ex) {
-                log.warn("Could not close STOMP session {}", session.getId(), ex);
-            }
+            Connection connection = sessions.get(session.getId());
+            if (connection != null) close(connection);
         }
     }
 

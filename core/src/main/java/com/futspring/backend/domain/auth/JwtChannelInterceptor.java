@@ -35,6 +35,7 @@ public class JwtChannelInterceptor implements ChannelInterceptor {
 
     private final AccessTokenVerifier tokenVerifier;
     private final PeladaRepository peladaRepository;
+    private final StompSessions sessions;
 
     @Override
     public Message<?> preSend(Message<?> message, MessageChannel channel) {
@@ -57,9 +58,10 @@ public class JwtChannelInterceptor implements ChannelInterceptor {
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             throw new MessageDeliveryException("Token ausente");
         }
-        String email = tokenVerifier.verify(authHeader.substring(7))
+        var verified = tokenVerifier.verifyConnection(authHeader.substring(7))
                 .orElseThrow(() -> new MessageDeliveryException("Sessão inválida ou expirada"));
-        accessor.setUser(new UsernamePasswordAuthenticationToken(email, null, Collections.emptyList()));
+        sessions.authenticate(accessor.getSessionId(), verified.expiresAt());
+        accessor.setUser(new UsernamePasswordAuthenticationToken(verified.email(), null, Collections.emptyList()));
     }
 
     private void authorizeSubscribe(StompHeaderAccessor accessor) {
