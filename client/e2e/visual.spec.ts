@@ -355,7 +355,7 @@ test("finance manager: deep link and WhatsApp message", async ({ page }) => {
   await page.getByRole("button", { name: "Opções da cobrança" }).click()
   await page.getByRole("menuitem", { name: "Compartilhar no WhatsApp" }).click()
   const dialog = page.getByRole("dialog", { name: "Compartilhar no WhatsApp" })
-  await expect(dialog.getByLabel("Mensagem")).toHaveValue(new RegExp(`financeiro/${financeDetail.collection.id}$`))
+  await expect(dialog.getByLabel("Mensagem")).toHaveValue(new RegExp(`financeiro/${financeDetail.collection.id}/paguei$`))
   await settle(page)
   await expect(page).toHaveScreenshot("finance-whatsapp.png", DIALOG_SHOT)
   expect(unmatched, "requests without a fixture").toEqual([])

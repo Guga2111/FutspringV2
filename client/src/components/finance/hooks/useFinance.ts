@@ -18,6 +18,9 @@ export function useFinance(peladaId: number, selected: number | null, select: (i
   const [detailState, setDetailState] = useState<{ id: number; data: FinanceDetail | null; error: string | null } | null>(null)
   const detail = detailState?.id === selected ? detailState.data : null
   const detailError = detailState?.id === selected ? detailState.error : null
+  const [overviewRead, setOverviewRead] = useState<string | null>(null)
+  const [detailRead, setDetailRead] = useState<string | null>(null)
+  const ready = overviewRead === `${peladaId}:${scope}:${page}:${attempt}` && (selected === null || detailRead === `${peladaId}:${selected}:${attempt}`) && !error && !detailError
   const [pending, setPending] = useState(false)
   const busy = useRef(false)
   const generation = useRef(0)
@@ -31,7 +34,7 @@ export function useFinance(peladaId: number, selected: number | null, select: (i
       if (cancelled || generation.current !== request) return
       const last = clampFinancePage(page, data.total, api.FINANCE_LISTS_PAGE_SIZE)
       if (last !== page) { setPage(last); return }
-      setOverview(data); setError(null)
+      setOverview(data); setError(null); setOverviewRead(`${peladaId}:${scope}:${page}:${attempt}`)
     }).catch(e => {
       if (!cancelled && generation.current === request) setError(getErrorMessage(e, "Não foi possível carregar o financeiro"))
     })
@@ -42,7 +45,10 @@ export function useFinance(peladaId: number, selected: number | null, select: (i
     let cancelled = false
     const request = ++detailGeneration.current
     api.getFinanceList(peladaId, selected).then(data => {
-      if (!cancelled && detailGeneration.current === request) setDetailState({ id: selected, data, error: null })
+      if (!cancelled && detailGeneration.current === request) {
+        setDetailState({ id: selected, data, error: null })
+        setDetailRead(`${peladaId}:${selected}:${attempt}`)
+      }
     }).catch(e => {
       if (!cancelled && detailGeneration.current === request) setDetailState(previous => ({ id: selected, data: previous?.id === selected ? previous.data : null, error: getErrorMessage(e, "Não foi possível carregar a lista") }))
     })
@@ -54,7 +60,7 @@ export function useFinance(peladaId: number, selected: number | null, select: (i
     return () => document.removeEventListener("visibilitychange", visible)
   }, [refresh])
   async function mutate(signature: string, reason: string, action: (command: FinanceCommand) => Promise<FinanceResult>, expectedRevision?: number) {
-    if (!overview || busy.current) throw new Error("Aguarde a operação em andamento")
+    if (!overview || !ready || !writable || busy.current) throw new Error("Aguarde a operação em andamento")
     busy.current = true
     setPending(true)
     if (retryCommand.current?.signature !== signature) retryCommand.current = { signature, command: { revision: expectedRevision ?? overview.revision, requestKey: crypto.randomUUID(), reason: reason || null } }
@@ -81,7 +87,7 @@ export function useFinance(peladaId: number, selected: number | null, select: (i
     } finally { busy.current = false; setPending(false) }
   }
   const setScope = (next: FinanceListScope) => { setScopeState(next); setPage(0) }
-  const locked = pending || !writable
-  return { overview, detail, selected, error, detailError, pending, writable, locked, scope, setScope, page, setPage, refresh, select, mutate }
+  const locked = pending || !writable || !ready
+  return { ready, overview, detail, selected, error, detailError, pending, writable, locked, scope, setScope, page, setPage, refresh, select, mutate }
 }
 export type FinanceController = ReturnType<typeof useFinance>

@@ -18,6 +18,7 @@ const PeladaMembersPage = lazy(() => import("@/pages/PeladaMembersPage"))
 const PeladaSessionsPage = lazy(() => import("@/pages/PeladaSessionsPage"))
 const PeladaRankingPage = lazy(() => import("@/pages/PeladaRankingPage"))
 const PeladaAwardsPage = lazy(() => import("@/pages/PeladaAwardsPage"))
+const FinanceQuickReportPage = lazy(() => import("@/pages/FinanceQuickReportPage"))
 const PeladaFinancePage = lazy(() => import("@/pages/PeladaFinancePage"))
 const PeladaInvitationsPage = lazy(() => import("@/pages/PeladaInvitationsPage"))
 const PeladaSubscriptionPage = lazy(() => import("@/pages/PeladaSubscriptionPage"))
@@ -74,6 +75,7 @@ function App() {
               <Route path="convites" element={<ErrorBoundary><PeladaInvitationsPage /></ErrorBoundary>} />
               <Route path="assinatura" element={<ErrorBoundary><PeladaSubscriptionPage /></ErrorBoundary>} />
             </Route>
+            <Route path="/pelada/:id/financeiro/:listId/paguei" element={<ErrorBoundary><FinanceQuickReportPage /></ErrorBoundary>} />
             <Route path="/pelada/:id/settings" element={<ErrorBoundary><PeladaSettingsPage /></ErrorBoundary>} />
             <Route path="/daily/:id" element={<ErrorBoundary><DailyDetailPage /></ErrorBoundary>} />
             <Route path="/profile/:id" element={<ErrorBoundary><ProfilePage /></ErrorBoundary>} />
