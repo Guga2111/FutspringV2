@@ -25,8 +25,8 @@ class TourControllerTest extends BaseIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        user = userRepository.save(User.builder().email("tour@test.com").username("tour").password("hash").build());
-        other = userRepository.save(User.builder().email("tourother@test.com").username("tourother").password("hash").build());
+        user = userRepository.save(User.builder().emailVerifiedAt(java.time.Instant.EPOCH).email("tour@test.com").username("tour").password("hash").build());
+        other = userRepository.save(User.builder().emailVerifiedAt(java.time.Instant.EPOCH).email("tourother@test.com").username("tourother").password("hash").build());
     }
 
     private String auth(User u) {

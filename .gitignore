@@ -31,9 +31,15 @@ uploads/
 # Logs
 *.log
 
+# Local security-review reports and reproduction artifacts; share through restricted channels.
+.security-reviews/
+
 # Private docs
 docs/analise-de-mercado.md
 
 # Private financial files (temporary receipts are excluded from durable backups).
 finance-receipts/
 finance-qr/
+
+# Local design inspection artifacts
+.taste-skill/

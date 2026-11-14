@@ -1,4 +1,4 @@
-import { z } from "zod"
+import { z } from "@/lib/zod"
 
 // mirrors PushSubscriptionRequestDTO; parses the browser's PushSubscription.toJSON() (keys are optional there)
 export const pushSubscriptionSchema = z.object({

@@ -3,6 +3,7 @@ import { Client, ReconnectionTimeMode, type StompSubscription } from "@stomp/sto
 import SockJS from "sockjs-client"
 import { RealtimeContext, type ConnectionState, type RealtimeContextValue } from "@/context/realtime-context-value"
 import { useAuth } from "@/hooks/useAuth"
+import { freshAccessToken } from "@/lib/session"
 
 interface Subscription {
   destination: string
@@ -12,10 +13,12 @@ interface Subscription {
 }
 
 // The user's single STOMP connection (/ws), shared by the chat and the notifications. The server only accepts it
-// with a valid token. Reconnects with exponential backoff (1 s, 2 s, 4 s), then gives up until the tab becomes
-// visible again or the token changes. Subscriptions are kept here and re-made on every connect.
+// with a valid token, read on every (re)connect (refreshed first when about to expire), so a renewed access token
+// never drops the connection. Reconnects with exponential backoff (1 s, 2 s, 4 s), then gives up until the tab
+// becomes visible again or another user logs in. Subscriptions are kept here and re-made on every connect.
 export function RealtimeProvider({ children }: { children: ReactNode }) {
-  const { token } = useAuth()
+  const { user } = useAuth()
+  const userId = user?.id ?? null
   const [connectionState, setConnectionState] = useState<ConnectionState>("reconnecting")
   const [connectionId, setConnectionId] = useState(0)
   const clientRef = useRef<Client | null>(null)
@@ -23,7 +26,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
   const nextIdRef = useRef(0)
 
   useEffect(() => {
-    if (!token) return
+    if (userId === null) return
     // failed attempts since the last CONNECT; the client's own reconnect waits 1 s, 2 s, 4 s between them
     let retryCount = 0
     let gaveUp = false
@@ -31,7 +34,9 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
 
     const client = new Client({
       webSocketFactory: () => new SockJS("/ws"),
-      connectHeaders: { Authorization: `Bearer ${token}` },
+      beforeConnect: async (self) => {
+        self.connectHeaders = { Authorization: `Bearer ${(await freshAccessToken()) ?? ""}` }
+      },
       reconnectDelay: 1000,
       reconnectTimeMode: ReconnectionTimeMode.EXPONENTIAL,
       maxReconnectDelay: 4000,
@@ -77,7 +82,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       void client.deactivate()
       clientRef.current = null
     }
-  }, [token])
+  }, [userId])
 
   const subscribe = useCallback((destination: string, handler: (body: string) => void) => {
     const id = ++nextIdRef.current

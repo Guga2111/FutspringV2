@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest"
 import type { FinanceCharge, FinanceComponent, FinanceDetail, FinanceList, FinanceNotice } from "@/types/finance"
 import { financeWhatsAppMessage, whatsAppUrl } from "@/utils/financeWhatsApp"
 
-const LINK = "https://futspring.test/pelada/7/financeiro/3"
+const LINK = "https://futspring.test/pelada/7/financeiro/3/paguei"
 const TODAY = "2026-11-05"
 const COMPONENTS: FinanceComponent[] = [{ name: "Campo", amount: "40.00" }, { name: "Bola", amount: "5.50" }]
 
@@ -59,7 +59,7 @@ describe("financeWhatsAppMessage", () => {
       "",
       "Pix: pix@futspring.com (Leal)",
       "",
-      `👉 Pague e informe aqui: ${LINK}`,
+      `✅ Já pagou? Avise aqui: ${LINK}`,
     ].join("\n"))
   })
 

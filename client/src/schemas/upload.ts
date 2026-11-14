@@ -1,4 +1,4 @@
-import { z } from "zod"
+import { z } from "@/lib/zod"
 
 // mirrors FileUploadService: 5 MB, JPEG / PNG / WebP
 export const MAX_IMAGE_BYTES = 5 * 1024 * 1024

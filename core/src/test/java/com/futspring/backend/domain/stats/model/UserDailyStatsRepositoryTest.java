@@ -41,10 +41,10 @@ class UserDailyStatsRepositoryTest {
 
     @BeforeEach
     void setUp() {
-        User creator = userRepository.save(User.builder()
+        User creator = userRepository.save(User.builder().emailVerifiedAt(java.time.Instant.EPOCH)
                 .email("creator@example.com").username("creator").password("hash").build());
 
-        player = userRepository.save(User.builder()
+        player = userRepository.save(User.builder().emailVerifiedAt(java.time.Instant.EPOCH)
                 .email("player@example.com").username("player").password("hash").build());
 
         pelada = peladaRepository.save(Pelada.builder()
@@ -70,7 +70,7 @@ class UserDailyStatsRepositoryTest {
 
     @Test
     void findWonSessionByUserAndDailyIds_onlyTheUsersRowsOfTheListedSessions() {
-        User other = userRepository.save(User.builder()
+        User other = userRepository.save(User.builder().emailVerifiedAt(java.time.Instant.EPOCH)
                 .email("other@example.com").username("other").password("hash").build());
         userDailyStatsRepository.save(UserDailyStats.builder()
                 .daily(daily2).user(other).matchesPlayed(3).wonSession(true).build());
@@ -163,7 +163,7 @@ class UserDailyStatsRepositoryTest {
 
     @Test
     void findHistoryByUserAndPelada_onlyThatPelada_newestFirst() {
-        User creator = userRepository.save(User.builder()
+        User creator = userRepository.save(User.builder().emailVerifiedAt(java.time.Instant.EPOCH)
                 .email("other-creator@example.com").username("other").password("hash").build());
         Pelada otherPelada = peladaRepository.save(Pelada.builder()
                 .name("Outra").dayOfWeek("MONDAY").timeOfDay("20:00").duration(1f)
@@ -194,7 +194,7 @@ class UserDailyStatsRepositoryTest {
 
     @Test
     void findHistoryByUserAndPelada_otherUser_returnsEmpty() {
-        User newPlayer = userRepository.save(User.builder()
+        User newPlayer = userRepository.save(User.builder().emailVerifiedAt(java.time.Instant.EPOCH)
                 .email("nohistory@example.com").username("nohistory").password("hash").build());
 
         assertThat(userDailyStatsRepository.findHistoryByUserAndPelada(newPlayer.getId(), pelada.getId(), Pageable.unpaged()))
@@ -203,7 +203,7 @@ class UserDailyStatsRepositoryTest {
 
     @Test
     void aggregatesForUserWithNoStats_returnNoRows() {
-        User newPlayer = userRepository.save(User.builder()
+        User newPlayer = userRepository.save(User.builder().emailVerifiedAt(java.time.Instant.EPOCH)
                 .email("new@example.com").username("new").password("hash").build());
 
         assertThat(userDailyStatsRepository.aggregateStatsByUsers(List.of(newPlayer))).isEmpty();
@@ -214,7 +214,7 @@ class UserDailyStatsRepositoryTest {
 
     @Test
     void countAttendanceByUser_countsOnlyFinishedSessionsOfThePeladaInRange() {
-        User other = userRepository.save(User.builder()
+        User other = userRepository.save(User.builder().emailVerifiedAt(java.time.Instant.EPOCH)
                 .email("other@example.com").username("other").password("hash").build());
         Pelada otherPelada = peladaRepository.save(Pelada.builder()
                 .name("Outra").dayOfWeek("MONDAY").timeOfDay("20:00").duration(1f)

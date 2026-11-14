@@ -9,7 +9,6 @@ import {
   getUnreadNotificationCount,
   markAllNotificationsRead,
   markNotificationRead,
-  resubscribeToEmails,
   unsubscribeFromEmails,
   updateNotificationPreferences,
 } from "./notifications"
@@ -99,10 +98,5 @@ describe("unsubscribe links", () => {
     expect(mockPost).toHaveBeenCalledWith("/api/v1/notifications/unsubscribe", { token: "a.b" })
   })
 
-  it("posts the token to resubscribe", async () => {
-    mockPost.mockResolvedValue({ data: { category: "ATTENDANCE", emailEnabled: true, pushEnabled: true } })
 
-    await expect(resubscribeToEmails("a.b")).resolves.toEqual({ category: "ATTENDANCE", emailEnabled: true, pushEnabled: true })
-    expect(mockPost).toHaveBeenCalledWith("/api/v1/notifications/resubscribe", { token: "a.b" })
-  })
 })

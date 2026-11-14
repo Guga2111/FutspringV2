@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 import { useAuth } from "@/hooks/useAuth"
 
 export default function NotFoundPage() {
-  const { token } = useAuth()
+  const { user } = useAuth()
   return (
     <AuthLayout>
       <div className="flex w-full max-w-sm flex-col gap-6">
@@ -18,7 +18,7 @@ export default function NotFoundPage() {
           </p>
         </div>
         <Button asChild variant="brand" size="lg" className="w-full md:w-auto md:self-start">
-          <Link to={token ? "/home" : "/"}>{token ? "Voltar para o início" : "Ir para a página inicial"}</Link>
+          <Link to={user ? "/home" : "/"}>{user ? "Voltar para o início" : "Ir para a página inicial"}</Link>
         </Button>
       </div>
     </AuthLayout>

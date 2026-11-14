@@ -67,6 +67,6 @@ export function financeWhatsAppMessage(detail: FinanceDetail, link: string, toda
   }
 
   if (list.pixKey) blocks.push(`Pix: ${list.pixKey}${list.pixRecipient ? ` (${list.pixRecipient})` : ""}`)
-  blocks.push(`👉 Pague e informe aqui: ${link}`)
+  blocks.push(`✅ Já pagou? Avise aqui: ${link}`)
   return blocks.join("\n\n")
 }

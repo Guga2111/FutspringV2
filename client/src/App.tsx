@@ -7,6 +7,8 @@ import { AppLayout } from "@/components/layout/AppLayout"
 
 const LandingPage = lazy(() => import("@/pages/LandingPage"))
 const AuthPage = lazy(() => import("@/pages/AuthPage"))
+const VerifyEmailPage = lazy(() => import("@/pages/VerifyEmailPage"))
+const VerificationEmailPage = lazy(() => import("@/pages/VerificationEmailPage"))
 const ForgotPasswordPage = lazy(() => import("@/pages/ForgotPasswordPage"))
 const ResetPasswordPage = lazy(() => import("@/pages/ResetPasswordPage"))
 const HomePage = lazy(() => import("@/pages/HomePage"))
@@ -16,6 +18,7 @@ const PeladaMembersPage = lazy(() => import("@/pages/PeladaMembersPage"))
 const PeladaSessionsPage = lazy(() => import("@/pages/PeladaSessionsPage"))
 const PeladaRankingPage = lazy(() => import("@/pages/PeladaRankingPage"))
 const PeladaAwardsPage = lazy(() => import("@/pages/PeladaAwardsPage"))
+const FinanceQuickReportPage = lazy(() => import("@/pages/FinanceQuickReportPage"))
 const PeladaFinancePage = lazy(() => import("@/pages/PeladaFinancePage"))
 const PeladaInvitationsPage = lazy(() => import("@/pages/PeladaInvitationsPage"))
 const PeladaSubscriptionPage = lazy(() => import("@/pages/PeladaSubscriptionPage"))
@@ -46,6 +49,8 @@ function App() {
         <Routes>
           <Route path="/" element={<ErrorBoundary><LandingPage /></ErrorBoundary>} />
           <Route path="/auth" element={<ErrorBoundary><AuthPage /></ErrorBoundary>} />
+          <Route path="/verify-email" element={<ErrorBoundary><VerifyEmailPage /></ErrorBoundary>} />
+          <Route path="/verification-email" element={<ErrorBoundary><VerificationEmailPage /></ErrorBoundary>} />
           <Route path="/forgot-password" element={<ErrorBoundary><ForgotPasswordPage /></ErrorBoundary>} />
           <Route path="/reset-password" element={<ErrorBoundary><ResetPasswordPage /></ErrorBoundary>} />
           <Route path="/notifications/unsubscribe" element={<ErrorBoundary><NotificationUnsubscribePage /></ErrorBoundary>} />
@@ -70,6 +75,7 @@ function App() {
               <Route path="convites" element={<ErrorBoundary><PeladaInvitationsPage /></ErrorBoundary>} />
               <Route path="assinatura" element={<ErrorBoundary><PeladaSubscriptionPage /></ErrorBoundary>} />
             </Route>
+            <Route path="/pelada/:id/financeiro/:listId/paguei" element={<ErrorBoundary><FinanceQuickReportPage /></ErrorBoundary>} />
             <Route path="/pelada/:id/settings" element={<ErrorBoundary><PeladaSettingsPage /></ErrorBoundary>} />
             <Route path="/daily/:id" element={<ErrorBoundary><DailyDetailPage /></ErrorBoundary>} />
             <Route path="/profile/:id" element={<ErrorBoundary><ProfilePage /></ErrorBoundary>} />

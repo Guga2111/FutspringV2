@@ -67,6 +67,15 @@ async function settle(page: Page) {
   await page.mouse.move(0, 0)
   await page.waitForLoadState("networkidle")
   await expect(page.locator(".animate-pulse")).toHaveCount(0)
+  const scroll = await page.evaluate(() => ({ x: window.scrollX, y: window.scrollY }))
+  await page.evaluate(async () => {
+    for (let y = 0; y < document.documentElement.scrollHeight; y += window.innerHeight) {
+      window.scrollTo(0, y)
+      await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())))
+    }
+  })
+  await page.evaluate(({ x, y }) => window.scrollTo(x, y), scroll)
+  await page.waitForLoadState("networkidle")
   await page.evaluate(async () => {
     const images = Array.from(document.images)
     for (const image of images) image.loading = "eager"
@@ -346,7 +355,7 @@ test("finance manager: deep link and WhatsApp message", async ({ page }) => {
   await page.getByRole("button", { name: "Opções da cobrança" }).click()
   await page.getByRole("menuitem", { name: "Compartilhar no WhatsApp" }).click()
   const dialog = page.getByRole("dialog", { name: "Compartilhar no WhatsApp" })
-  await expect(dialog.getByLabel("Mensagem")).toHaveValue(new RegExp(`financeiro/${financeDetail.collection.id}$`))
+  await expect(dialog.getByLabel("Mensagem")).toHaveValue(new RegExp(`financeiro/${financeDetail.collection.id}/paguei$`))
   await settle(page)
   await expect(page).toHaveScreenshot("finance-whatsapp.png", DIALOG_SHOT)
   expect(unmatched, "requests without a fixture").toEqual([])

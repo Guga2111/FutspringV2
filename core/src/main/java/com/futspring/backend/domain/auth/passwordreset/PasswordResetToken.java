@@ -8,7 +8,7 @@ import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
 
-// A password reset link. Only the SHA-256 of the token is stored (ResetTokens.hash)
+// A password reset link. Only the SHA-256 of the token is stored (SecretTokens.hash)
 @Entity
 @Table(name = "password_reset_tokens")
 @Getter

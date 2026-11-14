@@ -1,5 +1,6 @@
+import { useImageUrl } from "@/hooks/useImageUrl"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { cn, getAvatarColor, getFileUrl, getInitials } from "@/lib/utils"
+import { cn, getAvatarColor, getInitials } from "@/lib/utils"
 
 interface PlayerAvatarProps {
   // the player's account id: the initials take its color, the same on every screen.
@@ -15,9 +16,10 @@ interface PlayerAvatarProps {
 
 // Round player avatar: photo, or initials on the player's own color
 export function PlayerAvatar({ userId, username, image, className, deleted = false }: PlayerAvatarProps) {
+  const { url: photo, ref } = useImageUrl(image)
   return (
-    <Avatar className={cn("size-7 shrink-0 text-[11px]", className)}>
-      {image && <AvatarImage src={getFileUrl(image)} alt="" loading="lazy" className="object-cover" />}
+    <Avatar ref={ref} className={cn("size-7 shrink-0 text-[11px]", className)}>
+      {image && <AvatarImage src={photo} alt="" loading="lazy" className="object-cover" />}
       <AvatarFallback
         className={userId != null && !deleted ? cn(getAvatarColor(userId), "font-bold text-white") : "bg-avatar-fallback font-semibold"}
       >

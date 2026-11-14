@@ -1,3 +1,4 @@
+import { useImageUrl } from "@/hooks/useImageUrl"
 import { useMemo } from "react"
 import { Link } from "react-router-dom"
 import { HugeiconsIcon } from "@hugeicons/react"
@@ -7,7 +8,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { SessionGallery } from "@/components/pelada/sessions/SessionGallery"
 import { useSessionsView, type SessionsView } from "@/components/pelada/hooks/useSessionsView"
 import { DailyStatusBadge } from "@/components/daily/DailyStatusBadge"
-import { getFileUrl } from "@/lib/utils"
+
 import { parseLocalDate, weekdayShort } from "@/utils/dates"
 import { formatLongDate, formatSessionMeta, groupDailiesByMonth } from "@/utils/sessions"
 import type { DailyListItem } from "@/types/daily"
@@ -78,7 +79,7 @@ export function SessionHistoryList({ dailies, isLoading }: SessionHistoryListPro
 }
 
 export function SessionRow({ daily }: { daily: DailyListItem }) {
-  const photo = getFileUrl(daily.championImage)
+  const { url: photo, ref } = useImageUrl(daily.championImage)
   return (
     <li className="border-b border-border/60 last:border-b-0">
       <Link to={`/daily/${daily.id}`} className="flex items-center gap-3.5 px-3.5 py-3 transition-colors hover:bg-row-hover">
@@ -95,20 +96,19 @@ export function SessionRow({ daily }: { daily: DailyListItem }) {
           <HugeiconsIcon icon={UserGroupIcon} className="size-3.5" aria-label="Jogadores" />
           {daily.confirmedPlayerCount}
         </span>
-        {photo ? (
-          <img
-            src={photo}
-            alt="Foto do campeão"
-            loading="lazy"
-            width={40}
-            height={40}
-            className="hidden size-10 shrink-0 rounded-lg border border-input object-cover md:block"
-            style={{ objectPosition: "center 55%" }}
-          />
-        ) : (
-          // keeps the column so the badges line up with rows that have a photo; nothing is drawn
-          <span aria-hidden className="hidden size-10 shrink-0 md:block" />
-        )}
+        <span ref={ref} className="hidden size-10 shrink-0 md:block">
+          {photo && (
+            <img
+              src={photo}
+              alt="Foto do campeão"
+              loading="lazy"
+              width={40}
+              height={40}
+              className="size-full rounded-lg border border-input object-cover"
+              style={{ objectPosition: "center 55%" }}
+            />
+          )}
+        </span>
         <HugeiconsIcon icon={ArrowRight01Icon} className="size-4 shrink-0 text-faint-foreground" />
       </Link>
     </li>

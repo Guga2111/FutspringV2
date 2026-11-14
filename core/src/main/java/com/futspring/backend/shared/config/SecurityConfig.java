@@ -34,7 +34,19 @@ public class SecurityConfig {
      * session: JwtAuthFilter ignores the Authorization header on them and AuthRateLimitFilter limits them.
      */
     public static final Set<String> EMAIL_LINK_PATHS = Set.of(
-            "/api/v1/notifications/unsubscribe", "/api/v1/notifications/resubscribe");
+            "/api/v1/notifications/unsubscribe");
+
+    /**
+     * Errors reported by the web app (domain/telemetry): public, and JwtAuthFilter ignores the Authorization header,
+     * so an error with an expired session still arrives.
+     */
+    public static final String CLIENT_ERRORS_PATH = "/api/v1/client-errors";
+
+    /**
+     * Routes that act on the refresh cookie, not on the caller (public under /api/v1/auth/**): JwtAuthFilter ignores the
+     * Authorization header, since the client calls them precisely when its access token expired.
+     */
+    public static final Set<String> SESSION_COOKIE_PATHS = Set.of("/api/v1/auth/refresh", "/api/v1/auth/logout");
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -72,11 +84,11 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> {
                 auth
                     .requestMatchers("/api/v1/auth/**").permitAll()
-                    .requestMatchers("/api/v1/files/**").permitAll()
                     .requestMatchers("/ws/**").permitAll()
                     // liveness / readiness probes (management.endpoint.health.probes.add-additional-paths)
                     .requestMatchers(HttpMethod.GET, "/livez", "/readyz", "/api/v1/invite-links/*").permitAll()
-                    .requestMatchers(HttpMethod.POST, EMAIL_LINK_PATHS.toArray(String[]::new)).permitAll();
+                    .requestMatchers(HttpMethod.POST, EMAIL_LINK_PATHS.toArray(String[]::new)).permitAll()
+                    .requestMatchers(HttpMethod.POST, CLIENT_ERRORS_PATH).permitAll();
                 // OpenAPI docs and Swagger UI: public only where they are served (API_DOCS_ENABLED, dev)
                 if (apiDocsEnabled) {
                     auth.requestMatchers(HttpMethod.GET, "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html")

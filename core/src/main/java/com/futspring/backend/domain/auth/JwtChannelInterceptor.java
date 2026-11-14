@@ -19,8 +19,8 @@ import java.util.regex.Pattern;
 
 /**
  * Authenticates and authorizes STOMP frames:
- * CONNECT needs a Bearer token that opens a session (AccessTokenVerifier); a session already connected
- * when the token is revoked stays open until it disconnects; SUBSCRIBE is only allowed to /topic/pelada/{id} for members of that
+ * CONNECT needs a Bearer token that opens a session (AccessTokenVerifier); what was authorized here is taken back
+ * after a member removal or a token revocation by StompSessions; SUBSCRIBE is only allowed to /topic/pelada/{id} for members of that
  * pelada and to the user's own error and notification queues (/user/... resolves to the session's principal); SEND needs an authenticated session and an /app destination
  * (a SEND straight to /topic or /queue would reach the broker's subscribers without going through ChatService).
  */
@@ -35,6 +35,7 @@ public class JwtChannelInterceptor implements ChannelInterceptor {
 
     private final AccessTokenVerifier tokenVerifier;
     private final PeladaRepository peladaRepository;
+    private final StompSessions sessions;
 
     @Override
     public Message<?> preSend(Message<?> message, MessageChannel channel) {
@@ -57,9 +58,10 @@ public class JwtChannelInterceptor implements ChannelInterceptor {
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             throw new MessageDeliveryException("Token ausente");
         }
-        String email = tokenVerifier.verify(authHeader.substring(7))
+        var verified = tokenVerifier.verifyConnection(authHeader.substring(7))
                 .orElseThrow(() -> new MessageDeliveryException("Sessão inválida ou expirada"));
-        accessor.setUser(new UsernamePasswordAuthenticationToken(email, null, Collections.emptyList()));
+        sessions.authenticate(accessor.getSessionId(), verified.expiresAt());
+        accessor.setUser(new UsernamePasswordAuthenticationToken(verified.email(), null, Collections.emptyList()));
     }
 
     private void authorizeSubscribe(StompHeaderAccessor accessor) {

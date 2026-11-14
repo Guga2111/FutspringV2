@@ -212,7 +212,7 @@ class AccountExportTest extends BaseIntegrationTest {
     }
 
     private User user(String name) {
-        return users.save(User.builder().username(name + UUID.randomUUID().toString().substring(0, 8))
+        return users.save(User.builder().emailVerifiedAt(java.time.Instant.EPOCH).username(name + UUID.randomUUID().toString().substring(0, 8))
                 .email(UUID.randomUUID() + "@export.test").password(passwordEncoder.encode("senha-123")).build());
     }
 

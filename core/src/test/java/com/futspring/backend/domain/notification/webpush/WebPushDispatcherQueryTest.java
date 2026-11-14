@@ -120,6 +120,6 @@ class WebPushDispatcherQueryTest extends BaseIntegrationTest {
 
     private User user() {
         int n = USERS.incrementAndGet();
-        return userRepository.save(User.builder().email("wp" + n + "@test.com").username("wp" + n).password("hash").build());
+        return userRepository.save(User.builder().emailVerifiedAt(java.time.Instant.EPOCH).email("wp" + n + "@test.com").username("wp" + n).password("hash").build());
     }
 }

@@ -3,6 +3,8 @@ package com.futspring.backend.domain.auth;
 import com.futspring.backend.domain.auth.dto.AuthResponseDTO;
 import com.futspring.backend.domain.auth.dto.LoginRequestDTO;
 import com.futspring.backend.domain.auth.dto.RegisterRequestDTO;
+import com.futspring.backend.domain.auth.session.RefreshSessionService;
+import com.futspring.backend.shared.config.CorsConfig;
 import com.futspring.backend.shared.config.JwtConfig;
 import com.futspring.backend.shared.exception.AppException;
 import com.futspring.backend.domain.user.User;
@@ -13,10 +15,14 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.util.ReflectionTestUtils;
+import tools.jackson.databind.json.JsonMapper;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -38,7 +44,9 @@ class AuthServiceTest {
     PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     JwtService jwtService;
+    @Mock com.futspring.backend.domain.auth.verification.EmailVerificationService verification;
     AuthService authService;
+    RefreshSessionService refreshSessionService;
 
     @BeforeEach
     void setUp() {
@@ -47,7 +55,15 @@ class AuthServiceTest {
                 "test-secret-key-that-is-at-least-32-characters-long");
         ReflectionTestUtils.setField(jwtConfig, "expirationMs", 3600000L);
         jwtService = new JwtService(jwtConfig);
-        authService = new AuthService(userRepository, passwordEncoder, jwtService, CLOCK);
+        // the refresh session is written to a Redis stub (its behavior is in RefreshSessionTest)
+        StringRedisTemplate redis = mock(StringRedisTemplate.class);
+        @SuppressWarnings("unchecked")
+        ValueOperations<String, String> values = mock(ValueOperations.class);
+        lenient().when(redis.opsForValue()).thenReturn(values);
+        lenient().when(redis.execute(any(org.springframework.data.redis.core.script.RedisScript.class), anyList(), any(Object[].class))).thenReturn(1L);
+        refreshSessionService = new RefreshSessionService(redis, JsonMapper.builder().build(), userRepository,
+                jwtService, new CorsConfig("http://localhost:5173"), CLOCK, new SimpleMeterRegistry());
+        authService = new AuthService(userRepository, passwordEncoder, refreshSessionService, CLOCK, verification);
     }
 
     // --- register ---
@@ -63,18 +79,19 @@ class AuthServiceTest {
             return u;
         });
 
-        AuthResponseDTO result = authService.register(req);
-
-        assertThat(result).isNotNull();
-        assertThat(result.token()).isNotBlank();
-        assertThat(result.user().email()).isEqualTo("alice@example.com");
+        authService.register(req);
+        verify(verification).request("alice@example.com");
     }
 
     @Test
     void register_recordsTheAcceptedTermsVersionAndInstant() {
         RegisterRequestDTO req = new RegisterRequestDTO("alice", "alice@example.com", "password123", LegalTerms.CURRENT_VERSION);
         when(userRepository.findByEmail("alice@example.com")).thenReturn(Optional.empty());
-        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> {
+            User u = inv.getArgument(0);
+            ReflectionTestUtils.setField(u, "id", 1L);
+            return u;
+        });
 
         authService.register(req);
 
@@ -95,22 +112,18 @@ class AuthServiceTest {
     }
 
     @Test
-    void register_emailAlreadyRegistered_throwsConflict() {
+    void register_emailAlreadyRegistered_doesNotExposeItOrChangeTheAccount() {
         RegisterRequestDTO req = new RegisterRequestDTO("alice", "alice@example.com", "password123", LegalTerms.CURRENT_VERSION);
-
-        when(userRepository.findByEmail("alice@example.com"))
-                .thenReturn(Optional.of(User.builder().email("alice@example.com").build()));
-
-        assertThatThrownBy(() -> authService.register(req))
-                .isInstanceOf(AppException.class)
-                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.CONFLICT));
+        when(userRepository.findByEmail(req.email())).thenReturn(Optional.of(User.builder().email(req.email()).build()));
+        authService.register(req);
+        verify(verification).request(req.email());
+        verify(userRepository, never()).save(any());
     }
 
     @Test
     void register_usernameTakenInAnotherCase_throwsConflict() {
         RegisterRequestDTO req = new RegisterRequestDTO(" Alice ", "new@example.com", "password123", LegalTerms.CURRENT_VERSION);
 
-        when(userRepository.findByEmail("new@example.com")).thenReturn(Optional.empty());
         when(userRepository.existsByUsernameIgnoreCase("Alice")).thenReturn(true);
 
         assertThatThrownBy(() -> authService.register(req))
@@ -167,17 +180,15 @@ class AuthServiceTest {
             return u;
         });
 
-        AuthResponseDTO result = authService.register(req);
-
-        assertThat(jwtService.extractAllClaims(result.token()).getSubject()).isEqualTo("dave@example.com");
-        assertThat(jwtService.extractAllClaims(result.token()).get("userId", Long.class)).isEqualTo(99L);
+        authService.register(req);
+        verify(verification).request("dave@example.com");
     }
 
     // --- login ---
 
     @Test
     void login_success_returnsTokenAndUserDTO() {
-        User user = User.builder()
+        User user = User.builder().emailVerifiedAt(java.time.Instant.EPOCH)
                 .id(1L)
                 .email("alice@example.com")
                 .username("alice")
@@ -188,7 +199,7 @@ class AuthServiceTest {
 
         when(userRepository.findByEmail("alice@example.com")).thenReturn(Optional.of(user));
 
-        AuthResponseDTO result = authService.login(req);
+        AuthResponseDTO result = authService.login(req).auth();
 
         assertThat(result.token()).isNotBlank();
         assertThat(result.user().email()).isEqualTo("alice@example.com");
@@ -200,14 +211,20 @@ class AuthServiceTest {
 
         when(userRepository.findByEmail("nobody@example.com")).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> authService.login(req))
+        PasswordEncoder spyEncoder = spy(new BCryptPasswordEncoder());
+        AuthService service = new AuthService(userRepository, spyEncoder, refreshSessionService, CLOCK, verification);
+
+        assertThatThrownBy(() -> service.login(req))
                 .isInstanceOf(AppException.class)
                 .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.UNAUTHORIZED));
+        // an unknown e-mail still runs BCrypt, against a real cost-10 hash, so it takes as long as a wrong password
+        verify(spyEncoder).matches("anypassword", AuthService.DUMMY_HASH);
+        assertThat(AuthService.DUMMY_HASH).startsWith("$2a$10$").hasSize(60);
     }
 
     @Test
     void login_wrongPassword_throwsUnauthorized() {
-        User user = User.builder()
+        User user = User.builder().emailVerifiedAt(java.time.Instant.EPOCH)
                 .id(1L)
                 .email("alice@example.com")
                 .password(passwordEncoder.encode("correctPassword"))
@@ -224,7 +241,7 @@ class AuthServiceTest {
 
     @Test
     void login_correctCredentials_generatesTokenWithUserId() {
-        User user = User.builder()
+        User user = User.builder().emailVerifiedAt(java.time.Instant.EPOCH)
                 .id(42L)
                 .email("alice@example.com")
                 .username("alice")
@@ -235,7 +252,7 @@ class AuthServiceTest {
 
         when(userRepository.findByEmail("alice@example.com")).thenReturn(Optional.of(user));
 
-        AuthResponseDTO result = authService.login(req);
+        AuthResponseDTO result = authService.login(req).auth();
 
         assertThat(jwtService.extractAllClaims(result.token()).get("userId", Long.class)).isEqualTo(42L);
         assertThat(jwtService.extractAllClaims(result.token()).getSubject()).isEqualTo("alice@example.com");

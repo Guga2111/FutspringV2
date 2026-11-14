@@ -150,7 +150,7 @@ export const PRIVACY: LegalDocument = {
       title: "Dados que tratamos",
       blocks: [
         [
-          "Conta: nome de usuário, e-mail, senha (guardada só de forma criptografada, impossível de ler), posição e foto.",
+          "Conta: nome de usuário, e-mail, data de verificação do endereço, senha (guardada como um hash, sem guardar o texto original), posição e foto.",
           "Peladas: de quais você participa, se é admin ou mensalista, presença e horário da confirmação, times, gols, assistências, vitórias, prêmios, as estrelas que os admins dão a você, mensagens do chat e fotos.",
           "Financeiro: cobranças, valores, pagamentos, avisos de pagamento, comprovantes enviados, chave Pix e QR Code de quem recebe e o histórico de alterações.",
           "Assinatura das peladas que você criou: plano, validade, situação, quando você avisou que fez o Pix e os pagamentos registrados (valor, data, plano, nome da pelada e de quem pagou). Também guardamos se a sua conta já usou o teste grátis.",
@@ -181,7 +181,8 @@ export const PRIVACY: LegalDocument = {
       blocks: [
         [
           "Os membros das peladas de que você participa veem seu nome, foto, posição, presença, estatísticas e mensagens no chat.",
-          "Seu perfil só aparece para quem divide uma pelada com você. Dentro do app, o seu e-mail só você vê.",
+          "Seu perfil e sua foto só podem ser acessados por você e por quem divide uma pelada com você, após entrar na conta. Fotos de peladas e campeões exigem que você seja membro da pelada. Ter o endereço de uma imagem não dá acesso a ela. Quem já viu uma foto pode ter guardado uma cópia.",
+          "O link de convite mostra apenas o nome, o dia e o horário da pelada, sem a foto. Dentro do app, o seu e-mail só você vê.",
           "A área Assinatura de uma pelada (situação, planos e pagamentos) só é vista pelo criador.",
           "Nós, que mantemos o Futspring, temos um painel de administração restrito, usado para dar suporte e cobrar as assinaturas. Nele vemos o nome, o e-mail e a data de cadastro de cada conta, as peladas que ela criou, de quantas participa e se já usou o teste grátis, e a assinatura, os pagamentos e o histórico de alterações da assinatura de cada pelada.",
           "No financeiro em modo individual, cada membro vê só as próprias cobranças. No modo transparente, os membros veem participantes, totais e o caixa. Comprovantes só são vistos por você e pelos responsáveis financeiros.",
@@ -213,7 +214,9 @@ export const PRIVACY: LegalDocument = {
           "Comprovantes de pagamento: ficam disponíveis por 7 dias (cobranças de sessão) ou 30 dias (mensalidades e outras) e depois o arquivo é apagado.",
           "Notificações: as lidas são apagadas após 90 dias e todas após 180 dias.",
           "Pagamentos de assinatura: guardados pelo prazo exigido pela lei, inclusive a fiscal, mesmo depois que a pelada ou a conta é excluída, com o nome da pelada e de quem pagou.",
-          "Links de troca de senha: valem 30 minutos.",
+          "Links de troca de senha e de verificação de e-mail: valem 30 minutos. Guardamos apenas o hash dos tokens de verificação, até serem usados, substituídos ou a conta ser excluída. Links expirados não permitem verificar a conta.",
+          "Links para desativar e-mails: valem 30 dias. Alterar suas preferências de e-mail nas configurações invalida os links anteriores. Para reativar e-mails, entre na conta.",
+          "Relatórios de erros do navegador: guardados nos registros de observabilidade por até 14 dias, com remoção de credenciais e tokens reconhecidos antes do registro.",
           "Cópias de segurança do banco: mantemos as 10 mais recentes.",
         ],
         "Quando você exclui a conta, seus dados pessoais são apagados e, nas sessões passadas, você aparece como “Ex-jogador”. Registros que a pelada precisa manter, como resultados das partidas e lançamentos do financeiro, continuam existindo sem os seus dados pessoais. A exceção são os pagamentos de assinatura, guardados como descrito acima.",

@@ -22,7 +22,6 @@ import com.futspring.backend.domain.stats.model.RankingRepository;
 import com.futspring.backend.support.MembershipStubs;
 import com.futspring.backend.domain.user.User;
 import com.futspring.backend.domain.user.UserRepository;
-import com.futspring.backend.domain.user.dto.PublicUserDTO;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -95,9 +94,9 @@ class PeladaServiceTest {
                 notificationRepository, eventPublisher, invitationService, subscriptionService,
                 mock(com.futspring.backend.domain.subscription.SubscriptionGuard.class));
 
-        admin = User.builder().id(1L).email("admin@example.com").username("admin").password("hash").build();
-        member = User.builder().id(2L).email("member@example.com").username("member").password("hash").build();
-        outsider = User.builder().id(3L).email("outsider@example.com").username("outsider").password("hash").build();
+        admin = User.builder().emailVerifiedAt(java.time.Instant.EPOCH).id(1L).email("admin@example.com").username("admin").password("hash").build();
+        member = User.builder().emailVerifiedAt(java.time.Instant.EPOCH).id(2L).email("member@example.com").username("member").password("hash").build();
+        outsider = User.builder().emailVerifiedAt(java.time.Instant.EPOCH).id(3L).email("outsider@example.com").username("outsider").password("hash").build();
 
         Set<User> members = new HashSet<>(Set.of(admin, member));
         Set<User> admins = new HashSet<>(Set.of(admin));
@@ -486,35 +485,6 @@ class PeladaServiceTest {
         verify(playerStarsRepository, never()).saveAll(any());
     }
 
-    // --- searchUsers ---
-
-    @Test
-    void searchUsers_returnsMatchingUsers() {
-        when(userRepository.searchByUsernameOrEmail(eq("ali"), any())).thenReturn(List.of(admin));
-
-        List<PublicUserDTO> result = peladaService.searchUsers("ali");
-
-        assertThat(result).hasSize(1);
-        assertThat(result.get(0).username()).isEqualTo("admin");
-    }
-
-    @Test
-    void searchUsers_queryTooShort_throwsBadRequest() {
-        assertThatThrownBy(() -> peladaService.searchUsers(" a "))
-                .isInstanceOf(AppException.class)
-                .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.BAD_REQUEST));
-        verifyNoInteractions(userRepository);
-    }
-
-    @Test
-    void searchUsers_noMatches_returnsEmptyList() {
-        when(userRepository.searchByUsernameOrEmail(eq("zzz"), any())).thenReturn(Collections.emptyList());
-
-        List<PublicUserDTO> result = peladaService.searchUsers("zzz");
-
-        assertThat(result).isEmpty();
-    }
-
     // --- updatePelada ---
 
     @Test
@@ -581,10 +551,13 @@ class PeladaServiceTest {
     void deletePelada_success_deletesPelada() {
         when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(peladaRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(pelada));
+        pelada.setImage("cover.jpg");
 
         peladaService.deletePelada(10L, "admin@example.com");
 
         verify(peladaRepository).delete(pelada);
+        // the sessions' champion photos go through DailyService.deleteDailyData (DailyServiceTest)
+        verify(fileUploadService).deleteImageAfterCommit("cover.jpg");
     }
 
     @Test

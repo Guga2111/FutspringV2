@@ -1,4 +1,4 @@
-import { z } from "zod"
+import { z } from "@/lib/zod"
 
 // mirrors CreateDailyRequestDTO (dailyDate is sent as yyyy-MM-dd)
 export const createDailySchema = z.object({

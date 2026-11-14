@@ -41,8 +41,8 @@ class InvitationConcurrencyTest {
     record Fixture(User admin, User player, Long peladaId) { }
     Fixture fixture() {
         String key = UUID.randomUUID().toString();
-        User admin = users.save(User.builder().email(key + "a@test.com").username("Admin").password("hash").build());
-        User player = users.save(User.builder().email(key + "p@test.com").username("Player").password("hash").build());
+        User admin = users.save(User.builder().emailVerifiedAt(java.time.Instant.EPOCH).email(key + "a@test.com").username("Admin").password("hash").build());
+        User player = users.save(User.builder().emailVerifiedAt(java.time.Instant.EPOCH).email(key + "p@test.com").username("Player").password("hash").build());
         Pelada p = peladas.save(Pelada.builder().name("Concorrência").dayOfWeek("SUNDAY").timeOfDay("18:00").duration(1f)
                 .creator(admin).members(new HashSet<>(Set.of(admin))).admins(new HashSet<>(Set.of(admin))).build());
         return new Fixture(admin, player, p.getId());
@@ -113,10 +113,10 @@ class InvitationConcurrencyTest {
         String key = UUID.randomUUID().toString();
         List<User> fillers = new ArrayList<>();
         for (int i = 0; i < SubscriptionGuard.TRIAL_MEMBER_CAP - 2; i++)
-            fillers.add(users.save(User.builder().email(key + i + "@test.com").username("Filler" + i).password("hash").build()));
+            fillers.add(users.save(User.builder().emailVerifiedAt(java.time.Instant.EPOCH).email(key + i + "@test.com").username("Filler" + i).password("hash").build()));
         jdbc.batchUpdate("insert into pelada_members (pelada_id, user_id) values (?, ?)",
                 fillers.stream().map(u -> new Object[]{f.peladaId(), u.getId()}).toList());
-        User second = users.save(User.builder().email(key + "s@test.com").username("Second").password("hash").build());
+        User second = users.save(User.builder().emailVerifiedAt(java.time.Instant.EPOCH).email(key + "s@test.com").username("Second").password("hash").build());
         Long first = service.invite(f.peladaId(), f.player().getId(), f.admin().getEmail()).id();
         Long other = service.invite(f.peladaId(), second.getId(), f.admin().getEmail()).id();
         assertThat(race(() -> service.accept(first, f.player().getEmail()), () -> service.accept(other, second.getEmail())))

@@ -1,4 +1,4 @@
-import { z } from "zod"
+import { z } from "@/lib/zod"
 
 // mirrors PixClaimRequestDTO (plan @NotNull)
 export const pixClaimSchema = z.object({

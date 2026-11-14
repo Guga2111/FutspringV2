@@ -27,6 +27,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
+import com.futspring.backend.support.TestImages;
 import org.springframework.mock.web.MockMultipartFile;
 
 import java.time.Instant;
@@ -64,11 +65,11 @@ class PeladaControllerTest extends BaseIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        admin = userRepository.save(User.builder()
+        admin = userRepository.save(User.builder().emailVerifiedAt(java.time.Instant.EPOCH)
                 .email("padmin@test.com").username("padmin").password("hash").build());
-        member = userRepository.save(User.builder()
+        member = userRepository.save(User.builder().emailVerifiedAt(java.time.Instant.EPOCH)
                 .email("pmember@test.com").username("pmember").password("hash").build());
-        outsider = userRepository.save(User.builder()
+        outsider = userRepository.save(User.builder().emailVerifiedAt(java.time.Instant.EPOCH)
                 .email("pout@test.com").username("pout").password("hash").build());
 
         pelada = peladaRepository.save(Pelada.builder()
@@ -529,12 +530,23 @@ class PeladaControllerTest extends BaseIntegrationTest {
     void uploadImage_asAdmin() throws Exception {
         MockMultipartFile file = new MockMultipartFile(
                 "file", "banner.jpg", "image/jpeg",
-                new byte[]{(byte) 0xFF, (byte) 0xD8, (byte) 0xFF, (byte) 0xE0});
+                TestImages.jpeg());
 
         mockMvc.perform(multipart("/api/v1/peladas/" + pelada.getId() + "/image")
                 .file(file)
                 .header("Authorization", bearerToken(admin.getId(), admin.getEmail())))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    void uploadImage_textDeclaredAsPng_isRejected() throws Exception {
+        MockMultipartFile file = new MockMultipartFile(
+                "file", "banner.png", "image/png", "<svg onload=alert(1)>".getBytes());
+
+        mockMvc.perform(multipart("/api/v1/peladas/" + pelada.getId() + "/image")
+                .file(file)
+                .header("Authorization", bearerToken(admin.getId(), admin.getEmail())))
+                .andExpect(status().isBadRequest());
     }
 
     @Test
@@ -959,7 +971,7 @@ class PeladaControllerTest extends BaseIntegrationTest {
     }
 
     private User joinedMember(String username) {
-        User user = userRepository.save(User.builder()
+        User user = userRepository.save(User.builder().emailVerifiedAt(java.time.Instant.EPOCH)
                 .email(username + "@test.com").username(username).password("hash").build());
         pelada.getMembers().add(user);
         peladaRepository.save(pelada);

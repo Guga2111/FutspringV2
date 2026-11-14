@@ -217,7 +217,7 @@ class ScheduledNotificationJobTest {
     }
 
     private User user(String name) {
-        return userRepository.save(User.builder().email(name + "@test.com").username(name).password("hash").build());
+        return userRepository.save(User.builder().emailVerifiedAt(java.time.Instant.EPOCH).email(name + "@test.com").username(name).password("hash").build());
     }
 
     // 2 teams of `playersPerTeam`; members: the creator, `mensalistaUser` (marked), the diarista and `confirmed`

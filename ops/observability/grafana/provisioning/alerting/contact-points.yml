@@ -1,0 +1,17 @@
+# Where the alerts go: one Telegram chat (README.md → Alerts).
+# - bottoken: from the container's environment (TELEGRAM_BOT_TOKEN, written to .env by deploy-observability.yml).
+# - chatid: written into this file by deploy-observability.yml (TELEGRAM_CHAT_ID secret) in place of the placeholder.
+#   Not an env var: Grafana re-reads an expanded value as YAML, so a numeric id ("123", "__TELEGRAM_CHAT_ID__") becomes a number
+#   and the contact point is rejected (quoting doesn't help). Locally, replace the placeholder by hand.
+apiVersion: 1
+
+contactPoints:
+  - orgId: 1
+    name: telegram
+    receivers:
+      - uid: telegram
+        type: telegram
+        disableResolveMessage: false
+        settings:
+          bottoken: $TELEGRAM_BOT_TOKEN
+          chatid: "__TELEGRAM_CHAT_ID__"

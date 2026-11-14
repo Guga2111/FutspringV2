@@ -1,5 +1,7 @@
 package com.futspring.backend.domain.auth.passwordreset;
 
+import com.futspring.backend.domain.auth.SecretTokens;
+
 import com.futspring.backend.domain.user.User;
 import com.futspring.backend.domain.user.UserRepository;
 import com.futspring.backend.support.BaseIntegrationTest;
@@ -36,7 +38,7 @@ class PasswordResetControllerTest extends BaseIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        user = userRepository.save(User.builder()
+        user = userRepository.save(User.builder().emailVerifiedAt(java.time.Instant.EPOCH)
                 .username("resetuser")
                 .email("reset@example.com")
                 .password(passwordEncoder.encode("oldpassword"))
@@ -139,10 +141,29 @@ class PasswordResetControllerTest extends BaseIntegrationTest {
                 .andExpect(jsonPath("$.errors.newPassword").exists());
     }
 
+    @Test
+    void forgotPassword_emailWithOtherCaseAndSpaces_findsTheAccount() throws Exception {
+        postJson("/api/v1/auth/forgot-password", Map.of("email", " Reset@Example.COM "))
+                .andExpect(status().isNoContent());
+
+        assertThat(tokenRepository.findAll()).singleElement()
+                .satisfies(t -> assertThat(t.getUser()).isEqualTo(user));
+    }
+
+    @Test
+    void resetPassword_passwordOver72Bytes_returns400() throws Exception {
+        saveToken("valid-token", LocalDateTime.now().plusMinutes(30));
+
+        postJson("/api/v1/auth/reset-password", Map.of("token", "valid-token", "newPassword", "é".repeat(40)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.newPassword").value("A senha é longa demais (até 72 caracteres; letras com acento contam em dobro)"));
+        assertThat(passwordEncoder.matches("oldpassword", userRepository.findById(user.getId()).orElseThrow().getPassword())).isTrue();
+    }
+
     private void saveToken(String rawToken, LocalDateTime expiresAt) {
         tokenRepository.save(PasswordResetToken.builder()
                 .user(user)
-                .tokenHash(ResetTokens.hash(rawToken))
+                .tokenHash(SecretTokens.hash(rawToken))
                 .expiresAt(expiresAt)
                 .build());
     }

@@ -114,25 +114,29 @@ chown -R 10001:10001 /opt/futspring-uploads /opt/futspring-finance-receipts /opt
 echo "Starting containers..."
 docker compose -f docker-compose.prod.yml up -d --no-build --remove-orphans
 
-# The image's HEALTHCHECK probes readiness on the internal management port: healthy means Flyway migrated
-# and Hibernate validated the schema
-echo "Waiting for the API container to be healthy..."
-health=""
-for attempt in \$(seq 1 24); do
-  health=\$(docker inspect -f '{{.State.Health.Status}}' futspring_api 2>/dev/null || true)
-  if [[ "\${health}" == "healthy" ]]; then
-    echo "API is healthy (attempt \${attempt})."
-    break
-  fi
-  sleep 5
-done
-
-if [[ "\${health}" != "healthy" ]]; then
-  echo "API was not healthy after 2 minutes (last status: \${health})."
+# Waits up to 2 minutes for a container's healthcheck; prints its logs and fails otherwise
+wait_healthy() {
+  local container="\$1" service="\$2" health=""
+  echo "Waiting for \${container} to be healthy..."
+  for attempt in \$(seq 1 24); do
+    health=\$(docker inspect -f '{{.State.Health.Status}}' "\${container}" 2>/dev/null || true)
+    if [[ "\${health}" == "healthy" ]]; then
+      echo "\${container} is healthy (attempt \${attempt})."
+      return 0
+    fi
+    sleep 5
+  done
+  echo "\${container} was not healthy after 2 minutes (last status: \${health})."
   docker compose -f docker-compose.prod.yml ps
-  docker compose -f docker-compose.prod.yml logs --tail 100 ${SERVICE}
+  docker compose -f docker-compose.prod.yml logs --tail 100 "\${service}"
   exit 1
-fi
+}
+
+# Redis (refresh-token sessions, AOF on): its healthcheck is an authenticated PING
+wait_healthy futspring_redis futspring-redis
+# The image's HEALTHCHECK probes readiness on the internal management port: healthy means Flyway migrated
+# and Hibernate validated the schema. Redis is not part of readiness
+wait_healthy futspring_api ${SERVICE}
 
 docker compose -f docker-compose.prod.yml ps
 docker compose -f docker-compose.prod.yml logs --tail 30 ${SERVICE}

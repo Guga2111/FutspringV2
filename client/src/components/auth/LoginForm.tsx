@@ -33,6 +33,7 @@ export function LoginForm({ returnTo }: { returnTo: string }) {
           <AlertDescription>{errors.root.message}</AlertDescription>
         </Alert>
       )}
+      <Link to="/verification-email" className="text-body-sm text-brand-text underline-offset-4 hover:underline">Verificar meu e-mail</Link>
       <Button type="submit" variant="brand" size="lg" className="w-full" disabled={isSubmitting}>
         {isSubmitting ? "Entrando…" : "Entrar"}
       </Button>

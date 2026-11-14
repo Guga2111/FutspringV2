@@ -30,15 +30,17 @@ class UserServiceProfileTest {
     @Mock
     PeladaPlayerStarsRepository playerStarsRepository;
 
+    @Mock com.futspring.backend.domain.pelada.PeladaRepository peladaRepository;
+
     UserService userService;
 
     User user;
 
     @BeforeEach
     void setUp() {
-        userService = new UserService(userRepository, fileUploadService, playerStarsRepository, null, null, null, null);
+        userService = new UserService(userRepository, peladaRepository, fileUploadService, playerStarsRepository, new com.futspring.backend.shared.helper.UserAuthenticationHelper(userRepository), null, null, null, null);
 
-        user = User.builder()
+        user = User.builder().emailVerifiedAt(java.time.Instant.EPOCH)
                 .id(1L)
                 .email("alice@example.com")
                 .username("alice")
@@ -52,6 +54,7 @@ class UserServiceProfileTest {
     void getProfile_existingUser_returnsProfileDTO() {
         when(userRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.of(user));
 
+        when(userRepository.findByEmail("alice@example.com")).thenReturn(Optional.of(user));
         ProfileDTO result = userService.getProfile(1L, "alice@example.com");
 
         assertThat(result.id()).isEqualTo(1L);
@@ -63,6 +66,8 @@ class UserServiceProfileTest {
     void getProfile_otherViewer_hidesEmail() {
         when(userRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.of(user));
 
+        when(userRepository.findByEmail("bob@example.com")).thenReturn(Optional.of(User.builder().id(2L).email("bob@example.com").build()));
+        when(peladaRepository.existsSharedPelada(1L,2L)).thenReturn(true);
         ProfileDTO result = userService.getProfile(1L, "bob@example.com");
 
         assertThat(result.username()).isEqualTo("alice");
@@ -200,6 +205,8 @@ class UserServiceProfileTest {
         when(userRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.of(user));
         when(playerStarsRepository.averageStarsByUser(1L)).thenReturn(3.5);
 
+        when(userRepository.findByEmail("bob@example.com")).thenReturn(Optional.of(User.builder().id(2L).email("bob@example.com").build()));
+        when(peladaRepository.existsSharedPelada(1L,2L)).thenReturn(true);
         ProfileDTO result = userService.getProfile(1L, "bob@example.com");
 
         assertThat(result.stars()).isEqualTo(4);
@@ -210,6 +217,8 @@ class UserServiceProfileTest {
         when(userRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.of(user));
         when(playerStarsRepository.averageStarsByUser(1L)).thenReturn(null);
 
+        when(userRepository.findByEmail("bob@example.com")).thenReturn(Optional.of(User.builder().id(2L).email("bob@example.com").build()));
+        when(peladaRepository.existsSharedPelada(1L,2L)).thenReturn(true);
         ProfileDTO result = userService.getProfile(1L, "bob@example.com");
 
         assertThat(result.stars()).isNull();

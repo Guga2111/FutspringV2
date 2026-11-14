@@ -35,6 +35,7 @@ public class SubscriptionService {
     private final SubscriptionPaymentRepository paymentRepository;
     private final UserRepository userRepository;
     private final Clock clock;
+    private final jakarta.persistence.EntityManager entities;
 
     /**
      * Subscription of a pelada just created by {@code creator}: a 30-day trial when the account hasn't used its
@@ -44,10 +45,8 @@ public class SubscriptionService {
     public PeladaSubscription start(Pelada pelada, User creator) {
         Instant now = Instant.now(clock);
         boolean trial = userRepository.markTrialUsed(creator.getId(), now) == 1;
-        if (trial) {
-            // keeps the managed entity in step with the row, so a later flush of the user doesn't write null back
-            creator.setTrialUsedAt(now);
-        }
+        // The conditional bulk update increments rowVersion too; reload the managed creator before any flush.
+        entities.refresh(creator);
         PeladaSubscription subscription = trial
                 ? new PeladaSubscription(pelada, SubscriptionKind.TRIAL, now.plus(TRIAL_LENGTH), now)
                 : new PeladaSubscription(pelada, SubscriptionKind.PENDING, null, now);

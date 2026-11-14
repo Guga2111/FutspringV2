@@ -1,4 +1,4 @@
-import { z } from "zod"
+import { z } from "@/lib/zod"
 
 // Mirrors InvitePlayerRequestDTO; search is a separate, read-only user lookup.
 export const invitePlayerSchema = z.object({

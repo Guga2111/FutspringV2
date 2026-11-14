@@ -1,9 +1,10 @@
+import { useImageUrl } from "@/hooks/useImageUrl"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { ChampionIcon, Upload01Icon } from "@hugeicons/core-free-icons"
 import { Button } from "@/components/ui/button"
 import { PlayerAvatar } from "@/components/PlayerAvatar"
 import { TeamColorDot } from "@/components/daily/teams/TeamColorDot"
-import { getFileUrl } from "@/lib/utils"
+
 import { championSummary } from "@/utils/finishedSession"
 import type { DailyDetail } from "@/types/daily"
 import { isWritable } from "@/utils/subscription"
@@ -17,7 +18,7 @@ interface ChampionHeroProps {
 
 // Champion photo and the champion team card (stacks below 1100 px)
 export function ChampionHero({ daily, uploadLoading, onChangePhoto }: ChampionHeroProps) {
-  const photo = getFileUrl(daily.championImage)
+  const { url: photo, ref } = useImageUrl(daily.championImage)
   const champion = championSummary(daily)
   const statsById = new Map(daily.playerStats.map((s) => [s.userId, s]))
 
@@ -31,9 +32,9 @@ export function ChampionHero({ daily, uploadLoading, onChangePhoto }: ChampionHe
 
   // without a photo there is no empty frame: the champion card takes the whole row, and admins get the upload there
   if (!photo) {
-    if (!champion) return uploadButton || null
+    if (!champion) return daily.championImage ? <div ref={ref}>{uploadButton}</div> : uploadButton || null
     return (
-      <section className="grid grid-cols-1 gap-5 rounded-tile border border-highlight/40 bg-card p-5 md:grid-cols-2 md:gap-8">
+      <section ref={ref} className="grid grid-cols-1 gap-5 rounded-tile border border-highlight/40 bg-card p-5 md:grid-cols-2 md:gap-8">
         <div className="flex flex-col gap-[18px]">
           <ChampionTitle champion={champion} />
           <ChampionStats champion={champion} />
@@ -45,7 +46,7 @@ export function ChampionHero({ daily, uploadLoading, onChangePhoto }: ChampionHe
   }
 
   return (
-    <section className="grid grid-cols-1 gap-4 min-[1100px]:grid-cols-[minmax(0,1.6fr)_minmax(300px,1fr)]">
+    <section ref={ref} className="grid grid-cols-1 gap-4 min-[1100px]:grid-cols-[minmax(0,1.6fr)_minmax(300px,1fr)]">
       <div className="relative min-h-[220px] overflow-hidden rounded-tile bg-card-elevated md:min-h-[340px]">
         <img src={photo} alt="Foto do time campeão" className="absolute inset-0 size-full object-cover" style={{ objectPosition: "center 45%" }} />
         <div className="bg-photo-overlay absolute inset-0" />

@@ -14,10 +14,10 @@ import { getErrorMessage, getErrorStatus } from "@/lib/errors"
 // Public preview of a share link. It never joins by itself: a logged-in visitor confirms with "Entrar na pelada".
 export default function JoinPeladaPage() {
   const { token = "" } = useParams()
-  const { token: session } = useAuth()
+  const { user } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
-  const { preview, loading, error, memberPeladaId, retry } = useInvitePreview(token, session)
+  const { preview, loading, error, memberPeladaId, retry } = useInvitePreview(token, user?.id ?? null)
   const [joining, setJoining] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
   const here = encodeURIComponent(location.pathname + location.search + location.hash)
@@ -72,7 +72,7 @@ export default function JoinPeladaPage() {
               <Button asChild variant="brand" size="lg" className="w-full">
                 <Link to={`/pelada/${memberPeladaId}`}>Abrir pelada</Link>
               </Button>
-            ) : session ? (
+            ) : user ? (
               <Button variant="brand" size="lg" className="w-full" disabled={joining} onClick={join}>
                 {joining ? "Entrando…" : "Entrar na pelada"}
               </Button>
