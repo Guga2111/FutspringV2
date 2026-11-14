@@ -1,7 +1,7 @@
 # Quick payment report from WhatsApp
 
 Date: 2026-11-14
-Status: design approved in conversation; implementation pending.
+Status: implemented on `feat/finance-quick-report`; validation evidence below.
 
 ## Problem and approved direction
 
@@ -64,3 +64,13 @@ The implementation touches an authenticated financial workflow and must follow `
 ## Out of scope
 
 Native WhatsApp buttons or bots, bank/payment processing, automatic settlement, anonymous reporting, guest identity claiming, payment reminders and changes to the existing full financial workflow.
+
+## Implementation evidence (2026-11-14)
+
+- Added the lazy authenticated quick-report screen directly under the private shell; full collection links remain intact. Shared WhatsApp messages now use `/paguei`. No backend contract or migration change.
+- Reused `useFinance` command ownership and `financeReportSchema`. Read generations gate financial actions during loading/conflict refresh; account and route ids scope the quick screen and retry state.
+- Frontend lint passed (the existing TanStack Table warning remains), production build passed, 59 test files / 551 unit tests passed; 68 quick-report browser scenarios passed across 375px/desktop and light/dark, with the existing locally installed Chromium selected through a temporary test config.
+- Existing backend financial regressions: `FinanceServiceTest,FinanceConcurrencyTest`, 50 passed with Java 25. No backend code changed.
+- Production visual inspection at 1440, 768, 390 and 375px in both themes: 0 FAIL / 0 WARN; every final screenshot opened. Direction Pastel consumer, seed 1743302871, existing brand/type retained, no redraws or new imagery. Critique: design 7.5, usability 8.5, creativity 6.5, content 8.5; overall 7.7. Local evidence: `.taste-skill/finance-quick-report/`.
+- Official Docker visual check of the existing WhatsApp share dialog: 4 passed (all viewport/theme projects); existing references remained within tolerance.
+- Security impact: yes. Scoped Trail of Bits differential review evidence is kept under ignored `.security-reviews/`; review must be rechecked against the actual PR target and final head before opening/merge per `docs/SECURITY_REVIEW.md`.

@@ -20,7 +20,7 @@ export function FinanceWhatsAppDialog({ peladaId, detail, timeZone, onClose }: {
   peladaId: number; detail: FinanceDetail; timeZone: string; onClose: () => void
 }) {
   const [original] = useState(() => {
-    const link = `${window.location.origin}${areaPath(peladaId, "finance")}/${detail.collection.id}`
+    const link = `${window.location.origin}${areaPath(peladaId, "finance")}/${detail.collection.id}/paguei`
     return financeWhatsAppMessage(detail, link, todayInZone(timeZone))
   })
   const [text, setText] = useState(original)
