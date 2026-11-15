@@ -1,5 +1,13 @@
 # Revisão de segurança do backend — 2026-11-06
 
+> Historical review, retained as evidence. The findings and statuses below reflect
+> the original review and partial follow-ups, not the current release. Later work
+> added in-memory access tokens with refresh cookies, authenticated private photos
+> and email verification; see [Backend](../../core/docs/BACKEND.md) and
+> [privacy hardening](2026-11-13-privacy-hardening.md). Revalidate any remaining
+> finding against current code. Follow the [security review workflow](../SECURITY_REVIEW.md)
+> for new reviews; this record does not satisfy that gate for a new release.
+
 Os 10 problemas de segurança mais relevantes do `core/`, encontrados lendo o código (SecurityConfig, rate limit, auth, uploads, busca de usuários, STOMP). Ordem: do mais grave ao menos grave.
 
 Severidade: **Alta** (exploração simples, impacto em dados ou contas), **Média** (exige condição extra ou tem impacto limitado), **Baixa** (endurecimento).

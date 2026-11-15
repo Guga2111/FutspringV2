@@ -1,6 +1,6 @@
 # Prontidão para lançamento: segurança, sessão e observabilidade
 
-Endurecer o Futspring antes de abrir para usuários reais: fechar os itens de `docs/security-review-2026-11-06.md`, trocar a sessão de 7 dias em `localStorage` por access token curto + refresh token em cookie, e passar a enxergar falhas (logs centralizados, erros do frontend, alertas no celular).
+Endurecer o Futspring antes de abrir para usuários reais: fechar os itens de `docs/history/security-review-2026-11-06.md`, trocar a sessão de 7 dias em `localStorage` por access token curto + refresh token em cookie, e passar a enxergar falhas (logs centralizados, erros do frontend, alertas no celular).
 
 ## Escopo
 
@@ -164,7 +164,7 @@ Endurecer o Futspring antes de abrir para usuários reais: fechar os itens de `d
 
 ## Plano de PRs
 
-Treze PRs pequenos, cada um revisável sozinho, com seus testes e a parte do BACKEND.md / FRONTEND.md que mudou (como pede o CLAUDE.md). Itens corrigidos saem de "Known gaps" e da coluna "Found in"; o `docs/security-review-2026-11-06.md` ganha o status de cada item.
+Treze PRs pequenos, cada um revisável sozinho, com seus testes e a parte do BACKEND.md / FRONTEND.md que mudou (como pede o CLAUDE.md). Itens corrigidos saem de "Known gaps" e da coluna "Found in"; o `docs/history/security-review-2026-11-06.md` ganha o status de cada item.
 
 - **Branches:** integração `feat/launch-hardening`, saindo de `dev`. Cada PR sai dela e volta contra ela (`--base feat/launch-hardening`), nunca contra `main`.
 - **Ordem:** A1 → A6, depois C1 → C3, depois B1 → B4. Dentro da frente A os PRs são independentes e podem andar em paralelo; C3 depende de C1 (regra do Loki); B2 depende de B1; B3 de B2; B4 é independente mas fecha a frente.
@@ -182,7 +182,7 @@ Para planejar um PR, rode o prompt dele numa sessão limpa (`/clear` antes). Ao 
   - Sem mudança de contrato (rota, parâmetro, DTO e 400 iguais); o diálogo diz "Nome ou e-mail completo". Nenhum snapshot visual cobre o diálogo.
 
 ```
-/plan-task docs/plans/2026-11-11-launch-hardening-spec.md "PR A1 — Busca de usuários"
+/plan-task docs/history/2026-11-11-launch-hardening-spec.md "PR A1 — Busca de usuários"
 ```
 
 ### [x] PR A2 — Rate limit e IP real (`fix/rate-limit-ip`)
@@ -196,7 +196,7 @@ Para planejar um PR, rode o prompt dele numa sessão limpa (`/clear` antes). Ao 
   - `AuthRateLimitFilterTest` usa o `HttpClient` do JDK com `URI.create` (o `RestClient` recodifica o `%` de templates).
 
 ```
-/plan-task docs/plans/2026-11-11-launch-hardening-spec.md "PR A2 — Rate limit e IP real"
+/plan-task docs/history/2026-11-11-launch-hardening-spec.md "PR A2 — Rate limit e IP real"
 ```
 
 ### [x] PR A3 — Entradas de autenticação (`fix/auth-inputs`)
@@ -211,7 +211,7 @@ Para planejar um PR, rode o prompt dele numa sessão limpa (`/clear` antes). Ao 
   - Front: `passwordField` / `newPasswordField` em `schemas/auth.ts` (limite com `TextEncoder`), reusados em `schemas/user.ts`. O e-mail não é rebaixado no front.
 
 ```
-/plan-task docs/plans/2026-11-11-launch-hardening-spec.md "PR A3 — Entradas de autenticação"
+/plan-task docs/history/2026-11-11-launch-hardening-spec.md "PR A3 — Entradas de autenticação"
 ```
 
 ### [x] PR A4 — Actuator (`fix/actuator`)
@@ -224,7 +224,7 @@ Para planejar um PR, rode o prompt dele numa sessão limpa (`/clear` antes). Ao 
   - Autenticação básica no `actuatorFilterChain` (opcional na revisão) ficou fora.
 
 ```
-/plan-task docs/plans/2026-11-11-launch-hardening-spec.md "PR A4 — Actuator"
+/plan-task docs/history/2026-11-11-launch-hardening-spec.md "PR A4 — Actuator"
 ```
 
 ### [x] PR A5 — Uploads públicos (`fix/upload-sanitize`)
@@ -239,7 +239,7 @@ Para planejar um PR, rode o prompt dele numa sessão limpa (`/clear` antes). Ao 
   - Sem mudança no front nem no contrato (JPEG/PNG/WebP, 5 MB); um arquivo que antes passava só pelo `Content-Type` agora recebe 400.
 
 ```
-/plan-task docs/plans/2026-11-11-launch-hardening-spec.md "PR A5 — Uploads públicos"
+/plan-task docs/history/2026-11-11-launch-hardening-spec.md "PR A5 — Uploads públicos"
 ```
 
 ### [x] PR A6 — Revogação do chat (`fix/stomp-revocation`)
@@ -253,7 +253,7 @@ Para planejar um PR, rode o prompt dele numa sessão limpa (`/clear` antes). Ao 
   - `StompRevocationTest` usa um cliente SockJS/STOMP real, sem transação de teste, e apaga o que gravou (o H2 é compartilhado entre contextos). Com os listeners desligados, os 4 testes de revogação falham.
 
 ```
-/plan-task docs/plans/2026-11-11-launch-hardening-spec.md "PR A6 — Revogação do chat"
+/plan-task docs/history/2026-11-11-launch-hardening-spec.md "PR A6 — Revogação do chat"
 ```
 
 ### [x] PR C1 — Logs estruturados e Loki (`feat/logs-loki`)
@@ -269,7 +269,7 @@ Para planejar um PR, rode o prompt dele numa sessão limpa (`/clear` antes). Ao 
   - **Auditoria dos 37 `log.*`:** só o `NoopEmailSender` logava PII (destinatário; o assunto também leva nomes) → agora uma mensagem fixa. A mensagem do PgJDBC numa violação de unicidade traz `Detail: Key (lower(email))=(…)`, logada pelo Hibernate e pelo `GlobalExceptionHandler`: resolvido na origem com `spring.datasource.hikari.data-source-properties.logServerErrorDetail=false` (o nome da constraint continua). Os demais logam ids, nomes UUID e contadores. `RestClientException` do Resend (corpo de erro do provedor) fica, sem o destinatário. A regra "sem e-mail, token, senha, chave Pix ou corpo em log" entrou nas Conventions do BACKEND.md.
 
 ```
-/plan-task docs/plans/2026-11-11-launch-hardening-spec.md "PR C1 — Logs estruturados e Loki"
+/plan-task docs/history/2026-11-11-launch-hardening-spec.md "PR C1 — Logs estruturados e Loki"
 ```
 
 ### [x] PR C2 — Erros do frontend (`feat/client-errors`)
@@ -287,7 +287,7 @@ Para planejar um PR, rode o prompt dele numa sessão limpa (`/clear` antes). Ao 
   - O `<button>` cru do `ErrorBoundary` virou `Button` (antipattern #2, arquivo já tocado).
 
 ```
-/plan-task docs/plans/2026-11-11-launch-hardening-spec.md "PR C2 — Erros do frontend"
+/plan-task docs/history/2026-11-11-launch-hardening-spec.md "PR C2 — Erros do frontend"
 ```
 
 ### [x] PR C3 — Alertas no Telegram (`feat/grafana-alerts`)
@@ -304,7 +304,7 @@ Para planejar um PR, rode o prompt dele numa sessão limpa (`/clear` antes). Ao 
   - Validado com o stack local: Grafana sobe, 9 regras carregadas e avaliando sem erro, "API fora" dispara sem a API, 21 linhas `event=client_error` enviadas ao Loki disparam "Erros do front" e o Grafana tenta entregar ao Telegram (falha esperada com token falso). **A entrega real no celular fica para o dono** (Contact points → telegram → Test depois do deploy).
 
 ```
-/plan-task docs/plans/2026-11-11-launch-hardening-spec.md "PR C3 — Alertas no Telegram"
+/plan-task docs/history/2026-11-11-launch-hardening-spec.md "PR C3 — Alertas no Telegram"
 ```
 
 ### [x] PR B1 — Redis (`feat/session-redis`)
@@ -319,7 +319,7 @@ Para planejar um PR, rode o prompt dele numa sessão limpa (`/clear` antes). Ao 
   - Teste com `GenericContainer` + `@DynamicPropertySource` (como o `FlywayMigrationTest`), sem `spring-boot-testcontainers`. Com o health do Redis ligado o teste falha (conferido).
 
 ```
-/plan-task docs/plans/2026-11-11-launch-hardening-spec.md "PR B1 — Redis"
+/plan-task docs/history/2026-11-11-launch-hardening-spec.md "PR B1 — Redis"
 ```
 
 ### [x] PR B2 — API de refresh (`feat/session-refresh-api`)
@@ -338,7 +338,7 @@ Para planejar um PR, rode o prompt dele numa sessão limpa (`/clear` antes). Ao 
   - **Antes do merge no `main`:** nada novo de secret; `AUTH_COOKIE_SECURE` só existe no compose de dev.
 
 ```
-/plan-task docs/plans/2026-11-11-launch-hardening-spec.md "PR B2 — API de refresh"
+/plan-task docs/history/2026-11-11-launch-hardening-spec.md "PR B2 — API de refresh"
 ```
 
 ### [x] PR B3 — Sessão no cliente (`feat/session-refresh-client`)
@@ -356,7 +356,7 @@ Para planejar um PR, rode o prompt dele numa sessão limpa (`/clear` antes). Ao 
   - e2e: `login()` grava só o `futspring_user`; o `mockApi` responde `POST /auth/refresh` com um token em formato JWT válido até 2100 (o STOMP não pede outro). Visual regression verde sem snapshot novo.
 
 ```
-/plan-task docs/plans/2026-11-11-launch-hardening-spec.md "PR B3 — Sessão no cliente"
+/plan-task docs/history/2026-11-11-launch-hardening-spec.md "PR B3 — Sessão no cliente"
 ```
 
 ### [x] PR B4 — Content-Security-Policy (`feat/csp`)
@@ -371,7 +371,7 @@ Para planejar um PR, rode o prompt dele numa sessão limpa (`/clear` antes). Ao 
   - Verificação: o `dist` servido com a política **valendo** (connect-src trocado para o host local) no Chromium da imagem do Playwright: `/`, `/auth` (as duas abas, com submit), `/termos`, `/instalar`, `/forgot-password` sem violação e o tema escuro aplicado pelo script inline; com o hash adulterado, a violação aparece (o teste pega). Telas logadas (WebSocket, imagens do financeiro) ficam para a checagem manual em produção no período Report-Only.
 
 ```
-/plan-task docs/plans/2026-11-11-launch-hardening-spec.md "PR B4 — Content-Security-Policy"
+/plan-task docs/history/2026-11-11-launch-hardening-spec.md "PR B4 — Content-Security-Policy"
 ```
 
 ## Riscos
