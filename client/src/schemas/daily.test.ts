@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { makeResultsSchema, saveTeamsSchema, toMatchResultInputs, type MatchRowValues } from "./daily"
+import { finalizeDailySchema, makeResultsSchema, saveTeamsSchema, toMatchResultInputs, type MatchRowValues } from "./daily"
 
 const teams = [
   { id: 1, players: [{ id: 10 }, { id: 11 }] },
@@ -88,5 +88,16 @@ describe("saveTeamsSchema", () => {
     expect(color.success).toBe(false)
     expect(empty.success).toBe(false)
     expect(empty.error?.issues[0]).toMatchObject({ path: ["teams", 1, "playerIds"], message: "O Time 2 está vazio" })
+  })
+})
+
+describe("finalizeDailySchema", () => {
+  it("accepts winners and awards nobody won", () => {
+    expect(finalizeDailySchema.safeParse({ puskasWinnerIds: [10, 11], wiltballWinnerIds: [] }).success).toBe(true)
+  })
+
+  it("rejects ids that aren't positive integers", () => {
+    expect(finalizeDailySchema.safeParse({ puskasWinnerIds: [0], wiltballWinnerIds: [] }).success).toBe(false)
+    expect(finalizeDailySchema.safeParse({ puskasWinnerIds: [], wiltballWinnerIds: [1.5] }).success).toBe(false)
   })
 })

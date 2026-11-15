@@ -180,6 +180,28 @@ test("dialog results", async ({ page }) => {
   await expect(page.getByRole("dialog")).toHaveScreenshot("dialog-results.png", DIALOG_SHOT)
 })
 
+// The finalize form sends the picked winners; a server error stays in the dialog, on the form's root
+test("dialog finalize", async ({ page }) => {
+  let body: unknown = null
+  await open(page, `/daily/${LIVE_ID}`, true, "h1, h2", (p) =>
+    p.route(/\/api\/v1\/dailies\/\d+\/finalize$/, (route) => {
+      body = route.request().postDataJSON()
+      return route.fulfill({ status: 409, json: { status: 409, message: "A sessão mudou. Recarregue a página.", timestamp: NOW } })
+    }))
+  await page.getByRole("button", { name: "Finalizar sessão" }).first().click()
+  const dialog = page.getByRole("dialog", { name: "Finalizar sessão" })
+  await expect(dialog).toBeVisible()
+  await settle(page)
+  await expect(dialog).toHaveScreenshot("dialog-finalize.png", DIALOG_SHOT)
+
+  const puskas = dialog.getByRole("group", { name: /Puskás/ }).getByRole("checkbox").first()
+  await puskas.click()
+  await dialog.getByRole("button", { name: "Finalizar", exact: true }).click()
+  await expect(dialog.getByRole("alert").filter({ hasText: "A sessão mudou. Recarregue a página." })).toBeVisible()
+  expect(body).toMatchObject({ wiltballWinnerIds: [] })
+  expect((body as { puskasWinnerIds: number[] }).puskasWinnerIds).toHaveLength(1)
+})
+
 // "Montar times" over a confirmed session with a short team and a player without one
 test("teams editor", async ({ page }, testInfo) => {
   await open(page, `/daily/${CONFIRMED_ID}`)
