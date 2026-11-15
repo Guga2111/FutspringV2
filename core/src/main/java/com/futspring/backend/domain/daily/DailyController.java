@@ -12,6 +12,8 @@ import com.futspring.backend.domain.daily.dto.UpdateDailyStatusRequestDTO;
 import com.futspring.backend.domain.daily.dto.UpdateTeamColorRequestDTO;
 import com.futspring.backend.domain.daily.dto.UpdateTeamNameRequestDTO;
 import com.futspring.backend.domain.daily.attendance.DailyAttendanceService;
+import com.futspring.backend.domain.daily.results.DailyFinalizeService;
+import com.futspring.backend.domain.daily.results.DailyImportService;
 import com.futspring.backend.domain.daily.results.DailyResultsService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
@@ -36,6 +38,8 @@ public class DailyController {
     private final DailyAttendanceService dailyAttendanceService;
     private final DailyTeamManagementService dailyTeamManagementService;
     private final DailyResultsService dailyResultsService;
+    private final DailyFinalizeService dailyFinalizeService;
+    private final DailyImportService dailyImportService;
 
     @PostMapping("/peladas/{peladaId}/dailies")
     public ResponseEntity<DailyListItemDTO> createDaily(@PathVariable Long peladaId,
@@ -141,7 +145,7 @@ public class DailyController {
     public ResponseEntity<DailyDetailDTO> finalizeDaily(@PathVariable Long id,
                                                         @Valid @RequestBody FinalizeDailyRequestDTO request,
                                                         @AuthenticationPrincipal String email) {
-        dailyResultsService.finalizeDaily(id, request.puskasWinnerIds(), request.wiltballWinnerIds(), email);
+        dailyFinalizeService.finalizeDaily(id, request.puskasWinnerIds(), request.wiltballWinnerIds(), email);
         return ResponseEntity.ok(dailyService.getDailyDetail(id, email));
     }
 
@@ -149,7 +153,7 @@ public class DailyController {
     public ResponseEntity<DailyDetailDTO> populateFromMessage(@PathVariable Long id,
                                                               @Valid @RequestBody PopulateDailyRequestDTO request,
                                                               @AuthenticationPrincipal String email) {
-        dailyResultsService.populateFromMessage(id, request, email);
+        dailyImportService.populateFromMessage(id, request, email);
         return ResponseEntity.ok(dailyService.getDailyDetail(id, email));
     }
 
@@ -157,7 +161,7 @@ public class DailyController {
     public ResponseEntity<DailyListItemDTO> uploadChampionImage(@PathVariable Long id,
                                                                 @RequestParam("file") MultipartFile file,
                                                                 @AuthenticationPrincipal String email) {
-        return ResponseEntity.ok(dailyResultsService.uploadChampionImage(id, file, email));
+        return ResponseEntity.ok(dailyFinalizeService.uploadChampionImage(id, file, email));
     }
 
     @DeleteMapping("/dailies/{id}")

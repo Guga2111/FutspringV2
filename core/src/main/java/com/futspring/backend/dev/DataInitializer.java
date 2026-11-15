@@ -1,5 +1,6 @@
 package com.futspring.backend.dev;
 
+import com.futspring.backend.domain.daily.results.DailyFinalizeService;
 import com.futspring.backend.domain.daily.results.DailyResultsService;
 import com.futspring.backend.domain.daily.dto.MatchResultDTO;
 import com.futspring.backend.domain.daily.Daily;
@@ -53,6 +54,7 @@ public class DataInitializer implements CommandLineRunner {
     private final DailyAttendanceRepository attendanceRepository;
     private final TeamRepository teamRepository;
     private final DailyResultsService dailyResultsService;
+    private final DailyFinalizeService dailyFinalizeService;
     private final PasswordEncoder passwordEncoder;
 
     // Stars in the seed pelada, used to weight who scores
@@ -216,7 +218,7 @@ public class DataInitializer implements CommandLineRunner {
                 ? List.of()
                 : List.of(scorers.get(random.nextInt(scorers.size())).getId());
         List<Long> wiltball = List.of(confirmed.get(random.nextInt(confirmed.size())).getId());
-        dailyResultsService.finalizeDaily(daily.getId(), puskas, wiltball, admin.getEmail());
+        dailyFinalizeService.finalizeDaily(daily.getId(), puskas, wiltball, admin.getEmail());
     }
 
     // Each goal goes to a player weighted by stars; 60% of goals get an assist from a teammate.

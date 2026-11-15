@@ -1,5 +1,6 @@
 package com.futspring.backend.domain.daily.results;
 
+import com.futspring.backend.domain.subscription.SubscriptionGuard;
 import org.springframework.context.ApplicationEventPublisher;
 import com.futspring.backend.domain.daily.dto.DailyDetailDTO.MatchDTO;
 import com.futspring.backend.domain.daily.dto.MatchResultDTO;
@@ -76,6 +77,8 @@ class DailyResultsServiceTest {
     @Mock RankingRepository rankingRepository;
 
     DailyResultsService resultsService;
+    DailyFinalizeService finalizeService;
+    DailyImportService importService;
     InMemoryAttendance attendance;
 
     User admin;
@@ -87,14 +90,23 @@ class DailyResultsServiceTest {
 
     @BeforeEach
     void setUp() {
-        resultsService = new DailyResultsService(
-                fileUploadService, userAuthHelper, new PeladaAccessHelper(peladaRepository),
+        PeladaAccessHelper accessHelper = new PeladaAccessHelper(peladaRepository);
+        DailyLeagueTable leagueTable = new DailyLeagueTable(leagueTableEntryRepository);
+        SubscriptionGuard subscriptionGuard = org.mockito.Mockito.mock(SubscriptionGuard.class);
+        finalizeService = new DailyFinalizeService(
+                fileUploadService, userAuthHelper, accessHelper,
                 new AggregateRebuildService(userDailyStatsRepository, dailyAwardRepository, rankingRepository, statsRepository),
-                dailyTeamManagementService, new DailyDTOMapper(), dailyRepository, attendanceRepository, userRepository,
-                teamRepository, matchRepository, playerMatchStatRepository,
-                userDailyStatsRepository, leagueTableEntryRepository, dailyAwardRepository,
+                leagueTable, dailyRepository, teamRepository, matchRepository, playerMatchStatRepository,
+                userDailyStatsRepository, dailyAwardRepository,
                 new DailyListItemAssembler(attendanceRepository, teamRepository, matchRepository, mensalistaRepository, userDailyStatsRepository),
-                eventPublisher, org.mockito.Mockito.mock(com.futspring.backend.domain.subscription.SubscriptionGuard.class));
+                eventPublisher, subscriptionGuard);
+        resultsService = new DailyResultsService(
+                userAuthHelper, accessHelper, finalizeService, leagueTable, new DailyDTOMapper(), dailyRepository,
+                teamRepository, matchRepository, playerMatchStatRepository, userDailyStatsRepository,
+                dailyAwardRepository, subscriptionGuard);
+        importService = new DailyImportService(
+                userAuthHelper, accessHelper, dailyTeamManagementService, dailyRepository, attendanceRepository,
+                userRepository, teamRepository, matchRepository, playerMatchStatRepository, subscriptionGuard);
 
         admin = User.builder().emailVerifiedAt(java.time.Instant.EPOCH).id(1L).email("admin@example.com").username("admin").password("hash").build();
         member = User.builder().emailVerifiedAt(java.time.Instant.EPOCH).id(2L).email("member@example.com").username("member").password("hash").build();
@@ -296,7 +308,7 @@ class DailyResultsServiceTest {
         when(userAuthHelper.getAuthenticatedUser("member@example.com")).thenReturn(member);
         when(dailyRepository.findById(100L)).thenReturn(Optional.of(inCourseDaily));
 
-        assertThatThrownBy(() -> resultsService.finalizeDaily(100L, null, null, "member@example.com"))
+        assertThatThrownBy(() -> finalizeService.finalizeDaily(100L, null, null, "member@example.com"))
                 .isInstanceOf(AppException.class)
                 .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.FORBIDDEN));
     }
@@ -306,7 +318,7 @@ class DailyResultsServiceTest {
         when(userAuthHelper.getAuthenticatedUser("ghost@example.com"))
                 .thenThrow(new AppException(HttpStatus.NOT_FOUND, "User not found"));
 
-        assertThatThrownBy(() -> resultsService.finalizeDaily(100L, null, null, "ghost@example.com"))
+        assertThatThrownBy(() -> finalizeService.finalizeDaily(100L, null, null, "ghost@example.com"))
                 .isInstanceOf(AppException.class)
                 .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.NOT_FOUND));
     }
@@ -316,7 +328,7 @@ class DailyResultsServiceTest {
         when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(dailyRepository.findById(999L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> resultsService.finalizeDaily(999L, null, null, "admin@example.com"))
+        assertThatThrownBy(() -> finalizeService.finalizeDaily(999L, null, null, "admin@example.com"))
                 .isInstanceOf(AppException.class)
                 .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.NOT_FOUND));
     }
@@ -327,7 +339,7 @@ class DailyResultsServiceTest {
         when(userAuthHelper.getAuthenticatedUser("admin@example.com")).thenReturn(admin);
         when(dailyRepository.findById(100L)).thenReturn(Optional.of(inCourseDaily));
 
-        assertThatThrownBy(() -> resultsService.finalizeDaily(100L, null, null, "admin@example.com"))
+        assertThatThrownBy(() -> finalizeService.finalizeDaily(100L, null, null, "admin@example.com"))
                 .isInstanceOf(AppException.class)
                 .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.BAD_REQUEST));
     }
@@ -338,7 +350,7 @@ class DailyResultsServiceTest {
         when(dailyRepository.findById(100L)).thenReturn(Optional.of(inCourseDaily));
         when(matchRepository.findByDaily(inCourseDaily)).thenReturn(Collections.emptyList());
 
-        assertThatThrownBy(() -> resultsService.finalizeDaily(100L, null, null, "admin@example.com"))
+        assertThatThrownBy(() -> finalizeService.finalizeDaily(100L, null, null, "admin@example.com"))
                 .isInstanceOf(AppException.class)
                 .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.BAD_REQUEST));
     }
@@ -352,7 +364,7 @@ class DailyResultsServiceTest {
         when(matchRepository.findByDaily(inCourseDaily)).thenReturn(List.of(match));
 
         // puskas winner id 99 is not on any of the session's teams
-        assertThatThrownBy(() -> resultsService.finalizeDaily(100L, List.of(99L), null, "admin@example.com"))
+        assertThatThrownBy(() -> finalizeService.finalizeDaily(100L, List.of(99L), null, "admin@example.com"))
                 .isInstanceOf(AppException.class)
                 .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.BAD_REQUEST));
     }
@@ -380,7 +392,7 @@ class DailyResultsServiceTest {
         when(dailyRepository.save(any())).thenReturn(inCourseDaily);
         when(userDailyStatsRepository.saveAll(any())).thenReturn(Collections.emptyList());
 
-        resultsService.finalizeDaily(100L, null, null, "admin@example.com");
+        finalizeService.finalizeDaily(100L, null, null, "admin@example.com");
 
         assertThat(inCourseDaily.getStatus()).isEqualTo(DailyStatus.FINISHED);
         assertThat(inCourseDaily.isFinished()).isTrue();
@@ -407,7 +419,7 @@ class DailyResultsServiceTest {
         when(dailyAwardRepository.findByDaily(inCourseDaily)).thenReturn(Optional.empty());
         stubCloseSession(Collections.emptyList());
 
-        resultsService.finalizeDaily(100L, List.of(2L), null, "admin@example.com");
+        finalizeService.finalizeDaily(100L, List.of(2L), null, "admin@example.com");
 
         @SuppressWarnings("unchecked")
         ArgumentCaptor<Collection<UserDailyStats>> statsCaptor = ArgumentCaptor.forClass(Collection.class);
@@ -449,7 +461,7 @@ class DailyResultsServiceTest {
         when(dailyAwardRepository.findByDaily(inCourseDaily)).thenReturn(Optional.empty());
         stubCloseSession(Collections.emptyList());
 
-        resultsService.finalizeDaily(100L, List.of(2L), null, "admin@example.com");
+        finalizeService.finalizeDaily(100L, List.of(2L), null, "admin@example.com");
 
         verify(eventPublisher).publishEvent(argThat((Object e) -> e instanceof DailyFinalizedEvent f && !f.firstFinalize()));
     }
@@ -465,7 +477,7 @@ class DailyResultsServiceTest {
         when(matchRepository.findByDaily(inCourseDaily)).thenReturn(List.of(match));
         when(teamRepository.findByDailyWithPlayers(inCourseDaily)).thenReturn(List.of(team1, team2));
 
-        assertThatThrownBy(() -> resultsService.finalizeDaily(100L, List.of(3L), null, "admin@example.com"))
+        assertThatThrownBy(() -> finalizeService.finalizeDaily(100L, List.of(3L), null, "admin@example.com"))
                 .isInstanceOf(AppException.class)
                 .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.BAD_REQUEST));
         verify(userDailyStatsRepository, never()).saveAll(any());
@@ -484,7 +496,7 @@ class DailyResultsServiceTest {
         when(dailyAwardRepository.findByDaily(inCourseDaily)).thenReturn(Optional.empty());
         stubCloseSession(List.of(UserDailyStats.builder().daily(inCourseDaily).user(former).build()));
 
-        resultsService.finalizeDaily(100L, null, null, "admin@example.com");
+        finalizeService.finalizeDaily(100L, null, null, "admin@example.com");
 
         @SuppressWarnings("unchecked")
         ArgumentCaptor<Collection<User>> playersCaptor = ArgumentCaptor.forClass(Collection.class);
@@ -604,7 +616,7 @@ class DailyResultsServiceTest {
         PopulateDailyRequestDTO request = new PopulateDailyRequestDTO(
                 List.of(parsedTeam("Azul", admin), parsedTeam("Vermelho", member)), List.of(match));
 
-        assertThatThrownBy(() -> resultsService.populateFromMessage(100L, request, "admin@example.com"))
+        assertThatThrownBy(() -> importService.populateFromMessage(100L, request, "admin@example.com"))
                 .isInstanceOf(AppException.class)
                 .satisfies(e -> assertThat(((AppException) e).getStatus()).isEqualTo(HttpStatus.BAD_REQUEST));
         verify(matchRepository, never()).save(any());

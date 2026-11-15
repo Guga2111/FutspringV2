@@ -2,7 +2,8 @@ package com.futspring.backend.domain.pelada;
 
 import com.futspring.backend.domain.chat.ChatService;
 import com.futspring.backend.domain.chat.MessageRepository;
-import com.futspring.backend.domain.daily.results.DailyResultsService;
+import com.futspring.backend.domain.daily.results.DailyFinalizeService;
+import com.futspring.backend.domain.daily.results.DailyImportService;
 import com.futspring.backend.domain.daily.dto.PopulateDailyRequestDTO;
 import com.futspring.backend.domain.daily.Daily;
 import com.futspring.backend.domain.daily.attendance.DailyAttendance;
@@ -53,7 +54,8 @@ class PeladaControllerTest extends BaseIntegrationTest {
     @Autowired private MessageRepository messageRepository;
     @Autowired private RankingRepository rankingRepository;
     @Autowired private StatsRepository statsRepository;
-    @Autowired private DailyResultsService dailyResultsService;
+    @Autowired private DailyImportService dailyImportService;
+    @Autowired private DailyFinalizeService dailyFinalizeService;
     @Autowired private ChatService chatService;
     @Autowired private EntityManager entityManager;
     @Autowired private PeladaMensalistaRepository mensalistaRepository;
@@ -593,8 +595,8 @@ class PeladaControllerTest extends BaseIntegrationTest {
     void deletePelada_withFinishedDailyAndMessages_deletesEverythingAndRebuildsStats() throws Exception {
         Daily daily = dailyRepository.save(Daily.builder()
                 .pelada(pelada).dailyDate(LocalDate.now().minusDays(1)).dailyTime("18:00").build());
-        dailyResultsService.populateFromMessage(daily.getId(), twoTeamsOneMatch(), admin.getEmail());
-        dailyResultsService.finalizeDaily(daily.getId(), List.of(), List.of(), admin.getEmail());
+        dailyImportService.populateFromMessage(daily.getId(), twoTeamsOneMatch(), admin.getEmail());
+        dailyFinalizeService.finalizeDaily(daily.getId(), List.of(), List.of(), admin.getEmail());
         chatService.saveAndBroadcast(pelada.getId(), member.getEmail(), "Bora!");
         assertThat(statsRepository.findByUser(admin).orElseThrow().getGoals()).isEqualTo(2);
         // The delete runs in its own request in production: start from an empty persistence context, or the
