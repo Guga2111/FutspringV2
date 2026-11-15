@@ -20,6 +20,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.futspring.backend.domain.pelada.Pelada;
 import com.futspring.backend.domain.pelada.PeladaRepository;
 import com.futspring.backend.domain.pelada.PeladaService;
+import com.futspring.backend.domain.pelada.member.PeladaMemberService;
 import com.futspring.backend.domain.pelada.invitation.model.PeladaInvitation;
 import com.futspring.backend.domain.pelada.invitation.model.PeladaInvitationRepository;
 import com.futspring.backend.domain.pelada.invitation.model.PeladaInviteLinkRepository;
@@ -32,6 +33,7 @@ class PeladaInvitationTest extends BaseIntegrationTest {
     @MockitoBean Clock clock;
     @Autowired PeladaInvitationService service;
     @Autowired PeladaService peladaService;
+    @Autowired PeladaMemberService peladaMemberService;
     @Autowired PeladaRepository peladas;
     @Autowired UserRepository users;
     @Autowired PeladaInvitationRepository invitations;
@@ -132,7 +134,7 @@ class PeladaInvitationTest extends BaseIntegrationTest {
     }
     @Test void removalBlocksLinkUntilNewIndividualAcceptanceAndRetryNeverRejoinsRemovedMember() {
         Long original = invite(); service.accept(original, recipient.getEmail()); String token = link();
-        peladaService.removePlayer(pelada.getId(), recipient.getId(), admin.getEmail());
+        peladaMemberService.removePlayer(pelada.getId(), recipient.getId(), admin.getEmail());
         assertThat(blocks.existsByPeladaIdAndUserId(pelada.getId(), recipient.getId())).isTrue();
         fails(() -> service.joinLink(token, recipient.getEmail()), HttpStatus.FORBIDDEN);
         service.accept(original, recipient.getEmail()); assertThat(peladas.existsByIdAndMembers_Id(pelada.getId(), recipient.getId())).isFalse();
@@ -142,7 +144,7 @@ class PeladaInvitationTest extends BaseIntegrationTest {
     }
     @Test void removalCancelsAStalePendingInvitation() {
         Long id = invite(); pelada.getMembers().add(recipient); peladas.saveAndFlush(pelada);
-        peladaService.removePlayer(pelada.getId(), recipient.getId(), admin.getEmail());
+        peladaMemberService.removePlayer(pelada.getId(), recipient.getId(), admin.getEmail());
         assertThat(invitations.findById(id).orElseThrow().getStatus()).isEqualTo(CANCELED);
         fails(() -> service.accept(id, recipient.getEmail()), HttpStatus.CONFLICT);
     }
@@ -173,12 +175,12 @@ class PeladaInvitationTest extends BaseIntegrationTest {
     @Test void changingAdminDoesNotInvalidateTheirInvitationsOrLinkAndJoinNotifiesOnlyCurrentAdmins() {
         pelada.getMembers().add(other); pelada.getAdmins().add(other); peladas.saveAndFlush(pelada);
         Long id = service.invite(pelada.getId(), recipient.getId(), other.getEmail()).id();
-        String token = service.replaceLink(pelada.getId(), other.getEmail()).token(); peladaService.setAdmin(pelada.getId(), other.getId(), false, admin.getEmail());
+        String token = service.replaceLink(pelada.getId(), other.getEmail()).token(); peladaMemberService.setAdmin(pelada.getId(), other.getId(), false, admin.getEmail());
         assertThat(service.activeLink(pelada.getId(), admin.getEmail()).token()).isEqualTo(token); service.accept(id, recipient.getEmail());
         assertThat(notifications.findAll().stream().filter(n -> n.getType() == NotificationType.MEMBER_JOINED).map(n -> n.getRecipient().getId()).toList()).containsExactly(admin.getId());
     }
     @Test void deletionCleansAllInvitationData() {
-        Long id = invite(); service.accept(id, recipient.getEmail()); peladaService.removePlayer(pelada.getId(), recipient.getId(), admin.getEmail()); link();
+        Long id = invite(); service.accept(id, recipient.getEmail()); peladaMemberService.removePlayer(pelada.getId(), recipient.getId(), admin.getEmail()); link();
         entityManager.flush(); entityManager.clear();
         peladaService.deletePelada(pelada.getId(), admin.getEmail()); peladas.flush();
         assertThat(invitations.count()).isZero(); assertThat(links.count()).isZero(); assertThat(blocks.count()).isZero(); assertThat(notifications.count()).isZero();

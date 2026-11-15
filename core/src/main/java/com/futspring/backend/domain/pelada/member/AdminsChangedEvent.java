@@ -1,5 +1,6 @@
-package com.futspring.backend.domain.pelada;
+package com.futspring.backend.domain.pelada.member;
 
+import com.futspring.backend.domain.pelada.Pelada;
 import com.futspring.backend.domain.user.User;
 
 import java.util.Collection;

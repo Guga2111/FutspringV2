@@ -17,7 +17,7 @@ import java.util.concurrent.*;
 import static org.assertj.core.api.Assertions.*;
 import com.futspring.backend.domain.pelada.Pelada;
 import com.futspring.backend.domain.pelada.PeladaRepository;
-import com.futspring.backend.domain.pelada.PeladaService;
+import com.futspring.backend.domain.pelada.member.PeladaMemberService;
 import com.futspring.backend.domain.pelada.invitation.model.PeladaInvitationRepository;
 
 /** Real transactions and PostgreSQL row locks, including Flyway's partial unique indexes. */
@@ -32,7 +32,7 @@ class InvitationConcurrencyTest {
         r.add("spring.jpa.hibernate.ddl-auto", () -> "validate"); r.add("spring.flyway.enabled", () -> "true");
     }
     @Autowired PeladaInvitationService service;
-    @Autowired PeladaService peladaService;
+    @Autowired PeladaMemberService peladaMemberService;
     @Autowired PeladaRepository peladas;
     @Autowired PeladaInvitationRepository invitations;
     @Autowired UserRepository users;
@@ -94,14 +94,14 @@ class InvitationConcurrencyTest {
     }
     @Test void removalAndLinkRetryNeverReaddARemovedMember() throws Exception {
         var f = fixture(); String token = service.replaceLink(f.peladaId(), f.admin().getEmail()).token(); service.joinLink(token, f.player().getEmail());
-        var result = race(() -> service.joinLink(token, f.player().getEmail()), () -> peladaService.removePlayer(f.peladaId(), f.player().getId(), f.admin().getEmail()));
+        var result = race(() -> service.joinLink(token, f.player().getEmail()), () -> peladaMemberService.removePlayer(f.peladaId(), f.player().getId(), f.admin().getEmail()));
         assertThat(result.get(1)).isEqualTo(HttpStatus.OK); assertThat(result.get(0)).isIn(HttpStatus.OK, HttpStatus.FORBIDDEN);
         assertThat(peladas.existsByIdAndMembers_Id(f.peladaId(), f.player().getId())).isFalse();
         assertThat(joined(f)).isEqualTo(1);
     }
     @Test void acceptAndRemovalHaveConsistentMembershipAndBlock() throws Exception {
         var f = fixture(); Long id = service.invite(f.peladaId(), f.player().getId(), f.admin().getEmail()).id();
-        var result = race(() -> service.accept(id, f.player().getEmail()), () -> peladaService.removePlayer(f.peladaId(), f.player().getId(), f.admin().getEmail()));
+        var result = race(() -> service.accept(id, f.player().getEmail()), () -> peladaMemberService.removePlayer(f.peladaId(), f.player().getId(), f.admin().getEmail()));
         assertThat(result.get(0)).isEqualTo(HttpStatus.OK); assertThat(result.get(1)).isIn(HttpStatus.OK, HttpStatus.NOT_FOUND);
         assertThat(peladas.existsByIdAndMembers_Id(f.peladaId(), f.player().getId())).isEqualTo(result.get(1) == HttpStatus.NOT_FOUND);
         assertThat(jdbc.queryForObject("select count(*) from pelada_link_blocks where pelada_id=?", Long.class, f.peladaId())).isEqualTo(result.get(1) == HttpStatus.OK ? 1 : 0);
