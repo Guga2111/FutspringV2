@@ -347,6 +347,8 @@ Invitation entities (all in `domain/pelada/invitation/model`): `PeladaInvitation
 - **Mensalista limit:** marking past `maxMensalistas` → 409 "Limite de mensalistas atingido (8/8)"; lowering the limit below the current count → 409 "Desmarque 2 mensalistas antes de reduzir o limite" (the system never picks who loses the status); a limit above the capacity → 409 "O limite de mensalistas não pode passar das vagas (10)".
 - Read paths stay at a constant number of queries: mensalista ids per pelada in one query, the caller's mensalista peladas in one query, unseen bumps for `/peladas/my` in one query.
 
+The calendar day for `nextDaily` and the six-month attendance-ranking period comes from the injected `Clock` in each pelada's `timeZone`. `PeladaService.toSummaries` captures one instant for the response and groups pelada ids by local date before the next-session query (at most three date groups worldwide), preserving bounded query count without loading all future sessions. Same-date ties still use the lowest session id. The client's overview/session selection and relative labels use the same pelada calendar. No DTO or schema changes.
+
 **Positions** (`UpdateProfileRequest`, `@Pattern`): `GOALKEEPER`, `DEFENDER`, `MIDFIELDER`, `FORWARD`, `GOLEIRO`, `ZAGUEIRO`, `MEIO`, `ATACANTE`; an empty string clears it. The web app offers the Portuguese four.
 
 **Awards:** Puskás (best goal), "Wiltball" (shown as "Bola Murcha" in the UI), Artilheiro (top scorer), Garçom (top assists).
@@ -559,7 +561,6 @@ Relationships: **creator** (`pelada.creator`), **admin** (`pelada.admins`), **me
 | Gap | Where |
 |-----|-------|
 | No unique constraint on `user_daily_stats(daily_id, user_id)` / `player_match_stats(match_id, user_id)` (the code never writes duplicates, but the database doesn't enforce it). Check production for duplicates before adding them | `V1__baseline.sql` |
-| `nextDaily`'s "from today" (and the attendance ranking's period) still use the server's zone, not the pelada's `timeZone` | `PeladaService.toSummaries`, `AttendanceService` |
 | A logout ends the refresh session, not the access token already issued: it stays valid until it expires (`JWT_EXPIRATION_MS`; the default is still 7 days, production sets 15 min through the GitHub variable) | `JwtService`, `JWT_EXPIRATION_MS` |
 
 ## Pelada finance (`domain/finance`)

@@ -29,10 +29,10 @@ const AREA_ICONS: Record<Exclude<PeladaArea, "overview">, IconSvgElement> = {
 // What is happening now: the next session, the latest sessions, and a way into every area
 export default function PeladaOverviewPage() {
   const w = usePeladaWorkspace()
-  const nextSession = useMemo(() => pickNextSession(w.dailies), [w.dailies])
+  const nextSession = useMemo(() => pickNextSession(w.dailies, w.pelada.timeZone), [w.dailies, w.pelada.timeZone])
   const recent = useMemo(
-    () => pickRecentSessions(w.dailies, nextSession?.id ?? null, RECENT_LIMIT),
-    [w.dailies, nextSession],
+    () => pickRecentSessions(w.dailies, nextSession?.id ?? null, RECENT_LIMIT, w.pelada.timeZone),
+    [w.dailies, nextSession, w.pelada.timeZone],
   )
   const shortcuts = visibleAreas(w.role).filter((area): area is Exclude<PeladaArea, "overview"> => area !== "overview")
   const sessionsPath = areaPath(w.pelada.id, "sessions")

@@ -34,6 +34,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.HashSet;
@@ -74,6 +76,7 @@ public class PeladaService {
     private final PeladaInvitationService invitationService;
     private final SubscriptionService subscriptionService;
     private final SubscriptionGuard subscriptionGuard;
+    private final Clock clock;
 
     @Transactional
     public PeladaResponseDTO createPelada(CreatePeladaRequestDTO request, String currentUserEmail) {
@@ -130,8 +133,15 @@ public class PeladaService {
                 .collect(Collectors.toMap(row -> (Long) row[0], row -> ((Number) row[1]).intValue()));
         Set<Long> administered = new HashSet<>(peladaRepository.findAdministeredIds(ids, caller.getId()));
 
-        // Two sessions of a pelada on the same date: keep the oldest one
-        Map<Long, Daily> nextDailies = dailyRepository.findNextDailies(ids, UPCOMING_STATUSES, LocalDate.now()).stream()
+        // One instant for the entire response. Group by local day (at most three dates worldwide),
+        // not by pelada, so zone correctness does not introduce an N+1 query.
+        Instant now = clock.instant();
+        Map<LocalDate, List<Pelada>> byToday = peladas.stream().collect(Collectors.groupingBy(
+                p -> now.atZone(ZoneId.of(p.getTimeZone())).toLocalDate()));
+        // Two sessions of a pelada on the same date: keep the oldest one.
+        Map<Long, Daily> nextDailies = byToday.entrySet().stream()
+                .flatMap(entry -> dailyRepository.findNextDailies(
+                        entry.getValue().stream().map(Pelada::getId).toList(), UPCOMING_STATUSES, entry.getKey()).stream())
                 .collect(Collectors.toMap(d -> d.getPelada().getId(), d -> d,
                         (a, b) -> a.getId() <= b.getId() ? a : b));
         List<Long> nextIds = nextDailies.values().stream().map(Daily::getId).toList();

@@ -39,6 +39,7 @@ migration V19 reference them.
 | [Release P1](history/2026-11-13-release-p1-fixes.md) | Account identity, optimistic locking and refresh/logout regression evidence |
 | [Release P2](history/2026-11-13-release-p2-fixes.md) | Session replacement and private-photo regression evidence |
 | [STOMP expiration](history/2026-11-13-stomp-jwt-expiration-design.md) | Connection lifetime invariants and regression evidence |
+| [Cross-layer consistency review](history/2026-11-15-cross-layer-consistency-review.md) | Session navigation, load-error and pelada-calendar fixes with regression evidence |
 | [Quick payment report](history/2026-11-14-finance-quick-report-design.md) | Latest payment-report flow and its validation evidence |
 | [Load-test results](../ops/loadtest/results) | Local measurements retained with their limitations |
 

@@ -191,6 +191,8 @@ Where new code goes:
 - Pages don't render a nav bar. Their `<main>` is `PageContainer` (one max width, side margins and vertical rhythm for every private page, its skeletons included) and their title goes through `PageHeader` (`PeladaPageHeader` in a pelada area); they use the `.page-enter` fade on their root.
 - To add a private page: create `pages/<Name>Page.tsx` (default export), add the lazy import and a child `<Route>` under the layout route in `App.tsx`, and link to it from the sidebar or the page that leads to it.
 
+Session selection (`pickNextSession`, `pickRecentSessions`) and relative day labels (`formatRelativeSessionDay`) take the pelada's `timeZone` explicitly, using `todayInZone` rather than the browser's calendar day. This matches the backend's `nextDaily` and attendance-ranking period. `e2e/daily-navigation.spec.ts` covers route changes, delayed reads, access-denied recovery and retryable load errors in all four viewport/theme projects.
+
 ## Data layer
 
 ### API client and auth
@@ -240,7 +242,7 @@ Data flows **api → hook → page/component**. A hook owns the request state; t
 - `useUserSearch(query)` — debounced search, keyed by query, `tooShort` below 3 characters.
 - `useComparePlayers(peladaId, a, b)` — profile + pelada stats of two players, keyed by the pair.
 - `useProfile(userId)` — profile page data keyed by user id; `status` is `loading | ready | forbidden | notFound | error`.
-- `useDailyDetail(id)` — loads the daily detail; exposes `setDaily` to merge a mutation's response and `refetch` (returns a promise, doesn't show the skeleton again).
+- `useDailyDetail(id)` — loads the daily detail; exposes `setDaily` to merge a mutation's response and `refetch` (returns a promise, doesn't show the skeleton again). `DailyDetailPage` keys the session subtree by account and route id, resetting data, mutation state and dialogs on navigation. Only the latest mounted read may update state or show a load-error toast. Initial and reload failures show an inline error with retry and hide stale session actions; a 403 clears the detail and shows access denied.
 - `useDailyActions({ daily, setDaily, refetch })` — every mutation of the session page with its pending flag. The caller's own confirm / withdraw is optimistic: `withCallerAttendance` adds them (from `peladaMembers`) to or takes them out of `confirmedPlayers` at once, the detail is read again after the answer (teams, bumps), and an error restores the previous detail with a toast. `saveTeams(payload)` merges the returned teams and toasts "Times salvos", rethrowing errors to the editor form; `changeStatus` toasts the server's message and refetches on a 409 (the teams can't start).
 - `useTeamsEditor({ daily, onSave, refetch, onSaved })` — the "Montar times" form: react-hook-form + `useFieldArray` over `teams` (`saveTeamsSchema`), moves between teams and "Sem time" (only the changed teams are written, so the field ids stay), live pendencies; a 409 refetches the session and the draft drops whoever is no longer confirmed (new confirmed players land in "Sem time").
 - `useDailyModals` — open/close state of the daily page's dialogs (the teams editor included), plus `attendanceOpen` (null = open until the teams are sorted; the page sets it to false after a successful sort).

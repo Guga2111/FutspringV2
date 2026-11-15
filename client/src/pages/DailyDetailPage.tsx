@@ -1,40 +1,47 @@
-import { useParams } from 'react-router-dom'
+import { useParams } from "react-router-dom"
+import { Button } from "@/components/ui/button"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { getErrorMessage } from "@/lib/errors"
 import { PageContainer } from "@/components/layout/PageContainer"
-import ImportFromMessageModal from '@/components/daily/ImportFromMessageModal'
-import { useAuth } from '@/hooks/useAuth'
-import { Input } from '@/components/ui/input'
-import DetailSkeleton from '@/components/daily/DetailSkeleton'
-import TeamsSection from '@/components/daily/teams/TeamsSection'
-import { ResultsDialog } from '@/components/daily/live/ResultsDialog'
-import FinalizeModal from '@/components/daily/live/FinalizeModal'
-import DeleteDailyDialog from '@/components/daily/DeleteDailyDialog'
-import StatusConfirmDialog from '@/components/daily/StatusConfirmDialog'
-import { TeamsEditorSheet } from '@/components/daily/teams/TeamsEditorSheet'
-import { dailyTeamPendencies, pendencyLines } from '@/utils/teamDraft'
-import LiveSessionCard from '@/components/daily/live/LiveSessionCard'
-import { LiveLeagueTable } from '@/components/daily/live/LiveLeagueTable'
-import { SavedMatchesList } from '@/components/daily/live/SavedMatchesList'
-import { LiveTeamsSection } from '@/components/daily/live/LiveTeamsSection'
-import { ChampionHero } from '@/components/daily/finished/ChampionHero'
-import { DailyAwardsGrid } from '@/components/daily/finished/DailyAwardsGrid'
-import { FinishedSessionTabs } from '@/components/daily/finished/FinishedSessionTabs'
-import { DailyHeader } from '@/components/daily/DailyHeader'
-import { AttendanceSummaryCard } from '@/components/daily/AttendanceSummaryCard'
-import { AttendanceList } from '@/components/daily/AttendanceList'
-import { BumpAlert } from '@/components/BumpAlert'
-import { SubscriptionNotice } from '@/components/pelada/SubscriptionNotice'
-import { useDailyDetail } from '@/components/daily/hooks/useDailyDetail'
-import { useDailyModals } from '@/components/daily/hooks/useDailyModals'
-import { useDailyActions } from '@/components/daily/hooks/useDailyActions'
-import { IMAGE_ACCEPT } from '@/schemas/upload'
-import { isDailyOpen } from '@/types/daily'
+import ImportFromMessageModal from "@/components/daily/ImportFromMessageModal"
+import { useAuth } from "@/hooks/useAuth"
+import { Input } from "@/components/ui/input"
+import DetailSkeleton from "@/components/daily/DetailSkeleton"
+import TeamsSection from "@/components/daily/teams/TeamsSection"
+import { ResultsDialog } from "@/components/daily/live/ResultsDialog"
+import FinalizeModal from "@/components/daily/live/FinalizeModal"
+import DeleteDailyDialog from "@/components/daily/DeleteDailyDialog"
+import StatusConfirmDialog from "@/components/daily/StatusConfirmDialog"
+import { TeamsEditorSheet } from "@/components/daily/teams/TeamsEditorSheet"
+import { dailyTeamPendencies, pendencyLines } from "@/utils/teamDraft"
+import LiveSessionCard from "@/components/daily/live/LiveSessionCard"
+import { LiveLeagueTable } from "@/components/daily/live/LiveLeagueTable"
+import { SavedMatchesList } from "@/components/daily/live/SavedMatchesList"
+import { LiveTeamsSection } from "@/components/daily/live/LiveTeamsSection"
+import { ChampionHero } from "@/components/daily/finished/ChampionHero"
+import { DailyAwardsGrid } from "@/components/daily/finished/DailyAwardsGrid"
+import { FinishedSessionTabs } from "@/components/daily/finished/FinishedSessionTabs"
+import { DailyHeader } from "@/components/daily/DailyHeader"
+import { AttendanceSummaryCard } from "@/components/daily/AttendanceSummaryCard"
+import { AttendanceList } from "@/components/daily/AttendanceList"
+import { BumpAlert } from "@/components/BumpAlert"
+import { SubscriptionNotice } from "@/components/pelada/SubscriptionNotice"
+import { useDailyDetail } from "@/components/daily/hooks/useDailyDetail"
+import { useDailyModals } from "@/components/daily/hooks/useDailyModals"
+import { useDailyActions } from "@/components/daily/hooks/useDailyActions"
+import { IMAGE_ACCEPT } from "@/schemas/upload"
+import { isDailyOpen } from "@/types/daily"
 
 export default function DailyDetailPage() {
   const { id } = useParams<{ id: string }>()
-  const dailyId = Number(id)
   const { user } = useAuth()
+  // Route and account identity own the reads, optimistic mutations and all open dialogs.
+  return <DailySession key={`${user?.id}:${id}`} dailyId={Number(id)} />
+}
 
-  const { daily, setDaily, loading, accessDenied, refetch } = useDailyDetail(dailyId)
+function DailySession({ dailyId }: { dailyId: number }) {
+  const { user } = useAuth()
+  const { daily, setDaily, loading, accessDenied, error, refetch } = useDailyDetail(dailyId)
 
   const {
     resultsMode, openResults, closeResults,
@@ -62,7 +69,7 @@ export default function DailyDetailPage() {
   function handleChampionUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (file) void actions.uploadChampion(file)
-    e.target.value = ''
+    e.target.value = ""
   }
 
   if (loading) return <DetailSkeleton />
@@ -78,11 +85,22 @@ export default function DailyDetailPage() {
     )
   }
 
-  if (daily == null) return null
+  if (error || daily == null) {
+    return (
+      <PageContainer>
+        <Alert variant="destructive">
+          <AlertDescription className="flex flex-col items-start gap-3">
+            <p>{getErrorMessage(error, "Não foi possível carregar a sessão")}</p>
+            <Button variant="outline" onClick={() => void refetch()}>Tentar novamente</Button>
+          </AlertDescription>
+        </Alert>
+      </PageContainer>
+    )
+  }
 
   const isCurrentUserConfirmed = user != null && daily.confirmedPlayers.some((p) => p.id === user.id)
   const open = isDailyOpen(daily.status)
-  const preStart = open || daily.status === 'CANCELED'
+  const preStart = open || daily.status === "CANCELED"
 
   return (
     <div className="page-enter flex flex-1 flex-col">
@@ -92,33 +110,33 @@ export default function DailyDetailPage() {
           onImportFromMessage={openImport}
           onConfirmDaily={() =>
             setStatusDialog({
-              targetStatus: 'CONFIRMED',
-              title: 'Confirmar sessão',
-              description: 'A sessão passa a confirmada. A lista de presença continua aberta até a sessão começar.',
-              variant: 'brand',
+              targetStatus: "CONFIRMED",
+              title: "Confirmar sessão",
+              description: "A sessão passa a confirmada. A lista de presença continua aberta até a sessão começar.",
+              variant: "brand",
             })
           }
           onStartSession={() => {
-            // short teams and confirmed players without a team don't block, but the admin reads them first
+            // short teams and confirmed players without a team don"t block, but the admin reads them first
             const details = pendencyLines(dailyTeamPendencies(daily), daily.playersPerTeam)
             setStatusDialog({
-              targetStatus: 'IN_COURSE',
-              title: 'Iniciar sessão',
+              targetStatus: "IN_COURSE",
+              title: "Iniciar sessão",
               description: details.length > 0
-                ? 'Há pendências nos times. A sessão fica ao vivo e a presença e os times não podem mais mudar.'
-                : 'A sessão fica ao vivo e a presença e os times não podem mais mudar.',
+                ? "Há pendências nos times. A sessão fica ao vivo e a presença e os times não podem mais mudar."
+                : "A sessão fica ao vivo e a presença e os times não podem mais mudar.",
               details,
-              confirmLabel: details.length > 0 ? 'Iniciar mesmo assim' : undefined,
+              confirmLabel: details.length > 0 ? "Iniciar mesmo assim" : undefined,
             })
           }}
           onCancelDaily={() =>
             setStatusDialog({
-              targetStatus: 'CANCELED',
-              title: 'Cancelar sessão',
-              description: 'A sessão será cancelada. Essa ação não pode ser desfeita.',
+              targetStatus: "CANCELED",
+              title: "Cancelar sessão",
+              description: "A sessão será cancelada. Essa ação não pode ser desfeita.",
             })
           }
-          onEditResults={() => openResults('edit')}
+          onEditResults={() => openResults("edit")}
           onFinalizeDaily={openFinalize}
           onChangeChampionPhoto={() => fileInputRef.current?.click()}
           onDeleteDaily={() => setDeleteOpen(true)}
@@ -176,9 +194,9 @@ export default function DailyDetailPage() {
           </>
         )}
 
-        {daily.status === 'IN_COURSE' && (
+        {daily.status === "IN_COURSE" && (
           <>
-            <LiveSessionCard daily={daily} onEnterResults={() => openResults('add')} onFinalize={openFinalize} />
+            <LiveSessionCard daily={daily} onEnterResults={() => openResults("add")} onFinalize={openFinalize} />
             <section className="grid grid-cols-1 items-start gap-4 min-[1100px]:grid-cols-2">
               <LiveLeagueTable daily={daily} />
               <SavedMatchesList daily={daily} />
@@ -187,7 +205,7 @@ export default function DailyDetailPage() {
           </>
         )}
 
-        {daily.status === 'FINISHED' && (
+        {daily.status === "FINISHED" && (
           <>
             <ChampionHero
               daily={daily}
@@ -201,7 +219,7 @@ export default function DailyDetailPage() {
       </PageContainer>
 
       {/* Champion photo picker, opened from the header menu */}
-      {daily.status === 'FINISHED' && daily.isAdmin && (
+      {daily.status === "FINISHED" && daily.isAdmin && (
         <Input ref={fileInputRef} type="file" accept={IMAGE_ACCEPT} className="hidden" onChange={handleChampionUpload} />
       )}
 

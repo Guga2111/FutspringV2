@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { formatLongDate, formatRelativeSessionDay, formatSessionMeta, groupDailiesByMonth, pickNextSession, pickRecentSessions } from "./sessions"
+import { formatLongDate, formatRelativeSessionDay, formatSessionMeta, groupDailiesByMonth, pickNextSession, pickRecentSessions } from "@/utils/sessions"
 import type { DailyListItem, DailyStatus } from "@/types/daily"
 
 const daily = (id: number, dailyDate: string, status: DailyStatus = "FINISHED"): DailyListItem => ({
@@ -19,7 +19,8 @@ const daily = (id: number, dailyDate: string, status: DailyStatus = "FINISHED"):
   wonSession: null,
 })
 
-const now = new Date(2026, 9, 4, 10, 0)
+const zone = "America/Sao_Paulo"
+const now = new Date("2026-10-04T13:00:00Z")
 
 describe("pickNextSession", () => {
   it("returns the earliest open session from today on", () => {
@@ -29,11 +30,11 @@ describe("pickNextSession", () => {
       daily(3, "2026-10-01", "SCHEDULED"),
       daily(4, "2026-10-05", "CANCELED"),
     ]
-    expect(pickNextSession(list, now)?.id).toBe(2)
+    expect(pickNextSession(list, zone, now)?.id).toBe(2)
   })
 
   it("returns null without open sessions", () => {
-    expect(pickNextSession([daily(1, "2026-10-11", "FINISHED")], now)).toBeNull()
+    expect(pickNextSession([daily(1, "2026-10-11", "FINISHED")], zone, now)).toBeNull()
   })
 })
 
@@ -60,14 +61,14 @@ describe("formatSessionMeta", () => {
 
 describe("formatRelativeSessionDay", () => {
   it("says today and tomorrow, else the full date", () => {
-    expect(formatRelativeSessionDay("2026-10-04", now)).toBe("Hoje, domingo")
-    expect(formatRelativeSessionDay("2026-10-05", now)).toBe("Amanhã, segunda-feira")
-    expect(formatRelativeSessionDay("2026-10-08", now)).toBe("Quinta-feira, 8 de outubro")
+    expect(formatRelativeSessionDay("2026-10-04", zone, now)).toBe("Hoje, domingo")
+    expect(formatRelativeSessionDay("2026-10-05", zone, now)).toBe("Amanhã, segunda-feira")
+    expect(formatRelativeSessionDay("2026-10-08", zone, now)).toBe("Quinta-feira, 8 de outubro")
   })
 })
 
 describe("pickRecentSessions", () => {
-  const now = new Date(2026, 9, 15, 12)
+  const now = new Date("2026-10-15T15:00:00Z")
 
   it("returns past sessions newest first, without the next one or future ones", () => {
     const list = [
@@ -77,10 +78,33 @@ describe("pickRecentSessions", () => {
       daily(4, "2026-10-22", "SCHEDULED"),
       daily(5, "2026-09-24"),
     ]
-    expect(pickRecentSessions(list, 3, 3, now).map((d) => d.id)).toEqual([2, 1, 5])
+    expect(pickRecentSessions(list, 3, 3, zone, now).map((d) => d.id)).toEqual([2, 1, 5])
   })
 
   it("is empty when there is nothing before today", () => {
-    expect(pickRecentSessions([daily(4, "2026-10-22", "SCHEDULED")], null, 3, now)).toEqual([])
+    expect(pickRecentSessions([daily(4, "2026-10-22", "SCHEDULED")], null, 3, zone, now)).toEqual([])
+  })
+})
+
+// The same instant has different calendar dates across peladas, independently of the browser zone.
+describe("session calendar boundaries", () => {
+  const instant = new Date("2026-11-15T01:00:00Z")
+  const list = [daily(1, "2026-11-14", "SCHEDULED"), daily(2, "2026-11-15", "CONFIRMED")]
+
+  it("keeps today's session west of UTC and skips yesterday east of UTC", () => {
+    expect(pickNextSession(list, "America/Sao_Paulo", instant)?.id).toBe(1)
+    expect(pickNextSession(list, "Pacific/Kiritimati", instant)?.id).toBe(2)
+  })
+
+  it("limits recent activity to the pelada's current day", () => {
+    expect(pickRecentSessions(list, null, 3, "America/Sao_Paulo", instant).map(d => d.id)).toEqual([1])
+    expect(pickRecentSessions(list, null, 3, "Pacific/Kiritimati", instant).map(d => d.id)).toEqual([2, 1])
+  })
+
+  it("labels today and tomorrow using the pelada's calendar", () => {
+    expect(formatRelativeSessionDay("2026-11-14", "America/Sao_Paulo", instant)).toBe("Hoje, sábado")
+    expect(formatRelativeSessionDay("2026-11-15", "America/Sao_Paulo", instant)).toBe("Amanhã, domingo")
+    expect(formatRelativeSessionDay("2026-11-15", "Pacific/Kiritimati", instant)).toBe("Hoje, domingo")
+    expect(formatRelativeSessionDay("2026-01-01", "America/Sao_Paulo", new Date("2026-01-01T01:00:00Z"))).toBe("Amanhã, quinta-feira")
   })
 })
