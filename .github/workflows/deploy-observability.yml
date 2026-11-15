@@ -11,10 +11,14 @@ concurrency:
   group: deploy-observability
   cancel-in-progress: false
 
+permissions:
+  contents: read
+
 jobs:
   deploy:
     name: Deploy observability to VPS
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     environment:
       name: production
 
@@ -109,28 +113,31 @@ jobs:
           EXPECTED_RULES=$(grep -c '^      - uid: ' ops/observability/grafana/provisioning/alerting/rules.yml)
           for attempt in $(seq 1 12); do
             grafana=$(ssh "${VPS_USER}@${VPS_IP}" "curl -s -o /dev/null -w '%{http_code}' --max-time 5 http://127.0.0.1:8088/api/health" || true)
-            targets=$(ssh "${VPS_USER}@${VPS_IP}" "docker exec prometheus wget -qO- localhost:9090/api/v1/targets" || true)
+            targets=$(ssh "${VPS_USER}@${VPS_IP}" "docker exec prometheus wget -T 5 -qO- localhost:9090/api/v1/targets" || true)
             down=$(printf '%s' "$targets" | python3 -c "import sys,json; t=json.load(sys.stdin)['data']['activeTargets']; print(' '.join(x['labels']['job'] for x in t if x['health']!='up'))" 2>/dev/null || echo "unreadable")
             stack_down=""
             for job in $STACK_JOBS unreadable; do
               [[ " ${down} " == *" ${job} "* ]] && stack_down="${stack_down} ${job}"
             done
-            # Loki isn't scraped: its /ready is read from the Prometheus container (same network, has wget)
-            loki=$(ssh "${VPS_USER}@${VPS_IP}" "docker exec prometheus wget -qO- http://loki:3100/ready" 2>/dev/null || true)
+            # Loki isn't scraped: read /ready from Prometheus. Absolute DNS avoids external search.
+            loki=$(ssh "${VPS_USER}@${VPS_IP}" "docker exec prometheus wget -T 5 -qO- http://loki.:3100/ready" 2>/dev/null || true)
             # the provisioned alert rules (grafana/provisioning/alerting/rules.yml) must all be loaded
             rules=$(ssh "${VPS_USER}@${VPS_IP}" 'pw=$(grep "^GRAFANA_ADMIN_PASSWORD=" ~/observability/.env | cut -d= -f2-); curl -s --max-time 5 -u "admin:${pw}" http://127.0.0.1:8088/api/v1/provisioning/alert-rules' \
               | python3 -c "import sys,json; print(len(json.load(sys.stdin)))" 2>/dev/null || echo "unreadable")
-            if [[ "$grafana" == "200" && -z "$stack_down" && "$loki" == ready* && "$rules" == "$EXPECTED_RULES" ]]; then
-              echo "Grafana 200, ${rules} alert rules, Loki ready and the stack's targets up (attempt ${attempt})."
+            # Print only a boolean: the API response contains receiver settings.
+            telegram=$(ssh "${VPS_USER}@${VPS_IP}" 'pw=$(grep "^GRAFANA_ADMIN_PASSWORD=" ~/observability/.env | cut -d= -f2-); curl -fsS --max-time 5 -u "admin:${pw}" http://127.0.0.1:8088/api/v1/provisioning/contact-points' \
+              | python3 -c "import sys,json; print(any(x.get('uid')=='telegram' and x.get('type')=='telegram' for x in json.load(sys.stdin)))" 2>/dev/null || echo "unreadable")
+            if [[ "$grafana" == "200" && -z "$stack_down" && "$loki" == ready* && "$rules" == "$EXPECTED_RULES" && "$telegram" == "True" ]]; then
+              echo "Grafana 200, ${rules} alert rules, Telegram contact point, Loki ready and the stack's targets up (attempt ${attempt})."
               if [[ -n "${down// /}" ]]; then
                 echo "::warning::Prometheus targets still down: ${down} (a project deploy may still be running)."
               fi
               exit 0
             fi
-            echo "Not ready yet: grafana=${grafana} rules=${rules} loki=${loki:-no} down=${down:-none} (attempt ${attempt}/12), retrying in 10s..."
+            echo "Not ready yet: grafana=${grafana} rules=${rules} telegram=${telegram} loki=${loki:-no} down=${down:-none} (attempt ${attempt}/12), retrying in 10s..."
             sleep 10
           done
-          echo "Smoke test failed after 2 minutes."
+          echo "Smoke test failed after 12 attempts."
           ssh "${VPS_USER}@${VPS_IP}" "cd ~/observability && docker compose ps && docker compose logs --tail 50"
           exit 1
 

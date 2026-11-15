@@ -67,7 +67,7 @@ O que impede uma troca limpa para a nova identidade:
 
 ### 2.5 Tipografia atual [Fato]
 
-- Nenhuma fonte carregada, ou seja, stack do sistema (`ui-sans-serif, system-ui…`), confirmada pelo handoff do redesign (`docs/design/design_handoff_futspring_redesign/README.md:54`).
+- Nenhuma fonte carregada, ou seja, stack do sistema (`ui-sans-serif, system-ui…`), confirmada pelo handoff do redesign (retired redesign handoff, available in Git history).
 - Os tamanhos são em sua maioria **valores arbitrários**: `text-[13px]` ×47, `text-[15px]` ×23, `text-[11px]` ×18, `text-[10px]` ×9, `text-[28px]` ×5, `text-[22px]` ×4, `text-[17px]` ×4, `text-[0.8rem]` ×4 e usos únicos de 9/26/32/38/56 px.
 - Pesos: `font-semibold` ×152, `font-medium` ×65, `font-bold` ×50, `font-normal` ×39, `font-extrabold` ×5, `font-black` ×2.
 - `tabular-nums` aparece 47 vezes (placares, tabelas, contadores), uma boa base para números.
@@ -739,7 +739,7 @@ Nenhuma decisão pendente.
 
 ### Apêndice A — Arquivos inspecionados
 
-`client/package.json`, `tailwind.config.js`, `components.json`, `index.html`, `vitest.config.ts`, `eslint.config.js`, `.github/workflows/ci-frontend.yml`, `src/index.css`, `src/main.tsx`, `src/hooks/useTheme.ts`, `src/components/ui/{button,badge,tabs,toggle}-variants.ts`, `ui/{card,checkbox,calendar,dialog,alert-dialog,sheet,drawer,sidebar,chart}.tsx`, `src/lib/utils.ts`, os componentes citados nas §2.6, §2.7 e §2.9 (inspeção por grep), `docs/design/design_handoff_futspring_redesign/README.md` e `client/docs/FRONTEND.md`.
+`client/package.json`, `tailwind.config.js`, `components.json`, `index.html`, `vitest.config.ts`, `eslint.config.js`, `.github/workflows/ci-frontend.yml`, `src/index.css`, `src/main.tsx`, `src/hooks/useTheme.ts`, `src/components/ui/{button,badge,tabs,toggle}-variants.ts`, `ui/{card,checkbox,calendar,dialog,alert-dialog,sheet,drawer,sidebar,chart}.tsx`, `src/lib/utils.ts`, os componentes citados nas §2.6, §2.7 e §2.9 (inspeção por grep), the retired redesign handoff (available in Git history) e `client/docs/FRONTEND.md`.
 
 ### Apêndice B — Working tree no momento do discovery
 

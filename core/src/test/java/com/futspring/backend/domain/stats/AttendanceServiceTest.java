@@ -52,7 +52,8 @@ class AttendanceServiceTest {
     @BeforeEach
     void setUp() {
         attendanceService = new AttendanceService(peladaRepository, userAuthHelper,
-                new PeladaAccessHelper(peladaRepository), dailyRepository, userDailyStatsRepository, mensalistaRepository);
+                new PeladaAccessHelper(peladaRepository), dailyRepository, userDailyStatsRepository, mensalistaRepository,
+                java.time.Clock.fixed(java.time.Instant.parse("2026-11-15T01:00:00Z"), java.time.ZoneOffset.UTC));
 
         ana = User.builder().emailVerifiedAt(java.time.Instant.EPOCH).id(1L).email("ana@example.com").username("ana").password("hash").build();
         bruno = User.builder().emailVerifiedAt(java.time.Instant.EPOCH).id(2L).email("bruno@example.com").username("Bruno").password("hash").build();
@@ -77,9 +78,24 @@ class AttendanceServiceTest {
     }
 
     @Test
+    void getAttendanceRanking_usesThePeladasDayAheadOfUtc() {
+        stubCaller(ana);
+        pelada.setTimeZone("Pacific/Kiritimati");
+
+        PeladaAttendanceDTO result = attendanceService.getAttendanceRanking(10L, ana.getEmail());
+
+        assertThat(result.to()).isEqualTo(LocalDate.of(2026, 11, 15));
+        assertThat(result.from()).isEqualTo(LocalDate.of(2026, 5, 15));
+        verify(dailyRepository).countByPeladaAndStatusInRange(10L, DailyStatus.FINISHED,
+                result.from(), result.to());
+        verify(userDailyStatsRepository).countAttendanceByUser(10L, DailyStatus.FINISHED,
+                result.from(), result.to());
+    }
+
+    @Test
     void getAttendanceRanking_computesRatesOverTheLastSixMonthsAndSorts() {
         stubCaller(ana);
-        LocalDate to = LocalDate.now();
+        LocalDate to = LocalDate.of(2026, 11, 14);
         LocalDate from = to.minusMonths(6);
         when(dailyRepository.countByPeladaAndStatusInRange(10L, DailyStatus.FINISHED, from, to))
                 .thenReturn(4L);

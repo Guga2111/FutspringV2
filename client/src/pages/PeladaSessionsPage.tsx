@@ -7,7 +7,7 @@ import { pickNextSession } from "@/utils/sessions"
 
 export default function PeladaSessionsPage() {
   const w = usePeladaWorkspace()
-  const nextSession = useMemo(() => pickNextSession(w.dailies), [w.dailies])
+  const nextSession = useMemo(() => pickNextSession(w.dailies, w.pelada.timeZone), [w.dailies, w.pelada.timeZone])
   const otherSessions = useMemo(() => w.dailies.filter((d) => d.id !== nextSession?.id), [w.dailies, nextSession])
 
   return (

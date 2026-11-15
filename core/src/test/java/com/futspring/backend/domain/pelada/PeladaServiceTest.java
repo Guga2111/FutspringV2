@@ -92,7 +92,8 @@ class PeladaServiceTest {
         peladaService = new PeladaService(mock(com.futspring.backend.domain.finance.FinancePreservation.class), peladaRepository, playerStarsRepository, mensalistaRepository, userRepository, dailyRepository, attendanceRepository, bumpRepository, rankingRepository, messageRepository,
                 fileUploadService, userAuthHelper, new PeladaAccessHelper(peladaRepository), dailyService, aggregateRebuildService,
                 notificationRepository, eventPublisher, invitationService, subscriptionService,
-                mock(com.futspring.backend.domain.subscription.SubscriptionGuard.class));
+                mock(com.futspring.backend.domain.subscription.SubscriptionGuard.class),
+                java.time.Clock.fixed(java.time.Instant.parse("2026-11-15T01:00:00Z"), java.time.ZoneOffset.UTC));
 
         admin = User.builder().emailVerifiedAt(java.time.Instant.EPOCH).id(1L).email("admin@example.com").username("admin").password("hash").build();
         member = User.builder().emailVerifiedAt(java.time.Instant.EPOCH).id(2L).email("member@example.com").username("member").password("hash").build();
@@ -201,6 +202,31 @@ class PeladaServiceTest {
     }
 
     // --- getPeladaDetail ---
+
+    @Test
+    void getMyPeladas_groupsNextSessionReadsByEachPeladasLocalDay() {
+        Pelada west = pelada;
+        west.setTimeZone("America/Sao_Paulo");
+        Pelada sameDay = Pelada.builder().id(11L).name("West too").timeZone("America/Recife").build();
+        Pelada east = Pelada.builder().id(12L).name("East").timeZone("Pacific/Kiritimati").build();
+        when(userAuthHelper.getAuthenticatedUser(admin.getEmail())).thenReturn(admin);
+        when(peladaRepository.findByMembersContaining(admin)).thenReturn(List.of(west, sameDay, east));
+        Daily nextWest = Daily.builder().id(100L).pelada(west).dailyDate(java.time.LocalDate.of(2026, 11, 14))
+                .dailyTime("23:00").status(com.futspring.backend.domain.daily.DailyStatus.SCHEDULED).build();
+        Daily nextEast = Daily.builder().id(101L).pelada(east).dailyDate(java.time.LocalDate.of(2026, 11, 15))
+                .dailyTime("23:00").status(com.futspring.backend.domain.daily.DailyStatus.CONFIRMED).build();
+        when(dailyRepository.findNextDailies(eq(List.of(10L, 11L)), any(), eq(java.time.LocalDate.of(2026, 11, 14))))
+                .thenReturn(List.of(nextWest));
+        when(dailyRepository.findNextDailies(eq(List.of(12L)), any(), eq(java.time.LocalDate.of(2026, 11, 15))))
+                .thenReturn(List.of(nextEast));
+
+        List<PeladaResponseDTO> result = peladaService.getMyPeladas(admin.getEmail());
+
+        assertThat(result.get(0).nextDaily().id()).isEqualTo(100L);
+        assertThat(result.get(1).nextDaily()).isNull();
+        assertThat(result.get(2).nextDaily().id()).isEqualTo(101L);
+        verify(dailyRepository, times(2)).findNextDailies(any(), any(), any());
+    }
 
     @Test
     void getPeladaDetail_success_returnsDTO() {

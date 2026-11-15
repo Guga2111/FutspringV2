@@ -21,4 +21,9 @@ PR #125 remains separate and is not included in this series. Its exact head a2b0
 
 ## Review policy
 
+> Historical policy, superseded by the mandatory [security review workflow](../SECURITY_REVIEW.md).
+> Current reviews must also fix confirmed pre-existing vulnerabilities in changed
+> code and reachable related flows before merge. The original policy below is
+> preserved only as context for this historical record.
+
 Use the installed `/code-review` workflow: eligibility, scoped instructions and summaries, four independent compliance/bug reviews, independent validation of concrete findings, fixes and fresh proof before merge. Reviews remain local unless commenting is explicitly requested. No pre-existing or speculative issues, lint-only findings or style suggestions block these PRs.

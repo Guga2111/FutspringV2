@@ -61,7 +61,7 @@ export function NextSessionCard({ daily, timeZone, isAdmin, readOnly, attendance
           <DailyStatusBadge status={daily.status} />
         </div>
         <span className="text-lg font-semibold">
-          {formatRelativeSessionDay(daily.dailyDate)} · {daily.dailyTime}
+          {formatRelativeSessionDay(daily.dailyDate, timeZone)} · {daily.dailyTime}
         </span>
         <div className="flex items-center gap-2.5">
           <Progress

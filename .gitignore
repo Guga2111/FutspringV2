@@ -43,3 +43,12 @@ finance-qr/
 
 # Local design inspection artifacts
 .taste-skill/
+
+# Machine-specific MCP connection configuration
+/.mcp.json
+
+# Unused local palette experiments; application code must not import these.
+/client/src/dev/
+
+# Retired exported redesign prototype (source history retains the original).
+/client/docs/design/design_handoff_futspring_redesign/

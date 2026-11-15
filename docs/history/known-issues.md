@@ -1,5 +1,10 @@
 # Problemas conhecidos — Futspring
 
+> Historical record of resolved October findings. Paths, line numbers and
+> references to the "current commit" below describe the original investigation.
+> Current behavior and remaining gaps belong in the [Backend](../../core/docs/BACKEND.md)
+> and [Frontend](../../client/docs/FRONTEND.md) guides.
+
 Problemas críticos encontrados durante a escrita de `core/docs/BACKEND.md` e `client/docs/FRONTEND.md` (2026-10-03). Todos foram corrigidos; os detalhes ficam abaixo como histórico.
 
 | # | Problema | Severidade | Status |

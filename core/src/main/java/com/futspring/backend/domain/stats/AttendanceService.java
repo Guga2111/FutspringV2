@@ -16,7 +16,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -35,6 +37,7 @@ public class AttendanceService {
     private final DailyRepository dailyRepository;
     private final UserDailyStatsRepository userDailyStatsRepository;
     private final PeladaMensalistaRepository mensalistaRepository;
+    private final Clock clock;
 
     // Presence = being on a team of a finalized session (a UserDailyStats row); the denominator is every
     // finalized session of the pelada in the last PERIOD_MONTHS months. Constant number of queries.
@@ -45,7 +48,7 @@ public class AttendanceService {
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Pelada não encontrada"));
         accessHelper.requireMember(pelada, caller);
 
-        LocalDate to = LocalDate.now();
+        LocalDate to = LocalDate.now(clock.withZone(ZoneId.of(pelada.getTimeZone())));
         LocalDate from = to.minusMonths(PERIOD_MONTHS);
 
         long totalSessions = dailyRepository.countByPeladaAndStatusInRange(

@@ -1,19 +1,15 @@
 import { addDays, format } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { isDailyOpen, type DailyListItem } from "@/types/daily"
-import { parseLocalDate } from "@/utils/dates"
+import { parseLocalDate, todayInZone } from "@/utils/dates"
 
 function capitalize(text: string): string {
   return text.charAt(0).toUpperCase() + text.slice(1)
 }
 
-function todayIso(now: Date): string {
-  return format(now, "yyyy-MM-dd")
-}
-
 // The next session still open for attendance (SCHEDULED/CONFIRMED) from today on, the earliest first
-export function pickNextSession(dailies: DailyListItem[], now = new Date()): DailyListItem | null {
-  const today = todayIso(now)
+export function pickNextSession(dailies: DailyListItem[], timeZone: string, now = new Date()): DailyListItem | null {
+  const today = todayInZone(timeZone, now)
   return (
     dailies
       .filter((d) => isDailyOpen(d.status) && d.dailyDate >= today)
@@ -26,9 +22,10 @@ export function pickRecentSessions(
   dailies: DailyListItem[],
   nextId: number | null,
   limit: number,
+  timeZone: string,
   now = new Date(),
 ): DailyListItem[] {
-  const today = todayIso(now)
+  const today = todayInZone(timeZone, now)
   return dailies
     .filter((d) => d.id !== nextId && d.dailyDate <= today)
     .sort((a, b) => b.dailyDate.localeCompare(a.dailyDate) || b.id - a.id)
@@ -64,11 +61,12 @@ export function formatLongDate(iso: string): string {
 }
 
 // "Hoje, domingo", "Amanhã, segunda" or "Quinta, 8 de outubro"
-export function formatRelativeSessionDay(iso: string, now = new Date()): string {
+export function formatRelativeSessionDay(iso: string, timeZone: string, now = new Date()): string {
   const date = parseLocalDate(iso)
   const weekday = format(date, "EEEE", { locale: ptBR })
-  if (iso === todayIso(now)) return `Hoje, ${weekday}`
-  if (iso === todayIso(addDays(now, 1))) return `Amanhã, ${weekday}`
+  const today = todayInZone(timeZone, now)
+  if (iso === today) return `Hoje, ${weekday}`
+  if (iso === format(addDays(parseLocalDate(today), 1), "yyyy-MM-dd")) return `Amanhã, ${weekday}`
   return capitalize(format(date, "EEEE, d 'de' MMMM", { locale: ptBR }))
 }
 
