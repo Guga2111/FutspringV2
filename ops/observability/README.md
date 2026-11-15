@@ -46,6 +46,11 @@ edit it as JSON (or export a copy edited in Grafana and replace the file).
 
 It also uses `VPS_IP`, `VPS_USER`, `VPS_SSH_KEY` and `VPS_SSH_KNOWN_HOSTS`, shared with the API deploy.
 
+Changing a secret does not trigger a workflow. After creating or rotating the Telegram secrets, run
+**Actions → CD - Deploy observability stack → Run workflow → main** once. Subsequent changes to
+`ops/observability/**` or the workflow on `main` deploy automatically. A failed run with
+`Missing required secret: TELEGRAM_BOT_TOKEN` predates the secret setup; rerun after configuring both values.
+
 ## Network and scraping
 
 The stack creates no network: both deploys run `docker network create observability || true`. The API joins it
@@ -56,8 +61,13 @@ container name `futspring_api`: Tomcat answers 400 to a `Host` header with an un
 To add another project: attach its container to the `observability` network, expose its metrics on a port that isn't
 published, and add a job to `prometheus/prometheus.yml`.
 
-The workflow's smoke test requires Grafana's `/api/health`, every alert rule of `rules.yml` loaded, Loki's `/ready` and the stack's own targets (prometheus, node-exporter,
+The workflow's smoke test requires Grafana's `/api/health`, every alert rule of `rules.yml` loaded, the `telegram` contact point provisioned, Loki's `/ready` and the stack's own targets (prometheus, node-exporter,
 cadvisor). A project target that is down only warns, because on a push to `main` the API deploy runs at the same time.
+
+The readiness probe uses the absolute DNS name `loki.` from Prometheus to avoid external DNS search
+for the single-label service name; both `wget` probes have a 5-second timeout. The job has a 15-minute
+limit and read-only repository permissions. Smoke tests verify provisioning, not Telegram message delivery;
+use the contact point's **Test** action to confirm the bot can send to the chat.
 
 ## Logs (Loki)
 
