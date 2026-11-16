@@ -13,6 +13,7 @@
   "playersPerTeam" : 905,
   "timeZone" : "timeZone",
   "isAdmin" : true,
+  "isFinanceManager" : true,
   "nextDaily" : {
     "id" : 356,
     "date" : "2026-10-31",

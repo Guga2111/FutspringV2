@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test"
 import { mockApi, login, type PushState } from "./mockApi"
-import { CONFIRMED_ID, FINISHED_ID, LIVE_ID, NOW, PELADA_ID, SCHEDULED_ID, pendingDeletionBlockers, financeDetail, financeMemberDetail, financeMemberOverview, financeOverview, pastDueSubscription, peladaDetail, readOnlySubscription, scheduledDaily } from "./fixtures"
+import { CONFIRMED_ID, FINISHED_ID, LIVE_ID, NOW, PELADA_ID, myPeladas, SCHEDULED_ID, pendingDeletionBlockers, financeDetail, financeMemberDetail, financeMemberOverview, financeOverview, pastDueSubscription, peladaDetail, readOnlySubscription, scheduledDaily } from "./fixtures"
 
 const PELADA = `/pelada/${PELADA_ID}`
 
@@ -19,6 +19,9 @@ const pages: { name: string; path: string; auth?: boolean; ready?: string; mask?
   // the desktop context: a QR Code to open the page on the phone
   { name: "install", path: "/instalar", auth: false, ready: "h1" },
   { name: "home", path: "/home" },
+  // the tabs Peladas and Avisos of the mobile shell (they work at any width)
+  { name: "peladas", path: "/peladas" },
+  { name: "notifications", path: "/notificacoes" },
   { name: "pelada-overview", path: PELADA },
   { name: "pelada-members", path: `${PELADA}/membros` },
   { name: "pelada-sessions", path: `${PELADA}/sessoes` },
@@ -142,9 +145,38 @@ test.describe("home on an iPhone", () => {
   })
 })
 
+// The chat as a page (the mobile header's icon opens it). The tests abort the realtime connection: the shot waits for
+// the chat's last state after the retries, so it is the same on every run
+test("page pelada-chat", async ({ page }) => {
+  const unmatched = await open(page, `${PELADA}/chat`, true, "form")
+  await expect(page.getByText("Sem conexão com o chat")).toBeVisible({ timeout: 30_000 })
+  await expectNoHorizontalScroll(page)
+  await expect(page).toHaveScreenshot("pelada-chat.png", { fullPage: true })
+  expect(unmatched, "requests without a fixture").toEqual([])
+})
+
+// The "+" of the mobile tabs: an admin and responsável sees what their pelada allows, a plain player only Criar pelada
+for (const role of ["admin", "player"] as const) {
+  test(`create menu ${role}`, async ({ page }, testInfo) => {
+    test.skip(!testInfo.project.name.startsWith("mobile"), "the bottom tabs live below md")
+    await open(page, "/home", true, "h1, h2", (page) =>
+      role === "player"
+        ? page.route(/\/api\/v1\/peladas\/my$/, (route) =>
+            route.fulfill({ json: myPeladas.map((p) => ({ ...p, isAdmin: false, isFinanceManager: false })) }),
+          )
+        : Promise.resolve(),
+    )
+    await page.getByRole("button", { name: "Criar", exact: true }).click()
+    const menu = page.getByRole("dialog", { name: "Criar" })
+    await expect(menu).toBeVisible()
+    await settle(page)
+    await expect(menu).toHaveScreenshot(`create-menu-${role}.png`, DIALOG_SHOT)
+  })
+}
+
 // Collapsed sidebar: every row is one 40 px square at the same x (icons and avatars on one axis)
 test("sidebar collapsed", async ({ page }, testInfo) => {
-  test.skip(!testInfo.project.name.startsWith("desktop"), "below md the sidebar is a Sheet")
+  test.skip(!testInfo.project.name.startsWith("desktop"), "the sidebar lives from md")
   await page.addInitScript(() => localStorage.setItem("sidebar_open", "false"))
   await open(page, PELADA)
   const sidebar = page.locator('[data-sidebar="sidebar"]')

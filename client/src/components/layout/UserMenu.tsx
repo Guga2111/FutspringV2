@@ -11,7 +11,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar"
-import { useSidebar } from "@/components/ui/sidebar-context"
 import { useAuth } from "@/hooks/useAuth"
 import { useTheme } from "@/hooks/useTheme"
 import { collapsedTile } from "@/components/layout/sidebarTile"
@@ -22,28 +21,24 @@ const userAvatarClass = "size-8 rounded-lg text-xs [&>span]:rounded-lg"
 
 const itemClass = "gap-2.5 rounded-md px-2 py-[7px] text-sm [&>svg]:size-4 [&>svg]:text-muted-foreground"
 
-// Sidebar footer: the logged user and their menu (opens to the right; above the button on mobile)
+// Sidebar footer (md and up): the logged user and their menu, opening to the right
 export function UserMenu() {
   const { user, logout } = useAuth()
   const { isDark, toggleTheme } = useTheme()
-  const { isMobile, setOpenMobile } = useSidebar()
   const navigate = useNavigate()
 
   if (!user) return null
 
   function goToProfile() {
     if (!user) return
-    setOpenMobile(false)
     navigate(`/profile/${user.id}`)
   }
 
   function goToSettings() {
-    setOpenMobile(false)
     navigate("/settings")
   }
 
   function goToAdmin() {
-    setOpenMobile(false)
     navigate("/admin")
   }
 
@@ -70,9 +65,9 @@ export function UserMenu() {
             </SidebarMenuButton>
           </DropdownMenuTrigger>
           <DropdownMenuContent
-            side={isMobile ? "top" : "right"}
-            align={isMobile ? "start" : "end"}
-            sideOffset={isMobile ? 4 : 8}
+            side="right"
+            align="end"
+            sideOffset={8}
             className="w-60 rounded-[10px] p-1 shadow-menu"
           >
             <DropdownMenuLabel className="flex items-center gap-2.5 p-2 font-normal">

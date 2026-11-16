@@ -17,6 +17,8 @@ import { useAuth } from "@/hooks/useAuth"
 import { useMyPeladasContext } from "@/hooks/useMyPeladasContext"
 import { cn } from "@/lib/utils"
 import { statsKpis, upcomingSessions, type Kpi } from "@/utils/home"
+import { useMyInvitationsContext } from "@/hooks/useMyInvitationsContext"
+import { useRefresh } from "@/hooks/useMobileShell"
 
 const KPI_TONE: Record<NonNullable<Kpi["tone"]>, string> = { highlight: "text-highlight-text", brand: "text-brand-text" }
 
@@ -39,7 +41,10 @@ function SectionTitle({ title, extra, action }: { title: string; extra: ReactNod
 export default function HomePage() {
   const { user } = useAuth()
   const { peladas, loading, error, reload, openCreatePelada } = useMyPeladasContext()
-  const { stats, loading: statsLoading, error: statsError } = useUserStats(user?.id ?? null)
+  const { stats, loading: statsLoading, error: statsError, reload: reloadStats } = useUserStats(user?.id ?? null)
+  const { reload: reloadInvitations } = useMyInvitationsContext()
+  // pull to refresh: the peladas (and their next sessions), the invitations and "Seus números"
+  useRefresh(() => Promise.all([reload(), reloadInvitations(), reloadStats()]))
   const { pendingId, toggle, dismissBump } = useUpcomingAttendance()
 
   const upcoming = useMemo(() => upcomingSessions(peladas), [peladas])
@@ -72,7 +77,7 @@ export default function HomePage() {
         {error && (
           <Alert variant="destructive" className="flex items-center justify-between gap-4">
             <AlertDescription>Não foi possível carregar suas peladas.</AlertDescription>
-            <Button variant="outline" size="sm" onClick={reload}>
+            <Button variant="outline" size="sm" onClick={() => void reload()}>
               Tentar novamente
             </Button>
           </Alert>

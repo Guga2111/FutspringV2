@@ -65,6 +65,15 @@ public class FinancePreservation {
         managers.deleteAll(removed);
         record(pelada.getId(), actor, "MANAGERS_REVOKED", "Remoção de membro: " + removed.stream().map(FinanceManager::getUserId).toList());
     }
+    /** Peladas where the user is a responsável financeiro (one query, whatever the number of peladas). */
+    @Transactional(readOnly = true)
+    public Set<Long> managedPeladaIds(Long userId) {
+        return new HashSet<>(managers.findPeladaIdsByUserId(userId));
+    }
+    @Transactional(readOnly = true)
+    public boolean isManager(Long peladaId, Long userId) {
+        return managers.existsByPeladaIdAndUserId(peladaId, userId);
+    }
     /** Peladas where the user is the only responsável financeiro: their account deletion is blocked there. */
     public List<PeladaRef> soleManagedPeladas(Long userId) {
         return managers.findSoleManagedBy(userId);

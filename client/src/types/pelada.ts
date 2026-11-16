@@ -30,6 +30,8 @@ export interface PeladaResponse {
   timeZone: string
   // whether the caller administers the pelada
   isAdmin: boolean
+  // whether the caller is a responsável financeiro (the mobile "+" offers "Nova cobrança")
+  isFinanceManager: boolean
   // next SCHEDULED/CONFIRMED session from today; only filled by /peladas/my and /users/{id}/peladas
   nextDaily: NextDaily | null
   // only filled by /peladas/my and /users/{id}/peladas (null in command responses and without a row: writable)

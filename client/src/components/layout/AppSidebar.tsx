@@ -28,8 +28,8 @@ import { cn } from "@/lib/utils"
 export function AppSidebar() {
   const { pathname } = useLocation()
   const { peladas, loading, openCreatePelada } = useMyPeladasContext()
-  const { isMobile, state, toggleSidebar, setOpenMobile } = useSidebar()
-  const closeOnMobile = () => setOpenMobile(false)
+  // mounted from md only: below it the mobile shell's tabs navigate
+  const { state, toggleSidebar } = useSidebar()
   // pending invitations are answered on Home, so their count sits on "Início"
   const invitations = useMyInvitationsContext()
   const inviteCount = invitations.items.length
@@ -41,24 +41,20 @@ export function AppSidebar() {
       <SidebarHeader className="h-[60px] flex-row items-center gap-1.5 px-3.5 py-4 group-data-[collapsible=icon]:h-auto group-data-[collapsible=icon]:flex-col-reverse group-data-[collapsible=icon]:items-start group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-1 group-data-[collapsible=icon]:px-3 group-data-[collapsible=icon]:py-3">
         <Link
           to="/home"
-          onClick={closeOnMobile}
           className="flex min-w-0 flex-1 items-center gap-2.5 group-data-[collapsible=icon]:hidden"
         >
           <img src="/logo-64.webp" alt="" width={30} height={30} className="size-[30px] shrink-0 rounded-full object-cover" />
           <span className="text-brand-text text-[17px] font-bold">FutSpring</span>
         </Link>
-        {/* on mobile the bell lives in the top bar */}
-        {!isMobile && (
-          <NotificationBell
-            compact={state === "collapsed"}
-            className="size-7 rounded-lg hover:bg-sidebar-accent group-data-[collapsible=icon]:size-10 [&_svg]:size-4"
-          />
-        )}
+        <NotificationBell
+          compact={state === "collapsed"}
+          className="size-7 rounded-lg hover:bg-sidebar-accent group-data-[collapsible=icon]:size-10 [&_svg]:size-4"
+        />
         <Button
           variant="ghost"
           size="icon"
           onClick={toggleSidebar}
-          aria-label={isMobile ? "Fechar menu" : "Recolher menu"}
+          aria-label="Recolher menu"
           className="size-7 shrink-0 rounded-lg text-muted-foreground hover:bg-sidebar-accent hover:text-foreground group-data-[collapsible=icon]:size-10"
         >
           <HugeiconsIcon icon={SidebarLeftIcon} className="size-4" />
@@ -78,7 +74,7 @@ export function AppSidebar() {
                   collapsedTile,
                 )}
               >
-                <Link to="/home" onClick={closeOnMobile}>
+                <Link to="/home">
                   <HugeiconsIcon icon={Home01Icon} />
                   <span>
                     Início
@@ -107,10 +103,7 @@ export function AppSidebar() {
             <Button
               variant="outline"
               size="icon"
-              onClick={() => {
-                closeOnMobile()
-                openCreatePelada()
-              }}
+              onClick={openCreatePelada}
               aria-label="Nova pelada"
               className="mr-1 size-[26px] shrink-0 bg-transparent text-muted-foreground hover:bg-sidebar-accent hover:text-foreground group-data-[collapsible=icon]:mr-0 group-data-[collapsible=icon]:size-10 group-data-[collapsible=icon]:rounded-lg group-data-[collapsible=icon]:border-0"
             >
@@ -133,7 +126,6 @@ export function AppSidebar() {
                     key={pelada.id}
                     pelada={pelada}
                     isActive={isPeladaPath(pathname, pelada.id)}
-                    onNavigate={closeOnMobile}
                   />
                 ))}
           </SidebarMenu>

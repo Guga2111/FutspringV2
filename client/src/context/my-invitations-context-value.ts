@@ -9,7 +9,7 @@ export interface MyInvitationsContextValue {
   // more pages exist: counts show "20+"
   hasMore: boolean
   loadingMore: boolean
-  reload: () => void
+  reload: () => Promise<void>
   loadMore: () => Promise<void>
 }
 

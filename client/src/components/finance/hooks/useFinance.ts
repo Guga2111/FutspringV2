@@ -1,14 +1,18 @@
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import * as api from "@/api/finance"
 import type { FinanceCommand } from "@/schemas/finance"
 import type { FinanceOverview, FinanceDetail, FinanceResult, FinanceListScope } from "@/types/finance"
 import { clampFinancePage } from "@/utils/finance"
 import { getErrorMessage, getErrorStatus } from "@/lib/errors"
+import { useReload } from "@/hooks/useReload"
 
 // selected: the open collection, read from the URL (/financeiro/:listId); select navigates there.
 // writable: false while the pelada is read-only (subscription); `locked` disables every write control
 export function useFinance(peladaId: number, selected: number | null, select: (id: number | null) => void, writable = true) {
-  const [attempt, setAttempt] = useState(0)
+  // refresh() resolves once the overview and the open collection of the new attempt answered (pull to refresh)
+  const { version: attempt, reload: refresh, settle } = useReload()
+  const [overviewDone, setOverviewDone] = useState(-1)
+  const [detailDone, setDetailDone] = useState(-1)
   // the list section (open / closed) and its numbered page
   const [scope, setScopeState] = useState<FinanceListScope>("ACTIVE")
   const [page, setPage] = useState(0)
@@ -26,7 +30,6 @@ export function useFinance(peladaId: number, selected: number | null, select: (i
   const generation = useRef(0)
   const detailGeneration = useRef(0)
   const retryCommand = useRef<{ signature: string; command: FinanceCommand } | null>(null)
-  const refresh = useCallback(() => setAttempt(v => v + 1), [])
   useEffect(() => {
     let cancelled = false
     const request = ++generation.current
@@ -37,6 +40,8 @@ export function useFinance(peladaId: number, selected: number | null, select: (i
       setOverview(data); setError(null); setOverviewRead(`${peladaId}:${scope}:${page}:${attempt}`)
     }).catch(e => {
       if (!cancelled && generation.current === request) setError(getErrorMessage(e, "Não foi possível carregar o financeiro"))
+    }).finally(() => {
+      if (!cancelled && generation.current === request) setOverviewDone(attempt)
     })
     return () => { cancelled = true }
   }, [peladaId, scope, page, attempt])
@@ -51,9 +56,14 @@ export function useFinance(peladaId: number, selected: number | null, select: (i
       }
     }).catch(e => {
       if (!cancelled && detailGeneration.current === request) setDetailState(previous => ({ id: selected, data: previous?.id === selected ? previous.data : null, error: getErrorMessage(e, "Não foi possível carregar a lista") }))
+    }).finally(() => {
+      if (!cancelled && detailGeneration.current === request) setDetailDone(attempt)
     })
     return () => { cancelled = true }
   }, [peladaId, selected, attempt])
+  useEffect(() => {
+    if (overviewDone === attempt && (selected === null || detailDone === attempt)) settle()
+  }, [overviewDone, detailDone, attempt, selected, settle])
   useEffect(() => {
     const visible = () => { if (document.visibilityState === "visible") refresh() }
     document.addEventListener("visibilitychange", visible)
