@@ -202,6 +202,39 @@ test("dialog finalize", async ({ page }) => {
   expect((body as { puskasWinnerIds: number[] }).puskasWinnerIds).toHaveLength(1)
 })
 
+// Create pelada: errors under each field, then a photo that fails after the pelada was created only warns and
+// still opens the new pelada (an error there made people create it twice)
+test("sheet create pelada", async ({ page }) => {
+  let body: unknown = null
+  await open(page, "/home", true, "h1, h2", async (p) => {
+    await p.route(/\/api\/v1\/peladas$/, (route) => {
+      if (route.request().method() !== "POST") return route.fallback()
+      body = route.request().postDataJSON()
+      return route.fulfill({ status: 201, json: { ...peladaDetail, id: PELADA_ID } })
+    })
+    await p.route(/\/api\/v1\/peladas\/\d+\/image$/, (route) =>
+      route.fulfill({ status: 500, json: { status: 500, message: "Ocorreu um erro inesperado", timestamp: NOW } }))
+  })
+  await page.getByRole("button", { name: "Criar nova pelada" }).first().click()
+  const sheet = page.getByRole("dialog", { name: "Criar Pelada" })
+  await expect(sheet).toBeVisible()
+  await settle(page)
+  await expect(sheet).toHaveScreenshot("sheet-create-pelada.png", DIALOG_SHOT)
+
+  await sheet.getByRole("button", { name: "Criar Pelada" }).click()
+  await expect(sheet.getByText("O nome é obrigatório")).toBeVisible()
+  await expect(sheet.getByText("Horário inválido (HH:mm)")).toBeVisible()
+  expect(body).toBeNull()
+
+  await sheet.getByLabel("Nome *").fill("Pelada Nova")
+  await sheet.getByLabel("Horário *").fill("21:00")
+  await sheet.getByLabel("Imagem (opcional)").setInputFiles({ name: "foto.png", mimeType: "image/png", buffer: Buffer.from("png") })
+  await sheet.getByRole("button", { name: "Criar Pelada" }).click()
+  await expect(page.getByText("Pelada criada, mas a foto não foi enviada. Envie de novo nas configurações.")).toBeVisible()
+  await expect(page).toHaveURL(PELADA)
+  expect(body).toMatchObject({ name: "Pelada Nova", timeOfDay: "21:00", dayOfWeek: "MONDAY", timeZone: "America/Sao_Paulo" })
+})
+
 // "Montar times" over a confirmed session with a short team and a player without one
 test("teams editor", async ({ page }, testInfo) => {
   await open(page, `/daily/${CONFIRMED_ID}`)
