@@ -1,60 +1,46 @@
 package com.futspring.backend.domain.pelada;
 
 import com.futspring.backend.domain.chat.MessageRepository;
-import com.futspring.backend.domain.finance.FinancePreservation;
-import com.futspring.backend.domain.daily.attendance.AttendanceWindow;
-import com.futspring.backend.domain.daily.DailyService;
-import com.futspring.backend.domain.daily.dto.AttendanceBumpDTO;
 import com.futspring.backend.domain.daily.Daily;
-import com.futspring.backend.domain.daily.DailyStatus;
-import com.futspring.backend.domain.daily.attendance.DailyAttendanceBumpRepository;
-import com.futspring.backend.domain.daily.attendance.DailyAttendanceRepository;
 import com.futspring.backend.domain.daily.DailyRepository;
+import com.futspring.backend.domain.daily.DailyService;
 import com.futspring.backend.domain.file.FileUploadService;
+import com.futspring.backend.domain.finance.FinancePreservation;
 import com.futspring.backend.domain.notification.NotificationRepository;
 import com.futspring.backend.domain.pelada.dto.CreatePeladaRequestDTO;
 import com.futspring.backend.domain.pelada.dto.PeladaDetailResponseDTO;
-import com.futspring.backend.domain.pelada.dto.PeladaMemberDTO;
 import com.futspring.backend.domain.pelada.dto.PeladaResponseDTO;
 import com.futspring.backend.domain.pelada.dto.UpdatePeladaRequestDTO;
-import com.futspring.backend.shared.exception.AppException;
-import com.futspring.backend.shared.helper.PeladaAccessHelper;
-import com.futspring.backend.shared.helper.UserAuthenticationHelper;
+import com.futspring.backend.domain.pelada.invitation.PeladaInvitationService;
+import com.futspring.backend.domain.pelada.member.PeladaMensalistaRepository;
+import com.futspring.backend.domain.pelada.member.PeladaPlayerStarsRepository;
 import com.futspring.backend.domain.stats.AggregateRebuildService;
 import com.futspring.backend.domain.stats.model.RankingRepository;
 import com.futspring.backend.domain.subscription.SubscriptionGuard;
 import com.futspring.backend.domain.subscription.SubscriptionService;
-import com.futspring.backend.domain.subscription.dto.SubscriptionSummaryDTO;
 import com.futspring.backend.domain.user.User;
 import com.futspring.backend.domain.user.UserRepository;
+import com.futspring.backend.shared.exception.AppException;
+import com.futspring.backend.shared.helper.PeladaAccessHelper;
+import com.futspring.backend.shared.helper.UserAuthenticationHelper;
 import lombok.RequiredArgsConstructor;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.time.Clock;
-import java.time.Instant;
-import java.time.LocalDate;
 import java.time.ZoneId;
-import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
-import com.futspring.backend.domain.pelada.invitation.PeladaInvitationService;
-import com.futspring.backend.domain.pelada.member.PeladaMensalista;
-import com.futspring.backend.domain.pelada.member.PeladaMensalistaRepository;
-import com.futspring.backend.domain.pelada.member.PeladaPlayerStars;
-import com.futspring.backend.domain.pelada.member.PeladaPlayerStarsRepository;
 
+/**
+ * A pelada's own lifecycle: create, read, update its settings, delete it with everything it owns, and its photo.
+ * Members and their roles live in {@link com.futspring.backend.domain.pelada.member.PeladaMemberService}.
+ */
 @Service
 @RequiredArgsConstructor
 public class PeladaService {
-
-    private static final Set<DailyStatus> UPCOMING_STATUSES = Set.of(DailyStatus.SCHEDULED, DailyStatus.CONFIRMED);
 
     private final FinancePreservation financePreservation;
     private final PeladaRepository peladaRepository;
@@ -62,8 +48,6 @@ public class PeladaService {
     private final PeladaMensalistaRepository mensalistaRepository;
     private final UserRepository userRepository;
     private final DailyRepository dailyRepository;
-    private final DailyAttendanceRepository attendanceRepository;
-    private final DailyAttendanceBumpRepository bumpRepository;
     private final RankingRepository rankingRepository;
     private final MessageRepository messageRepository;
     private final FileUploadService fileUploadService;
@@ -72,11 +56,10 @@ public class PeladaService {
     private final DailyService dailyService;
     private final AggregateRebuildService aggregateRebuildService;
     private final NotificationRepository notificationRepository;
-    private final ApplicationEventPublisher eventPublisher;
     private final PeladaInvitationService invitationService;
     private final SubscriptionService subscriptionService;
     private final SubscriptionGuard subscriptionGuard;
-    private final Clock clock;
+    private final PeladaSummaryAssembler summaryAssembler;
 
     @Transactional
     public PeladaResponseDTO createPelada(CreatePeladaRequestDTO request, String currentUserEmail) {
@@ -110,7 +93,7 @@ public class PeladaService {
     @Transactional(readOnly = true)
     public List<PeladaResponseDTO> getMyPeladas(String currentUserEmail) {
         User user = userAuthHelper.getAuthenticatedUser(currentUserEmail);
-        return toSummaries(peladaRepository.findByMembersContaining(user), user);
+        return summaryAssembler.toSummaries(peladaRepository.findByMembersContaining(user), user);
     }
 
     /** Peladas that both the caller and {@code userId} belong to (profile page). */
@@ -120,62 +103,7 @@ public class PeladaService {
         if (!userRepository.existsByIdAndDeletedAtIsNull(userId)) {
             throw new AppException(HttpStatus.NOT_FOUND, "Usuário não encontrado");
         }
-        return toSummaries(peladaRepository.findSharedPeladas(caller.getId(), userId), caller);
-    }
-
-    // Member counts, admin flags, next sessions and subscriptions in grouped queries instead of one per pelada
-    private List<PeladaResponseDTO> toSummaries(List<Pelada> peladas, User caller) {
-        if (peladas.isEmpty()) {
-            return List.of();
-        }
-        List<Long> ids = peladas.stream().map(Pelada::getId).toList();
-        Map<Long, Integer> memberCounts = peladaRepository.countMembersByIds(ids).stream()
-                .collect(Collectors.toMap(row -> (Long) row[0], row -> ((Number) row[1]).intValue()));
-        Set<Long> administered = new HashSet<>(peladaRepository.findAdministeredIds(ids, caller.getId()));
-
-        // One instant for the entire response. Group by local day (at most three dates worldwide),
-        // not by pelada, so zone correctness does not introduce an N+1 query.
-        Instant now = clock.instant();
-        Map<LocalDate, List<Pelada>> byToday = peladas.stream().collect(Collectors.groupingBy(
-                p -> now.atZone(ZoneId.of(p.getTimeZone())).toLocalDate()));
-        // Two sessions of a pelada on the same date: keep the oldest one.
-        Map<Long, Daily> nextDailies = byToday.entrySet().stream()
-                .flatMap(entry -> dailyRepository.findNextDailies(
-                        entry.getValue().stream().map(Pelada::getId).toList(), UPCOMING_STATUSES, entry.getKey()).stream())
-                .collect(Collectors.toMap(d -> d.getPelada().getId(), d -> d,
-                        (a, b) -> a.getId() <= b.getId() ? a : b));
-        List<Long> nextIds = nextDailies.values().stream().map(Daily::getId).toList();
-        Map<Long, Integer> confirmedCounts = nextIds.isEmpty() ? Map.of()
-                : attendanceRepository.countConfirmedByIds(nextIds).stream()
-                        .collect(Collectors.toMap(row -> (Long) row[0], row -> ((Number) row[1]).intValue()));
-        Set<Long> confirmedByCaller = nextIds.isEmpty() ? Set.of()
-                : new HashSet<>(attendanceRepository.findConfirmedDailyIds(nextIds, caller.getId()));
-        Set<Long> mensalistaIn = new HashSet<>(mensalistaRepository.findPeladaIdsByUserAndPeladaIn(caller.getId(), ids));
-        // Newest first, so the first bump kept per session is the caller's latest
-        Map<Long, AttendanceBumpDTO> unseenBumps = nextIds.isEmpty() ? Map.of()
-                : bumpRepository.findUnseenByUserAndDailyIn(caller.getId(), nextIds).stream()
-                        .collect(Collectors.toMap(b -> b.getDaily().getId(), AttendanceBumpDTO::from, (newest, older) -> newest));
-        Map<Long, SubscriptionSummaryDTO> subscriptions = subscriptionGuard.summaries(ids);
-
-        return peladas.stream()
-                .map(p -> {
-                    Daily next = nextDailies.get(p.getId());
-                    PeladaResponseDTO.NextDailyDTO nextDaily = next == null ? null : PeladaResponseDTO.NextDailyDTO.builder()
-                            .id(next.getId())
-                            .date(next.getDailyDate())
-                            .time(next.getDailyTime())
-                            .status(next.getStatus())
-                            .confirmedCount(confirmedCounts.getOrDefault(next.getId(), 0))
-                            .capacity(p.capacity())
-                            .isConfirmed(confirmedByCaller.contains(next.getId()))
-                            .startsAt(AttendanceWindow.startsAt(next))
-                            .confirmOpensAt(mensalistaIn.contains(p.getId()) ? null : AttendanceWindow.diaristaOpensAt(next))
-                            .bump(unseenBumps.get(next.getId()))
-                            .build();
-                    return PeladaResponseDTO.from(p, memberCounts.getOrDefault(p.getId(), 0),
-                            administered.contains(p.getId()), nextDaily, subscriptions.get(p.getId()));
-                })
-                .toList();
+        return summaryAssembler.toSummaries(peladaRepository.findSharedPeladas(caller.getId(), userId), caller);
     }
 
     @Transactional(readOnly = true)
@@ -185,157 +113,6 @@ public class PeladaService {
         accessHelper.requireMember(pelada, user);
         return PeladaDetailResponseDTO.from(pelada, playerStarsRepository.findStarsByPelada(pelada),
                 mensalistaRepository.findUserIdsByPelada(pelada), subscriptionGuard.summary(pelada));
-    }
-
-    @Transactional
-    public void removePlayer(Long peladaId, Long targetUserId, String currentUserEmail) {
-        removePlayers(peladaId, List.of(targetUserId), currentUserEmail);
-    }
-
-    /**
-     * Removes several members at once, all or nothing: one target that isn't a member (404) or the creator (403)
-     * fails the whole batch before anything changes.
-     */
-    @Transactional
-    public void removePlayers(Long peladaId, List<Long> targetUserIds, String currentUserEmail) {
-        User caller = userAuthHelper.getAuthenticatedUser(currentUserEmail);
-        Pelada pelada = peladaRepository.findByIdForUpdate(peladaId)
-                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Pelada não encontrada"));
-        accessHelper.requireAdmin(pelada, caller);
-
-        List<User> targets = findMembers(pelada, targetUserIds);
-        if (targets.stream().anyMatch(t -> accessHelper.isCreator(pelada, t))) {
-            throw new AppException(HttpStatus.FORBIDDEN, "O criador da pelada não pode ser removido");
-        }
-
-        financePreservation.removeMembers(pelada, targets, caller);
-        invitationService.recordRemoval(pelada, targets);
-        targets.forEach(pelada.getMembers()::remove);
-        targets.forEach(pelada.getAdmins()::remove);
-        // A player who comes back starts again with the default stars, as a diarista
-        playerStarsRepository.deleteByPeladaAndUserIn(pelada, targets);
-        mensalistaRepository.deleteByPeladaAndUserIn(pelada, targets);
-        // Frees their spots in the sessions that haven't started; past sessions keep their results
-        dailyService.removeFromUpcomingSessions(pelada, targets);
-        peladaRepository.save(pelada);
-        eventPublisher.publishEvent(new MembersRemovedEvent(pelada, caller, targets));
-    }
-
-    /**
-     * Account deletion, with the user's peladas already locked and no pelada created by them: the user leaves
-     * every pelada as a removed member would (admin, stars, mensalista, attendance and teams of the sessions that
-     * haven't started, invitations, finance delegation) but nobody is notified and no link block is recorded.
-     * Bulk statements, so the reads don't grow with the number of peladas.
-     */
-    public void removeAccountFromPeladas(User user, String anonymousName) {
-        financePreservation.forgetAccount(user, anonymousName);
-        invitationService.forgetAccount(user);
-        playerStarsRepository.deleteByUser(user);
-        mensalistaRepository.deleteByUser(user);
-        dailyService.removeAccountFromUpcomingSessions(user);
-        peladaRepository.deleteAdminRowsOfUser(user.getId());
-        peladaRepository.deleteMemberRowsOfUser(user.getId());
-    }
-
-    @Transactional
-    public PeladaMemberDTO setPlayerStars(Long peladaId, Long targetUserId, int stars, String currentUserEmail) {
-        return setPlayersStars(peladaId, List.of(targetUserId), stars, currentUserEmail).get(0);
-    }
-
-    // Any admin sets any member's stars in this pelada, their own included; the same value for every target
-    @Transactional
-    public List<PeladaMemberDTO> setPlayersStars(Long peladaId, List<Long> targetUserIds, int stars, String currentUserEmail) {
-        User caller = userAuthHelper.getAuthenticatedUser(currentUserEmail);
-        Pelada pelada = findPelada(peladaId);
-        accessHelper.requireAdmin(pelada, caller);
-
-        List<User> targets = findMembers(pelada, targetUserIds);
-        Map<Long, PeladaPlayerStars> existing = playerStarsRepository.findByPeladaAndUserIn(pelada, targets).stream()
-                .collect(Collectors.toMap(s -> s.getUser().getId(), s -> s));
-        List<PeladaPlayerStars> ratings = targets.stream()
-                .map(t -> existing.getOrDefault(t.getId(), PeladaPlayerStars.builder().pelada(pelada).user(t).build()))
-                .toList();
-        ratings.forEach(r -> r.setStars(stars));
-        playerStarsRepository.saveAll(ratings);
-
-        return toMemberDTOs(pelada, targets);
-    }
-
-    @Transactional
-    public PeladaMemberDTO setMensalista(Long peladaId, Long targetUserId, boolean isMensalista, String currentUserEmail) {
-        return setMensalistas(peladaId, List.of(targetUserId), isMensalista, currentUserEmail).get(0);
-    }
-
-    /**
-     * Any admin marks or unmarks members as mensalistas (idempotent per member). The pelada row is locked before
-     * counting, so two admins at once can't go past maxMensalistas; a batch that doesn't fit changes nobody (the
-     * system never picks who gets the status).
-     */
-    @Transactional
-    public List<PeladaMemberDTO> setMensalistas(Long peladaId, List<Long> targetUserIds, boolean isMensalista,
-                                                String currentUserEmail) {
-        User caller = userAuthHelper.getAuthenticatedUser(currentUserEmail);
-        Pelada pelada = peladaRepository.findByIdForUpdate(peladaId)
-                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Pelada não encontrada"));
-        accessHelper.requireAdmin(pelada, caller);
-
-        List<User> targets = findMembers(pelada, targetUserIds);
-        Set<Long> current = mensalistaRepository.findUserIdsByPelada(pelada);
-        if (isMensalista) {
-            List<User> toAdd = targets.stream().filter(t -> !current.contains(t.getId())).toList();
-            int max = pelada.getMaxMensalistas();
-            if (current.size() + toAdd.size() > max) {
-                throw new AppException(HttpStatus.CONFLICT, toAdd.size() == 1
-                        ? "Limite de mensalistas atingido (" + current.size() + "/" + max + ")"
-                        : "Limite de mensalistas atingido: cabem " + Math.max(0, max - current.size())
-                                + ", foram selecionados " + toAdd.size());
-            }
-            mensalistaRepository.saveAll(toAdd.stream()
-                    .map(t -> PeladaMensalista.builder().pelada(pelada).user(t).build())
-                    .toList());
-            eventPublisher.publishEvent(new MensalistasChangedEvent(pelada, caller, toAdd, true));
-        } else {
-            List<User> toRemove = targets.stream().filter(t -> current.contains(t.getId())).toList();
-            if (!toRemove.isEmpty()) {
-                mensalistaRepository.deleteByPeladaAndUserIn(pelada, toRemove);
-            }
-            eventPublisher.publishEvent(new MensalistasChangedEvent(pelada, caller, toRemove, false));
-        }
-
-        return toMemberDTOs(pelada, targets);
-    }
-
-    @Transactional
-    public void setAdmin(Long peladaId, Long targetUserId, boolean isAdmin, String currentUserEmail) {
-        setAdmins(peladaId, List.of(targetUserId), isAdmin, currentUserEmail);
-    }
-
-    // Only members can be admins, and the creator always is one; idempotent per member
-    @Transactional
-    public List<PeladaMemberDTO> setAdmins(Long peladaId, List<Long> targetUserIds, boolean isAdmin, String currentUserEmail) {
-        User caller = userAuthHelper.getAuthenticatedUser(currentUserEmail);
-        Pelada pelada = peladaRepository.findByIdForUpdate(peladaId)
-                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Pelada não encontrada"));
-        accessHelper.requireAdmin(pelada, caller);
-
-        List<User> targets = findMembers(pelada, targetUserIds);
-        if (targets.stream().anyMatch(t -> accessHelper.isCreator(pelada, t))) {
-            throw new AppException(HttpStatus.FORBIDDEN, "O criador da pelada é sempre administrador");
-        }
-
-        // Only members whose status changes are notified (the route is idempotent)
-        Set<Long> adminsBefore = new HashSet<>(peladaRepository.findAdminIds(pelada.getId()));
-        List<User> changed = targets.stream().filter(t -> adminsBefore.contains(t.getId()) != isAdmin).toList();
-        if (isAdmin) {
-            pelada.getAdmins().addAll(targets);
-        } else {
-            targets.forEach(pelada.getAdmins()::remove);
-        }
-        // Flushed so the admin ids read for the response see the change
-        peladaRepository.saveAndFlush(pelada);
-        eventPublisher.publishEvent(new AdminsChangedEvent(pelada, caller, changed, isAdmin));
-
-        return toMemberDTOs(pelada, targets);
     }
 
     @Transactional
@@ -434,32 +211,6 @@ public class PeladaService {
         return PeladaResponseDTO.forAdmin(peladaRepository.save(pelada));
     }
 
-    /**
-     * The creator hands the pelada to another admin. The old creator stays member and admin; they only lose what
-     * is reserved to the creator (delete, transfer, not being removable or demotable).
-     */
-    @Transactional
-    public PeladaResponseDTO transferCreator(Long peladaId, Long userId, String currentUserEmail) {
-        User caller = userAuthHelper.getAuthenticatedUser(currentUserEmail);
-        Pelada pelada = peladaRepository.findByIdForUpdate(peladaId)
-                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Pelada não encontrada"));
-        if (!accessHelper.isCreator(pelada, caller)) {
-            throw new AppException(HttpStatus.FORBIDDEN, "Apenas o criador pode transferir a pelada");
-        }
-        if (caller.getId().equals(userId)) {
-            throw new AppException(HttpStatus.BAD_REQUEST, "Você já é o criador da pelada");
-        }
-        User target = findMembers(pelada, List.of(userId)).get(0);
-        if (!accessHelper.isAdmin(pelada, target)) {
-            throw new AppException(HttpStatus.CONFLICT, "Só é possível transferir a pelada para um admin");
-        }
-
-        pelada.setCreator(target);
-        PeladaResponseDTO response = PeladaResponseDTO.forAdmin(peladaRepository.save(pelada));
-        eventPublisher.publishEvent(new PeladaTransferredEvent(pelada, caller, target));
-        return response;
-    }
-
     // IANA region ids only (America/Sao_Paulo), not offsets like "-03:00"
     private static String validTimeZone(String timeZone) {
         if (!ZoneId.getAvailableZoneIds().contains(timeZone)) {
@@ -480,34 +231,4 @@ public class PeladaService {
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Pelada não encontrada"));
     }
 
-    /**
-     * The members with these ids, in the same order, in two queries. Any id that isn't a member fails the whole
-     * batch with 404, naming the player when the user exists.
-     */
-    private List<User> findMembers(Pelada pelada, List<Long> userIds) {
-        Map<Long, User> users = userRepository.findAllById(userIds).stream()
-                .collect(Collectors.toMap(User::getId, u -> u));
-        Set<Long> memberIds = new HashSet<>(peladaRepository.findMemberIds(pelada.getId(), userIds));
-        for (Long id : userIds) {
-            if (!memberIds.contains(id)) {
-                User user = users.get(id);
-                throw new AppException(HttpStatus.NOT_FOUND, user == null
-                        ? "O jogador não é membro desta pelada"
-                        : user.getUsername() + " não é membro desta pelada");
-            }
-        }
-        return userIds.stream().map(users::get).toList();
-    }
-
-    // The targets as the members grid shows them, in a fixed number of queries
-    private List<PeladaMemberDTO> toMemberDTOs(Pelada pelada, List<User> targets) {
-        Set<Long> adminIds = new HashSet<>(peladaRepository.findAdminIds(pelada.getId()));
-        Map<Long, Integer> stars = playerStarsRepository.findStarsByPelada(pelada);
-        Set<Long> mensalistaIds = mensalistaRepository.findUserIdsByPelada(pelada);
-        return targets.stream()
-                .map(t -> PeladaMemberDTO.from(t, adminIds.contains(t.getId()),
-                        stars.getOrDefault(t.getId(), PeladaPlayerStars.DEFAULT_STARS),
-                        mensalistaIds.contains(t.getId())))
-                .toList();
-    }
 }

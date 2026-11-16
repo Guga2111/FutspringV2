@@ -75,11 +75,15 @@ class PeladaServiceImageTest {
 
     @BeforeEach
     void setUp() {
-        peladaService = new PeladaService(mock(com.futspring.backend.domain.finance.FinancePreservation.class), peladaRepository, playerStarsRepository, mensalistaRepository, userRepository, dailyRepository, attendanceRepository, bumpRepository, rankingRepository, messageRepository,
+        com.futspring.backend.domain.subscription.SubscriptionGuard subscriptionGuard =
+                mock(com.futspring.backend.domain.subscription.SubscriptionGuard.class);
+        peladaService = new PeladaService(mock(com.futspring.backend.domain.finance.FinancePreservation.class), peladaRepository, playerStarsRepository, mensalistaRepository, userRepository, dailyRepository, rankingRepository, messageRepository,
                 fileUploadService, userAuthHelper, new PeladaAccessHelper(peladaRepository), dailyService, aggregateRebuildService,
-                notificationRepository, eventPublisher, mock(PeladaInvitationService.class), mock(com.futspring.backend.domain.subscription.SubscriptionService.class),
-                mock(com.futspring.backend.domain.subscription.SubscriptionGuard.class),
-                java.time.Clock.fixed(java.time.Instant.parse("2026-11-15T01:00:00Z"), java.time.ZoneOffset.UTC));
+                notificationRepository, mock(PeladaInvitationService.class), mock(com.futspring.backend.domain.subscription.SubscriptionService.class),
+                subscriptionGuard,
+                new PeladaSummaryAssembler(peladaRepository, dailyRepository, attendanceRepository, bumpRepository,
+                        mensalistaRepository, subscriptionGuard,
+                        java.time.Clock.fixed(java.time.Instant.parse("2026-11-15T01:00:00Z"), java.time.ZoneOffset.UTC)));
 
         admin = User.builder().emailVerifiedAt(java.time.Instant.EPOCH).id(1L).email("admin@example.com").username("admin").password("hash").build();
         member = User.builder().emailVerifiedAt(java.time.Instant.EPOCH).id(2L).email("member@example.com").username("member").password("hash").build();
