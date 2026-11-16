@@ -25,9 +25,10 @@ import java.util.Map;
 
 /**
  * Per-IP limits on the routes that check a password or a secret, can cause future sends, or read a lot: 10 requests
- * per minute on each POST /api/v1/auth/ route (login, register, forgot-password, reset-password), the logged-in
+ * per minute on each POST /api/v1/auth/ route (login, register, forgot-password, reset-password,
+ * verification-email, verify-email), the logged-in
  * password checks (POST /api/v1/users/me/password and /me/delete), the Web Push subscription (POST
- * /api/v1/push/subscriptions), the public e-mail link routes (notifications unsubscribe / resubscribe) and the
+ * /api/v1/push/subscriptions), the public e-mail link route (notifications unsubscribe) and the
  * account export (GET /api/v1/users/me/export); 30 per minute on the session refresh (POST /api/v1/auth/refresh);
  * 20 per minute on the web app's error reports
  * (POST /api/v1/client-errors); 60 per minute on the public invitation preview (GET /api/v1/invite-links/{token}).
