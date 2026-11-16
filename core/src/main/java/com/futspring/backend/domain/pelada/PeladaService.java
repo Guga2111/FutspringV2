@@ -104,7 +104,7 @@ public class PeladaService {
         Pelada saved = peladaRepository.save(pelada);
         financePreservation.appointCreator(saved);
         subscriptionService.start(saved, user);
-        return PeladaResponseDTO.forAdmin(saved);
+        return PeladaResponseDTO.forAdmin(saved, true);
     }
 
     @Transactional(readOnly = true)
@@ -123,7 +123,7 @@ public class PeladaService {
         return toSummaries(peladaRepository.findSharedPeladas(caller.getId(), userId), caller);
     }
 
-    // Member counts, admin flags, next sessions and subscriptions in grouped queries instead of one per pelada
+    // Member counts, admin and finance-manager flags, next sessions and subscriptions in grouped queries instead of one per pelada
     private List<PeladaResponseDTO> toSummaries(List<Pelada> peladas, User caller) {
         if (peladas.isEmpty()) {
             return List.of();
@@ -132,6 +132,7 @@ public class PeladaService {
         Map<Long, Integer> memberCounts = peladaRepository.countMembersByIds(ids).stream()
                 .collect(Collectors.toMap(row -> (Long) row[0], row -> ((Number) row[1]).intValue()));
         Set<Long> administered = new HashSet<>(peladaRepository.findAdministeredIds(ids, caller.getId()));
+        Set<Long> financeManaged = financePreservation.managedPeladaIds(caller.getId());
 
         // One instant for the entire response. Group by local day (at most three dates worldwide),
         // not by pelada, so zone correctness does not introduce an N+1 query.
@@ -173,7 +174,8 @@ public class PeladaService {
                             .bump(unseenBumps.get(next.getId()))
                             .build();
                     return PeladaResponseDTO.from(p, memberCounts.getOrDefault(p.getId(), 0),
-                            administered.contains(p.getId()), nextDaily, subscriptions.get(p.getId()));
+                            administered.contains(p.getId()), financeManaged.contains(p.getId()), nextDaily,
+                            subscriptions.get(p.getId()));
                 })
                 .toList();
     }
@@ -372,7 +374,7 @@ public class PeladaService {
             }
         }
 
-        return PeladaResponseDTO.forAdmin(peladaRepository.save(pelada));
+        return PeladaResponseDTO.forAdmin(peladaRepository.save(pelada), financePreservation.isManager(peladaId, caller.getId()));
     }
 
     /**
@@ -419,7 +421,7 @@ public class PeladaService {
         String filename = fileUploadService.uploadImage(file);
         fileUploadService.deleteImageAfterCommit(pelada.getImage());
         pelada.setImage(filename);
-        return PeladaResponseDTO.forAdmin(peladaRepository.save(pelada));
+        return PeladaResponseDTO.forAdmin(peladaRepository.save(pelada), financePreservation.isManager(peladaId, caller.getId()));
     }
 
     /** Back to the gradient with initials; the file is deleted after the commit. Idempotent. */
@@ -431,7 +433,7 @@ public class PeladaService {
 
         fileUploadService.deleteImageAfterCommit(pelada.getImage());
         pelada.setImage(null);
-        return PeladaResponseDTO.forAdmin(peladaRepository.save(pelada));
+        return PeladaResponseDTO.forAdmin(peladaRepository.save(pelada), financePreservation.isManager(peladaId, caller.getId()));
     }
 
     /**
@@ -455,7 +457,8 @@ public class PeladaService {
         }
 
         pelada.setCreator(target);
-        PeladaResponseDTO response = PeladaResponseDTO.forAdmin(peladaRepository.save(pelada));
+        PeladaResponseDTO response = PeladaResponseDTO.forAdmin(peladaRepository.save(pelada),
+                financePreservation.isManager(peladaId, caller.getId()));
         eventPublisher.publishEvent(new PeladaTransferredEvent(pelada, caller, target));
         return response;
     }

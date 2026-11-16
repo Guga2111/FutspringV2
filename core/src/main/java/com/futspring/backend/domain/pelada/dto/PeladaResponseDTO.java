@@ -29,6 +29,9 @@ public record PeladaResponseDTO(
         // whether the caller administers the pelada
         @JsonProperty("isAdmin")
         boolean isAdmin,
+        // whether the caller is a responsável financeiro of the pelada (the mobile "+" offers "Nova cobrança")
+        @JsonProperty("isFinanceManager")
+        boolean isFinanceManager,
         // next SCHEDULED/CONFIRMED session from today on; only filled by GET /peladas/my and /users/{id}/peladas
         NextDailyDTO nextDaily,
         // only filled by GET /peladas/my and /users/{id}/peladas (null in command responses and without a row)
@@ -54,13 +57,13 @@ public record PeladaResponseDTO(
             AttendanceBumpDTO bump) {
     }
 
-    /** Create/update responses: the caller is an admin (both routes require it). */
-    public static PeladaResponseDTO forAdmin(Pelada pelada) {
-        return from(pelada, pelada.getMembers().size(), true, null, null);
+    /** Create/update responses: the caller is an admin (every such route requires it). */
+    public static PeladaResponseDTO forAdmin(Pelada pelada, boolean isFinanceManager) {
+        return from(pelada, pelada.getMembers().size(), true, isFinanceManager, null, null);
     }
 
-    public static PeladaResponseDTO from(Pelada pelada, int memberCount, boolean isAdmin, NextDailyDTO nextDaily,
-                                         SubscriptionSummaryDTO subscription) {
+    public static PeladaResponseDTO from(Pelada pelada, int memberCount, boolean isAdmin, boolean isFinanceManager,
+                                         NextDailyDTO nextDaily, SubscriptionSummaryDTO subscription) {
         return PeladaResponseDTO.builder()
                 .id(pelada.getId())
                 .name(pelada.getName())
@@ -76,6 +79,7 @@ public record PeladaResponseDTO(
                 .playersPerTeam(pelada.getPlayersPerTeam())
                 .timeZone(pelada.getTimeZone())
                 .isAdmin(isAdmin)
+                .isFinanceManager(isFinanceManager)
                 .nextDaily(nextDaily)
                 .subscription(subscription)
                 .build();
