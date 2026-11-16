@@ -11,12 +11,12 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
 import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
+  ResponsiveDialog,
+  ResponsiveDialogContent,
+  ResponsiveDialogFooter,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+} from "@/components/ui/responsive-dialog"
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -55,11 +55,11 @@ export function CreateSessionDialog({
   const submitting = form.formState.isSubmitting
 
   return (
-    <Dialog open onOpenChange={(open) => !open && !submitting && onClose()}>
-      <DialogContent className="max-w-sm">
-        <DialogHeader>
-          <DialogTitle>Criar sessão</DialogTitle>
-        </DialogHeader>
+    <ResponsiveDialog open onOpenChange={(open) => !open && !submitting && onClose()}>
+      <ResponsiveDialogContent className="max-w-sm">
+        <ResponsiveDialogHeader>
+          <ResponsiveDialogTitle>Criar sessão</ResponsiveDialogTitle>
+        </ResponsiveDialogHeader>
         <form onSubmit={form.handleSubmit(onSubmit)} noValidate className="flex flex-col gap-6">
           <FieldGroup className="gap-5">
             <Controller
@@ -114,16 +114,16 @@ export function CreateSessionDialog({
               <AlertDescription>{form.formState.errors.root.message}</AlertDescription>
             </Alert>
           )}
-          <DialogFooter className="gap-2">
+          <ResponsiveDialogFooter className="gap-2">
             <Button type="button" variant="ghost" onClick={onClose} disabled={submitting}>
               Cancelar
             </Button>
             <Button type="submit" variant="brand" disabled={submitting}>
               {submitting ? "Criando..." : "Criar"}
             </Button>
-          </DialogFooter>
+          </ResponsiveDialogFooter>
         </form>
-      </DialogContent>
-    </Dialog>
+      </ResponsiveDialogContent>
+    </ResponsiveDialog>
   )
 }

@@ -22,11 +22,11 @@ function formatRelativeTime(sentAt: string): string {
 interface ChatPanelProps {
   peladaId: number;
   currentUserId: number | null;
-  // drawer (mobile): 44 px input with 16 px text so iOS doesn't zoom
-  size?: "panel" | "drawer";
+  // page (the /pelada/:id/chat route): 44 px input with 16 px text so iOS doesn't zoom, above the home bar
+  size?: "panel" | "page";
 }
 
-// Messages and composer of the pelada chat; the floating panel / drawer around it lives in PeladaChat
+// Messages and composer of the pelada chat: in PeladaChat's floating panel (desktop) and on the chat page
 export function ChatPanel({ peladaId, currentUserId, size = "panel" }: ChatPanelProps) {
   const { messages, loading, connectionState, send } = usePeladaChat(peladaId);
   const [inputValue, setInputValue] = useState("");
@@ -111,7 +111,7 @@ export function ChatPanel({ peladaId, currentUserId, size = "panel" }: ChatPanel
       </div>
 
       <form
-        className="flex shrink-0 gap-2 border-t p-3"
+        className={cn("flex shrink-0 gap-2 border-t p-3", size === "page" && "bg-card pb-[calc(0.75rem+env(safe-area-inset-bottom))]")}
         onSubmit={(e) => {
           e.preventDefault();
           sendMessage();
@@ -125,14 +125,14 @@ export function ChatPanel({ peladaId, currentUserId, size = "panel" }: ChatPanel
           maxLength={MAX_MESSAGE_LENGTH}
           className={cn(
             "min-w-0 flex-1 bg-background",
-            size === "drawer" ? "h-11 rounded-[10px] text-base" : "h-[38px] rounded-lg",
+            size === "page" ? "h-11 rounded-[10px] text-base" : "h-[38px] rounded-lg",
           )}
         />
         <Button
           type="submit"
           variant="brand"
           disabled={!inputValue.trim()}
-          className={cn("font-semibold", size === "drawer" ? "h-11 px-4" : "h-[38px] px-3.5")}
+          className={cn("font-semibold", size === "page" ? "h-11 px-4" : "h-[38px] px-3.5")}
         >
           Enviar
         </Button>

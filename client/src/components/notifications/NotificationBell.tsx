@@ -4,10 +4,8 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import { Notification01Icon } from "@hugeicons/core-free-icons"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Drawer, DrawerContent, DrawerDescription, DrawerTitle } from "@/components/ui/drawer"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { NotificationPanel } from "@/components/notifications/NotificationPanel"
-import { useIsMobile } from "@/hooks/useIsMobile"
 import { useNotificationsContext } from "@/hooks/useNotificationsContext"
 import { cn } from "@/lib/utils"
 import type { NotificationResponse } from "@/types/notification"
@@ -23,9 +21,9 @@ function bellLabel(count: number | null): string {
   return `Notificações, ${count} ${count === 1 ? "não lida" : "não lidas"}`
 }
 
-// Bell with the unread count; opens the panel as a Popover on desktop and a Drawer on mobile (like the chat)
+// Bell with the unread count in the sidebar (md and up), opening the panel in a Popover. Below md the "Avisos" tab
+// and /notificacoes take its place.
 export function NotificationBell({ compact = false, className }: NotificationBellProps) {
-  const isMobile = useIsMobile()
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
   const { unreadCount, refresh, markRead } = useNotificationsContext()
@@ -52,7 +50,6 @@ export function NotificationBell({ compact = false, className }: NotificationBel
       variant="ghost"
       size="icon"
       aria-label={bellLabel(unreadCount)}
-      onClick={isMobile ? () => handleOpenChange(true) : undefined}
       className={cn("relative shrink-0 text-muted-foreground hover:text-foreground", className)}
     >
       <HugeiconsIcon icon={Notification01Icon} />
@@ -72,25 +69,6 @@ export function NotificationBell({ compact = false, className }: NotificationBel
   )
 
   const title = <span className="text-[15px] font-semibold">Notificações</span>
-
-  if (isMobile) {
-    return (
-      <>
-        {trigger}
-        <Drawer open={open} onOpenChange={handleOpenChange}>
-          <DrawerContent className="h-[78%] rounded-t-2xl bg-card">
-            <DrawerDescription className="sr-only">Suas notificações</DrawerDescription>
-            <NotificationPanel
-              title={<DrawerTitle className="text-[15px] font-semibold">Notificações</DrawerTitle>}
-              onSelect={handleSelect}
-              onOpenPreferences={openPreferences}
-              className="flex min-h-0 flex-1 flex-col"
-            />
-          </DrawerContent>
-        </Drawer>
-      </>
-    )
-  }
 
   return (
     <Popover open={open} onOpenChange={handleOpenChange}>

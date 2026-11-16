@@ -1,14 +1,16 @@
 import { useCallback, useEffect, useState } from "react"
 import { getMyPeladas } from "@/api/peladas"
+import { useReload } from "@/hooks/useReload"
 import type { NextDaily, PeladaResponse } from "@/types/pelada"
 
-// The user's peladas. Each item already carries memberCount, isAdmin and nextDaily, so there is one request.
-// Used once by AppLayout and shared through MyPeladasContext.
+// The user's peladas. Each item already carries memberCount, isAdmin, isFinanceManager and nextDaily, so there is
+// one request. Used once by AppLayout and shared through MyPeladasContext.
 export function useMyPeladas() {
   const [peladas, setPeladas] = useState<PeladaResponse[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
-  const [version, setVersion] = useState(0)
+  // reload() resolves when the new list answered (a failure shows in `error`, the list on screen stays)
+  const { version, reload, settle } = useReload()
 
   useEffect(() => {
     let cancelled = false
@@ -19,13 +21,15 @@ export function useMyPeladas() {
         setError(false)
       })
       .catch(() => !cancelled && setError(true))
-      .finally(() => !cancelled && setLoading(false))
+      .finally(() => {
+        if (cancelled) return
+        setLoading(false)
+        settle()
+      })
     return () => {
       cancelled = true
     }
-  }, [version])
-
-  const reload = useCallback(() => setVersion((v) => v + 1), [])
+  }, [version, settle])
 
   const updateNextDaily = useCallback((peladaId: number, patch: Partial<NextDaily>) => {
     setPeladas((prev) =>

@@ -1,6 +1,6 @@
 # Redesign mobile pela Lei de Jakob — spec
 
-Data: 2026-11-16. Status: aprovada, não implementada.
+Data: 2026-11-16. Status: implementada (um PR único a partir de `dev`, em vez dos 4 sub-PRs da seção 6).
 
 ## Objetivo
 

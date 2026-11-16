@@ -6,7 +6,8 @@ export interface MyPeladasContextValue {
   peladas: PeladaResponse[]
   loading: boolean
   error: boolean
-  reload: () => void
+  // resolves when the list answered (errors go to `error`)
+  reload: () => Promise<void>
   // merge a mutation's result (confirm / unconfirm) into a pelada's next session
   updateNextDaily: (peladaId: number, patch: Partial<NextDaily>) => void
   openCreatePelada: () => void

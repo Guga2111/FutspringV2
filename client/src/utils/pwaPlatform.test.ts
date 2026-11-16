@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { detectInstallContext, installCardVisible, installPlatform, type InstallEnvironment } from "@/utils/pwaPlatform"
+import { detectInstallContext, installCardVisible, installPlatform, isIosDevice, type InstallEnvironment } from "@/utils/pwaPlatform"
 
 const UA = {
   iphoneSafari:
@@ -90,5 +90,14 @@ describe("installCardVisible", () => {
   it("hides it for 30 days after the ✕", () => {
     expect(installCardVisible("2026-10-08T12:00:01Z", now)).toBe(false)
     expect(installCardVisible("2026-10-07T12:00:00Z", now)).toBe(true)
+  })
+})
+
+describe("isIosDevice", () => {
+  it("knows an iPhone and an iPad that reports a Mac", () => {
+    expect(isIosDevice("Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)", 5)).toBe(true)
+    expect(isIosDevice("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)", 5)).toBe(true)
+    expect(isIosDevice("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)", 0)).toBe(false)
+    expect(isIosDevice("Mozilla/5.0 (Linux; Android 14)", 5)).toBe(false)
   })
 })

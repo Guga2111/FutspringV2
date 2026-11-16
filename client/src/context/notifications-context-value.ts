@@ -14,8 +14,9 @@ export interface NotificationsContextValue {
   error: boolean
   hasMore: boolean
   loadingMore: boolean
-  // the panel opened: loads the list (first open) or refreshes its first page, and the counter
-  refresh: () => void
+  // the panel opened: loads the list (first open) or refreshes its first page, and the counter; settles when both
+  // answered (pull to refresh waits for it)
+  refresh: () => Promise<void>
   setFilter: (filter: NotificationFilter) => void
   loadMore: () => void
   // optimistic; reverts with a toast on error

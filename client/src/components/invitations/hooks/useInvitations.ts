@@ -1,16 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { getMyInvitations, getPeladaInvitations, INVITATIONS_PAGE_SIZE } from "@/api/invitations"
+import { useReload } from "@/hooks/useReload"
 import type { Invitation } from "@/types/invitation"
 
 // Paginated invitation inbox/history; results are keyed so route changes cannot display another pelada's rows.
 export function useInvitations(peladaId?: number, pending = true, refreshKey = 0) {
   const key = `${peladaId ?? "mine"}:${pending}`
-  const [version, setVersion] = useState(0)
+  // reload() resolves when the first page answered
+  const { version, reload, settle } = useReload()
   const [state, setState] = useState<{ key: string; version: number; items: Invitation[]; page: number; more: boolean; error: boolean } | null>(null)
   const [loadingMore, setLoadingMore] = useState(false)
   const requestId = useRef(0)
   const request = useCallback((page: number) => peladaId === undefined ? getMyInvitations(page) : getPeladaInvitations(peladaId, pending, page), [peladaId, pending])
-  const reload = useCallback(() => setVersion(v => v + 1), [])
 
   useEffect(() => {
     let active = true
@@ -19,9 +20,11 @@ export function useInvitations(peladaId?: number, pending = true, refreshKey = 0
       if (active && requestId.current === id) setState({ key, version, items, page: 0, more: items.length === INVITATIONS_PAGE_SIZE, error: false })
     }).catch(() => {
       if (active && requestId.current === id) setState({ key, version, items: [], page: 0, more: false, error: true })
+    }).finally(() => {
+      if (active && requestId.current === id) settle()
     })
     return () => { active = false }
-  }, [request, key, version, refreshKey])
+  }, [request, key, version, refreshKey, settle])
 
   async function loadMore() {
     if (!state || state.key !== key || state.version !== version || !state.more || loadingMore) return
