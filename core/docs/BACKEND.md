@@ -157,8 +157,10 @@ com.futspring.backend
 │   │   │                           PasswordResetRequestedEvent, PasswordResetEmailListener (sends the
 │   │   │                           e-mail after commit, @Async), PasswordResetEmail (fills resources/email/password-reset.html),
 │   │   │                           PasswordResetTokenCleanup (daily purge)
+│   │   ├── verification/           EmailVerificationService (verification link: request / verify with the account password),
+│   │   │                           EmailVerificationRequested, EmailVerificationListener (sends the e-mail after commit, @Async)
 │   │   └── dto/                    LoginRequestDTO, RegisterRequestDTO, AuthResponseDTO, UserResponseDTO,
-│   │                               ForgotPasswordRequestDTO, ResetPasswordRequestDTO
+│   │                               ForgotPasswordRequestDTO, ResetPasswordRequestDTO, VerifyEmailRequestDTO
 │   ├── user/                       UserController, UserService (profile get/update, avatar, background image, change password), User, UserRepository,
 │   │   │                           AccountDeletionService (deletion blockers, account deletion by anonymization), DeletionBlockerType,
 │   │   │                           AccountExportService (the caller's data export, LGPD access and portability),

@@ -73,7 +73,7 @@ public class RefreshSessionService {
     private final Clock clock;
     private final MeterRegistry meterRegistry;
 
-    /** A new session for a user who just proved who they are (login, registration, password change). */
+    /** A new session for a user who just proved who they are (verified login, password change). */
     public IssuedSession open(User user) {
         if (user.isDeleted() || user.getEmailVerifiedAt() == null) {
             throw new AppException(HttpStatus.FORBIDDEN, "Verifique seu e-mail antes de entrar.");
