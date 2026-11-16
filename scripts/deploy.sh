@@ -101,9 +101,6 @@ else
   echo "PG_DUMP_URL not set: skipping the database backup."
 fi
 
-# The old deploy ran a plain 'docker run' container that holds the API port
-docker rm -f futspring-api 2>/dev/null || true
-
 # Shared with the observability stack (ops/observability), which scrapes the API on it
 docker network create observability >/dev/null 2>&1 || true
 
