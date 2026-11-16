@@ -1,4 +1,6 @@
 import { z } from "@/lib/zod"
+import type { PopulateDailyInput } from "@/api/dailies"
+import type { ParsedSession } from "@/utils/parseSessionMessage"
 
 // mirrors CreateDailyRequestDTO (dailyDate is sent as yyyy-MM-dd)
 export const createDailySchema = z.object({
@@ -94,3 +96,72 @@ export const saveTeamsSchema = z.object({
     }),
 })
 export type SaveTeamsValues = z.infer<typeof saveTeamsSchema>
+
+// mirrors FinalizeDailyRequestDTO: the Puskás and Bola Murcha winners (players on the session's teams, checked
+// by the server too); an empty list means nobody gets that award
+const winnerIdsSchema = z.array(z.number().int().positive())
+export const finalizeDailySchema = z.object({
+  puskasWinnerIds: winnerIdsSchema,
+  wiltballWinnerIds: winnerIdsSchema,
+})
+export type FinalizeDailyValues = z.infer<typeof finalizeDailySchema>
+
+// "Importar da mensagem", step 1: the WhatsApp text (client only; the parse then decides whether it has teams)
+export const importMessageSchema = z.object({
+  message: z.string().trim().min(1, "Cole a mensagem da sessão"),
+})
+export type ImportMessageValues = z.infer<typeof importMessageSchema>
+
+// Step 2: one row per player name in the message, in the parsed order. Errors sit on the row (path [], the
+// whole player), so the row shows them whatever state it is in
+const importPlayerSchema = z
+  .object({
+    rawName: z.string(),
+    totalGoals: z.number().int().min(0),
+    totalAssists: z.number().int().min(0),
+    matchedUserId: z.number().int().positive().nullable(),
+    skipped: z.boolean(),
+  })
+  .refine((player) => player.matchedUserId !== null || player.skipped, "Escolha o jogador ou ignore")
+
+// Every name is linked to a member or skipped, and a member once (PopulateDailyRequestDTO: each player once)
+export const importResolutionSchema = z
+  .object({
+    teams: z.array(z.object({ players: z.array(importPlayerSchema) })),
+  })
+  .superRefine((values, ctx) => {
+    const seen = new Map<number, string>()
+    values.teams.forEach((team, teamIndex) =>
+      team.players.forEach((player, playerIndex) => {
+        if (player.skipped || player.matchedUserId === null) return
+        const first = seen.get(player.matchedUserId)
+        if (first === undefined) {
+          seen.set(player.matchedUserId, player.rawName)
+          return
+        }
+        ctx.addIssue({
+          code: "custom",
+          path: ["teams", teamIndex, "players", playerIndex],
+          message: `Este jogador já está vinculado a ${first}`,
+        })
+      }),
+    )
+  })
+export type ImportResolutionValues = z.infer<typeof importResolutionSchema>
+
+// The parsed message + the linked players -> PopulateDailyRequestDTO: the teams' colors and the matches come from
+// the parse, each team keeps its linked, not skipped players
+export function toPopulateInput(parsed: ParsedSession, values: ImportResolutionValues): PopulateDailyInput {
+  return {
+    teams: parsed.teams.map((team, index) => ({
+      colorName: team.colorName,
+      colorHex: team.colorHex,
+      players: (values.teams[index]?.players ?? []).flatMap((player) =>
+        player.matchedUserId !== null && !player.skipped
+          ? [{ userId: player.matchedUserId, totalGoals: player.totalGoals, totalAssists: player.totalAssists }]
+          : [],
+      ),
+    })),
+    matches: parsed.matches.map((match) => ({ ...match })),
+  }
+}

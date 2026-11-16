@@ -180,6 +180,97 @@ test("dialog results", async ({ page }) => {
   await expect(page.getByRole("dialog")).toHaveScreenshot("dialog-results.png", DIALOG_SHOT)
 })
 
+// The finalize form sends the picked winners; a server error stays in the dialog, on the form's root
+test("dialog finalize", async ({ page }) => {
+  let body: unknown = null
+  await open(page, `/daily/${LIVE_ID}`, true, "h1, h2", (p) =>
+    p.route(/\/api\/v1\/dailies\/\d+\/finalize$/, (route) => {
+      body = route.request().postDataJSON()
+      return route.fulfill({ status: 409, json: { status: 409, message: "A sessão mudou. Recarregue a página.", timestamp: NOW } })
+    }))
+  await page.getByRole("button", { name: "Finalizar sessão" }).first().click()
+  const dialog = page.getByRole("dialog", { name: "Finalizar sessão" })
+  await expect(dialog).toBeVisible()
+  await settle(page)
+  await expect(dialog).toHaveScreenshot("dialog-finalize.png", DIALOG_SHOT)
+
+  const puskas = dialog.getByRole("group", { name: /Puskás/ }).getByRole("checkbox").first()
+  await puskas.click()
+  await dialog.getByRole("button", { name: "Finalizar", exact: true }).click()
+  await expect(dialog.getByRole("alert").filter({ hasText: "A sessão mudou. Recarregue a página." })).toBeVisible()
+  expect(body).toMatchObject({ wiltballWinnerIds: [] })
+  expect((body as { puskasWinnerIds: number[] }).puskasWinnerIds).toHaveLength(1)
+})
+
+// Create pelada: errors under each field, then a photo that fails after the pelada was created only warns and
+// still opens the new pelada (an error there made people create it twice)
+test("sheet create pelada", async ({ page }) => {
+  let body: unknown = null
+  await open(page, "/home", true, "h1, h2", async (p) => {
+    await p.route(/\/api\/v1\/peladas$/, (route) => {
+      if (route.request().method() !== "POST") return route.fallback()
+      body = route.request().postDataJSON()
+      return route.fulfill({ status: 201, json: { ...peladaDetail, id: PELADA_ID } })
+    })
+    await p.route(/\/api\/v1\/peladas\/\d+\/image$/, (route) =>
+      route.fulfill({ status: 500, json: { status: 500, message: "Ocorreu um erro inesperado", timestamp: NOW } }))
+  })
+  await page.getByRole("button", { name: "Criar nova pelada" }).first().click()
+  const sheet = page.getByRole("dialog", { name: "Criar Pelada" })
+  await expect(sheet).toBeVisible()
+  await settle(page)
+  await expect(sheet).toHaveScreenshot("sheet-create-pelada.png", DIALOG_SHOT)
+
+  await sheet.getByRole("button", { name: "Criar Pelada" }).click()
+  await expect(sheet.getByText("O nome é obrigatório")).toBeVisible()
+  await expect(sheet.getByText("Horário inválido (HH:mm)")).toBeVisible()
+  expect(body).toBeNull()
+
+  await sheet.getByLabel("Nome *").fill("Pelada Nova")
+  await sheet.getByLabel("Horário *").fill("21:00")
+  await sheet.getByLabel("Imagem (opcional)").setInputFiles({ name: "foto.png", mimeType: "image/png", buffer: Buffer.from("png") })
+  await sheet.getByRole("button", { name: "Criar Pelada" }).click()
+  await expect(page.getByText("Pelada criada, mas a foto não foi enviada. Envie de novo nas configurações.")).toBeVisible()
+  await expect(page).toHaveURL(PELADA)
+  expect(body).toMatchObject({ name: "Pelada Nova", timeOfDay: "21:00", dayOfWeek: "MONDAY", timeZone: "America/Sao_Paulo" })
+})
+
+// Import from a WhatsApp message: an empty text and unresolved or repeated names show on their field / row;
+// the body sends the parsed colors and matches with the linked players only
+test("dialog import message", async ({ page }) => {
+  const sent: { body?: { teams: { colorName: string; players: { userId: number }[] }[]; matches: unknown[] } } = {}
+  await open(page, `/daily/${SCHEDULED_ID}`, true, "h1, h2", (p) =>
+    p.route(/\/api\/v1\/dailies\/\d+\/populate$/, (route) => {
+      sent.body = route.request().postDataJSON()
+      return route.fulfill({ json: scheduledDaily })
+    }))
+  await page.getByRole("button", { name: "Importar mensagem" }).click()
+  const dialog = page.getByRole("dialog", { name: "Importar da mensagem" })
+  await dialog.getByRole("button", { name: "Analisar mensagem" }).click()
+  await expect(dialog.getByText("Cole a mensagem da sessão")).toBeVisible()
+
+  await dialog.getByLabel(/Cole a mensagem do WhatsApp/).fill(
+    "Azul 🔵\n\nLeal ⚽️⚽️🅰️\nBruno ⚽️\nLeal Jr\nVisitante\n\nBranco ⚪️\n\nCaio ⚽️\n\nAzul 2 x 1 Branco",
+  )
+  await dialog.getByRole("button", { name: "Analisar mensagem" }).click()
+  await dialog.getByRole("button", { name: "Confirmar e importar" }).click()
+  await expect(dialog.getByText("Escolha o jogador ou ignore")).toBeVisible()
+  await expect(dialog.getByText("Este jogador já está vinculado a Leal")).toBeVisible()
+  expect(sent.body).toBeUndefined()
+  await settle(page)
+  await expect(dialog).toHaveScreenshot("dialog-import-message.png", DIALOG_SHOT)
+
+  await dialog.getByText("Leal Jr", { exact: true }).locator("..").getByRole("button", { name: "Trocar jogador" }).click()
+  await dialog.getByRole("combobox", { name: "Jogador para Leal Jr" }).click()
+  await page.getByRole("option", { name: "Diego" }).click()
+  await dialog.getByRole("combobox", { name: "Jogador para Visitante" }).click()
+  await page.getByRole("option", { name: "Ignorar jogador" }).click()
+  await dialog.getByRole("button", { name: "Confirmar e importar" }).click()
+  await expect(dialog).toBeHidden()
+  expect(sent.body?.teams.map((t) => [t.colorName, t.players.length])).toEqual([["Azul", 3], ["Branco", 1]])
+  expect(sent.body?.matches).toEqual([{ team1ColorName: "Azul", team1Score: 2, team2ColorName: "Branco", team2Score: 1 }])
+})
+
 // "Montar times" over a confirmed session with a short team and a player without one
 test("teams editor", async ({ page }, testInfo) => {
   await open(page, `/daily/${CONFIRMED_ID}`)
