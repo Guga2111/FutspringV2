@@ -235,6 +235,42 @@ test("sheet create pelada", async ({ page }) => {
   expect(body).toMatchObject({ name: "Pelada Nova", timeOfDay: "21:00", dayOfWeek: "MONDAY", timeZone: "America/Sao_Paulo" })
 })
 
+// Import from a WhatsApp message: an empty text and unresolved or repeated names show on their field / row;
+// the body sends the parsed colors and matches with the linked players only
+test("dialog import message", async ({ page }) => {
+  const sent: { body?: { teams: { colorName: string; players: { userId: number }[] }[]; matches: unknown[] } } = {}
+  await open(page, `/daily/${SCHEDULED_ID}`, true, "h1, h2", (p) =>
+    p.route(/\/api\/v1\/dailies\/\d+\/populate$/, (route) => {
+      sent.body = route.request().postDataJSON()
+      return route.fulfill({ json: scheduledDaily })
+    }))
+  await page.getByRole("button", { name: "Importar mensagem" }).click()
+  const dialog = page.getByRole("dialog", { name: "Importar da mensagem" })
+  await dialog.getByRole("button", { name: "Analisar mensagem" }).click()
+  await expect(dialog.getByText("Cole a mensagem da sessão")).toBeVisible()
+
+  await dialog.getByLabel(/Cole a mensagem do WhatsApp/).fill(
+    "Azul 🔵\n\nLeal ⚽️⚽️🅰️\nBruno ⚽️\nLeal Jr\nVisitante\n\nBranco ⚪️\n\nCaio ⚽️\n\nAzul 2 x 1 Branco",
+  )
+  await dialog.getByRole("button", { name: "Analisar mensagem" }).click()
+  await dialog.getByRole("button", { name: "Confirmar e importar" }).click()
+  await expect(dialog.getByText("Escolha o jogador ou ignore")).toBeVisible()
+  await expect(dialog.getByText("Este jogador já está vinculado a Leal")).toBeVisible()
+  expect(sent.body).toBeUndefined()
+  await settle(page)
+  await expect(dialog).toHaveScreenshot("dialog-import-message.png", DIALOG_SHOT)
+
+  await dialog.getByText("Leal Jr", { exact: true }).locator("..").getByRole("button", { name: "Trocar jogador" }).click()
+  await dialog.getByRole("combobox", { name: "Jogador para Leal Jr" }).click()
+  await page.getByRole("option", { name: "Diego" }).click()
+  await dialog.getByRole("combobox", { name: "Jogador para Visitante" }).click()
+  await page.getByRole("option", { name: "Ignorar jogador" }).click()
+  await dialog.getByRole("button", { name: "Confirmar e importar" }).click()
+  await expect(dialog).toBeHidden()
+  expect(sent.body?.teams.map((t) => [t.colorName, t.players.length])).toEqual([["Azul", 3], ["Branco", 1]])
+  expect(sent.body?.matches).toEqual([{ team1ColorName: "Azul", team1Score: 2, team2ColorName: "Branco", team2Score: 1 }])
+})
+
 // "Montar times" over a confirmed session with a short team and a player without one
 test("teams editor", async ({ page }, testInfo) => {
   await open(page, `/daily/${CONFIRMED_ID}`)
