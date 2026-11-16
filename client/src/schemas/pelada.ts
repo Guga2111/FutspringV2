@@ -28,20 +28,26 @@ export const peladaLocationSchema = z.object({
 })
 export type PeladaLocationValues = z.infer<typeof peladaLocationSchema>
 
+// numberOfTeams and playersPerTeam: the same rules on CreatePeladaRequestDTO and UpdatePeladaRequestDTO. A plain
+// shape, spread into both schemas (zod 4 can't .extend a schema that has a superRefine)
+const teamSizeFields = {
+  numberOfTeams: z
+    .number({ error: "Informe o número de times" })
+    .int("Use um número inteiro")
+    .min(2, "Mínimo de 2 times")
+    .max(10, "Máximo de 10 times"),
+  playersPerTeam: z
+    .number({ error: "Informe os jogadores por time" })
+    .int("Use um número inteiro")
+    .min(2, "Mínimo de 2 jogadores por time")
+    .max(20, "Máximo de 20 jogadores por time"),
+}
+
 // mirrors UpdatePeladaRequestDTO.numberOfTeams, playersPerTeam and maxMensalistas. The limit is checked against
 // the capacity being edited, as the backend does (409); going below the current mensalistas is only checked there.
 export const peladaSlotsSchema = z
   .object({
-    numberOfTeams: z
-      .number({ error: "Informe o número de times" })
-      .int("Use um número inteiro")
-      .min(2, "Mínimo de 2 times")
-      .max(10, "Máximo de 10 times"),
-    playersPerTeam: z
-      .number({ error: "Informe os jogadores por time" })
-      .int("Use um número inteiro")
-      .min(2, "Mínimo de 2 jogadores por time")
-      .max(20, "Máximo de 20 jogadores por time"),
+    ...teamSizeFields,
     maxMensalistas: z
       .number({ error: "Informe o limite de mensalistas" })
       .int("Use um número inteiro")
@@ -58,6 +64,17 @@ export const peladaSlotsSchema = z
     }
   })
 export type PeladaSlotsValues = z.infer<typeof peladaSlotsSchema>
+
+// mirrors CreatePeladaRequestDTO. The time zone is the creator's (Intl), added on submit; maxMensalistas keeps the
+// backend default (0) and is set later in the settings
+export const createPeladaSchema = z.object({
+  ...peladaInfoSchema.shape,
+  ...peladaScheduleSchema.omit({ timeZone: true }).shape,
+  ...peladaLocationSchema.shape,
+  ...teamSizeFields,
+  autoCreateDailyEnabled: z.boolean(),
+})
+export type CreatePeladaValues = z.infer<typeof createPeladaSchema>
 
 // Client only: destructive actions ask for the pelada's name, typed as it is shown (surrounding spaces ignored)
 function typedName(peladaName: string) {

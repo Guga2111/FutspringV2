@@ -94,3 +94,12 @@ export const saveTeamsSchema = z.object({
     }),
 })
 export type SaveTeamsValues = z.infer<typeof saveTeamsSchema>
+
+// mirrors FinalizeDailyRequestDTO: the Puskás and Bola Murcha winners (players on the session's teams, checked
+// by the server too); an empty list means nobody gets that award
+const winnerIdsSchema = z.array(z.number().int().positive())
+export const finalizeDailySchema = z.object({
+  puskasWinnerIds: winnerIdsSchema,
+  wiltballWinnerIds: winnerIdsSchema,
+})
+export type FinalizeDailyValues = z.infer<typeof finalizeDailySchema>

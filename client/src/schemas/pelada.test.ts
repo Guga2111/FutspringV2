@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest"
 import {
+  createPeladaSchema,
   makeDeletePeladaSchema,
   makeTransferPeladaSchema,
   peladaInfoSchema,
@@ -60,6 +61,44 @@ describe("peladaSlotsSchema", () => {
     expect(peladaSlotsSchema.safeParse({ ...valid, maxMensalistas: -1 }).success).toBe(false)
     expect(peladaSlotsSchema.safeParse({ ...valid, maxMensalistas: 1.5 }).success).toBe(false)
     expect(peladaSlotsSchema.safeParse({ ...valid, numberOfTeams: Number.NaN }).success).toBe(false)
+  })
+})
+
+describe("createPeladaSchema", () => {
+  const valid = {
+    name: "  Pelada do Fut ",
+    dayOfWeek: "THURSDAY",
+    timeOfDay: "21:00",
+    duration: 1.5,
+    address: "",
+    reference: "",
+    numberOfTeams: 2,
+    playersPerTeam: 5,
+    autoCreateDailyEnabled: false,
+  }
+
+  it("accepts a new pelada and trims the name", () => {
+    const result = createPeladaSchema.safeParse(valid)
+    expect(result.success).toBe(true)
+    expect(result.data?.name).toBe("Pelada do Fut")
+  })
+
+  it("puts each error on its field", () => {
+    const result = createPeladaSchema.safeParse({
+      ...valid,
+      name: " ",
+      timeOfDay: "",
+      duration: Number.NaN,
+      numberOfTeams: 11,
+      playersPerTeam: 1,
+    })
+    expect(result.error?.issues.map((issue) => issue.path[0]).sort()).toEqual(
+      ["duration", "name", "numberOfTeams", "playersPerTeam", "timeOfDay"],
+    )
+  })
+
+  it("leaves the time zone to the submit", () => {
+    expect(Object.keys(createPeladaSchema.shape)).not.toContain("timeZone")
   })
 })
 

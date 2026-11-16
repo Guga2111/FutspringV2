@@ -13,7 +13,7 @@ import { useNotifications } from "@/hooks/useNotifications"
 import { useAuth } from "@/hooks/useAuth"
 import { useOnline } from "@/hooks/useOnline"
 import { syncPushSubscription } from "@/hooks/usePushSubscription"
-import CreatePeladaModal from "@/components/CreatePeladaModal"
+import { CreatePeladaSheet } from "@/components/pelada/CreatePeladaSheet"
 import { AppSidebar } from "@/components/layout/AppSidebar"
 import { MobileTopBar } from "@/components/layout/MobileTopBar"
 import { RealtimeProvider } from "@/components/layout/RealtimeProvider"
@@ -104,7 +104,7 @@ function AppShell() {
         </SidebarInset>
       </SidebarProvider>
       {createOpen && (
-        <CreatePeladaModal
+        <CreatePeladaSheet
           onClose={() => setCreateOpen(false)}
           onCreated={() => {
             setCreateOpen(false)
