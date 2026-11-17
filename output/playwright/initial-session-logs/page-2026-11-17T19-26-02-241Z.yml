@@ -1,0 +1,206 @@
+- generic:
+  - generic:
+    - generic [aria-hidden]:
+      - main:
+        - generic:
+          - generic:
+            - generic:
+              - link:
+                - /url: /home
+                - generic: FutSpring
+          - generic:
+            - generic:
+              - generic:
+                - generic:
+                  - main:
+                    - generic:
+                      - generic:
+                        - generic:
+                          - generic: Quarta-feira, 4 de novembro
+                          - heading [level=1]: Boa tarde, Leal
+                          - generic: Você tem 1 sessão esperando sua confirmação.
+                        - button: Nova pelada
+                    - region:
+                      - generic:
+                        - heading [level=2]: Convites para você
+                        - generic: "1"
+                      - generic:
+                        - generic:
+                          - generic:
+                            - generic [aria-hidden]: RF
+                            - generic:
+                              - paragraph: Racha da Firma
+                              - paragraph: Terça às 19:30
+                          - paragraph:
+                            - generic: ED
+                            - generic: Edu te convidou · expira em 6 dias
+                          - generic:
+                            - button: Aceitar convite
+                            - button: Recusar
+                            - link:
+                              - /url: /invitations/900
+                              - text: Ver detalhes
+                    - generic:
+                      - generic:
+                        - generic:
+                          - heading [level=2]: Próximas sessões
+                          - generic: "1"
+                      - generic:
+                        - article:
+                          - generic:
+                            - generic [aria-hidden]: PF
+                            - generic: Pelada do Fut
+                            - generic: Agendada
+                          - generic:
+                            - generic:
+                              - generic:
+                                - generic: Qui, 05 nov
+                                - generic: às 21:00
+                              - generic:
+                                - generic:
+                                  - text: "7"
+                                  - generic: /10
+                                - generic: 3 vagas
+                            - generic: Arena Society, Rua das Flores 120
+                          - progressbar
+                          - generic:
+                            - generic:
+                              - generic:
+                                - button: Confirmar presença
+                            - link:
+                              - /url: /daily/203
+                    - generic:
+                      - generic:
+                        - generic:
+                          - heading [level=2]: Seus números
+                          - generic: em todas as peladas
+                        - link:
+                          - /url: /profile/1
+                          - text: Ver perfil →
+                      - generic:
+                        - generic:
+                          - term: Gols
+                          - definition: "42"
+                          - definition: 0,44 por partida
+                        - generic:
+                          - term: Assistências
+                          - definition: "27"
+                          - definition: 0,28 por partida
+                        - generic:
+                          - term: Partidas
+                          - definition: "96"
+                          - definition: em 24 sessões
+                        - generic:
+                          - term: Vitórias
+                          - definition: "51"
+                          - definition: 53% de aproveitamento
+                    - generic:
+                      - generic:
+                        - generic:
+                          - heading [level=2]: Minhas peladas
+                          - generic: "2"
+                      - generic:
+                        - link:
+                          - /url: /pelada/1
+                          - generic [aria-hidden]: PF
+                          - generic:
+                            - generic: Pelada do Fut
+                            - generic: Quinta · 21:00
+                            - generic:
+                              - generic: 12 membros
+                              - generic: Admin
+                              - generic: "Próxima: Qui, 05/11 · 21:00"
+                        - link:
+                          - /url: /pelada/2
+                          - generic [aria-hidden]: FD
+                          - generic:
+                            - generic: Fut de Domingo
+                            - generic: Domingo · 09:00
+                            - generic:
+                              - generic: 8 membros
+                              - generic: Sem sessão marcada
+                        - button:
+                          - generic: Criar nova pelada
+        - navigation:
+          - generic:
+            - link:
+              - /url: /home
+              - generic [aria-hidden]: Início
+            - link:
+              - /url: /peladas
+              - generic [aria-hidden]: Peladas
+            - generic:
+              - button
+            - link:
+              - /url: /notificacoes
+              - generic:
+                - generic [aria-hidden]: "1"
+              - generic [aria-hidden]: Avisos
+            - link:
+              - /url: /profile/1
+              - generic: LE
+              - generic [aria-hidden]: Perfil
+    - region "Notifications alt+T"
+  - dialog "Criar Pelada" [ref=e167]:
+    - generic [ref=e168]:
+      - heading "Criar Pelada" [level=2] [ref=e169]
+      - paragraph [ref=e170]: Preencha em detalhes para criar seus jogos semanais.
+    - generic [ref=e171]:
+      - generic [ref=e172]:
+        - group [ref=e173]:
+          - generic [ref=e174]: Nome *
+          - textbox "Nome *" [active] [ref=e175]:
+            - /placeholder: Jogasse Onde?
+          - alert:
+            - list
+        - generic [ref=e176]:
+          - group [ref=e177]:
+            - generic [ref=e178]: Dia da semana *
+            - combobox "Dia da semana *" [ref=e179] [cursor=pointer]:
+              - generic: Segunda
+            - combobox [aria-hidden] [ref=e182]
+            - alert:
+              - list
+          - group [ref=e183]:
+            - generic [ref=e184]: Horário *
+            - textbox "Horário *" [ref=e185]
+            - alert:
+              - list
+        - group [ref=e186]:
+          - generic [ref=e187]: Duração (h) *
+          - spinbutton "Duração (h) *" [ref=e188]: "1"
+          - alert:
+            - list
+        - generic [ref=e189]:
+          - group [ref=e190]:
+            - generic [ref=e191]: Número de times *
+            - spinbutton "Número de times *" [ref=e192]: "2"
+            - alert:
+              - list
+          - group [ref=e193]:
+            - generic [ref=e194]: Jogadores por time *
+            - spinbutton "Jogadores por time *" [ref=e195]: "5"
+            - alert:
+              - list
+        - group [ref=e196]:
+          - generic [ref=e197]: Endereço
+          - textbox "Endereço" [ref=e201]:
+            - /placeholder: Rua da Estrela
+          - alert:
+            - list
+        - group [ref=e202]:
+          - generic [ref=e203]: Referência (opcional)
+          - textbox "Referência (opcional)" [ref=e204]:
+            - /placeholder: Ilha do Retiro
+          - alert:
+            - list
+        - group [ref=e205]:
+          - checkbox "Criar as sessões semanais automaticamente" [ref=e206] [cursor=pointer]
+          - checkbox [aria-hidden]
+          - generic [ref=e207] [cursor=pointer]: Criar as sessões semanais automaticamente
+        - group [ref=e208]:
+          - generic [ref=e209]: Imagem (opcional)
+          - button "Imagem (opcional)" [ref=e210] [cursor=pointer]
+          - paragraph [ref=e211]: JPEG, PNG ou WebP · máx. 5 MB
+      - button "Criar Pelada" [ref=e213] [cursor=pointer]
+    - button "Close" [ref=e214] [cursor=pointer]

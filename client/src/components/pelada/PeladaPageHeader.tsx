@@ -17,7 +17,7 @@ interface PeladaPageHeaderProps {
 }
 
 // PageHeader of a pelada area: Início > Pelada > Área, the area selector and the area's main action. Below md the
-// breadcrumb steps aside (the mobile header has ← and the name) and the selector becomes a strip of areas
+// breadcrumb steps aside (the mobile header has ← and the name) and the selector becomes four direct links and a grouped More menu
 export function PeladaPageHeader({ peladaId, peladaName, area, role, title, description, actions }: PeladaPageHeaderProps) {
   const name = peladaName ?? "Pelada"
   // on a page the caller can't open (access denied) the current area isn't in their list

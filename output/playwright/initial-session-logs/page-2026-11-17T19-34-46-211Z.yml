@@ -1,0 +1,22 @@
+- generic [ref=f4e2]:
+  - main [ref=f4e4]:
+    - generic [ref=f4e5]:
+      - button "Voltar" [ref=f4e8] [cursor=pointer]
+      - generic [ref=f4e11]: Carregando…
+    - navigation "Navegação principal" [ref=f4e15]:
+      - generic [ref=f4e16]:
+        - link "Início" [ref=f4e17] [cursor=pointer]:
+          - /url: /home
+          - generic [aria-hidden] [ref=f4e21]: Início
+        - link "Peladas" [ref=f4e22] [cursor=pointer]:
+          - /url: /peladas
+          - generic [aria-hidden] [ref=f4e29]: Peladas
+        - button "Criar" [ref=f4e31] [cursor=pointer]
+        - link "Avisos" [ref=f4e35] [cursor=pointer]:
+          - /url: /notificacoes
+          - generic [aria-hidden] [ref=f4e40]: Avisos
+        - link "Perfil" [ref=f4e41] [cursor=pointer]:
+          - /url: /profile/1
+          - generic [ref=f4e42]: LE
+          - generic [aria-hidden] [ref=f4e45]: Perfil
+  - region "Notifications alt+T"

@@ -1,7 +1,7 @@
 import { useEffect } from "react"
 import { Link, useLocation, useNavigate } from "react-router-dom"
 import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react"
-import { FootballIcon, Home01Icon, Notification01Icon, PlusSignIcon } from "@hugeicons/core-free-icons"
+import { Home01Icon, Notification01Icon, PlusSignIcon, SportShoeIcon } from "@hugeicons/core-free-icons"
 import { Button } from "@/components/ui/button"
 import { PlayerAvatar } from "@/components/PlayerAvatar"
 import { useAuth } from "@/hooks/useAuth"
@@ -19,7 +19,7 @@ const TAB_LABEL: Record<MobileTab, string> = {
 
 const TAB_ICON: Record<Exclude<MobileTab, "profile">, IconSvgElement> = {
   home: Home01Icon,
-  peladas: FootballIcon,
+  peladas: SportShoeIcon,
   notifications: Notification01Icon,
 }
 

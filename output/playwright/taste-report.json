@@ -1,0 +1,142 @@
+[
+  {
+    "name": "taste-home-1440-dark.json",
+    "findings": [
+      {
+        "level": "WARN",
+        "id": "ragged-row",
+        "width": 1440,
+        "message": "1 pair(s) of cards in one row end at different heights (by 46px).",
+        "fix": "Cards that share a row share a bottom edge: balance them by their content (the same number of rows, a block of similar height beside it), or stack them. In testing, ragged rows were marked down every time."
+      }
+    ]
+  },
+  {
+    "name": "taste-home-1440-light.json",
+    "findings": [
+      {
+        "level": "WARN",
+        "id": "ragged-row",
+        "width": 1440,
+        "message": "1 pair(s) of cards in one row end at different heights (by 46px).",
+        "fix": "Cards that share a row share a bottom edge: balance them by their content (the same number of rows, a block of similar height beside it), or stack them. In testing, ragged rows were marked down every time."
+      }
+    ]
+  },
+  {
+    "name": "taste-home-375-dark.json",
+    "findings": []
+  },
+  {
+    "name": "taste-home-375-light.json",
+    "findings": []
+  },
+  {
+    "name": "taste-home-768-dark.json",
+    "findings": []
+  },
+  {
+    "name": "taste-home-768-light.json",
+    "findings": []
+  },
+  {
+    "name": "taste-overview-1440-dark.json",
+    "findings": [
+      {
+        "level": "WARN",
+        "id": "micro-label",
+        "width": 1440,
+        "message": "1 tiny uppercase letter-spaced label(s): \"QUI\"",
+        "fix": "Prefer sentence case at body size."
+      },
+      {
+        "level": "WARN",
+        "id": "size-count",
+        "width": 1440,
+        "message": "11 font sizes (10, 11, 12, 13, 14, 15, 17, 18, 22, 28, 56).",
+        "fix": "App screens use 4-9 sizes (median 6): a scale such as 12/14/16/24 with one figure size."
+      }
+    ]
+  },
+  {
+    "name": "taste-overview-1440-light.json",
+    "findings": [
+      {
+        "level": "WARN",
+        "id": "micro-label",
+        "width": 1440,
+        "message": "1 tiny uppercase letter-spaced label(s): \"QUI\"",
+        "fix": "Prefer sentence case at body size."
+      },
+      {
+        "level": "WARN",
+        "id": "size-count",
+        "width": 1440,
+        "message": "11 font sizes (10, 11, 12, 13, 14, 15, 17, 18, 22, 28, 56).",
+        "fix": "App screens use 4-9 sizes (median 6): a scale such as 12/14/16/24 with one figure size."
+      }
+    ]
+  },
+  {
+    "name": "taste-overview-375-dark.json",
+    "findings": [
+      {
+        "level": "WARN",
+        "id": "micro-label",
+        "width": 375,
+        "message": "1 tiny uppercase letter-spaced label(s): \"QUI\"",
+        "fix": "Prefer sentence case at body size."
+      }
+    ]
+  },
+  {
+    "name": "taste-overview-375-light.json",
+    "findings": [
+      {
+        "level": "WARN",
+        "id": "micro-label",
+        "width": 375,
+        "message": "1 tiny uppercase letter-spaced label(s): \"QUI\"",
+        "fix": "Prefer sentence case at body size."
+      }
+    ]
+  },
+  {
+    "name": "taste-overview-768-dark.json",
+    "findings": [
+      {
+        "level": "WARN",
+        "id": "micro-label",
+        "width": 768,
+        "message": "1 tiny uppercase letter-spaced label(s): \"QUI\"",
+        "fix": "Prefer sentence case at body size."
+      },
+      {
+        "level": "WARN",
+        "id": "size-count",
+        "width": 768,
+        "message": "11 font sizes (10, 11, 12, 13, 14, 15, 17, 18, 22, 28, 56).",
+        "fix": "App screens use 4-9 sizes (median 6): a scale such as 12/14/16/24 with one figure size."
+      }
+    ]
+  },
+  {
+    "name": "taste-overview-768-light.json",
+    "findings": [
+      {
+        "level": "WARN",
+        "id": "micro-label",
+        "width": 768,
+        "message": "1 tiny uppercase letter-spaced label(s): \"QUI\"",
+        "fix": "Prefer sentence case at body size."
+      },
+      {
+        "level": "WARN",
+        "id": "size-count",
+        "width": 768,
+        "message": "11 font sizes (10, 11, 12, 13, 14, 15, 17, 18, 22, 28, 56).",
+        "fix": "App screens use 4-9 sizes (median 6): a scale such as 12/14/16/24 with one figure size."
+      }
+    ]
+  }
+]

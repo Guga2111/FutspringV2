@@ -247,7 +247,7 @@ test("sheet create pelada", async ({ page }) => {
     await p.route(/\/api\/v1\/peladas\/\d+\/image$/, (route) =>
       route.fulfill({ status: 500, json: { status: 500, message: "Ocorreu um erro inesperado", timestamp: NOW } }))
   })
-  await page.getByRole("button", { name: "Criar nova pelada" }).first().click()
+  await page.getByRole("button", { name: "Nova pelada", exact: true }).last().click()
   const sheet = page.getByRole("dialog", { name: "Criar Pelada" })
   await expect(sheet).toBeVisible()
   await settle(page)
@@ -260,6 +260,7 @@ test("sheet create pelada", async ({ page }) => {
 
   await sheet.getByLabel("Nome *").fill("Pelada Nova")
   await sheet.getByLabel("Horário *").fill("21:00")
+  await sheet.getByRole("button", { name: /Outras opções/ }).click()
   await sheet.getByLabel("Imagem (opcional)").setInputFiles({ name: "foto.png", mimeType: "image/png", buffer: Buffer.from("png") })
   await sheet.getByRole("button", { name: "Criar Pelada" }).click()
   await expect(page.getByText("Pelada criada, mas a foto não foi enviada. Envie de novo nas configurações.")).toBeVisible()
