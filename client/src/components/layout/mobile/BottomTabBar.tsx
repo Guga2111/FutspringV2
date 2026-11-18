@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom"
 import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react"
 import { Home01Icon, Notification01Icon, PlusSignIcon, SportShoeIcon } from "@hugeicons/core-free-icons"
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import { PlayerAvatar } from "@/components/PlayerAvatar"
 import { useAuth } from "@/hooks/useAuth"
 import { useNotificationsContext } from "@/hooks/useNotificationsContext"
@@ -28,8 +29,8 @@ function unreadLabel(count: number | null): string | null {
   return count > 20 ? "20+" : String(count)
 }
 
-// The app's navigation below md, as in the apps people use every day: Início · Peladas · + · Avisos · Perfil.
-// Hidden in the chat and while the keyboard is open; its height lives in --mobile-tabbar-h for what floats above it.
+// Route navigation needs real links and a separate create action, rather than shadcn's in-page Tabs widget.
+// Floating below md; --mobile-tabbar-h reserves its full footprint, including the bottom gap and safe area.
 export function BottomTabBar({ onCreate }: { onCreate: () => void }) {
   const { pathname } = useLocation()
   const navigate = useNavigate()
@@ -72,11 +73,11 @@ export function BottomTabBar({ onCreate }: { onCreate: () => void }) {
         aria-label={label}
         onClick={(event) => handleTab(event, name)}
         className={cn(
-          "flex min-h-12 flex-1 flex-col items-center justify-center gap-0.5 rounded-tile text-caption focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-          current ? "font-semibold text-brand-text" : "text-muted-foreground",
+          "flex min-h-12 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-full text-caption transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+          current ? "bg-muted font-semibold text-brand-text" : "text-muted-foreground hover:bg-muted/60 hover:text-foreground active:bg-muted",
         )}
       >
-        <span className="relative flex size-6 items-center justify-center">
+        <div className="relative flex size-6 items-center justify-center">
           {name === "profile" && user ? (
             <PlayerAvatar
               userId={user.id}
@@ -88,14 +89,15 @@ export function BottomTabBar({ onCreate }: { onCreate: () => void }) {
             <HugeiconsIcon icon={TAB_ICON[name]} className="size-6" strokeWidth={current ? 2.2 : 1.5} />
           ) : null}
           {name === "notifications" && unread && (
-            <span
+            <Badge
+              variant="status"
               aria-hidden
-              className="absolute -right-2.5 -top-1.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-brand px-1 text-[10px] font-bold leading-none text-brand-foreground"
+              className="absolute -right-2.5 -top-1.5 flex h-[18px] min-w-[18px] items-center justify-center bg-brand px-1 py-0 text-[10px] font-bold leading-none text-brand-foreground"
             >
               {unread}
-            </span>
+            </Badge>
           )}
-        </span>
+        </div>
         <span aria-hidden>{TAB_LABEL[name]}</span>
       </Link>
     )
@@ -104,9 +106,9 @@ export function BottomTabBar({ onCreate }: { onCreate: () => void }) {
   return (
     <nav
       aria-label="Navegação principal"
-      className="fixed inset-x-0 bottom-0 z-40 border-t bg-card pb-[env(safe-area-inset-bottom)] md:hidden"
+      className="fixed inset-x-3 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-40 rounded-full bg-card p-1 shadow-fab md:hidden"
     >
-      <div className="flex h-14 items-stretch px-1">
+      <div className="flex h-14 items-stretch">
         {tab("home")}
         {tab("peladas")}
         <div className="flex flex-1 items-center justify-center">

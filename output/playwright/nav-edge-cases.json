@@ -1,0 +1,37 @@
+{
+  "pageEnd": {
+    "navTop": 736,
+    "lastBottom": 711.59375,
+    "clear": true
+  },
+  "keyboard": {
+    "hidden": "hidden",
+    "footprint": "0px"
+  },
+  "safeArea": {
+    "unavailable": "Error: cdpSession.send: Protocol error (Emulation.setSafeAreaInsets): 'Emulation.setSafeAreaInsets' wasn't found"
+  },
+  "selection": {
+    "nav": {
+      "x": 12,
+      "y": 736,
+      "width": 351,
+      "height": 64,
+      "top": 736,
+      "right": 363,
+      "bottom": 800,
+      "left": 12
+    },
+    "toolbar": {
+      "x": 16,
+      "y": 610.484375,
+      "width": 343,
+      "height": 58,
+      "top": 610.484375,
+      "right": 359,
+      "bottom": 668.484375,
+      "left": 16
+    },
+    "clear": true
+  }
+}

@@ -278,10 +278,11 @@
   .dark {
     color-scheme: dark;
   }
-  /* The mobile shell's bottom tabs (below md): what floats at the bottom (selection bars) sits above them.
+  /* Floating mobile tabs: 64 px capsule + 12 px bottom gap + the phone's safe area.
+     What floats at the bottom (selection bars) sits above the complete footprint.
      0 from md, and while the tabs step aside (the chat, the open keyboard: html[data-tabbar="hidden"]) */
   :root {
-    --mobile-tabbar-h: calc(56px + env(safe-area-inset-bottom));
+    --mobile-tabbar-h: calc(64px + 0.75rem + env(safe-area-inset-bottom));
   }
   :root[data-tabbar="hidden"] {
     --mobile-tabbar-h: 0px;

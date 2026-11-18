@@ -1,0 +1,250 @@
+[
+  {
+    "width": 375,
+    "theme": "light",
+    "visible": true,
+    "rect": {
+      "x": 12,
+      "y": 736,
+      "width": 351,
+      "height": 64,
+      "top": 736,
+      "right": 363,
+      "bottom": 800,
+      "left": 12
+    },
+    "footprint": "calc(64px + .75rem + 0px)",
+    "overflow": 0,
+    "targets": [
+      {
+        "name": "In\u00edcio",
+        "width": 68.59375,
+        "height": 56
+      },
+      {
+        "name": "Peladas",
+        "width": 68.609375,
+        "height": 56
+      },
+      {
+        "name": "Criar",
+        "width": 48,
+        "height": 48
+      },
+      {
+        "name": "Avisos, 1 n\u00e3o lidas",
+        "width": 68.609375,
+        "height": 56
+      },
+      {
+        "name": "Perfil",
+        "width": 68.59375,
+        "height": 56
+      }
+    ]
+  },
+  {
+    "width": 600,
+    "theme": "light",
+    "visible": true,
+    "rect": {
+      "x": 12,
+      "y": 736,
+      "width": 576,
+      "height": 64,
+      "top": 736,
+      "right": 588,
+      "bottom": 800,
+      "left": 12
+    },
+    "footprint": "calc(64px + .75rem + 0px)",
+    "overflow": 0,
+    "targets": [
+      {
+        "name": "In\u00edcio",
+        "width": 113.59375,
+        "height": 56
+      },
+      {
+        "name": "Peladas",
+        "width": 113.609375,
+        "height": 56
+      },
+      {
+        "name": "Criar",
+        "width": 48,
+        "height": 48
+      },
+      {
+        "name": "Avisos, 1 n\u00e3o lidas",
+        "width": 113.609375,
+        "height": 56
+      },
+      {
+        "name": "Perfil",
+        "width": 113.59375,
+        "height": 56
+      }
+    ]
+  },
+  {
+    "width": 768,
+    "theme": "light",
+    "visible": false,
+    "rect": {
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 0,
+      "left": 0
+    },
+    "footprint": "0px",
+    "overflow": 0,
+    "targets": []
+  },
+  {
+    "width": 1440,
+    "theme": "light",
+    "visible": false,
+    "rect": {
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 0,
+      "left": 0
+    },
+    "footprint": "0px",
+    "overflow": 0,
+    "targets": []
+  },
+  {
+    "width": 375,
+    "theme": "dark",
+    "visible": true,
+    "rect": {
+      "x": 12,
+      "y": 736,
+      "width": 351,
+      "height": 64,
+      "top": 736,
+      "right": 363,
+      "bottom": 800,
+      "left": 12
+    },
+    "footprint": "calc(64px + .75rem + 0px)",
+    "overflow": 0,
+    "targets": [
+      {
+        "name": "In\u00edcio",
+        "width": 68.59375,
+        "height": 56
+      },
+      {
+        "name": "Peladas",
+        "width": 68.609375,
+        "height": 56
+      },
+      {
+        "name": "Criar",
+        "width": 48,
+        "height": 48
+      },
+      {
+        "name": "Avisos, 1 n\u00e3o lidas",
+        "width": 68.609375,
+        "height": 56
+      },
+      {
+        "name": "Perfil",
+        "width": 68.59375,
+        "height": 56
+      }
+    ]
+  },
+  {
+    "width": 600,
+    "theme": "dark",
+    "visible": true,
+    "rect": {
+      "x": 12,
+      "y": 736,
+      "width": 576,
+      "height": 64,
+      "top": 736,
+      "right": 588,
+      "bottom": 800,
+      "left": 12
+    },
+    "footprint": "calc(64px + .75rem + 0px)",
+    "overflow": 0,
+    "targets": [
+      {
+        "name": "In\u00edcio",
+        "width": 113.59375,
+        "height": 56
+      },
+      {
+        "name": "Peladas",
+        "width": 113.609375,
+        "height": 56
+      },
+      {
+        "name": "Criar",
+        "width": 48,
+        "height": 48
+      },
+      {
+        "name": "Avisos, 1 n\u00e3o lidas",
+        "width": 113.609375,
+        "height": 56
+      },
+      {
+        "name": "Perfil",
+        "width": 113.59375,
+        "height": 56
+      }
+    ]
+  },
+  {
+    "width": 768,
+    "theme": "dark",
+    "visible": false,
+    "rect": {
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 0,
+      "left": 0
+    },
+    "footprint": "0px",
+    "overflow": 0,
+    "targets": []
+  },
+  {
+    "width": 1440,
+    "theme": "dark",
+    "visible": false,
+    "rect": {
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 0,
+      "left": 0
+    },
+    "footprint": "0px",
+    "overflow": 0,
+    "targets": []
+  }
+]
