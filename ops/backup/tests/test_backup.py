@@ -132,6 +132,37 @@ class LedgerTests(unittest.TestCase):
         with self.assertRaises(BudgetFailure):
             backup.reserve(self.config["budget_file"], self.config, int(time.time()))
 
+    def test_r2_billing_acceptance_never_implies_activation_or_known_budget(self):
+        approval = read_json(self.config["activation_file"])
+        approval.update(zero_additional_cost_enforced=False)
+        save_json(self.config["activation_file"], approval)
+        with self.assertRaises(BudgetFailure):
+            backup.validate(self.config, int(time.time()))
+        approval["owner_r2_usage_charges_accepted"] = True
+        save_json(self.config["activation_file"], approval)
+        backup.validate(self.config, int(time.time()))
+        for changes in (
+            {"owner_activation_accepted": False},
+            {"billing_control_evidence": None},
+            {"verified_backup_restore_alert_evidence": None},
+            {"valid_until": 0},
+        ):
+            save_json(self.config["activation_file"], dict(approval, **changes))
+            with self.subTest(changes=changes), self.assertRaises(BudgetFailure):
+                backup.validate(self.config, int(time.time()))
+        approval.update(owner_activation_accepted=False, owner_validation_accepted=True)
+        save_json(self.config["activation_file"], approval)
+        backup.validate(self.config, int(time.time()), validation_only=True)
+        with self.assertRaises(BudgetFailure):
+            backup.validate(self.config, int(time.time()))
+        b = read_json(self.config["budget_file"])
+        b["source_usage_known"] = False
+        save_json(self.config["budget_file"], b)
+        with patch.object(backup, "source_dump") as dump:
+            with self.assertRaises(BudgetFailure):
+                backup.execute(self.config, "daily", None, validation_only=True)
+            dump.assert_not_called()
+
     def test_boundaries_include_all_account_reservations_and_safety(self):
         original = read_json(self.config["budget_file"])
         costs = {
@@ -408,7 +439,14 @@ class DockerTests(unittest.TestCase):
         for _ in range(100):
             try:
                 cls.runner.run(
-                    ["docker", "exec", cls.source, "pg_isready", "-U", "postgres"]
+                    [
+                        "docker",
+                        "exec",
+                        cls.source,
+                        "sh",
+                        "-c",
+                        'test "$(cat /proc/1/comm)" = postgres && pg_isready -U postgres',
+                    ]
                 )
                 break
             except Failure:

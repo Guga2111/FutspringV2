@@ -1,8 +1,9 @@
 # Database backup and recovery
 
-**Local implementation; production activation is BLOCKED.** No R2 resources, real data transfers,
-production restores or paid services are authorized by this delivery. Operational task #43 remains open.
-The owner approved deploy blocking, seven-day deletion protection and **zero additional cost**.
+**Operational acceptance pending; task #43 remains open.** The owner subsequently authorized R2 setup,
+its metered-billing exposure and continuation through verified backup/isolated recovery/alert acceptance.
+This supersedes the initial strict zero-cost requirement for R2 only; no paid upgrades, recovery targets
+or production restore/cutover are authorized. Deploy blocking and seven-day deletion protection remain.
 See the [approved specification](../../docs/plans/2026-11-19-r2-database-backup-spec.md).
 
 ## Ownership and invariants
@@ -39,9 +40,12 @@ not the trustworthiness of a dump or its author; keep recovery credentials and e
 
 **8 GB is a prospective local ceiling, not a zero-invoice guarantee.** R2 has no applicable US$0
 billing hard cap. Workers spending controls and budget alerts do not stop R2 usage. Do not turn
-`zero_additional_cost_enforced` on merely because the free allowance is available. Record provider-enforced
-controls and independent owner acceptance; if no enforceable zero-overage path exists, keep activation
-blocked and bring alternative providers to the owner. No automatic provider switch or acceptance of overages.
+`zero_additional_cost_enforced` on merely because the free allowance is available. Leave it false for R2.
+The financial gate alternatively accepts `owner_r2_usage_charges_accepted=true`, with a private
+`billing_control_evidence` reference to the owner's explicit R2 billing-risk acceptance. This does not
+approve another provider, paid Supabase upgrades or recovery resources, raise any local limit, establish
+known account/source budgets, or satisfy backup/restore/alert acceptance. Without enforceable zero-cost
+controls or that explicit R2 acceptance, activation stays blocked. Never infer acceptance from free headroom.
 References: [R2 pricing](https://developers.cloudflare.com/r2/pricing/),
 [Cloudflare spending controls](https://developers.cloudflare.com/billing/manage/spend-management/),
 [Supabase egress](https://supabase.com/docs/guides/platform/manage-your-usage/egress).
@@ -88,10 +92,10 @@ automatically reset a ledger on month rollover. To refresh/reconcile, hold the s
 account for all actual and still-outstanding usage, retain an audit copy, then atomically replace the ledger.
 Never reset counters just to unblock a deploy. Unknown/missing/exhausted state blocks backup and deploy.
 
-## Installation and external setup (future, separately authorized)
+## Installation and external setup
 
-1. Resolve the financial gate first. Account/location, Supabase plan/remaining egress, operator and
-   independent recovery-credential custody remain unconfirmed. Use existing VPS resources; no paid target.
+1. Record the financial decision first. Account/location, Supabase plan/remaining egress, operator and
+   independent recovery-credential custody need verified evidence. Use existing VPS resources; no paid target.
 2. With a separate bucket-admin credential **outside the VPS**, create/review a private Standard bucket,
    public access/r2.dev/custom public domains disabled. Apply lifecycle expiration for `database/daily/`
    after 30 days and `database/pre-deploy/` after 7 days. Apply R2 **bucket lock** to `database/` for
@@ -99,7 +103,7 @@ Never reset counters just to unblock a deploy. Unknown/missing/exhausted state b
    Reviewable request bodies: `r2-lifecycle.example.json` (S3 lifecycle) and `r2-lock.example.json`
    (Cloudflare bucket-lock API). Apply only after authorization, with admin credentials off the VPS.
    Verify with synthetic PUT/delete/overwrite/expiry tests and record exact settings. Lock-rule admins
-   can change protection. Do not create resources as part of local validation.
+   can change protection. Resource creation and real transfers require explicit operational authorization.
 3. Pre-stage reviewed AWS CLI v2, Python and the PostgreSQL image; record image digest and tool versions.
    `sudo ops/backup/install.sh` idempotently copies tooling/units and reloads systemd; it never starts
    or enables anything and never overwrites credentials/budgets. Run outside a backup/deploy window.

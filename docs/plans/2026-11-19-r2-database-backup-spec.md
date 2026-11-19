@@ -1,7 +1,13 @@
 # Database backup and recovery to Cloudflare R2 — spec
 
-Date: 2026-11-19. Status: **Owner decisions confirmed; zero-cost feasibility must be resolved before production activation.**
+Date: 2026-11-19. Status: **Implementation committed; operational acceptance pending.**
 Oriens: Futspring task **#43 — Agendar backup do banco e testar restauração**.
+
+Decision amendment, 2026-11-19: after the initial local delivery, the owner explicitly accepted R2
+metered-billing exposure, personally subscribed to R2, and authorized setup and continuation through
+operational acceptance. This supersedes strict zero additional cost for R2 only. No other paid service,
+upgrade, recovery target or production restore/cutover is authorized. Conservative limits and unknown-budget
+blocking remain mandatory; neither this acceptance nor the local 8 GB limit guarantees a zero invoice.
 
 ## 1. Goal and scope
 
@@ -27,9 +33,11 @@ Photos, uploaded files, finance QR files, Redis and Supabase-managed services ar
 | Monitoring | Existing Prometheus/Grafana stack and Telegram contact point |
 | Deployment failure | Block publication/migrations if the required offsite backup cannot be verified |
 | Deletion protection | R2 bucket lock for 7 days; ordinary deletion/overwrite is blocked during that period |
-| Additional provider cost | **US$0. No paid overages, upgrades or paid recovery resources are authorized** |
+| Additional provider cost | R2 metered-billing exposure explicitly accepted by owner; no other paid upgrades/services/recovery resources authorized |
 
-The owner explicitly confirmed deployment blocking, seven-day deletion protection and no additional cost. Other settings remain the recommended defaults. This confirmation does not start an infrastructure rollout or authorize billable exposure. Client-side encryption is not part of the initial proposal; introducing it requires an explicit key-recovery design.
+The owner initially confirmed deployment blocking, seven-day deletion protection and no additional cost;
+the amendment above records the later R2-specific decision. Other settings remain the recommended defaults.
+Client-side encryption is not part of the initial proposal; introducing it requires an explicit key-recovery design.
 
 ## 3. How backup execution works
 
@@ -52,14 +60,14 @@ The reported **228 MB** Supabase database size is not the measured compressed ar
 
 As checked on 2026-11-19, R2 Standard includes 10 GB-month; excess storage is US$0.015/GB-month, with separate operation allowances. The allowance is not a billing hard cap. See [R2 pricing](https://developers.cloudflare.com/r2/pricing/).
 
-### Mandatory zero-cost policy
+### Mandatory conservative financial controls
 
-- Do not enable paid plans, accept overages, create paid recovery targets or treat an alert as permission to spend. Review the complete cost path, including Supabase egress, R2 operations and existing VPS resources.
+- R2 billing exposure is accepted only as recorded above. Do not enable other paid plans, create paid recovery targets or treat an alert as permission to spend. Review the complete cost path, including Supabase egress, R2 operations and existing VPS resources.
 - Add a conservative **8 GB prospective storage ceiling** for controlled R2 uploads. Count the next complete archive/manifest, retained objects, incomplete uploads and outstanding reservations; do not subtract objects merely eligible for lifecycle deletion. Shared account usage and concurrent writers must be accounted for. A bucket-scoped token alone cannot prove account-wide headroom.
 - Bound monthly request usage, including inventory pagination, multipart transfers, retries, integrity downloads, monitoring and drills, below the available free operation allowances. Unknown account usage, missing budget state or exhausted allowances must fail closed; a storage-only check is insufficient.
 - When a budget check fails, skip new offsite copies, notify through the existing stack and block the associated deployment. Do not delete protected/history copies early, lower retention, disable the lock or bypass verification to free space. The live API is not stopped, but backup freshness degrades; after the existing retention window, copies can expire. This tradeoff must be visible in alerts.
 - These local controls reduce accidental usage; **they are not a provider-enforced guarantee of a zero invoice**. Cloudflare's documented spending limits cover Workers/Durable Objects, not R2, and budget alerts do not stop usage. Do not claim that R2 has a configurable US$0 hard cap. [Cloudflare spending controls](https://developers.cloudflare.com/billing/manage/spend-management/)
-- **Activation gate:** verify the account's effective billing controls and whether this setup can meet the owner's strict no-cost requirement. If billable exposure cannot be ruled out, do not activate R2 or silently accept that risk. Record the limitation and evaluate a storage option with enforceable no-overage behavior; provider selection then needs owner review. Development of local tooling can proceed independently of this gate.
+- **Financial gate:** require verified zero-overage controls or the owner's explicit R2 metered-billing acceptance, with a private evidence reference. R2 must retain `zero_additional_cost_enforced=false`; use `owner_r2_usage_charges_accepted=true` for the later decision. Neither path bypasses known source/account budgets or verified backup/restore/alert acceptance. Missing evidence blocks execution; never silently accept risk or switch providers.
 - Confirm the actual Supabase plan and remaining organization-wide egress. The Free plan currently includes **5 GB uncached egress**, shared with application traffic; manual backups through the pooler consume it. The 228 MB dashboard size is not the wire-byte measurement, and compression on the VPS does not itself reduce bytes already transferred from Supabase. Measure actual source transfer and reserve normal app traffic before fixing the backup frequency. Free-plan overuse can restrict service; paid plans require their applicable billing controls. [Supabase egress](https://supabase.com/docs/guides/platform/manage-your-usage/egress), [cost controls](https://supabase.com/docs/guides/platform/cost-control)
 
 Use node-exporter's textfile collector, with atomic metric-file updates and fixed daily/pre-deploy labels, to publish last attempt/result, verified snapshot time, duration and size. Add Grafana notifications for failures/budget-blocked runs, a daily snapshot older than **26 hours**, missing/broken monitoring, storage nearing the **8 GB prospective ceiling**, and overdue monthly restore tests. Test actual Telegram delivery. Monitoring shares the VPS and therefore does not provide independent host-loss alerting.
@@ -93,7 +101,7 @@ The same archive tooling supports this process, but does not automatically recre
 - Configure node-exporter's textfile directory and Grafana rules, preserving unrelated changes in the observability README.
 - Integrate one pre-deploy backup gate into [deploy.sh](../../scripts/deploy.sh) **before frontend publication and API/Flyway startup**. The current gzip SQL backup runs later and is optional when `PG_DUMP_URL` is missing; do not accidentally retain that downgrade after protection is activated.
 - Provision credentials separately from the API `.env`, install/update tooling idempotently and activate only after a verified copy, restore drill and notification test. Keep the existing local deploy backups during transition and document their legacy `.sql.gz` restore format.
-- Test synthetic dump/restore, denied access, upload failure, corruption, concurrency, timeouts, missing configuration, budget-state failure, quota boundaries and cleanup. Prove budget checks account for retries/in-flight bytes and never silently permit an upload/deploy on unknown headroom. Validate systemd/calendar/shell/metrics configuration and provider behavior with synthetic R2 test objects only after the zero-cost activation gate passes. Do not store real backups in CI artifacts or Git.
+- Test synthetic dump/restore, denied access, upload failure, corruption, concurrency, timeouts, missing configuration, budget-state failure, quota boundaries and cleanup. Prove budget checks account for retries/in-flight bytes and never silently permit an upload/deploy on unknown headroom. Validate systemd/calendar/shell/metrics configuration and provider behavior with synthetic R2 test objects only after the financial gate passes. Do not store real backups in CI artifacts or Git.
 - Record measured size and recovery time, observe a daily run and a pre-deploy run, and prove alert delivery. Disabling the tooling must not delete backup objects or restore application data.
 - Update backend/operations documentation and mark the backlog/Oriens item done only after operational acceptance. This draft changes no application behavior and needs no application test-suite run.
 - The implementation has security impact: follow [SECURITY_REVIEW.md](../SECURITY_REVIEW.md), including Trail of Bits `differential-review` and regression evidence before opening/marking ready the implementation PR and before merge. No security review is claimed by this spec.
@@ -103,9 +111,9 @@ The same archive tooling supports this process, but does not automatically recre
 The owner confirmed these choices in the conversation on 2026-11-19:
 
 1. **Deployment failure policy: approved.** Failed/unverified offsite backup blocks deployment, including R2 unavailability or a budget rejection.
-2. **Deletion protection: approved.** Enable a **7-day R2 bucket lock** after cost feasibility is established. It protects recent objects against deletion/overwrite, including deliberate operator deletion; bucket administrators can change its rules. Object credentials are not assumed append-only.
-3. **Budget: strictly zero additional cost.** No paid overage or billing-risk acceptance was granted. The R2 no-overage feasibility gate above remains unresolved until effective controls are verified; a local 8 GB ceiling must not be presented as a guaranteed zero-cost plan.
+2. **Deletion protection: approved.** Enable a **7-day R2 bucket lock** after the financial gate passes. It protects recent objects against deletion/overwrite, including deliberate operator deletion; bucket administrators can change its rules. Object credentials are not assumed append-only.
+3. **Budget: amended for R2 only.** The initial strict no-cost decision was subsequently superseded by explicit R2 metered-billing acceptance and manual subscription. Keep that evidence distinct from provider enforcement; a local 8 GB ceiling must not be presented as a guaranteed zero-cost plan. Supabase source headroom and all conservative gates remain required.
 
-Account/bucket location, source egress allowance, actual database permissions/version, recovery credential custody and the monthly drill operator must also be confirmed before activation. These are implementation/preflight checks; no production rollout or paid resource creation is implied by recording the decisions. Do not mark the operational task complete while feasibility or recovery proof remains unresolved.
+Account/bucket location, source egress allowance, actual database permissions/version, recovery credential custody and the monthly drill operator must also be confirmed before activation. These are implementation/preflight checks; no production rollout or paid resource creation is implied by recording the decisions. Do not mark the operational task complete while source/account budgets or recovery proof remain unresolved.
 
 Technical references: [PostgreSQL dump](https://www.postgresql.org/docs/17/app-pgdump.html), [restore](https://www.postgresql.org/docs/17/app-pgrestore.html), [R2 lifecycle](https://developers.cloudflare.com/r2/buckets/object-lifecycles/), [bucket locks](https://developers.cloudflare.com/r2/buckets/bucket-locks/), [encryption](https://developers.cloudflare.com/r2/reference/data-security/), [tokens](https://developers.cloudflare.com/r2/api/tokens/), [systemd timers](https://www.freedesktop.org/software/systemd/man/latest/systemd.timer.html), [node-exporter textfile collector](https://github.com/prometheus/node_exporter#textfile-collector).

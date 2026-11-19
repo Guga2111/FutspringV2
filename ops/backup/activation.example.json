@@ -1,5 +1,6 @@
 {
   "zero_additional_cost_enforced": false,
+  "owner_r2_usage_charges_accepted": false,
   "owner_activation_accepted": false,
   "owner_validation_accepted": false,
   "billing_control_evidence": null,

@@ -78,7 +78,16 @@ def drill(archive, manifest_path, run=None):
             while True:
                 try:
                     run.run(
-                        ["docker", "exec", container, "pg_isready", "-U", "postgres"],
+                        [
+                            "docker",
+                            "exec",
+                            container,
+                            "sh",
+                            "-c",
+                            # initdb's temporary server also accepts connections,
+                            # but is stopped before PID 1 becomes the final server.
+                            'test "$(cat /proc/1/comm)" = postgres && pg_isready -U postgres',
+                        ],
                         timeout=5,
                     )
                     break

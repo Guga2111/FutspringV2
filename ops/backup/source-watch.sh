@@ -1,7 +1,7 @@
 #!/bin/sh
 # PID 1: exiting kills every client in this dedicated network namespace.
 # Polling cannot guarantee a byte-exact provider cap. The reviewed reservation
-# includes a separate in-flight margin; enforced zero-cost feasibility is still required.
+# includes a separate in-flight margin; the financial acceptance gate is still required.
 set -eu
 deadline=$(( $(date +%s) + 1800 ))
 while [ "$(date +%s)" -lt "$deadline" ]; do

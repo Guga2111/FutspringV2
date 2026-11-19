@@ -105,7 +105,10 @@ def validate(config, now, validation_only=False):
             "Evidência de ativação ausente, ilegível ou inválida."
         ) from None
     if (
-        approval.get("zero_additional_cost_enforced") is not True
+        (
+            approval.get("zero_additional_cost_enforced") is not True
+            and approval.get("owner_r2_usage_charges_accepted") is not True
+        )
         or approval.get(
             "owner_validation_accepted"
             if validation_only
@@ -121,7 +124,7 @@ def validate(config, now, validation_only=False):
         or approval.get("bucket") != config["bucket"]
     ):
         raise BudgetFailure(
-            "Ativação bloqueada: viabilidade de custo zero/aceite não comprovados."
+            "Ativação bloqueada: controle financeiro/aceite não comprovados."
         )
     if not re.fullmatch(
         r"https://[a-f0-9]{32}\.r2\.cloudflarestorage\.com", config["endpoint"]
@@ -503,7 +506,7 @@ def main():
     parser.add_argument(
         "--validation-only",
         action="store_true",
-        help="Manual acceptance rehearsal; still requires enforced zero-cost evidence.",
+        help="Manual acceptance rehearsal; still requires financial evidence and owner acceptance.",
     )
     args = parser.parse_args()
     os.umask(0o077)
