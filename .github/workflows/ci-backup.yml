@@ -1,0 +1,38 @@
+name: CI - Database backup tooling
+on:
+  workflow_call:
+  push:
+    branches: [main, dev]
+    paths: [ops/backup/**, ops/observability/**, scripts/deploy.sh, .github/workflows/deploy.yml, .github/workflows/ci-backup.yml]
+  pull_request:
+    branches: [main, dev]
+    paths: [ops/backup/**, ops/observability/**, scripts/deploy.sh, .github/workflows/deploy.yml, .github/workflows/ci-backup.yml]
+permissions:
+  contents: read
+jobs:
+  synthetic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Shell and systemd validation
+        run: |
+          bash -n scripts/deploy.sh ops/backup/install.sh
+          sh -n ops/backup/source-watch.sh
+          shellcheck scripts/deploy.sh ops/backup/install.sh ops/backup/source-watch.sh
+          systemd-analyze calendar '*-*-* 03:00:00 America/Recife'
+          # Check the unit syntax without assuming tooling is installed in /opt on a runner.
+          mkdir -p /tmp/futspring-unit-check
+          sed 's|ExecStart=.*|ExecStart=/usr/bin/true|' ops/backup/systemd/futspring-backup.service > /tmp/futspring-unit-check/futspring-backup.service
+          cp ops/backup/systemd/futspring-backup.timer /tmp/futspring-unit-check/
+          systemd-analyze verify /tmp/futspring-unit-check/futspring-backup.{service,timer}
+      - name: Local synthetic dump and isolated restore (no provider credentials)
+        run: |
+          docker pull postgres:17-alpine
+          BACKUP_DOCKER_TESTS=1 python3 -m unittest discover -s ops/backup/tests -v
+      - name: PromQL failure and freshness scenarios
+        run: |
+          python3 -m pip install -r ops/backup/tests/requirements.txt
+          docker pull prom/prometheus:v3.15.1
+          python3 ops/backup/tests/check-alerts.py
+      # No database dumps/logs are uploaded as CI artifacts.

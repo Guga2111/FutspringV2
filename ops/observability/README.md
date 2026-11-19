@@ -188,3 +188,21 @@ For the API target, run the API container on the `observability` network with th
 Logs of every local container show up in Explore → Loki after ~30 s (Alloy's discovery interval). The dev compose
 logs plain text (`LOGGING_STRUCTURED_FORMAT_CONSOLE=""`), so its lines have no `level` label; drop that variable
 to see the production JSON.
+
+## Database backup metrics (activation pending)
+
+The node-exporter textfile collector reads `/var/lib/node_exporter/textfile_collector` through a
+read-only mount. Host-only scripts atomically publish fixed daily/pre-deploy numeric metrics; no
+credentials enter this stack. See the [backup runbook](../backup/README.md) for installation, tests
+and operational acceptance. Existing local backups remain untouched. The tooling is not activated;
+R2 zero-additional-cost feasibility is still unresolved. The local 8 GB ceiling is not a billing cap.
+
+Additional Grafana rules use the existing Telegram contact/policy: failed attempt, unknown/insufficient
+budget or financial gate, verified daily snapshot older than 26 hours, missing/broken textfile metrics
+(including missing pre-deploy metrics), prospective storage above 7.2 GB, and restore drill older than
+31 days/missing. No data and query errors notify. A running attempt reports `success=-1`; only a fully
+verified archive and manifest report 1. Failed jobs do not move the snapshot timestamp.
+Test actual Telegram delivery during separately authorized activation, including synthetic failures.
+Until first acceptance runs, missing/stale alerts are expected. Monitoring shares the VPS and does not
+independently detect complete host loss. Lifecycle expiration continues during failures, so all retained
+copies can eventually expire; never shorten retention or disable locks to unblock a budget rejection.

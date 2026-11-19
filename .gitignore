@@ -53,3 +53,10 @@ finance-qr/
 # Retired exported redesign prototype (source history retains the original).
 /client/docs/design/design_handoff_futspring_redesign/
 docs/melhorias-escritas-a-mao.md
+
+# Database backup/recovery data and host-only configuration (never CI artifacts).
+*.dump
+*.sql.gz
+/ops/backup/local/
+/ops/backup/__pycache__/
+/ops/backup/tests/__pycache__/

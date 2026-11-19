@@ -259,3 +259,153 @@ groups:
         execErrState: Error
         annotations:
           summary: "Mais de 20 erros do web app em 10 minutos. Loki: {service=\"futspring-api\"} | json | event=\"client_error\"."
+      - uid: futspring-backup-failed
+        title: Backup falhou
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 900, to: 0 }
+            datasourceUid: prometheus
+            model:
+                refId: A
+                expr: "max(futspring_backup_success == bool 0)"
+                instant: true
+                range: false
+          - refId: C
+            datasourceUid: __expr__
+            model:
+                refId: C
+                type: threshold
+                expression: A
+                conditions:
+                  - evaluator: { type: gt, params: [0] }
+        for: 1m
+        noDataState: Alerting
+        execErrState: Error
+        annotations:
+          summary: "A última tentativa de backup falhou. Deploy bloqueado; confira o journal e a configuração privada."
+      - uid: futspring-backup-budget
+        title: Backup sem orçamento
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 900, to: 0 }
+            datasourceUid: prometheus
+            model:
+                refId: A
+                expr: "max(futspring_backup_budget_blocked)"
+                instant: true
+                range: false
+          - refId: C
+            datasourceUid: __expr__
+            model:
+                refId: C
+                type: threshold
+                expression: A
+                conditions:
+                  - evaluator: { type: gt, params: [0] }
+        for: 1m
+        noDataState: Alerting
+        execErrState: Error
+        annotations:
+          summary: "Orçamento desconhecido/insuficiente ou ativação financeira bloqueada. Não aceite excedentes nem reduza retenção."
+      - uid: futspring-backup-stale
+        title: Backup diário atrasado
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 900, to: 0 }
+            datasourceUid: prometheus
+            model:
+                refId: A
+                expr: "time() - min(futspring_backup_snapshot_timestamp_seconds{kind=\"daily\"}) > bool 93600"
+                instant: true
+                range: false
+          - refId: C
+            datasourceUid: __expr__
+            model:
+                refId: C
+                type: threshold
+                expression: A
+                conditions:
+                  - evaluator: { type: gt, params: [0] }
+        for: 1m
+        noDataState: Alerting
+        execErrState: Error
+        annotations:
+          summary: "Snapshot diário verificado com mais de 26 horas. Cópias antigas podem expirar se as falhas continuarem."
+      - uid: futspring-backup-monitoring
+        title: Monitoramento do backup ausente
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 900, to: 0 }
+            datasourceUid: prometheus
+            model:
+                refId: A
+                expr: "max(absent(futspring_backup_success{kind=\"daily\"}) or absent(futspring_backup_success{kind=\"pre-deploy\"}) or (up{job=\"node-exporter\"} == bool 0) or node_textfile_scrape_error or (count(futspring_backup_success) != bool 2))"
+                instant: true
+                range: false
+          - refId: C
+            datasourceUid: __expr__
+            model:
+                refId: C
+                type: threshold
+                expression: A
+                conditions:
+                  - evaluator: { type: gt, params: [0] }
+        for: 1m
+        noDataState: Alerting
+        execErrState: Error
+        annotations:
+          summary: "Métricas de backup ausentes ou coletor indisponível. A monitoração compartilha o VPS e não cobre sua perda de forma independente."
+      - uid: futspring-backup-storage
+        title: Reserva do backup próxima do limite
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 900, to: 0 }
+            datasourceUid: prometheus
+            model:
+                refId: A
+                expr: "max(futspring_backup_prospective_storage_bytes) > bool 7200000000"
+                instant: true
+                range: false
+          - refId: C
+            datasourceUid: __expr__
+            model:
+                refId: C
+                type: threshold
+                expression: A
+                conditions:
+                  - evaluator: { type: gt, params: [0] }
+        for: 1m
+        noDataState: Alerting
+        execErrState: Error
+        annotations:
+          summary: "Uso e reservas conservadoras acima de 7,2 GB. O teto local de 8 GB não garante custo zero."
+      - uid: futspring-backup-restore-stale
+        title: Teste de recuperação atrasado
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 900, to: 0 }
+            datasourceUid: prometheus
+            model:
+                refId: A
+                expr: "time() - min(futspring_backup_restore_timestamp_seconds) > bool 2678400"
+                instant: true
+                range: false
+          - refId: C
+            datasourceUid: __expr__
+            model:
+                refId: C
+                type: threshold
+                expression: A
+                conditions:
+                  - evaluator: { type: gt, params: [0] }
+        for: 1m
+        noDataState: Alerting
+        execErrState: Error
+        annotations:
+          summary: "Teste de recuperação verificado há mais de 31 dias ou sem evidência. Execute o procedimento manual com orçamento reservado."

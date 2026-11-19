@@ -1,0 +1,2 @@
+# Test-only YAML parser; operational scripts use the Python standard library.
+PyYAML==6.0.3
