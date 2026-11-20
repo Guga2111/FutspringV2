@@ -14,6 +14,15 @@ scrape_configs:
         labels:
           project: futspring
 
+  - job_name: oriens-api
+    metrics_path: /actuator/prometheus
+    static_configs:
+      # Oriens API management port (never published on the host), joined via oriens docker-compose-prod.yml.
+      # The container name has no underscore, so Tomcat accepts it as the Host header.
+      - targets: ["oriens-api:8081"]
+        labels:
+          project: oriens
+
   - job_name: node-exporter
     static_configs:
       - targets: ["node-exporter:9100"]
