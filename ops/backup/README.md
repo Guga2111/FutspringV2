@@ -4,6 +4,9 @@
 its metered-billing exposure and continuation through verified backup/isolated recovery/alert acceptance.
 This supersedes the initial strict zero-cost requirement for R2 only; no paid upgrades, recovery targets
 or production restore/cutover are authorized. Deploy blocking and seven-day deletion protection remain.
+On 2026-11-20 the owner reconfirmed acceptance of possible R2 charges. This does not waive source/account
+budget checks or authorize a paid Supabase plan. Automatic approval review still requires explicit
+timer-activation authorization overriding the initial infrastructure-activation prohibition.
 See the [approved specification](../../docs/plans/2026-11-19-r2-database-backup-spec.md).
 
 ## Ownership and invariants

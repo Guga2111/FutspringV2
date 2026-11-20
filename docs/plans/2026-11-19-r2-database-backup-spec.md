@@ -8,6 +8,9 @@ metered-billing exposure, personally subscribed to R2, and authorized setup and 
 operational acceptance. This supersedes strict zero additional cost for R2 only. No other paid service,
 upgrade, recovery target or production restore/cutover is authorized. Conservative limits and unknown-budget
 blocking remain mandatory; neither this acceptance nor the local 8 GB limit guarantees a zero invoice.
+The owner reconfirmed R2 billing exposure on 2026-11-20. Source/account budget checks remain required;
+no paid Supabase upgrade is authorized. Automatic approval review requires explicit authorization
+to enable the timer, overriding the initial infrastructure-activation restriction; it remains disabled.
 
 ## 1. Goal and scope
 
