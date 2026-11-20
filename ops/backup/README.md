@@ -22,8 +22,9 @@ RLS flags are preserved and compared during the drill; the backup role must read
 (`row_security_active=false`, normally through `BYPASSRLS`). Public RLS policies currently fail preflight
 until their recovery roles/dependencies are reviewed. Never add `--enable-row-security` to pg_dump or
 disable production RLS to make a backup pass. Source metadata confirmed PostgreSQL 17.6 and RLS enabled
-on `users` without policies; complete dedicated-role access and full preflight remain acceptance checks.
-Provider services and cluster-wide roles are outside this archive.
+on `users` without policies.
+Dedicated-reader complete SELECT, absence of write privileges and the full source preflight were
+verified on 2026-11-20. Provider services and cluster-wide roles are outside this archive.
 
 The host flock serializes both callers, with a 30-second wait and 30-minute overall command deadline.
 Database connect/lock timeouts are 10 seconds; statement timeout is 20 minutes. Source clients
@@ -65,6 +66,9 @@ not usage inferred from one bucket. An operator must reconcile it using authorit
 usage, incomplete uploads, retained objects, other buckets, pending reservations, pagination, monitoring,
 drills and other writers. No provider inventory is queried automatically (those requests also cost budget).
 The evidence must be ≤24 hours old, in the current UTC month and valid for the next full 30-minute run.
+The timer does not refresh this ledger. An operator must renew/reconcile the evidence within that
+window; otherwise the next backup/deploy blocks and alerts. An initial valid lease is not unattended
+operation for the rest of the month. Agree that ongoing responsibility before operational acceptance.
 Every uncoordinated writer must be stopped or have a proven worst-case envelope reserved under
 `external_reserved`; otherwise `writers_coordinated` must remain false. A bucket token proves neither
 account-wide usage nor coordination. Keep budget/approval/config ownership private to the host operator.
@@ -118,6 +122,7 @@ Never reset counters just to unblock a deploy. Unknown/missing/exhausted state b
    tables/sequences and default privileges for future Flyway objects; test deny/partial-read failures.
    Install bucket-scoped object read/write S3 credentials in `r2.credentials`; keep admin and recovery
    credentials elsewhere. Never print these files or run with shell tracing/AWS debug.
+   Record token/database-role expiry and rotate before it; the backup job does not renew credentials.
 
    For the current `postgres`-owned schema, a database administrator can provision the reader with:
 
@@ -148,6 +153,15 @@ Never reset counters just to unblock a deploy. Unknown/missing/exhausted state b
    and a pre-deploy execution. `Persistent=true` catches a missed daily at host restart. Review monthly.
 
 ## Operation and local tests
+
+Acceptance checkpoint (2026-11-20): tooling and monitoring are installed, the timer remains disabled,
+and Telegram's saved-integration test returned success. A source-only real dump (about 269 KB,
+2.51 MB source wire traffic) restored all 49 tables with matching data/Flyway/RLS; the exact deployed
+API image passed isolated profile, pelada, stats, finance and daily reads, rejected unauthenticated
+access, and left the restored database unchanged. These rehearsals used no public ports, outbound
+routing, migrations, mail/push credentials or production writes. They are **not verified R2 recovery**.
+R2 credential transfer, provider lock/private-access tests, a verified offsite copy, independent
+download/recovery and ordinary activation/ongoing budget ownership remain pending. Task #43 stays open.
 
 ```sh
 python3 -m unittest discover -s ops/backup/tests -v

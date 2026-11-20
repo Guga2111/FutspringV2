@@ -116,4 +116,10 @@ The owner confirmed these choices in the conversation on 2026-11-19:
 
 Account/bucket location, source egress allowance, actual database permissions/version, recovery credential custody and the monthly drill operator must also be confirmed before activation. These are implementation/preflight checks; no production rollout or paid resource creation is implied by recording the decisions. Do not mark the operational task complete while source/account budgets or recovery proof remain unresolved.
 
+Operational checkpoint (2026-11-20): the authorized dedicated source reader has complete SELECT,
+BYPASSRLS and no write privileges. Real source-only dump/isolated restore and read-only smoke checks
+with the deployed API image passed; Telegram test delivery succeeded. No R2 copy has been uploaded
+or independently recovered, and the timer remains disabled. The budget evidence lease is at most
+24 hours and needs ongoing operator reconciliation; acceptance must include that responsibility.
+
 Technical references: [PostgreSQL dump](https://www.postgresql.org/docs/17/app-pgdump.html), [restore](https://www.postgresql.org/docs/17/app-pgrestore.html), [R2 lifecycle](https://developers.cloudflare.com/r2/buckets/object-lifecycles/), [bucket locks](https://developers.cloudflare.com/r2/buckets/bucket-locks/), [encryption](https://developers.cloudflare.com/r2/reference/data-security/), [tokens](https://developers.cloudflare.com/r2/api/tokens/), [systemd timers](https://www.freedesktop.org/software/systemd/man/latest/systemd.timer.html), [node-exporter textfile collector](https://github.com/prometheus/node_exporter#textfile-collector).
