@@ -160,8 +160,16 @@ and Telegram's saved-integration test returned success. A source-only real dump 
 API image passed isolated profile, pelada, stats, finance and daily reads, rejected unauthenticated
 access, and left the restored database unchanged. These rehearsals used no public ports, outbound
 routing, migrations, mail/push credentials or production writes. They are **not verified R2 recovery**.
-R2 credential transfer, provider lock/private-access tests, a verified offsite copy, independent
-download/recovery and ordinary activation/ongoing budget ownership remain pending. Task #43 stays open.
+The approved bucket-scoped R2 credential is installed root-only on the VPS; its temporary Mac export
+was deleted after transfer verification. A synthetic object passed authenticated PUT/GET/SHA-256;
+overwrite and deletion returned `ObjectLockedByBucketPolicy`, and a subsequent GET confirmed the
+original content. An unsigned request was rejected with HTTP 400 `InvalidArgument` (not a successful
+read). Public r2.dev/custom domains remain disabled. The lock error is documented by
+[Cloudflare](https://developers.cloudflare.com/r2/buckets/bucket-locks/).
+A verified real offsite copy, independent download/recovery and ordinary activation/ongoing budget
+ownership remain pending. Automatic approval review blocked the first real R2 backup attempt before
+execution, requiring explicit authorization overriding the initial real-data-transfer prohibition.
+No real dump has been uploaded. Task #43 stays open.
 
 ```sh
 python3 -m unittest discover -s ops/backup/tests -v

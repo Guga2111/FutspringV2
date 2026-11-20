@@ -118,8 +118,11 @@ Account/bucket location, source egress allowance, actual database permissions/ve
 
 Operational checkpoint (2026-11-20): the authorized dedicated source reader has complete SELECT,
 BYPASSRLS and no write privileges. Real source-only dump/isolated restore and read-only smoke checks
-with the deployed API image passed; Telegram test delivery succeeded. No R2 copy has been uploaded
-or independently recovered, and the timer remains disabled. The budget evidence lease is at most
+with the deployed API image passed; Telegram test delivery succeeded. The approved bucket-scoped
+R2 credential is installed privately. Synthetic upload/download/hash, lock-denied overwrite/deletion,
+unchanged-object and denied unsigned-access tests passed. No real R2 copy has been uploaded or
+independently recovered: automatic approval review requires explicit real-data-transfer authorization
+overriding the initial prohibition. The timer remains disabled. The budget evidence lease is at most
 24 hours and needs ongoing operator reconciliation; acceptance must include that responsibility.
 
 Technical references: [PostgreSQL dump](https://www.postgresql.org/docs/17/app-pgdump.html), [restore](https://www.postgresql.org/docs/17/app-pgrestore.html), [R2 lifecycle](https://developers.cloudflare.com/r2/buckets/object-lifecycles/), [bucket locks](https://developers.cloudflare.com/r2/buckets/bucket-locks/), [encryption](https://developers.cloudflare.com/r2/reference/data-security/), [tokens](https://developers.cloudflare.com/r2/api/tokens/), [systemd timers](https://www.freedesktop.org/software/systemd/man/latest/systemd.timer.html), [node-exporter textfile collector](https://github.com/prometheus/node_exporter#textfile-collector).
