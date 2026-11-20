@@ -278,6 +278,26 @@
   .dark {
     color-scheme: dark;
   }
+  /* Floating mobile tabs: 64 px capsule + 12 px bottom gap + the phone's safe area.
+     What floats at the bottom (selection bars) sits above the complete footprint.
+     0 from md, and while the tabs step aside (the chat, the open keyboard: html[data-tabbar="hidden"]) */
+  :root {
+    --mobile-tabbar-h: calc(64px + 0.75rem + env(safe-area-inset-bottom));
+  }
+  :root[data-tabbar="hidden"] {
+    --mobile-tabbar-h: 0px;
+  }
+  @media (min-width: 768px) {
+    :root {
+      --mobile-tabbar-h: 0px;
+    }
+  }
+  /* pull to refresh is ours below md: no Chrome reload of the whole app (and the session boot), no Safari bounce */
+  @media (max-width: 767px) {
+    html {
+      overscroll-behavior-y: none;
+    }
+  }
 }
 
 /* Standard-density screens (devicePixelRatio < 1.5, e.g. a 1080p monitor): Hugeicons'

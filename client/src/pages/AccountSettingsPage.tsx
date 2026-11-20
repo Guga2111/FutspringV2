@@ -1,3 +1,7 @@
+import { Link, useNavigate } from "react-router-dom"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { DashboardSquare01Icon, Logout01Icon } from "@hugeicons/core-free-icons"
+import { Button } from "@/components/ui/button"
 import { AppearanceCard } from "@/components/account-settings/AppearanceCard"
 import { DeleteAccountCard } from "@/components/account-settings/DeleteAccountCard"
 import { ProfileCard } from "@/components/account-settings/ProfileCard"
@@ -19,11 +23,19 @@ const SECTIONS: SettingsSection[] = [
 ]
 
 // /settings: everything about the account, one card per section, each saved on its own.
-// Opened from the UserMenu, the gear in the bell's panel (#notificacoes) and "Editar perfil" (#perfil).
+// Opened from the UserMenu, the gear in the bell's panel (#notificacoes), "Editar perfil" (#perfil) and, below md, the
+// gear of the own profile. Ends with "Painel admin" (platform admins) and "Sair": the UserMenu's items, which the
+// mobile shell has no sidebar for.
 export default function AccountSettingsPage() {
-  const { user } = useAuth()
+  const { user, logout } = useAuth()
+  const navigate = useNavigate()
   useScrollToHash(user !== null)
   if (!user) return null
+
+  function handleLogout() {
+    logout()
+    navigate("/auth", { replace: true })
+  }
 
   return (
     <div className="page-enter flex flex-1 flex-col">
@@ -47,6 +59,20 @@ export default function AccountSettingsPage() {
             <SettingsGroup label="Zona de perigo">
               <DeleteAccountCard />
             </SettingsGroup>
+            <div className="flex flex-wrap items-center gap-3">
+              {user.isPlatformAdmin && (
+                <Button asChild variant="outline">
+                  <Link to="/admin">
+                    <HugeiconsIcon icon={DashboardSquare01Icon} className="size-4" />
+                    Painel admin
+                  </Link>
+                </Button>
+              )}
+              <Button variant="destructive-ghost" onClick={handleLogout} className="ml-auto">
+                <HugeiconsIcon icon={Logout01Icon} className="size-4" />
+                Sair
+              </Button>
+            </div>
           </div>
           <aside className="hidden lg:block">
             <div className="sticky top-6">

@@ -9,10 +9,9 @@ import { cn } from "@/lib/utils"
 interface SidebarPeladaItemProps {
   pelada: PeladaResponse
   isActive: boolean
-  onNavigate: () => void
 }
 
-export function SidebarPeladaItem({ pelada, isActive, onNavigate }: SidebarPeladaItemProps) {
+export function SidebarPeladaItem({ pelada, isActive }: SidebarPeladaItemProps) {
   const next = pelada.nextDaily
   return (
     <SidebarMenuItem>
@@ -22,7 +21,7 @@ export function SidebarPeladaItem({ pelada, isActive, onNavigate }: SidebarPelad
         tooltip={pelada.name}
         className={cn("h-auto gap-2.5 rounded-[10px] p-2 font-normal hover:bg-sidebar-accent/70 data-[active=true]:font-normal", collapsedTile)}
       >
-        <Link to={`/pelada/${pelada.id}`} onClick={onNavigate}>
+        <Link to={`/pelada/${pelada.id}`}>
           <PeladaAvatar name={pelada.name} image={pelada.image} className="size-[34px] rounded-[9px] text-xs group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:rounded-lg" />
           <span className="flex min-w-0 flex-col gap-0.5 group-data-[collapsible=icon]:hidden">
             <span className="truncate text-sm font-medium">{pelada.name}</span>

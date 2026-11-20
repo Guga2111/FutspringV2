@@ -158,21 +158,38 @@ jobs:
 
       # Through nginx and the public API prefix (nginx strips /api): 200 from /readyz only when the API is up and
       # ready AND API_URL points at it. Every other actuator endpoint stays on the internal management port.
+      # Then the anti-clickjacking header: nginx is applied by hand on the VPS (ops/nginx/futspring.conf), so this
+      # catches a live config that drifted from the versioned one. Checked on / and on an SPA route (the
+      # try_files fallback to /index.html); no retry, since the deploy never touches nginx.
       - name: Smoke test
         run: |
           set -uo pipefail
+          ready=false
           for attempt in $(seq 1 12); do
             web=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "${APP_URL}/" || true)
             api=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "${VITE_API_URL}/readyz" || true)
             if [[ "$web" == "200" && "$api" == "200" ]]; then
               echo "Frontend 200 and API 200 on /readyz (attempt ${attempt})."
-              exit 0
+              ready=true
+              break
             fi
             echo "Not ready yet: web=${web} api=${api} (attempt ${attempt}/12), retrying in 10s..."
             sleep 10
           done
-          echo "Smoke test failed after 2 minutes."
-          exit 1
+          if [[ "$ready" != "true" ]]; then
+            echo "Smoke test failed after 2 minutes."
+            exit 1
+          fi
+
+          for path in / /home; do
+            headers=$(curl -sS -D - -o /dev/null --max-time 10 "${APP_URL}${path}" | tr -d '\r' || true)
+            if ! grep -qiE "^content-security-policy:.*frame-ancestors[[:space:]]+'none'" <<< "$headers"; then
+              echo "${APP_URL}${path} has no 'Content-Security-Policy: frame-ancestors 'none'' header (clickjacking)."
+              echo "The live nginx drifted from ops/nginx/futspring.conf: apply it on the VPS (see its header comment)."
+              exit 1
+            fi
+          done
+          echo "frame-ancestors 'none' present on / and /home."
 
       - name: Clean up secrets from runner
         if: always()

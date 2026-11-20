@@ -4,6 +4,7 @@ import com.futspring.backend.domain.auth.dto.LoginRequestDTO;
 import com.futspring.backend.domain.auth.dto.RegisterRequestDTO;
 import com.futspring.backend.domain.auth.session.IssuedSession;
 import com.futspring.backend.domain.auth.session.RefreshSessionService;
+import com.futspring.backend.domain.auth.verification.EmailVerificationService;
 import com.futspring.backend.shared.exception.AppException;
 import com.futspring.backend.domain.user.User;
 import com.futspring.backend.domain.user.UserRepository;
@@ -11,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -27,9 +29,9 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final RefreshSessionService refreshSessionService;
     private final Clock clock;
-    private final com.futspring.backend.domain.auth.verification.EmailVerificationService verification;
+    private final EmailVerificationService verification;
 
-    @org.springframework.transaction.annotation.Transactional
+    @Transactional
     public void register(RegisterRequestDTO request) {
         // A tab opened before the terms changed sends the old version: the user must read the new one first
         if (!LegalTerms.CURRENT_VERSION.equals(request.termsVersion())) {

@@ -14,7 +14,8 @@ export function PageContainer({ width = "default", className, children }: PageCo
   return (
     <main
       className={cn(
-        "mx-auto flex w-full min-w-0 flex-col gap-6 px-4 py-5 md:px-8 md:py-7",
+        // below md the bottom tabs (and the phone's home bar) cover the end of the page: room for them
+        "mx-auto flex w-full min-w-0 flex-col gap-6 px-4 pb-[calc(1.25rem+var(--mobile-tabbar-h))] pt-5 md:px-8 md:py-7",
         width === "narrow" ? "max-w-[720px]" : "max-w-[1120px]",
         className,
       )}

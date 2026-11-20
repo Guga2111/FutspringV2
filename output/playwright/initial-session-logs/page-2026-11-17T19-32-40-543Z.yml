@@ -1,0 +1,133 @@
+- generic:
+  - generic:
+    - generic [aria-hidden]:
+      - main:
+        - generic:
+          - generic:
+            - generic:
+              - button
+              - generic: Pelada do Fut
+              - generic:
+                - link:
+                  - /url: /pelada/1/chat
+                - link:
+                  - /url: /pelada/1/settings
+          - generic:
+            - generic:
+              - generic:
+                - generic:
+                  - main:
+                    - generic:
+                      - navigation:
+                        - generic:
+                          - link:
+                            - /url: /pelada/1
+                            - text: Geral
+                          - link:
+                            - /url: /pelada/1/sessoes
+                            - text: Sessões
+                          - link:
+                            - /url: /pelada/1/membros
+                            - text: Membros
+                          - link:
+                            - /url: /pelada/1/ranking
+                            - text: Ranking
+                          - button [expanded]: Mais
+                    - generic:
+                      - generic:
+                        - generic:
+                          - link:
+                            - /url: /pelada/1/settings
+                        - generic:
+                          - heading [level=1]: Pelada do Fut
+                          - generic:
+                            - generic: Quinta
+                            - generic: 21:00 · 2h
+                            - generic: Arena Society, Rua das Flores 120
+                            - generic: Portão azul
+                      - generic:
+                        - generic:
+                          - generic: QUI
+                          - generic: "05"
+                          - generic: NOV
+                        - generic:
+                          - generic:
+                            - generic: Próxima sessão
+                            - generic: Agendada
+                          - generic: Amanhã, quinta-feira · 21:00
+                          - generic:
+                            - progressbar
+                            - generic: 7 de 10 confirmados
+                        - generic:
+                          - link:
+                            - /url: /daily/203
+                            - text: Ver sessão
+                          - generic:
+                            - button: Confirmar presença
+                      - region:
+                        - generic:
+                          - heading [level=2]: Atividade recente
+                          - link:
+                            - /url: /pelada/1/sessoes
+                            - text: Ver todas as sessões
+                        - list:
+                          - listitem:
+                            - link:
+                              - /url: /daily/201
+                              - generic:
+                                - generic: "29"
+                                - generic: Qui
+                              - generic:
+                                - generic: Quinta-feira, 29 de outubro
+                                - generic: 21:00 · 2 times · 4 partidas
+                              - generic: Finalizada
+                          - listitem:
+                            - link:
+                              - /url: /daily/200
+                              - generic:
+                                - generic: "22"
+                                - generic: Qui
+                              - generic:
+                                - generic: Quinta-feira, 22 de outubro
+                                - generic: 21:00 · 2 times · 4 partidas
+                              - generic: Finalizada
+                          - listitem:
+                            - link:
+                              - /url: /daily/199
+                              - generic:
+                                - generic: "15"
+                                - generic: Qui
+                              - generic:
+                                - generic: Quinta-feira, 15 de outubro
+                                - generic: 21:00 · 2 times · 4 partidas
+                              - generic: Finalizada
+        - navigation:
+          - generic:
+            - link:
+              - /url: /home
+              - generic [aria-hidden]: Início
+            - link:
+              - /url: /peladas
+              - generic [aria-hidden]: Peladas
+            - generic:
+              - button
+            - link:
+              - /url: /notificacoes
+              - generic:
+                - generic [aria-hidden]: "1"
+              - generic [aria-hidden]: Avisos
+            - link:
+              - /url: /profile/1
+              - generic: LE
+              - generic [aria-hidden]: Perfil
+    - region "Notifications alt+T"
+  - menu "Mais áreas" [active] [ref=f2e158]:
+    - group [ref=f2e159]:
+      - generic [ref=f2e160]: Pelada
+      - menuitem "Prêmios" [ref=f2e161]
+    - group [ref=f2e162]:
+      - generic [ref=f2e163]: Gestão
+      - menuitem "Financeiro" [ref=f2e164]
+      - menuitem "Convites" [ref=f2e165]
+      - menuitem "Configurações" [ref=f2e166]
+      - menuitem "Assinatura" [ref=f2e167]

@@ -1,0 +1,131 @@
+- generic:
+  - generic:
+    - generic:
+      - main:
+        - generic:
+          - generic [aria-hidden]:
+            - generic:
+              - button
+              - generic: Pelada do Fut
+              - generic:
+                - link:
+                  - /url: /pelada/1/chat
+                - link:
+                  - /url: /pelada/1/settings
+          - generic:
+            - generic:
+              - generic:
+                - generic:
+                  - main:
+                    - generic [aria-hidden]:
+                      - navigation:
+                        - generic:
+                          - link:
+                            - /url: /pelada/1
+                            - text: Geral
+                          - link:
+                            - /url: /pelada/1/sessoes
+                            - text: Sessões
+                          - link:
+                            - /url: /pelada/1/membros
+                            - text: Membros
+                          - link:
+                            - /url: /pelada/1/ranking
+                            - text: Ranking
+                          - button: Mais
+                      - generic:
+                        - generic:
+                          - heading [level=1]: Financeiro
+                    - generic:
+                      - generic:
+                        - generic [aria-hidden]:
+                          - tablist:
+                            - tab [selected]: Cobranças
+                            - tab: Caixa
+                            - tab: Histórico
+                            - tab: Configurações
+                          - generic:
+                            - button
+                            - button
+                        - tabpanel "Cobranças":
+                          - generic [aria-hidden]:
+                            - generic:
+                              - heading [level=2]: Cobranças da pelada
+                              - paragraph: Abra uma cobrança para receber ou conferir pagamentos.
+                            - button: Nova cobrança
+                          - radiogroup [aria-hidden]:
+                            - radio [checked]: Em aberto
+                            - radio: Encerradas
+                          - list [aria-hidden]:
+                            - listitem:
+                              - button:
+                                - generic:
+                                  - generic:
+                                    - generic: Mensalidade de novembro
+                                    - generic: Aberta
+                                  - generic: R$ 250,00 recebidos · 1 para conferir
+                                - generic:
+                                  - generic: R$ 350,00
+                                  - generic: a receber
+                          - navigation "Páginas de cobranças":
+                            - paragraph [aria-hidden]: 1 cobrança
+                            - generic:
+                              - button [disabled] [aria-hidden]: Anterior
+                              - generic: Página 1 de 1
+                              - button [disabled] [aria-hidden]: Próxima
+        - navigation [aria-hidden]:
+          - generic:
+            - link:
+              - /url: /home
+              - generic [aria-hidden]: Início
+            - link:
+              - /url: /peladas
+              - generic [aria-hidden]: Peladas
+            - generic:
+              - button
+            - link:
+              - /url: /notificacoes
+              - generic:
+                - generic [aria-hidden]: "1"
+              - generic [aria-hidden]: Avisos
+            - link:
+              - /url: /profile/1
+              - generic: LE
+              - generic [aria-hidden]: Perfil
+    - region "Notifications alt+T"
+  - dialog "Criar Pelada" [ref=f2e261]:
+    - generic [ref=f2e262]:
+      - heading "Criar Pelada" [level=2] [ref=f2e263]
+      - paragraph [ref=f2e264]: Comece pelo nome e horário. Os detalhes podem ser ajustados depois.
+    - generic [ref=f2e265]:
+      - generic [ref=f2e266]:
+        - group [ref=f2e267]:
+          - generic [ref=f2e268]: Nome *
+          - textbox "Nome *" [ref=f2e269]:
+            - /placeholder: Jogasse Onde?
+            - text: Pelada QA
+          - alert:
+            - list
+        - generic [ref=f2e270]:
+          - group [ref=f2e271]:
+            - generic [ref=f2e272]: Dia da semana *
+            - combobox "Dia da semana *" [ref=f2e273] [cursor=pointer]:
+              - generic: Segunda
+            - combobox [aria-hidden] [ref=f2e276]
+            - alert:
+              - list
+          - group [ref=f2e277]:
+            - generic [ref=f2e278]: Horário *
+            - textbox "Horário *" [ref=f2e279]: 20:00
+            - alert:
+              - list
+        - button "Formato dos jogos 2 times · 5 por time · NaN h" [active] [ref=f2e315] [cursor=pointer]:
+          - generic [ref=f2e282]:
+            - generic [ref=f2e283]: Formato dos jogos
+            - generic [ref=f2e284]: 2 times · 5 por time · NaN h
+        - button "Outras opções Local e foto opcionais · Sessões manuais" [ref=f2e288] [cursor=pointer]:
+          - generic [ref=f2e289]:
+            - generic [ref=f2e290]: Outras opções
+            - generic [ref=f2e291]: Local e foto opcionais · Sessões manuais
+      - button "Criar Pelada" [ref=f2e295] [cursor=pointer]
+    - button "Close" [ref=f2e296] [cursor=pointer]

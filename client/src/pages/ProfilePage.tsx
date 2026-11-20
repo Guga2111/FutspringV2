@@ -14,6 +14,9 @@ import { ProfileSkeleton } from "@/components/profile/ProfileSkeleton"
 import { RecentForm } from "@/components/profile/RecentForm"
 import { useProfile } from "@/components/profile/hooks/useProfile"
 import { useAuth } from "@/hooks/useAuth"
+import { Settings01Icon } from "@hugeicons/core-free-icons"
+import { MobileHeaderActions, MobileHeaderLink } from "@/components/layout/mobile/MobileHeaderActions"
+import { useRefresh } from "@/hooks/useMobileShell"
 
 type ProfileTab = "visao" | "historico" | "peladas"
 
@@ -35,7 +38,9 @@ export default function ProfilePage() {
     peladas, peladasLoading,
     timelinePoints, timelineLoading,
     matchHistory, matchHistoryLoading,
+    reload,
   } = useProfile(Number(id))
+  useRefresh(reload)
 
   // the tab lives in the URL (?aba=historico), so reload, back/forward and shared links keep it
   const requested = searchParams.get("aba")
@@ -76,6 +81,12 @@ export default function ProfilePage() {
 
   return (
     <PageContainer className="page-enter gap-5">
+      {/* the account's settings (sign out included) are one tap away from the Perfil tab */}
+      {isOwnProfile && (
+        <MobileHeaderActions>
+          <MobileHeaderLink to="/settings" label="Configurações" icon={Settings01Icon} />
+        </MobileHeaderActions>
+      )}
       <ProfileHeader
         profile={profile}
         isOwnProfile={isOwnProfile}

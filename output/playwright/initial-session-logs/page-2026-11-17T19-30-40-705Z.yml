@@ -1,0 +1,23 @@
+- generic [ref=f2e2]:
+  - main [ref=f2e4]:
+    - generic [ref=f2e5]:
+      - link "FutSpring" [ref=f2e8] [cursor=pointer]:
+        - /url: /home
+      - generic [ref=f2e10]: Carregando…
+    - navigation "Navegação principal" [ref=f2e14]:
+      - generic [ref=f2e15]:
+        - link "Início" [ref=f2e16] [cursor=pointer]:
+          - /url: /home
+          - generic [aria-hidden] [ref=f2e20]: Início
+        - link "Peladas" [ref=f2e21] [cursor=pointer]:
+          - /url: /peladas
+          - generic [aria-hidden] [ref=f2e28]: Peladas
+        - button "Criar" [ref=f2e30] [cursor=pointer]
+        - link "Avisos" [ref=f2e34] [cursor=pointer]:
+          - /url: /notificacoes
+          - generic [aria-hidden] [ref=f2e39]: Avisos
+        - link "Perfil" [ref=f2e40] [cursor=pointer]:
+          - /url: /profile/1
+          - generic [ref=f2e41]: LE
+          - generic [aria-hidden] [ref=f2e44]: Perfil
+  - region "Notifications alt+T"

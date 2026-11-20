@@ -18,11 +18,12 @@ export function formatCardDate(iso: string): string {
   return `${weekdayShort(iso)}, ${String(date.getDate()).padStart(2, "0")} ${MONTHS[date.getMonth()]}`
 }
 
-// Peladas with a next session, earliest first
+// Sessions awaiting a response first; within each group, earliest date and time first.
 export function upcomingSessions(peladas: PeladaResponse[]) {
   return peladas
     .filter((p): p is PeladaResponse & { nextDaily: NonNullable<PeladaResponse["nextDaily"]> } => p.nextDaily != null)
-    .sort((a, b) => a.nextDaily.date.localeCompare(b.nextDaily.date) || a.nextDaily.time.localeCompare(b.nextDaily.time))
+    .sort((a, b) => Number(a.nextDaily.isConfirmed) - Number(b.nextDaily.isConfirmed)
+      || a.nextDaily.date.localeCompare(b.nextDaily.date) || a.nextDaily.time.localeCompare(b.nextDaily.time))
 }
 
 export function pendingLine(pendingCount: number): string {

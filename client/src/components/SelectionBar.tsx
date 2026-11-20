@@ -26,7 +26,7 @@ export function SelectionBar({ count, outsideFilter, summary, note, pending, onE
       role="toolbar"
       aria-label="Ações em massa"
       aria-busy={pending}
-      className="sticky bottom-4 z-10 flex items-center gap-2 rounded-hero border bg-card p-2 pl-4 shadow-panel"
+      className="sticky bottom-[calc(1rem+var(--mobile-tabbar-h))] z-10 flex items-center gap-2 rounded-hero border bg-card p-2 pl-4 shadow-panel"
     >
       <span className="flex min-w-0 flex-col text-sm">
         <span className="font-semibold">

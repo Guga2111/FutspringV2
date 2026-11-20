@@ -1,5 +1,14 @@
 import { describe, it, expect } from "vitest"
-import { makeResultsSchema, saveTeamsSchema, toMatchResultInputs, type MatchRowValues } from "./daily"
+import {
+  finalizeDailySchema,
+  importMessageSchema,
+  importResolutionSchema,
+  makeResultsSchema,
+  saveTeamsSchema,
+  toMatchResultInputs,
+  toPopulateInput,
+  type MatchRowValues,
+} from "./daily"
 
 const teams = [
   { id: 1, players: [{ id: 10 }, { id: 11 }] },
@@ -88,5 +97,82 @@ describe("saveTeamsSchema", () => {
     expect(color.success).toBe(false)
     expect(empty.success).toBe(false)
     expect(empty.error?.issues[0]).toMatchObject({ path: ["teams", 1, "playerIds"], message: "O Time 2 está vazio" })
+  })
+})
+
+describe("finalizeDailySchema", () => {
+  it("accepts winners and awards nobody won", () => {
+    expect(finalizeDailySchema.safeParse({ puskasWinnerIds: [10, 11], wiltballWinnerIds: [] }).success).toBe(true)
+  })
+
+  it("rejects ids that aren't positive integers", () => {
+    expect(finalizeDailySchema.safeParse({ puskasWinnerIds: [0], wiltballWinnerIds: [] }).success).toBe(false)
+    expect(finalizeDailySchema.safeParse({ puskasWinnerIds: [], wiltballWinnerIds: [1.5] }).success).toBe(false)
+  })
+})
+
+describe("importMessageSchema", () => {
+  it("needs some text", () => {
+    expect(importMessageSchema.safeParse({ message: "Azul\nLeal" }).success).toBe(true)
+    const blank = importMessageSchema.safeParse({ message: "  \n " })
+    expect(blank.error?.issues[0]).toMatchObject({ path: ["message"], message: "Cole a mensagem da sessão" })
+  })
+})
+
+describe("importResolutionSchema", () => {
+  const row = (rawName: string, matchedUserId: number | null, skipped = false) => ({
+    rawName,
+    totalGoals: 0,
+    totalAssists: 0,
+    matchedUserId,
+    skipped,
+  })
+
+  it("accepts linked and skipped names", () => {
+    const values = { teams: [{ players: [row("Leal", 1), row("Visitante", null, true)] }, { players: [row("Souto", 2)] }] }
+    expect(importResolutionSchema.safeParse(values).success).toBe(true)
+  })
+
+  it("puts an unresolved name on its row", () => {
+    const result = importResolutionSchema.safeParse({ teams: [{ players: [row("Leal", 1), row("Ferraz", null)] }] })
+    expect(result.error?.issues[0]).toMatchObject({ path: ["teams", 0, "players", 1], message: "Escolha o jogador ou ignore" })
+  })
+
+  it("refuses the same member for two names, on the second row", () => {
+    const result = importResolutionSchema.safeParse({ teams: [{ players: [row("Leal", 1)] }, { players: [row("Leal Jr", 1)] }] })
+    expect(result.error?.issues[0]).toMatchObject({
+      path: ["teams", 1, "players", 0],
+      message: "Este jogador já está vinculado a Leal",
+    })
+  })
+})
+
+describe("toPopulateInput", () => {
+  it("sends the parsed colors and matches with the linked players only", () => {
+    const parsed = {
+      teams: [
+        { colorName: "Azul", colorHex: "#3b82f6", players: [] },
+        { colorName: "Branco", colorHex: "#f8fafc", players: [] },
+      ],
+      matches: [{ team1ColorName: "Azul", team1Score: 2, team2ColorName: "Branco", team2Score: 0 }],
+    }
+    const values = {
+      teams: [
+        {
+          players: [
+            { rawName: "Leal", totalGoals: 3, totalAssists: 1, matchedUserId: 1, skipped: false },
+            { rawName: "Visitante", totalGoals: 1, totalAssists: 0, matchedUserId: null, skipped: true },
+          ],
+        },
+        { players: [{ rawName: "Pedrão", totalGoals: 0, totalAssists: 1, matchedUserId: 2, skipped: false }] },
+      ],
+    }
+    expect(toPopulateInput(parsed, values)).toEqual({
+      teams: [
+        { colorName: "Azul", colorHex: "#3b82f6", players: [{ userId: 1, totalGoals: 3, totalAssists: 1 }] },
+        { colorName: "Branco", colorHex: "#f8fafc", players: [{ userId: 2, totalGoals: 0, totalAssists: 1 }] },
+      ],
+      matches: [{ team1ColorName: "Azul", team1Score: 2, team2ColorName: "Branco", team2Score: 0 }],
+    })
   })
 })

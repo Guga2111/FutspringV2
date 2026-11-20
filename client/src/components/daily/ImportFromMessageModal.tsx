@@ -1,9 +1,9 @@
-import { useState, useMemo } from 'react'
+import { Controller } from "react-hook-form"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { Alert02Icon, CheckmarkCircle02Icon, PencilEdit02Icon } from "@hugeicons/core-free-icons"
-import { toast } from 'sonner'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
@@ -11,37 +11,17 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog'
-import { Field, FieldLabel } from '@/components/ui/field'
-import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Textarea } from '@/components/ui/textarea'
-import { getErrorMessage } from '@/lib/errors'
-import { parseSessionMessage } from '@/utils/parseSessionMessage'
-import { autoMatchPlayers } from '@/utils/matchPlayers'
-import { populateFromMessage } from '@/api/dailies'
-import type { DailyDetail } from '@/types/daily'
-import type { PopulateDailyInput } from '@/api/dailies'
+} from "@/components/ui/dialog"
+import { Field, FieldError, FieldLabel } from "@/components/ui/field"
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Textarea } from "@/components/ui/textarea"
+import { useImportFromMessage } from "@/components/daily/hooks/useImportFromMessage"
+import type { ImportResolutionValues } from "@/schemas/daily"
+import type { DailyDetail, PlayerDTO } from "@/types/daily"
 
-interface MatchedPlayerState {
-  rawName: string
-  totalGoals: number
-  totalAssists: number
-  matchedUserId: number | null
-  ambiguous: boolean
-  skipped: boolean
-}
+type ImportPlayer = ImportResolutionValues["teams"][number]["players"][number]
 
-interface ParsedTeamMeta {
-  colorName: string
-  colorHex: string
-}
-
-interface ParsedMatchMeta {
-  team1ColorName: string
-  team1Score: number
-  team2ColorName: string
-  team2Score: number
-}
+const SKIP = "__skip__"
 
 interface Props {
   daily: DailyDetail
@@ -49,122 +29,123 @@ interface Props {
   onSuccess: (updated: DailyDetail) => void
 }
 
-export default function ImportFromMessageModal({ daily, onClose, onSuccess }: Props) {
-  const [step, setStep] = useState<1 | 2>(1)
-  const [text, setText] = useState('')
-  const [parseError, setParseError] = useState<string | null>(null)
-  const [parsedTeams, setParsedTeams] = useState<ParsedTeamMeta[]>([])
-  const [parsedMatches, setParsedMatches] = useState<ParsedMatchMeta[]>([])
-  const [matchedPlayers, setMatchedPlayers] = useState<MatchedPlayerState[][]>([])
-  const [loading, setLoading] = useState(false)
+interface ImportPlayerRowProps {
+  player: ImportPlayer
+  onChange: (player: ImportPlayer) => void
+  error?: string
+  members: PlayerDTO[]
+  linkedIds: Set<number>
+}
 
-  const members = daily.peladaMembers ?? []
-
-  const handleAnalyze = () => {
-    setParseError(null)
-    const parsed = parseSessionMessage(text)
-    if (parsed.teams.length === 0) {
-      setParseError('Nenhum time encontrado. Verifique o formato da mensagem.')
-      return
-    }
-    const autoMatched = autoMatchPlayers(parsed, members)
-    const initialState: MatchedPlayerState[][] = autoMatched.map(teamPlayers =>
-      teamPlayers.map(p => ({ ...p, skipped: false }))
-    )
-
-    setParsedTeams(parsed.teams.map(t => ({ colorName: t.colorName, colorHex: t.colorHex })))
-    setParsedMatches(parsed.matches)
-    setMatchedPlayers(initialState)
-    setStep(2)
-  }
-
-  const assignedUserIds = useMemo(() => {
-    const ids = new Set<number>()
-    for (const teamPlayers of matchedPlayers) {
-      for (const p of teamPlayers) {
-        if (p.matchedUserId !== null) ids.add(p.matchedUserId)
-      }
-    }
-    return ids
-  }, [matchedPlayers])
-
-  const handlePlayerChange = (
-    teamIdx: number,
-    playerIdx: number,
-    userId: number | null,
-    skipped: boolean,
-  ) => {
-    setMatchedPlayers(prev => {
-      const next = prev.map(team => [...team])
-      next[teamIdx] = [...next[teamIdx]]
-      next[teamIdx][playerIdx] = { ...next[teamIdx][playerIdx], matchedUserId: userId, skipped }
-      return next
-    })
-  }
-
-  const allResolved = matchedPlayers.every(team =>
-    team.every(p => p.matchedUserId !== null || p.skipped)
-  )
-
-  const handleImport = async () => {
-    setLoading(true)
-    try {
-      const input: PopulateDailyInput = {
-        teams: parsedTeams.map((team, i) => ({
-          colorName: team.colorName,
-          colorHex: team.colorHex,
-          players: (matchedPlayers[i] ?? []).flatMap(p =>
-            p.matchedUserId !== null && !p.skipped
-              ? [{ userId: p.matchedUserId, totalGoals: p.totalGoals, totalAssists: p.totalAssists }]
-              : [],
-          ),
-        })),
-        matches: parsedMatches,
-      }
-      const updated = await populateFromMessage(daily.id, input)
-      toast.success('Sessão importada')
-      onSuccess(updated)
-    } catch (error) {
-      toast.error(getErrorMessage(error, 'Não foi possível importar a sessão'))
-    } finally {
-      setLoading(false)
-    }
-  }
+// One name of the message: linked (✓ member, change), skipped (Desfazer) or waiting for a member or "Ignorar"
+function ImportPlayerRow({ player, onChange, error, members, linkedIds }: ImportPlayerRowProps) {
+  const set = (matchedUserId: number | null, skipped: boolean) => onChange({ ...player, matchedUserId, skipped })
 
   return (
-    <Dialog open onOpenChange={open => !open && !loading && onClose()}>
+    <div className="flex min-h-[28px] flex-wrap items-center gap-2 text-sm">
+      <span className="w-24 shrink-0 truncate text-muted-foreground">{player.rawName}</span>
+      <span className="w-16 shrink-0 text-xs text-muted-foreground">
+        {player.totalGoals > 0 && `⚽${player.totalGoals}`}
+        {player.totalGoals > 0 && player.totalAssists > 0 && " "}
+        {player.totalAssists > 0 && `🅰️${player.totalAssists}`}
+      </span>
+      {player.matchedUserId !== null ? (
+        <span className="flex items-center gap-1.5 text-xs">
+          <HugeiconsIcon icon={CheckmarkCircle02Icon} className="size-3.5 shrink-0 text-chart-1" />
+          {members.find((m) => m.id === player.matchedUserId)?.username}
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="size-6"
+            aria-label="Trocar jogador"
+            onClick={() => set(null, false)}
+          >
+            <HugeiconsIcon icon={PencilEdit02Icon} className="size-3" />
+          </Button>
+        </span>
+      ) : player.skipped ? (
+        <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          Ignorado
+          <Button type="button" variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => set(null, false)}>
+            Desfazer
+          </Button>
+        </span>
+      ) : (
+        <span className="flex items-center gap-1.5">
+          <HugeiconsIcon icon={Alert02Icon} className="size-3.5 shrink-0 text-destructive" />
+          <Select onValueChange={(value) => (value === SKIP ? set(null, true) : set(Number(value), false))}>
+            <SelectTrigger
+              className="h-7 w-44 text-xs"
+              aria-label={`Jogador para ${player.rawName}`}
+              aria-invalid={error !== undefined}
+            >
+              <SelectValue placeholder="Selecionar jogador..." />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                {members
+                  .filter((m) => !linkedIds.has(m.id))
+                  .map((m) => (
+                    <SelectItem key={m.id} value={String(m.id)}>
+                      {m.username}
+                    </SelectItem>
+                  ))}
+                <SelectItem value={SKIP}>Ignorar jogador</SelectItem>
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        </span>
+      )}
+      {error && <FieldError className="w-full text-xs">{error}</FieldError>}
+    </div>
+  )
+}
+
+export default function ImportFromMessageModal({ daily, onClose, onSuccess }: Props) {
+  const { step, back, parsed, members, linkedIds, messageForm, resolutionForm, analyze, submit } = useImportFromMessage(
+    daily,
+    onSuccess,
+  )
+  const submitting = resolutionForm.formState.isSubmitting
+  const rootError = resolutionForm.formState.errors.root
+
+  return (
+    <Dialog open onOpenChange={(open) => !open && !submitting && onClose()}>
       <DialogContent className="flex max-h-[90vh] max-w-2xl flex-col">
         <DialogHeader>
           <DialogTitle>Importar da mensagem</DialogTitle>
           <DialogDescription>
-            {step === 1 ? 'Passo 1 de 2: cole a mensagem' : 'Passo 2 de 2: confirme os jogadores'}
+            {step === 1 ? "Passo 1 de 2: cole a mensagem" : "Passo 2 de 2: confirme os jogadores"}
           </DialogDescription>
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto">
-          {step === 1 ? (
-            <Field data-invalid={parseError !== null}>
-              <FieldLabel htmlFor="session-message" className="font-normal text-muted-foreground">
-                Cole a mensagem do WhatsApp com os times, jogadores e resultados.
-              </FieldLabel>
-              <Textarea
-                id="session-message"
-                className="h-64 resize-none font-mono"
-                placeholder={"Azul 🔵\n\nLeal⚽️⚽️⚽️🅰️\nSouto ⚽️🅰️\nFerraz\n\nBranco ⚪️\n\nPedrão ⚽️\n\nAzul 2 x 0 Branco"}
-                value={text}
-                aria-invalid={parseError !== null}
-                onChange={e => setText(e.target.value)}
+          {step === 1 || !parsed ? (
+            <form id="import-message" onSubmit={analyze} noValidate>
+              <Controller
+                name="message"
+                control={messageForm.control}
+                render={({ field, fieldState }) => (
+                  <Field data-invalid={fieldState.invalid}>
+                    <FieldLabel htmlFor="session-message" className="font-normal text-muted-foreground">
+                      Cole a mensagem do WhatsApp com os times, jogadores e resultados.
+                    </FieldLabel>
+                    <Textarea
+                      {...field}
+                      id="session-message"
+                      className="h-64 resize-none font-mono"
+                      placeholder={"Azul 🔵\n\nLeal⚽️⚽️⚽️🅰️\nSouto ⚽️🅰️\nFerraz\n\nBranco ⚪️\n\nPedrão ⚽️\n\nAzul 2 x 0 Branco"}
+                      aria-invalid={fieldState.invalid}
+                    />
+                    <FieldError errors={[fieldState.error]} />
+                  </Field>
+                )}
               />
-              {parseError && (
-                <p role="alert" className="flex items-center gap-1.5 text-sm text-destructive">
-                  <HugeiconsIcon icon={Alert02Icon} className="size-4 shrink-0" />
-                  {parseError}
-                </p>
-              )}
-            </Field>
+            </form>
           ) : (
-            <div className="flex flex-col gap-6">
-              {parsedTeams.map((team, teamIdx) => (
+            <form id="import-resolution" onSubmit={submit} noValidate className="flex flex-col gap-6">
+              {parsed.teams.map((team, teamIdx) => (
                 <div key={team.colorName}>
                   <div className="mb-2 flex items-center gap-2">
                     <span
@@ -174,69 +155,22 @@ export default function ImportFromMessageModal({ daily, onClose, onSuccess }: Pr
                     <span className="text-sm font-semibold">{team.colorName}</span>
                   </div>
                   <div className="flex flex-col gap-1.5 pl-5">
-                    {(matchedPlayers[teamIdx] ?? []).map((player, playerIdx) => (
-                      <div key={`${team.colorName}-${playerIdx}`} className="flex min-h-[28px] flex-wrap items-center gap-2 text-sm">
-                        <span className="w-24 shrink-0 truncate text-muted-foreground">{player.rawName}</span>
-                        <span className="w-16 shrink-0 text-xs text-muted-foreground">
-                          {player.totalGoals > 0 && `⚽${player.totalGoals}`}
-                          {player.totalGoals > 0 && player.totalAssists > 0 && ' '}
-                          {player.totalAssists > 0 && `🅰️${player.totalAssists}`}
-                        </span>
-                        {player.matchedUserId !== null ? (
-                          <span className="flex items-center gap-1.5 text-xs">
-                            <HugeiconsIcon icon={CheckmarkCircle02Icon} className="size-3.5 shrink-0 text-chart-1" />
-                            {members.find(m => m.id === player.matchedUserId)?.username}
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="size-6"
-                              aria-label="Trocar jogador"
-                              onClick={() => handlePlayerChange(teamIdx, playerIdx, null, false)}
-                            >
-                              <HugeiconsIcon icon={PencilEdit02Icon} className="size-3" />
-                            </Button>
-                          </span>
-                        ) : player.skipped ? (
-                          <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                            Ignorado
-                            <Button
-                              variant="link"
-                              size="sm"
-                              className="h-auto p-0 text-xs"
-                              onClick={() => handlePlayerChange(teamIdx, playerIdx, null, false)}
-                            >
-                              Desfazer
-                            </Button>
-                          </span>
-                        ) : (
-                          <span className="flex items-center gap-1.5">
-                            <HugeiconsIcon icon={Alert02Icon} className="size-3.5 shrink-0 text-destructive" />
-                            <Select
-                              onValueChange={val => {
-                                if (val === '__skip__') {
-                                  handlePlayerChange(teamIdx, playerIdx, null, true)
-                                } else {
-                                  handlePlayerChange(teamIdx, playerIdx, Number(val), false)
-                                }
-                              }}
-                            >
-                              <SelectTrigger className="h-7 w-44 text-xs" aria-label={`Jogador para ${player.rawName}`}>
-                                <SelectValue placeholder="Selecionar jogador..." />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectGroup>
-                                  {members
-                                    .filter(m => !assignedUserIds.has(m.id))
-                                    .map(m => (
-                                      <SelectItem key={m.id} value={String(m.id)}>{m.username}</SelectItem>
-                                    ))}
-                                  <SelectItem value="__skip__">Ignorar jogador</SelectItem>
-                                </SelectGroup>
-                              </SelectContent>
-                            </Select>
-                          </span>
+                    {team.players.map((_, playerIdx) => (
+                      <Controller
+                        // the parsed names have no id; the list is fixed until the message is parsed again
+                        key={`${team.colorName}-${playerIdx}`}
+                        name={`teams.${teamIdx}.players.${playerIdx}`}
+                        control={resolutionForm.control}
+                        render={({ field, fieldState }) => (
+                          <ImportPlayerRow
+                            player={field.value}
+                            onChange={field.onChange}
+                            error={fieldState.error?.message}
+                            members={members}
+                            linkedIds={linkedIds}
+                          />
                         )}
-                      </div>
+                      />
                     ))}
                   </div>
                 </div>
@@ -244,9 +178,9 @@ export default function ImportFromMessageModal({ daily, onClose, onSuccess }: Pr
 
               <div>
                 <p className="mb-2 text-sm font-semibold">Resultados</p>
-                {parsedMatches.length > 0 ? (
+                {parsed.matches.length > 0 ? (
                   <div className="flex flex-wrap gap-2">
-                    {parsedMatches.map((m, i) => (
+                    {parsed.matches.map((m, i) => (
                       <Badge key={`${i}-${m.team1ColorName}-${m.team2ColorName}`} variant="secondary">
                         {m.team1ColorName} {m.team1Score} × {m.team2Score} {m.team2ColorName}
                       </Badge>
@@ -259,27 +193,35 @@ export default function ImportFromMessageModal({ daily, onClose, onSuccess }: Pr
                   </p>
                 )}
               </div>
-            </div>
+
+              {rootError && (
+                <Alert variant="destructive">
+                  <AlertDescription>{rootError.message}</AlertDescription>
+                </Alert>
+              )}
+            </form>
           )}
         </div>
 
         <DialogFooter className="gap-2 sm:justify-between">
           <div>
             {step === 2 && (
-              <Button variant="outline" onClick={() => setStep(1)}>
+              <Button type="button" variant="outline" onClick={back} disabled={submitting}>
                 Voltar
               </Button>
             )}
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={onClose} disabled={loading}>Cancelar</Button>
+            <Button type="button" variant="outline" onClick={onClose} disabled={submitting}>
+              Cancelar
+            </Button>
             {step === 1 ? (
-              <Button variant="brand" onClick={handleAnalyze} disabled={!text.trim()}>
+              <Button type="submit" form="import-message" variant="brand">
                 Analisar mensagem
               </Button>
             ) : (
-              <Button variant="brand" onClick={handleImport} disabled={!allResolved || loading}>
-                {loading ? 'Importando...' : 'Confirmar e importar'}
+              <Button type="submit" form="import-resolution" variant="brand" disabled={submitting}>
+                {submitting ? "Importando..." : "Confirmar e importar"}
               </Button>
             )}
           </div>

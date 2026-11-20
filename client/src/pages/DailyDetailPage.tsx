@@ -27,6 +27,8 @@ import { AttendanceList } from "@/components/daily/AttendanceList"
 import { BumpAlert } from "@/components/BumpAlert"
 import { SubscriptionNotice } from "@/components/pelada/SubscriptionNotice"
 import { useDailyDetail } from "@/components/daily/hooks/useDailyDetail"
+import { useMobileHeader, useRefresh } from "@/hooks/useMobileShell"
+import { areaPath } from "@/utils/peladaAreas"
 import { useDailyModals } from "@/components/daily/hooks/useDailyModals"
 import { useDailyActions } from "@/components/daily/hooks/useDailyActions"
 import { IMAGE_ACCEPT } from "@/schemas/upload"
@@ -42,6 +44,9 @@ export default function DailyDetailPage() {
 function DailySession({ dailyId }: { dailyId: number }) {
   const { user } = useAuth()
   const { daily, setDaily, loading, accessDenied, error, refetch } = useDailyDetail(dailyId)
+  // ← without history goes to the pelada's sessions; the "+" preselects the pelada
+  useMobileHeader({ parent: daily ? areaPath(daily.peladaId, "sessions") : undefined, peladaId: daily?.peladaId })
+  useRefresh(refetch)
 
   const {
     resultsMode, openResults, closeResults,

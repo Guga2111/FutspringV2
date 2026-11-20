@@ -2,10 +2,8 @@ import { useState } from "react"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { BubbleChatIcon, Cancel01Icon } from "@hugeicons/core-free-icons"
 import { Button } from "@/components/ui/button"
-import { Drawer, DrawerContent, DrawerDescription, DrawerTitle } from "@/components/ui/drawer"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { ChatPanel } from "@/components/pelada/ChatPanel"
-import { useIsMobile } from "@/hooks/useIsMobile"
 
 interface PeladaChatProps {
   peladaId: number
@@ -16,9 +14,9 @@ interface PeladaChatProps {
 
 const fabClass = "fixed bottom-4 right-4 z-40 size-[54px] rounded-full shadow-fab [&_svg]:size-[22px]"
 
-// Floating chat button: a panel above it on desktop, a bottom drawer on mobile
+// Floating chat button with its panel, from md. Below md the chat is a page (/pelada/:id/chat), opened from the
+// icon in the mobile header, as in WhatsApp
 export function PeladaChat({ peladaId, peladaName, memberCount, currentUserId }: PeladaChatProps) {
-  const isMobile = useIsMobile()
   const [open, setOpen] = useState(false)
 
   const closeButton = (
@@ -32,30 +30,6 @@ export function PeladaChat({ peladaId, peladaName, memberCount, currentUserId }:
       <HugeiconsIcon icon={Cancel01Icon} />
     </Button>
   )
-
-  if (isMobile) {
-    return (
-      <>
-        {!open && (
-          <Button variant="brand" size="icon" aria-label="Abrir chat" onClick={() => setOpen(true)} className={fabClass}>
-            <HugeiconsIcon icon={BubbleChatIcon} />
-          </Button>
-        )}
-        <Drawer open={open} onOpenChange={setOpen}>
-          <DrawerContent className="h-[78%] rounded-t-2xl bg-card [&>div:first-child]:mt-2 [&>div:first-child]:h-1 [&>div:first-child]:w-10 [&>div:first-child]:bg-star-off">
-            <div className="flex items-center justify-between border-b py-2 pl-4 pr-2">
-              <DrawerTitle className="text-[15px] font-semibold">Chat</DrawerTitle>
-              <DrawerDescription className="sr-only">
-                {peladaName} · {memberCount} membros
-              </DrawerDescription>
-              {closeButton}
-            </div>
-            <ChatPanel peladaId={peladaId} currentUserId={currentUserId} size="drawer" />
-          </DrawerContent>
-        </Drawer>
-      </>
-    )
-  }
 
   return (
     <Popover open={open} onOpenChange={setOpen}>

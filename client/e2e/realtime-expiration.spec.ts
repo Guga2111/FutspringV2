@@ -7,7 +7,7 @@ function token(expiresAt: number) {
 }
 
 for (const refreshFails of [false, true]) {
-  test(`expired realtime connection ${refreshFails ? "stops retrying when renewal fails" : "renews and restores subscriptions"}`, async ({ page }) => {
+  test(`expired realtime connection ${refreshFails ? "stops retrying when renewal fails" : "renews and restores subscriptions"}`, async ({ page }, testInfo) => {
     await page.clock.setFixedTime(NOW)
     const unmatched = await mockApi(page)
     await login(page)
@@ -48,8 +48,13 @@ for (const refreshFails of [false, true]) {
       })
       socket.send("o")
     })
-    await page.goto("/pelada/1")
-    await page.getByRole("button", { name: "Abrir chat", exact: true }).click()
+    // the chat subscribes to the pelada's topic: a floating panel from md, its own page below
+    if (testInfo.project.name.startsWith("mobile")) {
+      await page.goto("/pelada/1/chat")
+    } else {
+      await page.goto("/pelada/1")
+      await page.getByRole("button", { name: "Abrir chat", exact: true }).click()
+    }
     const destinations = ["destination:/topic/pelada/1", "destination:/user/queue/notifications"]
     await expect.poll(() => subscriptions[0]).toEqual(expect.arrayContaining(destinations))
     expect(credentials).toEqual([`Authorization:Bearer ${original}`])

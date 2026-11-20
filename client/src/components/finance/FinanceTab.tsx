@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react"
-import { useNavigate, useParams } from "react-router-dom"
+import { useLocation, useNavigate, useParams } from "react-router-dom"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { ArrowRight01Icon, InformationCircleIcon, PlusSignIcon, RefreshIcon } from "@hugeicons/core-free-icons"
 import { toast } from "sonner"
@@ -13,6 +13,8 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { cn } from "@/lib/utils"
 import type { FinancePaymentValues } from "@/schemas/finance"
 import { useFinance } from "@/components/finance/hooks/useFinance"
+import { useRefresh } from "@/hooks/useMobileShell"
+import { createIntent } from "@/utils/mobileNav"
 import { FinanceListDetail } from "@/components/finance/collection/FinanceListDetail"
 import { FinanceCreateForm } from "@/components/finance/collection/FinanceCreateForm"
 import { FinanceListForm } from "@/components/finance/collection/FinanceListForm"
@@ -55,6 +57,10 @@ export function FinanceTab({ peladaId, userId, members, dailies, timeZone, writa
     navigate(id === null ? base : `${base}/${id}`)
   }, [navigate, peladaId, selected])
   const finance = useFinance(peladaId, selected, select, writable)
+  useRefresh(finance.refresh)
+  // "Nova cobrança" from the mobile "+": the creation opens once the list is ready (closing it clears the request)
+  const location = useLocation()
+  const chargeIntent = createIntent(location.state) === "charge"
   const [tabState, setTabState] = useState("collections")
   // a collection in the URL is always shown on the collections tab
   const tab = selected !== null ? "collections" : tabState
@@ -67,7 +73,10 @@ export function FinanceTab({ peladaId, userId, members, dailies, timeZone, writa
   const overview = finance.overview
   const detail = finance.detail
   const open = (action: EditorAction) => setEditor({ ...action, revision: editor?.revision ?? overview?.revision ?? 0 })
-  const close = () => setEditor(null)
+  const close = () => {
+    setEditor(null)
+    if (chargeIntent) navigate(location.pathname, { replace: true, state: null })
+  }
   const askReason = (action: FinanceReasonAction) => { close(); setReason({ ...action, revision: editor?.revision ?? overview?.revision ?? 0 }) }
   const formFinance = { ...finance, mutate: (signature: string, message: string, action: Parameters<typeof finance.mutate>[2]) => finance.mutate(signature, message, action, editor?.revision ?? reason?.revision) }
   const payment = (charge: FinanceCharge, action: FinancePaymentValues["action"], notice?: FinanceNotice) => open({ kind: "payment", charge, action, notice })
@@ -79,6 +88,7 @@ export function FinanceTab({ peladaId, userId, members, dailies, timeZone, writa
   const manage = Boolean(overview?.permissions.manage)
   // admins who aren't responsáveis see the member view; they only reach the settings to appoint responsáveis
   const appointOnly = Boolean(overview?.permissions.appointManagers) && !manage
+  const intentCreate = chargeIntent && editor === null && manage && finance.ready && !finance.locked && selected === null
   // the tour points at the collections list, so it brings it on screen first
   const prepareTour = () => { setEditor(null); setReason(null); setTab("collections"); finance.select(null) }
   const collectionRow = (list: FinanceList) => (
@@ -118,7 +128,7 @@ export function FinanceTab({ peladaId, userId, members, dailies, timeZone, writa
       }
   return <div className="flex min-w-0 flex-col gap-5">
     {!overview ? finance.error ? <><FinanceFormError message={finance.error} /><Button variant="outline" onClick={finance.refresh}>Tentar de novo</Button></> : <><Skeleton className="h-10 w-64" /><Skeleton className="h-48 w-full" /></> : <>
-      <FinanceTour manage={manage} viewCash={overview.permissions.viewCash} canAutoStart={tab === "collections" && finance.selected === null && !editor && !reason}>
+      <FinanceTour manage={manage} viewCash={overview.permissions.viewCash} canAutoStart={tab === "collections" && finance.selected === null && !editor && !intentCreate && !reason}>
       <Tabs value={tab} onValueChange={setTab} className="min-w-0">
         <div className="mb-3 flex items-center justify-between gap-3">
           {/* min-w-0 + horizontal scroll: at 375 px the tabs and the two icon buttons don't fit, the row scrolls instead of the page */}
@@ -187,7 +197,7 @@ export function FinanceTab({ peladaId, userId, members, dailies, timeZone, writa
       </Tabs>
       </FinanceTour>
     </>}
-    {editor?.kind === "create" && <FinanceCreateForm peladaId={peladaId} finance={formFinance} members={members} dailies={dailies} onClose={close} />}
+    {(editor?.kind === "create" || intentCreate) && <FinanceCreateForm peladaId={peladaId} finance={formFinance} members={members} dailies={dailies} onClose={close} />}
     {editor?.kind === "list" && <FinanceListForm peladaId={peladaId} finance={formFinance} list={editor.list} template={editor.template} asTemplate={!editor.list} dailies={dailies} onClose={close} />}
     {editor?.kind === "participants" && detail && <FinanceParticipantsForm peladaId={peladaId} finance={formFinance} detail={detail} members={members} dailies={dailies} onClose={close} />}
     {editor?.kind === "payment" && detail && <FinancePaymentForm peladaId={peladaId} finance={formFinance} list={detail.collection} charge={editor.charge} action={editor.action} notice={editor.notice} onClose={close} />}

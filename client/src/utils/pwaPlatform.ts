@@ -19,12 +19,15 @@ const IN_APP = /FBAN|FBAV|Instagram|WhatsApp|; wv\)/
 const IOS_DEVICE = /iPhone|iPad|iPod/
 const IOS_OTHER_BROWSER = /CriOS|FxiOS|EdgiOS/
 
+// iPadOS identifies itself as a Mac; a touch screen gives it away
+export function isIosDevice(userAgent: string, maxTouchPoints: number): boolean {
+  return IOS_DEVICE.test(userAgent) || (/Macintosh/.test(userAgent) && maxTouchPoints > 1)
+}
+
 export function detectInstallContext({ userAgent, maxTouchPoints, standalone, hasInstallPrompt }: InstallEnvironment): InstallContext {
   if (standalone) return "installed"
   if (IN_APP.test(userAgent)) return "in-app"
-  // iPadOS identifies itself as a Mac; a touch screen gives it away
-  const ios = IOS_DEVICE.test(userAgent) || (/Macintosh/.test(userAgent) && maxTouchPoints > 1)
-  if (ios) return IOS_OTHER_BROWSER.test(userAgent) ? "ios-other" : "ios-safari"
+  if (isIosDevice(userAgent, maxTouchPoints)) return IOS_OTHER_BROWSER.test(userAgent) ? "ios-other" : "ios-safari"
   // desktop Chrome sends the prompt too, but the install flow targets phones (the desktop gets a QR Code)
   if (/Android/.test(userAgent)) return hasInstallPrompt ? "android-prompt" : "android-manual"
   return "desktop"

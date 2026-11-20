@@ -5,13 +5,13 @@ import { invitePlayer } from "@/api/invitations"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
+  ResponsiveDialog,
+  ResponsiveDialogContent,
+  ResponsiveDialogDescription,
+  ResponsiveDialogFooter,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+} from "@/components/ui/responsive-dialog"
 import { Input } from "@/components/ui/input"
 import { getErrorMessage } from "@/lib/errors"
 import { getPositionLabel, type PublicUser } from "@/types/user"
@@ -47,12 +47,12 @@ export function InvitePlayerDialog({
   }
 
   return (
-    <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>Convidar jogador</DialogTitle>
-          <DialogDescription>Busque pelo nome de usuário ou pelo e-mail completo.</DialogDescription>
-        </DialogHeader>
+    <ResponsiveDialog open onOpenChange={(open) => !open && onClose()}>
+      <ResponsiveDialogContent className="max-w-md">
+        <ResponsiveDialogHeader>
+          <ResponsiveDialogTitle>Convidar jogador</ResponsiveDialogTitle>
+          <ResponsiveDialogDescription>Busque pelo nome de usuário ou pelo e-mail completo.</ResponsiveDialogDescription>
+        </ResponsiveDialogHeader>
         <Input
           aria-label="Buscar jogador"
           placeholder="Nome ou e-mail completo"
@@ -90,12 +90,12 @@ export function InvitePlayerDialog({
             <p className="py-4 text-center text-sm text-muted-foreground">Nenhum usuário encontrado</p>
           )}
         </div>
-        <DialogFooter>
+        <ResponsiveDialogFooter>
           <Button variant="ghost" onClick={onClose}>
             Fechar
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </ResponsiveDialogFooter>
+      </ResponsiveDialogContent>
+    </ResponsiveDialog>
   )
 }

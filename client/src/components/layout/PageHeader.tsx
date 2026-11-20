@@ -12,11 +12,12 @@ interface PageHeaderProps {
   actions?: ReactNode
 }
 
-// Breadcrumb, page title (Barlow) and the page's actions: the same header on every private page
+// Breadcrumb (from md), page title (Barlow) and the page's actions: the same header on every private page
 export function PageHeader({ breadcrumb, aside, title, description, actions }: PageHeaderProps) {
   return (
     <header className="flex flex-col gap-3">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      {/* below md the mobile header says where you are, and the pelada's areas get their own strip */}
+      <div className="hidden gap-3 md:flex md:flex-row md:items-center md:justify-between">
         <PeladaBreadcrumb items={breadcrumb} />
         {aside}
       </div>

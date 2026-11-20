@@ -13,9 +13,10 @@ import { useNotifications } from "@/hooks/useNotifications"
 import { useAuth } from "@/hooks/useAuth"
 import { useOnline } from "@/hooks/useOnline"
 import { syncPushSubscription } from "@/hooks/usePushSubscription"
-import CreatePeladaModal from "@/components/CreatePeladaModal"
+import { CreatePeladaSheet } from "@/components/pelada/CreatePeladaSheet"
 import { AppSidebar } from "@/components/layout/AppSidebar"
-import { MobileTopBar } from "@/components/layout/MobileTopBar"
+import { MobileShell } from "@/components/layout/mobile/MobileShell"
+import { useIsMobile } from "@/hooks/useIsMobile"
 import { RealtimeProvider } from "@/components/layout/RealtimeProvider"
 
 const SIDEBAR_OPEN_KEY = "sidebar_open"
@@ -38,7 +39,8 @@ function saveSidebarOpen(open: boolean) {
 
 const pageFallback = <div className="flex flex-1 items-center justify-center p-8 text-sm text-muted-foreground">Carregando…</div>
 
-// Shell of every private page: sidebar with the user's peladas (Sheet on mobile) and the page in <Outlet/>.
+// Shell of every private page: from md the sidebar with the user's peladas, below md the mobile shell (header,
+// bottom tabs, gestures; the sidebar isn't mounted there), and the page in <Outlet/>.
 // Opens the user's realtime connection and loads the peladas, the notifications and the pending invitations once, shared through contexts.
 export function AppLayout() {
   return (
@@ -65,6 +67,7 @@ function AppShell() {
   const notifications = useNotifications(clearBumps)
   const invitations = useMyInvitations()
   const online = useOnline()
+  const isMobile = useIsMobile()
   const { user } = useAuth()
   const userId = user?.id
 
@@ -88,27 +91,28 @@ function AppShell() {
       <NotificationsContext.Provider value={notifications}>
       <MyInvitationsContext.Provider value={invitations}>
       <SidebarProvider open={sidebarOpen} onOpenChange={handleSidebarOpenChange}>
-        <AppSidebar />
+        {!isMobile && <AppSidebar />}
         <SidebarInset className="min-w-0">
-          <MobileTopBar />
-          {!online && (
-            // the screens keep their own error states; this only says why they appear
-            <Alert role="status" className="rounded-none border-x-0 border-t-0 px-4 py-2 [&>svg]:top-2.5">
-              <HugeiconsIcon icon={WifiDisconnected01Icon} className="size-4" />
-              <AlertDescription>Sem conexão. Algumas informações podem não carregar.</AlertDescription>
-            </Alert>
-          )}
-          <Suspense fallback={pageFallback}>
-            <Outlet />
-          </Suspense>
+          <MobileShell>
+            {!online && (
+              // the screens keep their own error states; this only says why they appear
+              <Alert role="status" className="rounded-none border-x-0 border-t-0 px-4 py-2 [&>svg]:top-2.5">
+                <HugeiconsIcon icon={WifiDisconnected01Icon} className="size-4" />
+                <AlertDescription>Sem conexão. Algumas informações podem não carregar.</AlertDescription>
+              </Alert>
+            )}
+            <Suspense fallback={pageFallback}>
+              <Outlet />
+            </Suspense>
+          </MobileShell>
         </SidebarInset>
       </SidebarProvider>
       {createOpen && (
-        <CreatePeladaModal
+        <CreatePeladaSheet
           onClose={() => setCreateOpen(false)}
           onCreated={() => {
             setCreateOpen(false)
-            reload()
+            void reload()
           }}
         />
       )}

@@ -20,7 +20,8 @@ export interface BreadcrumbEntry {
 
 export function PeladaBreadcrumb({ items, className }: { items: BreadcrumbEntry[]; className?: string }) {
   return (
-    <Breadcrumb aria-label="Você está em" className={cn("min-w-0", className)}>
+    // below md the mobile header's ← and title say where you are
+    <Breadcrumb aria-label="Você está em" className={cn("hidden min-w-0 md:block", className)}>
       <BreadcrumbList className="flex-nowrap gap-1.5 text-[13px] sm:gap-2">
         {items.map((item, index) => {
           const last = index === items.length - 1

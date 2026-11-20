@@ -17,8 +17,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-// Every route acts on the caller's notifications only; none takes a userId. Exception: unsubscribe and resubscribe
-// are public and act on the user and category signed in the e-mail's token.
+// Every route acts on the caller's notifications only; none takes a userId. Exception: unsubscribe
+// is public and acts on the user and category signed in the e-mail's token.
 // @Validated enables validation of the List<@Valid NotificationPreferenceDTO> body
 @Validated
 @RestController
