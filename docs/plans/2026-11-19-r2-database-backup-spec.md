@@ -120,9 +120,17 @@ Operational checkpoint (2026-11-20): the authorized dedicated source reader has 
 BYPASSRLS and no write privileges. Real source-only dump/isolated restore and read-only smoke checks
 with the deployed API image passed; Telegram test delivery succeeded. The approved bucket-scoped
 R2 credential is installed privately. Synthetic upload/download/hash, lock-denied overwrite/deletion,
-unchanged-object and denied unsigned-access tests passed. No real R2 copy has been uploaded or
-independently recovered: automatic approval review requires explicit real-data-transfer authorization
-overriding the initial prohibition. The timer remains disabled. The budget evidence lease is at most
-24 hours and needs ongoing operator reconciliation; acceptance must include that responsibility.
+unchanged-object and denied unsigned-access tests passed. The owner then explicitly authorized real
+data transfer, overriding the initial prohibition. Both shared backup kinds verified real R2 copies.
+The 269,134-byte daily archive was downloaded again and restored in network-none PostgreSQL: all
+49 tables/data/constraints/sequences/RLS/Flyway matched; restore 3.796 seconds, download plus validation
+7.616 seconds. Independent recovery also passed: the owner downloaded archive/manifest through
+their Cloudflare web session on the Mac, confirmed size/SHA-256 and restored all checks in local
+network-none PostgreSQL (1.743 seconds), without the VPS S3 credential. The independently held owner
+login must remain available after VPS loss; no additional token was created. Private downloaded
+files and targets were removed. All six backup/recovery alerts evaluate healthy/inactive. The correct pre-deploy
+commit was verified; an earlier incorrect-reference rehearsal is excluded and retained untouched.
+The timer remains disabled and the new deploy gate has not been released. The budget evidence lease
+is at most 24 hours and needs ongoing operator reconciliation; acceptance must include that responsibility.
 
 Technical references: [PostgreSQL dump](https://www.postgresql.org/docs/17/app-pgdump.html), [restore](https://www.postgresql.org/docs/17/app-pgrestore.html), [R2 lifecycle](https://developers.cloudflare.com/r2/buckets/object-lifecycles/), [bucket locks](https://developers.cloudflare.com/r2/buckets/bucket-locks/), [encryption](https://developers.cloudflare.com/r2/reference/data-security/), [tokens](https://developers.cloudflare.com/r2/api/tokens/), [systemd timers](https://www.freedesktop.org/software/systemd/man/latest/systemd.timer.html), [node-exporter textfile collector](https://github.com/prometheus/node_exporter#textfile-collector).

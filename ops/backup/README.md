@@ -166,10 +166,23 @@ overwrite and deletion returned `ObjectLockedByBucketPolicy`, and a subsequent G
 original content. An unsigned request was rejected with HTTP 400 `InvalidArgument` (not a successful
 read). Public r2.dev/custom domains remain disabled. The lock error is documented by
 [Cloudflare](https://developers.cloudflare.com/r2/buckets/bucket-locks/).
-A verified real offsite copy, independent download/recovery and ordinary activation/ongoing budget
-ownership remain pending. Automatic approval review blocked the first real R2 backup attempt before
-execution, requiring explicit authorization overriding the initial real-data-transfer prohibition.
-No real dump has been uploaded. Task #43 stays open.
+After the owner's explicit real-data-transfer authorization, shared daily and pre-deploy validation
+runs uploaded and verified real archives/manifests. The daily snapshot at 2026-11-20 12:58:39 UTC
+is 269,134 bytes and used 2.51 MB measured source traffic. A separately budgeted R2 download restored
+all 49 tables/data/constraints/sequences/RLS/Flyway in network-none PostgreSQL: restore 3.796 seconds,
+download plus validation 7.616 seconds. Temporary files and target were removed. A second recovery
+used the owner's Cloudflare web session on the Mac, independent of the VPS S3 credential: both files
+were downloaded directly into private staging, size/SHA-256 matched, and all restore checks passed
+in local network-none PostgreSQL (1.743 seconds). The owner account is the independently held recovery
+access; no additional recovery token was created. Keep that login and its recovery factors accessible
+after VPS loss. The initially blank bucket panel loaded in a new dedicated window. Local dump,
+manifest and disposable target were removed after recording the sanitized evidence.
+The accepted pre-deploy point at 13:01:26 UTC records commit `2c739aa0b88f640abff7beb61ca89de063e026e8`.
+An earlier rehearsal with an incorrectly supplied commit reference is excluded from acceptance;
+its protected objects remain untouched. Backup/restore metrics now reflect actual R2 recovery;
+all six backup/recovery alerts evaluate healthy and inactive. Ordinary activation, ongoing budget
+ownership and release of the committed deploy gate remain pending. The timer is disabled and no
+application deployment occurred. Task #43 stays open.
 
 ```sh
 python3 -m unittest discover -s ops/backup/tests -v
