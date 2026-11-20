@@ -16,10 +16,14 @@ The source must be PostgreSQL 17, direct/session endpoint on 5432, verified TLS 
 on every public table/sequence. The script exports a read-only repeatable-read snapshot, then uses
 it for preflight, data fingerprints and `pg_dump -Fc --compress=gzip:6 --schema=public --no-owner --no-acl`.
 All application public objects and Flyway history are included. Roles, ownership and grants must
-be provisioned explicitly on a recovery target. Public extensions, RLS, partitioned/foreign tables
-and dependencies on other application schemas fail preflight: review scope before supporting them.
-This matches the current migrations; **actual production version, scope, dependencies and permissions
-have not been verified**. Provider services and cluster-wide roles are outside this archive.
+be provisioned explicitly on a recovery target. Public extensions, partitioned/foreign tables and
+dependencies on other application schemas fail preflight: review scope before supporting them.
+RLS flags are preserved and compared during the drill; the backup role must read without filtering
+(`row_security_active=false`, normally through `BYPASSRLS`). Public RLS policies currently fail preflight
+until their recovery roles/dependencies are reviewed. Never add `--enable-row-security` to pg_dump or
+disable production RLS to make a backup pass. Source metadata confirmed PostgreSQL 17.6 and RLS enabled
+on `users` without policies; complete dedicated-role access and full preflight remain acceptance checks.
+Provider services and cluster-wide roles are outside this archive.
 
 The host flock serializes both callers, with a 30-second wait and 30-minute overall command deadline.
 Database connect/lock timeouts are 10 seconds; statement timeout is 20 minutes. Source clients
@@ -114,6 +118,24 @@ Never reset counters just to unblock a deploy. Unknown/missing/exhausted state b
    tables/sequences and default privileges for future Flyway objects; test deny/partial-read failures.
    Install bucket-scoped object read/write S3 credentials in `r2.credentials`; keep admin and recovery
    credentials elsewhere. Never print these files or run with shell tracing/AWS debug.
+
+   For the current `postgres`-owned schema, a database administrator can provision the reader with:
+
+   ```sql
+   CREATE ROLE futspring_backup_reader LOGIN BYPASSRLS NOCREATEDB NOCREATEROLE NOREPLICATION CONNECTION LIMIT 6;
+   GRANT CONNECT ON DATABASE postgres TO futspring_backup_reader;
+   GRANT USAGE ON SCHEMA public TO futspring_backup_reader;
+   GRANT SELECT ON ALL TABLES IN SCHEMA public TO futspring_backup_reader;
+   GRANT SELECT ON ALL SEQUENCES IN SCHEMA public TO futspring_backup_reader;
+   ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT SELECT ON TABLES TO futspring_backup_reader;
+   ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT SELECT ON SEQUENCES TO futspring_backup_reader;
+   ALTER ROLE futspring_backup_reader SET default_transaction_read_only=on;
+   ```
+
+   Set the generated password with psql `\password futspring_backup_reader`, outside command history/logs.
+   Store it only in the private passfile; shared-pooler usernames include `.PROJECT_REF`. Verify the role
+   has complete SELECT and no table write/schema-create privileges, including privileges inherited from
+   PUBLIC. `BYPASSRLS` alone grants neither SELECT nor writes. Keep the API's credentials unchanged.
 5. Populate measured budget and financial evidence. Authorize acceptance validation, run a real
    `backup.py daily --validation-only`, download its archive/manifest using an independently held
    recovery credential under a **separately reserved GET/drill budget**, and run the drill below.
@@ -145,7 +167,7 @@ python3 ops/backup/restore-drill.py /private/staging/database.dump /private/stag
 Tests use synthetic TLS, all repository migrations, synthetic accounts, stats and finance, and in-memory S3
 fault injection; never contact R2/Supabase. The drill accepts **no DSN**: a new PostgreSQL container, no network,
 no published ports, no host/credential mounts, bounded CPU/memory/tmpfs, single-transaction error-stop restore.
-It compares every table's count/fingerprint, constraints, indexes and Flyway history against the source snapshot,
+It compares every table's count/fingerprint, constraints, indexes, RLS flags and Flyway history against the source snapshot,
 and tests sequence nextval against column maxima plus FK/NOT NULL/CHECK/uniqueness rejection. Constraint/index
 inventories are structural: PostgreSQL may reparse equivalent casts differently when restoring the archived DDL.
 It discards the target even on failure. Monthly drills must

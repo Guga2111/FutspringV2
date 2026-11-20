@@ -20,5 +20,7 @@ SELECT jsonb_build_object(
       i.indoption::text,i.indpred IS NOT NULL,i.indexprs IS NOT NULL)::text,E'\n' ORDER BY c.relname),''))
     FROM pg_index i JOIN pg_class c ON c.oid=i.indexrelid JOIN pg_class t ON t.oid=i.indrelid
     WHERE t.relnamespace='public'::regnamespace),
+  'row_security', (SELECT jsonb_object_agg(c.relname,jsonb_build_array(c.relrowsecurity,c.relforcerowsecurity))
+    FROM pg_class c WHERE c.relnamespace='public'::regnamespace AND c.relkind='r'),
   'flyway', (SELECT md5(string_agg(row_to_json(h)::text, E'\n' ORDER BY installed_rank)) FROM public.flyway_schema_history h)
 );

@@ -159,7 +159,7 @@ def drill(archive, manifest_path, run=None):
             )
             if actual != manifest["validation"]:
                 raise Failure(
-                    "Dados, constraints, índices ou histórico Flyway divergentes."
+                    "Dados, constraints, índices, RLS ou histórico Flyway divergentes."
                 )
             run.run(psql, data=(HERE / "sequences.sql").read_bytes(), timeout=120)
             return {

@@ -10,10 +10,18 @@ BEGIN
    RAISE EXCEPTION 'Missing/failed Flyway history';
  END IF;
  IF EXISTS (SELECT FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
-   WHERE n.nspname='public' AND (c.relkind IN ('f','p') OR c.relrowsecurity OR
+   WHERE n.nspname='public' AND (c.relkind IN ('f','p') OR
+    (c.relrowsecurity AND row_security_active(c.oid)) OR
     (c.relkind IN ('r','v','m') AND NOT has_table_privilege(c.oid,'SELECT')) OR
     (c.relkind='S' AND NOT has_sequence_privilege(c.oid,'SELECT')))) THEN
-   RAISE EXCEPTION 'Incomplete read permissions / unsupported RLS, foreign or partitioned table';
+   RAISE EXCEPTION 'Incomplete read permissions / filtered RLS, foreign or partitioned table';
+ END IF;
+ -- Production users has RLS enabled without policies. Preserve its flags; never
+ -- enable row-security dumping, which could silently archive only visible rows.
+ -- Policies may depend on cluster roles outside public; require a recovery review.
+ IF EXISTS (SELECT FROM pg_policy p JOIN pg_class c ON c.oid=p.polrelid
+   WHERE c.relnamespace='public'::regnamespace) THEN
+   RAISE EXCEPTION 'RLS policies require recovery-role/dependency review';
  END IF;
  IF EXISTS (SELECT FROM pg_extension e JOIN pg_namespace n ON n.oid=e.extnamespace WHERE n.nspname='public') OR
     EXISTS (SELECT FROM pg_depend d

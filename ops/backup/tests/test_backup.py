@@ -512,11 +512,24 @@ class DockerTests(unittest.TestCase):
                 + f"\nINSERT INTO flyway_schema_history VALUES({n},'{n}',true);"
             )
         cls.sql((HERE / "tests/seed.sql").read_text())
+        cls.sql(
+            "ALTER TABLE users ENABLE ROW LEVEL SECURITY; "
+            "CREATE ROLE backup_reader LOGIN BYPASSRLS; "
+            "GRANT CONNECT ON DATABASE postgres TO backup_reader; "
+            "GRANT USAGE ON SCHEMA public TO backup_reader; "
+            "GRANT SELECT ON ALL TABLES IN SCHEMA public TO backup_reader; "
+            "GRANT SELECT ON ALL SEQUENCES IN SCHEMA public TO backup_reader; "
+            "ALTER ROLE backup_reader SET default_transaction_read_only=on;"
+        )
+        cls.sql("\\password backup_reader\nsynthetic-only\nsynthetic-only\n")
         (pg / "pg_service.conf").write_text(
             (HERE / "pg_service.example.conf")
             .read_text()
             .replace("SESSION_OR_DIRECT_HOST", "source")
-            .replace("BACKUP_READER", "postgres")
+            .replace("BACKUP_READER", "backup_reader")
+        )
+        (pg / "pgpass").write_text(
+            "source:5432:postgres:backup_reader:synthetic-only\n"
         )
         cls.config["source_network"] = cls.network
         cls.config["max_archive_bytes"] = 5_000_000
@@ -580,6 +593,7 @@ class DockerTests(unittest.TestCase):
         self.assertEqual(self.sql("SELECT count(*) FROM users;").strip(), "2")
         self.assertIn("<rows>1</rows>", manifest["validation"]["tables"]["users"])
         self.assertIn("finance_movements", manifest["validation"]["tables"])
+        self.assertEqual(manifest["validation"]["row_security"]["users"], [True, False])
         archive_path, manifest_path = (
             self.root / "verified.dump",
             self.root / "manifest.json",
@@ -598,7 +612,7 @@ class DockerTests(unittest.TestCase):
         pg = Path(self.config["pg_credentials_dir"])
         original = (pg / "pg_service.conf").read_text()
         (pg / "pg_service.conf").write_text(
-            original.replace("user=postgres", "user=denied")
+            original.replace("user=backup_reader", "user=denied")
         )
         (pg / "pgpass").write_text("source:5432:postgres:denied:synthetic-only\n")
         with self.assertRaises(Failure), patch.object(backup, "s3") as upload:
@@ -610,8 +624,24 @@ class DockerTests(unittest.TestCase):
             (self.root / "metrics/futspring-backup-daily.prom").read_text(),
         )
         self.assertFalse(list((self.root / "state").glob("staging-*")))
+        # SELECT grants alone must not permit a filtered/empty RLS backup.
+        self.sql(
+            "GRANT SELECT ON ALL TABLES IN SCHEMA public TO denied; "
+            "GRANT SELECT ON ALL SEQUENCES IN SCHEMA public TO denied;"
+        )
+        with self.assertRaises(Failure), patch.object(backup, "s3") as upload:
+            backup.execute(self.config, "daily", None, self.runner)
+        upload.assert_not_called()
+        self.assertEqual(read_json(self.root / "state/daily.json"), prior_success)
         (pg / "pg_service.conf").write_text(original)
-        (pg / "pgpass").write_text("source:5432:postgres:postgres:synthetic-only\n")
+        (pg / "pgpass").write_text(
+            "source:5432:postgres:backup_reader:synthetic-only\n"
+        )
+        self.sql("CREATE POLICY needs_review ON users FOR SELECT USING (true);")
+        with self.assertRaises(Failure), patch.object(backup, "s3") as upload:
+            backup.execute(self.config, "daily", None, self.runner)
+        upload.assert_not_called()
+        self.sql("DROP POLICY needs_review ON users;")
         self.sql(
             "CREATE SCHEMA dependency; CREATE TYPE dependency.custom AS ENUM ('a'); CREATE TABLE public.unsupported(x dependency.custom);"
         )
@@ -620,6 +650,11 @@ class DockerTests(unittest.TestCase):
         upload.assert_not_called()
         self.sql("DROP TABLE public.unsupported; DROP SCHEMA dependency CASCADE;")
         # Constraints are restored, data/history and stale sequences are actually detected.
+        bad = copy.deepcopy(manifest)
+        bad["validation"]["row_security"]["users"] = [False, False]
+        save_json(manifest_path, bad)
+        with self.assertRaises(Failure):
+            restore.drill(archive_path, manifest_path, self.runner)
         bad = copy.deepcopy(manifest)
         bad["validation"]["flyway"] = "changed"
         save_json(manifest_path, bad)
