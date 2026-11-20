@@ -1,7 +1,7 @@
 import { Link, useLocation } from "react-router-dom"
 import { isPeladaPath } from "@/utils/peladaAreas"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { Home01Icon, SidebarLeftIcon } from "@hugeicons/core-free-icons"
+import { Home01Icon, PlusSignIcon, SidebarLeftIcon } from "@hugeicons/core-free-icons"
 import { Button } from "@/components/ui/button"
 import {
   Sidebar,
@@ -27,7 +27,7 @@ import { cn } from "@/lib/utils"
 
 export function AppSidebar() {
   const { pathname } = useLocation()
-  const { peladas, loading } = useMyPeladasContext()
+  const { peladas, loading, openCreatePelada } = useMyPeladasContext()
   // mounted from md only: below it the mobile shell's tabs navigate
   const { state, toggleSidebar } = useSidebar()
   // pending invitations are answered on Home, so their count sits on "Início"
@@ -99,7 +99,16 @@ export function AppSidebar() {
           <div className="flex min-h-[42px] items-center justify-between pb-1.5 pt-4 group-data-[collapsible=icon]:min-h-0 group-data-[collapsible=icon]:justify-start group-data-[collapsible=icon]:pb-1 group-data-[collapsible=icon]:pt-3">
             <SidebarGroupLabel className="h-auto px-2.5 text-xs font-medium text-muted-foreground group-data-[collapsible=icon]:hidden">
               Minhas peladas
-2            </SidebarGroupLabel>
+            </SidebarGroupLabel>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={openCreatePelada}
+              aria-label="Nova pelada"
+              className="mr-1 size-[26px] shrink-0 bg-transparent text-muted-foreground hover:bg-sidebar-accent hover:text-foreground group-data-[collapsible=icon]:mr-0 group-data-[collapsible=icon]:size-10 group-data-[collapsible=icon]:rounded-lg group-data-[collapsible=icon]:border-0"
+            >
+              <HugeiconsIcon icon={PlusSignIcon} className="size-3.5" />
+            </Button>
           </div>
           {/* collapsed: no scrollbar, a fixed one would eat the column's width and push the avatars */}
           <SidebarMenu className="min-h-0 flex-1 gap-0.5 overflow-y-auto group-data-[collapsible=icon]:[scrollbar-width:none] group-data-[collapsible=icon]:[&::-webkit-scrollbar]:hidden">
