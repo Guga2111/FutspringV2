@@ -1,6 +1,6 @@
 # Database backup and recovery to Cloudflare R2 — spec
 
-Date: 2026-11-19. Status: **Implementation committed; operational acceptance pending.**
+Date: 2026-11-19. Status: **Timer activated; deploy transition and ongoing budget maintenance pending.**
 Oriens: Futspring task **#43 — Agendar backup do banco e testar restauração**.
 
 Decision amendment, 2026-11-19: after the initial local delivery, the owner explicitly accepted R2
@@ -9,8 +9,8 @@ operational acceptance. This supersedes strict zero additional cost for R2 only.
 upgrade, recovery target or production restore/cutover is authorized. Conservative limits and unknown-budget
 blocking remain mandatory; neither this acceptance nor the local 8 GB limit guarantees a zero invoice.
 The owner reconfirmed R2 billing exposure on 2026-11-20. Source/account budget checks remain required;
-no paid Supabase upgrade is authorized. Automatic approval review requires explicit authorization
-to enable the timer, overriding the initial infrastructure-activation restriction; it remains disabled.
+no paid Supabase upgrade is authorized. On 2026-11-21 the owner explicitly authorized timer activation,
+overriding the initial infrastructure-activation restriction. The timer is enabled/active.
 
 ## 1. Goal and scope
 
@@ -133,7 +133,13 @@ network-none PostgreSQL (1.743 seconds), without the VPS S3 credential. The inde
 login must remain available after VPS loss; no additional token was created. Private downloaded
 files and targets were removed. All six backup/recovery alerts evaluate healthy/inactive. The correct pre-deploy
 commit was verified; an earlier incorrect-reference rehearsal is excluded and retained untouched.
-The timer remains disabled and the new deploy gate has not been released. The budget evidence lease
-is at most 24 hours and needs ongoing operator reconciliation; acceptance must include that responsibility.
+On 2026-11-21 the owner explicitly accepted timer activation. The enabled/active timer schedules
+03:00 Recife; an ordinary systemd service execution verified a new 272,709-byte copy in 37.366 seconds.
+The initial attempt correctly failed on a missing staged PostgreSQL image; restoring the exact reviewed
+digest resolved it without changing guards or refunding costs. Preserve that image during host cleanup.
+Fresh account/source dashboards were reconciled without reducing any reservations; the lease expires
+2026-11-22 08:26:24 Recife and covers the next 03:00 trigger. The timer does not renew the ledger.
+Ongoing budget maintenance, observing the first calendar trigger and release of the new deploy gate
+remain pending. No application release occurred in this execution; task #43 remains open.
 
 Technical references: [PostgreSQL dump](https://www.postgresql.org/docs/17/app-pgdump.html), [restore](https://www.postgresql.org/docs/17/app-pgrestore.html), [R2 lifecycle](https://developers.cloudflare.com/r2/buckets/object-lifecycles/), [bucket locks](https://developers.cloudflare.com/r2/buckets/bucket-locks/), [encryption](https://developers.cloudflare.com/r2/reference/data-security/), [tokens](https://developers.cloudflare.com/r2/api/tokens/), [systemd timers](https://www.freedesktop.org/software/systemd/man/latest/systemd.timer.html), [node-exporter textfile collector](https://github.com/prometheus/node_exporter#textfile-collector).

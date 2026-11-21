@@ -1,12 +1,13 @@
 # Database backup and recovery
 
-**Operational acceptance pending; task #43 remains open.** The owner subsequently authorized R2 setup,
+**Timer activated; deploy transition and ongoing budget maintenance pending. Task #43 remains open.**
+The owner subsequently authorized R2 setup,
 its metered-billing exposure and continuation through verified backup/isolated recovery/alert acceptance.
 This supersedes the initial strict zero-cost requirement for R2 only; no paid upgrades, recovery targets
 or production restore/cutover are authorized. Deploy blocking and seven-day deletion protection remain.
 On 2026-11-20 the owner reconfirmed acceptance of possible R2 charges. This does not waive source/account
-budget checks or authorize a paid Supabase plan. Automatic approval review still requires explicit
-timer-activation authorization overriding the initial infrastructure-activation prohibition.
+budget checks or authorize a paid Supabase plan. On 2026-11-21 the owner explicitly authorized timer
+activation, overriding the initial infrastructure-activation prohibition; the timer is enabled/active.
 See the [approved specification](../../docs/plans/2026-11-19-r2-database-backup-spec.md).
 
 ## Ownership and invariants
@@ -118,6 +119,9 @@ Never reset counters just to unblock a deploy. Unknown/missing/exhausted state b
 3. Pre-stage reviewed AWS CLI v2, Python and the PostgreSQL image; record image digest and tool versions.
    `sudo ops/backup/install.sh` idempotently copies tooling/units and reloads systemd; it never starts
    or enables anything and never overwrites credentials/budgets. Run outside a backup/deploy window.
+   Keep the staged `postgres:17-alpine` image available through host cleanup. The job uses `--pull=never`;
+   if the image is removed, it fails and alerts. Re-stage the recorded reviewed digest explicitly and
+   retry the service; do not add an implicit pull or waive the verification gate.
 4. Copy the JSON examples into the indicated paths, `chmod 600`, owned by the execution user (production:
    root). In `/etc/futspring-backup/postgres`, install `pg_service.conf`, a trusted `root.crt` and a
    `pgpass` line `host:5432:database:backup_reader:password` (libpq escaping applies). Do not use URLs,
@@ -183,9 +187,24 @@ manifest and disposable target were removed after recording the sanitized eviden
 The accepted pre-deploy point at 13:01:26 UTC records commit `2c739aa0b88f640abff7beb61ca89de063e026e8`.
 An earlier rehearsal with an incorrectly supplied commit reference is excluded from acceptance;
 its protected objects remain untouched. Backup/restore metrics now reflect actual R2 recovery;
-all six backup/recovery alerts evaluate healthy and inactive. Ordinary activation, ongoing budget
-ownership and release of the committed deploy gate remain pending. The timer is disabled and no
-application deployment occurred. Task #43 stays open.
+all six backup/recovery alerts evaluated healthy and inactive after these rehearsals.
+
+Activation checkpoint (2026-11-21): explicit owner approval enabled the 03:00 Recife timer. A real
+ordinary execution through `futspring-backup.service` passed remote archive/manifest verification:
+272,709 bytes, 37.366 seconds, systemd exit status 0. Its first attempt failed because the staged
+PostgreSQL image was missing; restoring the previously reviewed digest resolved it, without changing
+the sandbox or refunding the failed reservation. No cause of image removal was confirmed.
+The next timer trigger is 2026-11-22 03:00 Recife. Authoritative account dashboards were reconciled:
+R2 one bucket, reported 839.18 KB/56 Class A/49 Class B; Supabase All projects Free 0.202/5 GB uncached
+egress. All old reservations/margins remain charged and used storage was rounded upward for delayed
+provider accounting. The refreshed evidence expires **2026-11-22 08:26:24 Recife**; the next trigger fits
+that lease. The timer does not renew it, so ongoing reconciliation is still required. No application
+deployment or release of the new deploy gate occurred in this execution. Task #43 stays open.
+The active node-exporter configuration had also lost the textfile flag/mount. Only those two settings
+were reapplied and node-exporter recreated; no API restart. Publish the committed observability
+configuration with the deployment transition so future stack deployments preserve the collector.
+Final checks passed: both backup-kind success metrics are scraped, textfile scrape errors are zero,
+and all six Grafana backup/recovery rules are healthy/inactive. Native systemd unit validation passed.
 
 ```sh
 python3 -m unittest discover -s ops/backup/tests -v
