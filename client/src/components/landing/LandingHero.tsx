@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom"
 import { Button } from "@/components/ui/button"
-import { SessionFragment } from "@/components/landing/SessionFragment"
+import { SessionFragment } from "@/components/landing/fragments/SessionFragment"
 
 const NAV = [
   { href: "#como-funciona", label: "Como funciona" },

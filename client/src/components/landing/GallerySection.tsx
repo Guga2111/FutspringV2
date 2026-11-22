@@ -1,4 +1,4 @@
-import { PhotoSlot } from "@/components/landing/PhotoSlot"
+import { PhotoSlot } from "@/components/landing/fragments/PhotoSlot"
 import { CHAMPION_PHOTOS } from "@/components/landing/content"
 import { revealAt, useReveal } from "@/components/landing/hooks/useReveal"
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel"
