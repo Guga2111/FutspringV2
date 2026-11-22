@@ -55,7 +55,7 @@ CI (`.github/workflows/ci-backend.yml`) runs `./mvnw -B verify` (every test, inc
 
 | GitHub | Name | Notes |
 |--------|------|-------|
-| secret | `VPS_SSH_KEY`, `VPS_SSH_KNOWN_HOSTS` | deploy key; `ssh-keyscan -H <ip>` (falls back to keyscan when empty) |
+| secret | `VPS_SSH_KEY`, `VPS_SSH_KNOWN_HOSTS` | required by both deploys; deploy key and VPS host key verified out of band, with no automatic discovery fallback |
 | secret | `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, `JWT_SECRET` | required |
 | secret | `REDIS_PASSWORD` | required (the deploy fails without it): the Redis container's `requirepass` and the API's password. Hex only (`openssl rand -hex 32`): compose interpolates `$` in `.env` values. Changing it later restarts Redis with the new one (the AOF data stays) |
 | secret | `RESEND_API_KEY` | optional for now; without it the API sends no e-mails (the deploy warns) |

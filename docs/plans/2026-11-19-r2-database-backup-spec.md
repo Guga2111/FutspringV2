@@ -139,7 +139,9 @@ The initial attempt correctly failed on a missing staged PostgreSQL image; resto
 digest resolved it without changing guards or refunding costs. Preserve that image during host cleanup.
 Fresh account/source dashboards were reconciled without reducing any reservations; the lease expires
 2026-11-22 08:26:24 Recife and covers the next 03:00 trigger. The timer does not renew the ledger.
-Ongoing budget maintenance, observing the first calendar trigger and release of the new deploy gate
+The first calendar trigger passed on 2026-11-22 at 03:00 Recife (272,834 bytes, 43.626 seconds).
+The budget lease subsequently expired at 08:26:24 Recife; PR preparation did not renew or bypass it.
+Ongoing budget ownership/reconciliation and release of the new deploy/observability configuration
 remain pending. No application release occurred in this execution; task #43 remains open.
 
 Technical references: [PostgreSQL dump](https://www.postgresql.org/docs/17/app-pgdump.html), [restore](https://www.postgresql.org/docs/17/app-pgrestore.html), [R2 lifecycle](https://developers.cloudflare.com/r2/buckets/object-lifecycles/), [bucket locks](https://developers.cloudflare.com/r2/buckets/bucket-locks/), [encryption](https://developers.cloudflare.com/r2/reference/data-security/), [tokens](https://developers.cloudflare.com/r2/api/tokens/), [systemd timers](https://www.freedesktop.org/software/systemd/man/latest/systemd.timer.html), [node-exporter textfile collector](https://github.com/prometheus/node_exporter#textfile-collector).

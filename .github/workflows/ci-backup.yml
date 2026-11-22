@@ -3,10 +3,10 @@ on:
   workflow_call:
   push:
     branches: [main, dev]
-    paths: [ops/backup/**, ops/observability/**, scripts/deploy.sh, .github/workflows/deploy.yml, .github/workflows/ci-backup.yml]
+    paths: [ops/backup/**, ops/observability/**, scripts/deploy.sh, .github/workflows/deploy.yml, .github/workflows/deploy-observability.yml, .github/workflows/ci-backup.yml]
   pull_request:
     branches: [main, dev]
-    paths: [ops/backup/**, ops/observability/**, scripts/deploy.sh, .github/workflows/deploy.yml, .github/workflows/ci-backup.yml]
+    paths: [ops/backup/**, ops/observability/**, scripts/deploy.sh, .github/workflows/deploy.yml, .github/workflows/deploy-observability.yml, .github/workflows/ci-backup.yml]
 permissions:
   contents: read
 jobs:

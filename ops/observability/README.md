@@ -45,6 +45,8 @@ edit it as JSON (or export a copy edited in Grafana and replace the file).
 | variable | `GRAFANA_ROOT_URL` | `https://grafana.luisgosampaio.com` (the default) |
 
 It also uses `VPS_IP`, `VPS_USER`, `VPS_SSH_KEY` and `VPS_SSH_KNOWN_HOSTS`, shared with the API deploy.
+Both deploy workflows require `VPS_SSH_KNOWN_HOSTS` with a host key verified out of band. They fail
+before writing credentials or connecting if it is missing; there is no automatic keyscan fallback.
 
 Changing a secret does not trigger a workflow. After creating or rotating the Telegram secrets, run
 **Actions → CD - Deploy observability stack → Run workflow → main** once. Subsequent changes to
@@ -189,20 +191,23 @@ Logs of every local container show up in Explore → Loki after ~30 s (Alloy's d
 logs plain text (`LOGGING_STRUCTURED_FORMAT_CONSOLE=""`), so its lines have no `level` label; drop that variable
 to see the production JSON.
 
-## Database backup metrics (activation pending)
+## Database backup metrics
 
 The node-exporter textfile collector reads `/var/lib/node_exporter/textfile_collector` through a
 read-only mount. Host-only scripts atomically publish fixed daily/pre-deploy numeric metrics; no
 credentials enter this stack. See the [backup runbook](../backup/README.md) for installation, tests
-and operational acceptance. Existing local backups remain untouched. The tooling is not activated;
-R2 zero-additional-cost feasibility is still unresolved. The local 8 GB ceiling is not a billing cap.
+and operational acceptance. Existing local backups remain untouched. The owner accepted R2 metered
+billing, real backup/recovery tests passed, and the daily timer was activated on 2026-11-21. The local
+8 GB ceiling is not a billing cap. Ongoing budget reconciliation and release of the deploy gate remain
+pending; this configuration must be published so stack deployments preserve the collector.
 
 Additional Grafana rules use the existing Telegram contact/policy: failed attempt, unknown/insufficient
 budget or financial gate, verified daily snapshot older than 26 hours, missing/broken textfile metrics
 (including missing pre-deploy metrics), prospective storage above 7.2 GB, and restore drill older than
 31 days/missing. No data and query errors notify. A running attempt reports `success=-1`; only a fully
 verified archive and manifest report 1. Failed jobs do not move the snapshot timestamp.
-Test actual Telegram delivery during separately authorized activation, including synthetic failures.
-Until first acceptance runs, missing/stale alerts are expected. Monitoring shares the VPS and does not
+Actual Telegram delivery and synthetic failure cases were tested during authorized activation.
+Disposable restore targets disable Docker logging to keep restored data out of shared Loki.
+Monitoring shares the VPS and does not
 independently detect complete host loss. Lifecycle expiration continues during failures, so all retained
 copies can eventually expire; never shorten retention or disable locks to unblock a budget rejection.

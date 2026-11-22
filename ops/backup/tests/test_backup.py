@@ -5,9 +5,11 @@ import importlib.util
 import json
 import multiprocessing
 import os
+import shlex
 import subprocess
 import sys
 import tempfile
+import textwrap
 import time
 import unittest
 import uuid
@@ -400,6 +402,62 @@ class LedgerTests(unittest.TestCase):
         self.assertNotIn("PG_DUMP_URL", text)
         self.assertNotIn("sql.gz", text)
 
+    def test_ssh_bootstrap_requires_pinned_host_without_network(self):
+        for workflow in ("deploy.yml", "deploy-observability.yml"):
+            text = (HERE.parents[1] / ".github/workflows" / workflow).read_text()
+            block = text.split("      - name: Configure SSH key\n", 1)[1]
+            block = block.split("        run: |\n", 1)[1]
+            script = textwrap.dedent(block.split("\n      - name:", 1)[0])
+            for known_hosts in (None, "", "192.0.2.1 ssh-ed25519 SYNTHETIC"):
+                with self.subTest(workflow=workflow, known_hosts=known_hosts):
+                    with tempfile.TemporaryDirectory(dir=self.root) as directory:
+                        root = Path(directory)
+                        stubs = root / "bin"
+                        stubs.mkdir()
+                        scanned = root / "network-called"
+                        scanner = stubs / "ssh-keyscan"
+                        scanner.write_text(
+                            "#!/bin/sh\nprintf scanned > "
+                            + shlex.quote(str(scanned))
+                            + "\n"
+                        )
+                        scanner.chmod(0o700)
+                        ssh_dir = root / "ssh"
+                        # Redirect only file paths, never validation or control flow.
+                        # Do not touch the developer's real SSH directory or HOME.
+                        isolated = script.replace("~/.ssh", shlex.quote(str(ssh_dir)))
+                        env = {
+                            "PATH": str(stubs) + os.pathsep + os.defpath,
+                            "SSH_PRIVATE_KEY": "SYNTHETIC-PRIVATE-KEY",
+                            "VPS_IP": "192.0.2.1",
+                            "VPS_USER": "synthetic",
+                        }
+                        if known_hosts is not None:
+                            env["SSH_KNOWN_HOSTS"] = known_hosts
+                        result = subprocess.run(
+                            ["bash", "-c", isolated],
+                            env=env,
+                            capture_output=True,
+                            timeout=10,
+                        )
+                        self.assertFalse(scanned.exists())
+                        if known_hosts:
+                            self.assertEqual(result.returncode, 0)
+                            self.assertEqual(
+                                (ssh_dir / "known_hosts").read_text(),
+                                known_hosts + "\n",
+                            )
+                            self.assertIn(
+                                "StrictHostKeyChecking yes",
+                                (ssh_dir / "config").read_text(),
+                            )
+                            self.assertEqual(
+                                (ssh_dir / "id_deploy").stat().st_mode & 0o777, 0o600
+                            )
+                        else:
+                            self.assertNotEqual(result.returncode, 0)
+                            self.assertFalse(ssh_dir.exists())
+
 
 @unittest.skipUnless(
     os.environ.get("BACKUP_DOCKER_TESTS") == "1", "opt-in local Docker integration"
@@ -600,7 +658,43 @@ class DockerTests(unittest.TestCase):
         )
         archive_path.write_bytes(objects[manifest["archive_key"]])
         manifest_path.write_bytes(objects[manifest_key])
-        result = restore.drill(archive_path, manifest_path, self.runner)
+        checked_log_targets = []
+
+        def inspect_restore_logging(args, **kwargs):
+            output = original_run(args, **kwargs)
+            if args[:2] == ["docker", "run"] and "--name" in args:
+                target = args[args.index("--name") + 1]
+                if target.startswith("futspring-restore-drill-"):
+                    driver = original_run(
+                        [
+                            "docker",
+                            "inspect",
+                            "--format",
+                            "{{.HostConfig.LogConfig.Type}}",
+                            target,
+                        ]
+                    ).strip()
+                    self.assertEqual(driver, "none")
+                    checked_log_targets.append(target)
+            if "pg_restore" in args and "--dbname=drill" in args:
+                target = args[2]
+                marker = b"SYNTHETIC-RESTORE-ROW-MUST-NOT-REACH-LOGS"
+                original_run(
+                    ["docker", "exec", "-i", target, "psql", "-U", "postgres"],
+                    data=b"DO $$ BEGIN RAISE LOG '" + marker + b"'; END $$;",
+                )
+                logs = subprocess.run(
+                    ["docker", "logs", target],
+                    capture_output=True,
+                    timeout=10,
+                    check=False,
+                )
+                self.assertNotIn(marker, logs.stdout + logs.stderr)
+            return output
+
+        with patch.object(self.runner, "run", side_effect=inspect_restore_logging):
+            result = restore.drill(archive_path, manifest_path, self.runner)
+        self.assertEqual(len(checked_log_targets), 1)
         print("Synthetic restore evidence:", json.dumps(result))
         self.assertGreater(result["size_bytes"], 0)
         self.assertFalse(list((self.root / "state").glob("staging-*")))

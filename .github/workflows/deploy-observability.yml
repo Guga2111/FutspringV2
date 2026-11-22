@@ -41,14 +41,14 @@ jobs:
             echo "Missing VPS_IP (variable) or VPS_SSH_KEY (secret)"
             exit 1
           fi
+          if [[ -z "${SSH_KNOWN_HOSTS:-}" ]]; then
+            echo "Missing required secret: VPS_SSH_KNOWN_HOSTS (verify the host key out of band)"
+            exit 1
+          fi
           umask 077
           mkdir -p ~/.ssh
           printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/id_deploy
-          if [[ -n "${SSH_KNOWN_HOSTS}" ]]; then
-            printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
-          else
-            ssh-keyscan -H "$VPS_IP" >> ~/.ssh/known_hosts 2>/dev/null
-          fi
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
           cat > ~/.ssh/config << EOF2
           Host $VPS_IP
             User $VPS_USER
