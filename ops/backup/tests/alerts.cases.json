@@ -1,0 +1,12 @@
+[
+  ["monitor absent", "backup-monitoring", {}, 1],
+  ["monitor healthy", "backup-monitoring", {"futspring_backup_success{kind=\"daily\"}": 1, "futspring_backup_success{kind=\"pre-deploy\"}": 1, "up{job=\"node-exporter\"}": 1, "node_textfile_scrape_error": 0}, 0],
+  ["monitor broken", "backup-monitoring", {"futspring_backup_success{kind=\"daily\"}": 1, "futspring_backup_success{kind=\"pre-deploy\"}": 1, "up{job=\"node-exporter\"}": 1, "node_textfile_scrape_error": 1}, 1],
+  ["failed", "backup-failed", {"futspring_backup_success{kind=\"daily\"}": 0}, 1],
+  ["running", "backup-failed", {"futspring_backup_success{kind=\"daily\"}": -1}, 0],
+  ["budget", "backup-budget", {"futspring_backup_budget_blocked{kind=\"daily\"}": 1}, 1],
+  ["stale", "backup-stale", {"futspring_backup_snapshot_timestamp_seconds{kind=\"daily\"}": -100000}, 1],
+  ["fresh", "backup-stale", {"futspring_backup_snapshot_timestamp_seconds{kind=\"daily\"}": -100}, 0],
+  ["storage", "backup-storage", {"futspring_backup_prospective_storage_bytes{kind=\"daily\"}": 7300000000}, 1],
+  ["restore overdue", "backup-restore-stale", {"futspring_backup_restore_timestamp_seconds": -2800000}, 1]
+]

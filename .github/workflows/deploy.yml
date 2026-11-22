@@ -18,9 +18,13 @@ jobs:
     name: CI Frontend
     uses: ./.github/workflows/ci-frontend.yml
 
+  backup:
+    name: CI Backup
+    uses: ./.github/workflows/ci-backup.yml
+
   deploy:
     name: Deploy to VPS
-    needs: [backend, frontend]
+    needs: [backend, frontend, backup]
     runs-on: ubuntu-latest
     environment:
       name: production
@@ -86,7 +90,6 @@ jobs:
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
           REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
-          PG_DUMP_URL: ${{ secrets.PG_DUMP_URL }}
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           VAPID_PUBLIC_KEY: ${{ secrets.VAPID_PUBLIC_KEY }}
           VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
@@ -111,10 +114,6 @@ jobs:
             fi
           done
 
-          if [[ -z "${PG_DUMP_URL}" ]]; then
-            echo "::warning::PG_DUMP_URL not set: deploying without a database backup before the Flyway migrations."
-          fi
-
           if [[ -z "${RESEND_API_KEY}" ]]; then
             echo "::warning::RESEND_API_KEY not set: the API will not send e-mails (password reset)."
           fi
@@ -138,7 +137,6 @@ jobs:
             printf 'REDIS_PASSWORD=%s\n' "$REDIS_PASSWORD"
             printf 'ALLOWED_ORIGINS=%s\n' "$ALLOWED_ORIGINS"
             printf 'API_PORT=%s\n' "$API_PORT"
-            printf 'PG_DUMP_URL=%s\n' "$PG_DUMP_URL"
             printf 'APP_URL=%s\n' "$APP_URL"
             # Public API URL (same value the frontend is built with), for the List-Unsubscribe header
             printf 'API_URL=%s\n' "$VITE_API_URL"

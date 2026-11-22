@@ -4,6 +4,7 @@ import { CHAMPION_PHOTOS } from "@/components/landing/content"
 const SECTIONS = [
   { href: "#como-funciona", label: "Como funciona" },
   { href: "#sorteio", label: "Sorteio" },
+  { href: "#precos", label: "Preços" },
   { href: "#perguntas", label: "Perguntas" },
 ]
 

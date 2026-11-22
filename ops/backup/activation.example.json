@@ -1,0 +1,14 @@
+{
+  "zero_additional_cost_enforced": false,
+  "owner_r2_usage_charges_accepted": false,
+  "owner_activation_accepted": false,
+  "owner_validation_accepted": false,
+  "billing_control_evidence": null,
+  "verified_backup_restore_alert_evidence": null,
+  "valid_until": 0,
+  "bucket": "futspring-backups-prod",
+  "private_standard_bucket": false,
+  "lock_days": 7,
+  "daily_retention_days": 30,
+  "pre_deploy_retention_days": 7
+}

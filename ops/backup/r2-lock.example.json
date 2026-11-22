@@ -1,0 +1,5 @@
+{
+  "rules": [
+    {"id": "database-seven-days", "enabled": true, "prefix": "database/", "condition": {"type": "Age", "maxAgeSeconds": 604800}}
+  ]
+}

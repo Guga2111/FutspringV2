@@ -5,12 +5,13 @@ import { GallerySection } from "@/components/landing/GallerySection"
 import { LandingFooter } from "@/components/landing/LandingFooter"
 import { LandingHero } from "@/components/landing/LandingHero"
 import { MatchDaySection } from "@/components/landing/MatchDaySection"
+import { PricingSection } from "@/components/landing/PricingSection"
 import { ShowcaseSection } from "@/components/landing/ShowcaseSection"
 import { TeamDrawSection } from "@/components/landing/TeamDrawSection"
 import { useAuth } from "@/hooks/useAuth"
 
 // Colour chapters: each section is a full-bleed field that follows a match day
-// (list → draw → score → ranking), then the management tools, the champions, the FAQ
+// (list → draw → score → ranking), then the management tools, the champions, the prices, the FAQ
 export default function LandingPage() {
   const { user } = useAuth()
 
@@ -26,6 +27,7 @@ export default function LandingPage() {
         <TeamDrawSection />
         <ShowcaseSection />
         <GallerySection />
+        <PricingSection />
         <FaqSection />
         <ClosingSection />
       </main>

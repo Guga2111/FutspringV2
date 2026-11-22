@@ -18,6 +18,8 @@ BASE_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd )"
 CLIENT_DIR="${BASE_DIR}/client"
 BACKEND_DIR="${BASE_DIR}/core"
 ENV_FILE="${ENV_FILE:-${BASE_DIR}/.env}"
+# Expanded by the remote login shell in SSH/scp paths.
+# shellcheck disable=SC2088
 REMOTE_DIR="~/projects/${PROJECT}"
 
 if [[ ! -f "${ENV_FILE}" ]]; then
@@ -59,7 +61,19 @@ echo "Image size: $(du -h "${ARCHIVE}" | cut -f1)"
 # UPLOAD
 # ====================
 echo "Uploading to VPS..."
+# Trusted deployment paths are expanded locally; the remote shell expands ~.
+# shellcheck disable=SC2029
 ssh "${VPS_USER}@${VPS_IP}" "mkdir -p ${REMOTE_DIR}/backups ${WEB_ROOT}"
+
+# Host credentials and billing/activation evidence are provisioned separately.
+# Failure (including missing tooling/config) blocks ALL publication and Flyway startup.
+# Do not replace this with an optional local dump. Existing backups/ are preserved.
+COMMIT=$(git -C "${BASE_DIR}" rev-parse HEAD)
+[[ "${COMMIT}" =~ ^[a-f0-9]{40}$ ]] || { echo "Invalid commit"; exit 1; }
+echo "Requiring a verified offsite backup before publication..."
+# COMMIT is validated above; this expansion intentionally happens locally.
+# shellcheck disable=SC2029
+ssh "${VPS_USER}@${VPS_IP}" "python3 /opt/futspring-backup/backup.py pre-deploy --commit ${COMMIT}"
 
 # Old hashed assets are kept (no --delete) so users with a stale index.html
 # can still load the lazy page chunks they reference.
@@ -74,32 +88,15 @@ scp "${ENV_FILE}" "${VPS_USER}@${VPS_IP}:${REMOTE_DIR}/.env"
 # DEPLOY ON VPS
 # ====================
 echo "Deploying on VPS..."
+# VERSION/IMAGE/paths expand locally; remote variables below are explicitly escaped.
+# shellcheck disable=SC2087
 ssh "${VPS_USER}@${VPS_IP}" bash << ENDSSH
 set -euo pipefail
 cd ${REMOTE_DIR}
 chmod 600 .env
 
-PG_DUMP_URL=\$(grep '^PG_DUMP_URL=' .env | cut -d= -f2- || true)
-
 echo "Loading Docker image ${VERSION}..."
 docker load < ${ARCHIVE}
-
-# Flyway migrates the database when the new container starts, so back it up first
-# (migrations can be destructive, e.g. V2). Needs the Supabase session pooler (port 5432).
-if [[ -n "\${PG_DUMP_URL}" ]]; then
-  echo "Backing up the database..."
-  docker run --rm postgres:17-alpine pg_dump "\${PG_DUMP_URL}" --schema=public --no-owner \
-    | gzip > backups/${PROJECT}-${VERSION}.sql.gz
-  if [[ \$(gzip -dc backups/${PROJECT}-${VERSION}.sql.gz | head -c 1 | wc -c) -eq 0 ]]; then
-    echo "Backup is empty, aborting."
-    rm -f backups/${PROJECT}-${VERSION}.sql.gz
-    exit 1
-  fi
-  echo "Backup: backups/${PROJECT}-${VERSION}.sql.gz (\$(du -h backups/${PROJECT}-${VERSION}.sql.gz | cut -f1))"
-  ls -1t backups/${PROJECT}-*.sql.gz | tail -n +11 | xargs -r rm -f
-else
-  echo "PG_DUMP_URL not set: skipping the database backup."
-fi
 
 # Shared with the observability stack (ops/observability), which scrapes the API on it
 docker network create observability >/dev/null 2>&1 || true

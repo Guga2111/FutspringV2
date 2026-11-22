@@ -1,5 +1,6 @@
-import type { SubscriptionStatus, SubscriptionSummary } from "@/types/subscription"
+import type { SubscriptionPlan, SubscriptionStatus, SubscriptionSummary } from "@/types/subscription"
 import { formatShortDate, todayInZone } from "@/utils/dates"
+import { formatFinanceMoney } from "@/utils/finance"
 
 const DAY_MS = 86_400_000
 
@@ -7,6 +8,47 @@ const DAY_MS = 86_400_000
 export const TRIAL_NOTICE_DAYS = 5
 // a paid subscription keeps writing this long after validUntil (mirrors SubscriptionState.GRACE)
 export const GRACE_DAYS = 7
+
+// List prices in cents, mirroring SubscriptionPlans.java (change both together); the price a
+// pelada pays comes from the API, these only feed the public landing page
+export const PLAN_PRICE_CENTS: Record<"standard" | "large", Record<SubscriptionPlan, number>> = {
+  standard: { MONTHLY: 1990, ANNUAL: 19900 },
+  large: { MONTHLY: 2990, ANNUAL: 29900 },
+}
+// peladas with more members than this pay the large price (SubscriptionPlans.LARGE_GROUP_MEMBERS)
+export const LARGE_GROUP_MEMBERS = 40
+// the first pelada of an account (SubscriptionService.TRIAL_LENGTH, SubscriptionGuard.TRIAL_MEMBER_CAP)
+export const TRIAL_DAYS = 30
+export const TRIAL_MEMBER_CAP = 30
+
+export interface LandingPricing {
+  large: boolean
+  // up to the trial's member cap, a new pelada fits in the free trial
+  fitsTrial: boolean
+  // formatted: "R$ 19,90"
+  monthly: string
+  annual: string
+  // the annual price over 12 months, rounded to the cent
+  annualPerMonth: string
+  // 12 monthly payments minus the annual one
+  annualSaving: string
+}
+
+const money = (cents: number) => formatFinanceMoney(`${Math.floor(cents / 100)}.${String(cents % 100).padStart(2, "0")}`)
+
+// The landing's price for a pelada of `members`, in integer cents (no floating point)
+export function landingPricing(members: number): LandingPricing {
+  const large = members > LARGE_GROUP_MEMBERS
+  const { MONTHLY, ANNUAL } = PLAN_PRICE_CENTS[large ? "large" : "standard"]
+  return {
+    large,
+    fitsTrial: members <= TRIAL_MEMBER_CAP,
+    monthly: money(MONTHLY),
+    annual: money(ANNUAL),
+    annualPerMonth: money(Math.round(ANNUAL / 12)),
+    annualSaving: money(MONTHLY * 12 - ANNUAL),
+  }
+}
 
 // the hint of every button disabled by a read-only pelada
 export const READ_ONLY_HINT = "Pelada em somente leitura"

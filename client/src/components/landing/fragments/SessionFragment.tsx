@@ -3,7 +3,7 @@ import { DailyStatusBadge } from "@/components/daily/DailyStatusBadge"
 import { TeamColorDot } from "@/components/daily/teams/TeamColorDot"
 import { buttonVariants } from "@/components/ui/button-variants"
 import { Progress } from "@/components/ui/progress"
-import { StarCount } from "@/components/landing/StarCount"
+import { StarCount } from "@/components/landing/fragments/StarCount"
 import { cn } from "@/lib/utils"
 import type { DailyStatus } from "@/types/daily"
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import type { SubscriptionStatus, SubscriptionSummary } from "@/types/subscription"
-import { isWritable, subscriptionNotice, subscriptionNoticeFrom } from "./subscription"
+import { isWritable, landingPricing, subscriptionNotice, subscriptionNoticeFrom } from "./subscription"
 
 const ZONE = "America/Sao_Paulo"
 const NOW = new Date("2026-11-04T18:00:00Z")
@@ -72,5 +72,33 @@ describe("subscriptionNoticeFrom", () => {
     expect(subscriptionNoticeFrom(sub("TRIAL", inDays(10)))).toBe(inDays(5))
     expect(subscriptionNoticeFrom(sub("ACTIVE", inDays(10)))).toBeNull()
     expect(subscriptionNoticeFrom(null)).toBeNull()
+  })
+})
+
+describe("landingPricing", () => {
+  it("charges the standard price up to 40 members, with the annual over 12 and the saving", () => {
+    expect(landingPricing(40)).toEqual({
+      large: false,
+      fitsTrial: false,
+      monthly: "R$ 19,90",
+      annual: "R$ 199,00",
+      annualPerMonth: "R$ 16,58",
+      annualSaving: "R$ 39,80",
+    })
+  })
+
+  it("switches to the large price above 40 members", () => {
+    expect(landingPricing(41)).toMatchObject({
+      large: true,
+      monthly: "R$ 29,90",
+      annual: "R$ 299,00",
+      annualPerMonth: "R$ 24,92",
+      annualSaving: "R$ 59,80",
+    })
+  })
+
+  it("fits the trial up to 30 members", () => {
+    expect(landingPricing(30).fitsTrial).toBe(true)
+    expect(landingPricing(31).fitsTrial).toBe(false)
   })
 })
