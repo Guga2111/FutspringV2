@@ -32,6 +32,7 @@ import org.springframework.mock.web.MockMultipartFile;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -485,7 +486,8 @@ class PeladaControllerTest extends BaseIntegrationTest {
                 .header("Authorization", bearerToken(member.getId(), member.getEmail())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalSessions").value(0))
-                .andExpect(jsonPath("$.from").value(LocalDate.now().minusMonths(6).toString()))
+                // the period is computed in the pelada's zone, not the JVM's (UTC in CI)
+                .andExpect(jsonPath("$.from").value(LocalDate.now(ZoneId.of(pelada.getTimeZone())).minusMonths(6).toString()))
                 .andExpect(jsonPath("$.rows.length()").value(2))
                 .andExpect(jsonPath("$.rows[?(@.userId == " + member.getId() + ")].isMensalista").value(true))
                 .andExpect(jsonPath("$.rows[?(@.userId == " + admin.getId() + ")].isMensalista").value(false));
