@@ -1,7 +1,7 @@
 # Backlog
 
-Unscheduled ideas preserved from the handwritten notes (`docs/melhorias-escritas-a-mao.md`,
-"Futspring — rumo à v1 comercial"). These are not approved implementation plans or
+Unscheduled ideas preserved from the owner's handwritten notes ("Futspring — rumo à v1
+comercial", kept outside the repository). These are not approved implementation plans or
 release requirements. Items already shipped (subscriptions, PWA + Web Push, manual
 teams, account settings, terms, refresh-token sessions, client error reporting,
 founder peladas) were left out.
