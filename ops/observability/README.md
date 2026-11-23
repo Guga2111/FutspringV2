@@ -105,6 +105,36 @@ Loki keeps 14 days (`retention_period`, applied by the compactor) and refuses li
 is part of the deploy's smoke test. Docker still keeps the last 30 MB per container (`json-file`), so
 `docker logs` keeps working.
 
+### Host log rotation and Docker restarts
+
+Docker owns rotation of its `json-file` logs: use `max-size: "10m"` and `max-file: "3"` in each
+service or the daemon defaults. Do not rotate or truncate `/var/lib/docker/containers/*/*-json.log`
+with external tools. On 2026-11-18, the VPS's `/etc/logrotate.d/docker-containers` rule was disabled:
+its `copytruncate` conflicted with Docker's log bookkeeping. A `docker compose logs --tail 50`
+request started on 2026-11-15 left readers spinning beyond the ends of truncated cAdvisor and
+node-exporter logs, exhausting CPU and triggering the provider's CPU limit. A CPU profile attributed
+93% of the daemon's sampled CPU to the tail-reading path.
+
+The host's `/etc/docker/daemon.json` now also enables `"live-restore": true`. Before a daemon restart,
+validate any edited configuration with `dockerd --validate --config-file /etc/docker/daemon.json`,
+reload with `systemctl reload docker`, and confirm `docker info --format '{{.LiveRestoreEnabled}}'`
+returns `true`. Live restore keeps container processes running; published ports can still have a
+brief interruption while Docker reconnects. Compare container IDs, PIDs and start times, check
+readiness and scrape targets, and sample CPU after restarting. Do not remove volumes or truncate
+logs as a recovery step. The incident's private backups and verification records are on the VPS
+under `/root/maintenance/cpu-incident-20261118T184957Z`.
+
+Daemon logging defaults apply when containers are created; existing containers without explicit
+limits must be recreated while preserving their images, environment and mounted volumes.
+The two legacy Pilling containers were recreated with the same images, settings and Redis volume
+to apply these limits. Redis passed an authenticated PING and retained its key count. The API's
+restart exposed an unavailable Supabase connection (`tenant/user not found`); its image and
+environment were unchanged. Restoring database access is still required for the API to start.
+The owner confirmed that Pilling is not in use and authorized stopping `pilling-api-1`; it remains
+stopped with its `unless-stopped` policy. Pilling Redis remains running and healthy.
+The Redis volume and a pre-recreation RDB snapshot remain available. Futspring readiness, Grafana
+health and all four scrape targets passed after the daemon restart.
+
 ## Alerts (Telegram)
 
 Grafana evaluates the rules of `grafana/provisioning/alerting/rules.yml` every minute (folder **Futspring**) and sends
