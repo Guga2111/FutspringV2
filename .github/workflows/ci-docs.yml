@@ -1,0 +1,26 @@
+name: CI Docs
+
+on:
+  push:
+    branches: [main, dev]
+    paths: ["**/*.md", scripts/check-docs-links.py, .github/workflows/ci-docs.yml]
+  pull_request:
+    branches: [main, dev]
+    paths: ["**/*.md", scripts/check-docs-links.py, .github/workflows/ci-docs.yml]
+
+concurrency:
+  group: ci-docs-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  links:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check relative Markdown links
+        run: python3 scripts/check-docs-links.py

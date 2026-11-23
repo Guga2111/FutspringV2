@@ -17,7 +17,7 @@ founder peladas) were left out.
 - **Mobile-specific redesign:** not just responsive; follow the patterns of apps people
   already use (Jakob's law).
 - **Referee payment:** session and monthly charges are covered by the
-  [finance module](../core/docs/BACKEND.md#pelada-finance-domainfinance) (payments stay
+  [finance module](../core/docs/finance.md) (payments stay
   outside the platform), but the referee has no dedicated flow: today it is an "Outro"
   charge for the members plus an expense in the cash.
 - **Automatic Pix confirmation** (Asaas, Efí or Mercado Pago): the system issues a Pix

@@ -11,4 +11,4 @@ rankings, awards, chat and financial tracking.
 Start with the [documentation index](docs/README.md) for setup, commands,
 architecture and operations. Contributors and coding agents must follow
 [AGENTS.md](AGENTS.md) and read both the
-[frontend](client/docs/FRONTEND.md) and [backend](core/docs/BACKEND.md) guides.
+[frontend](client/docs/README.md) and [backend](core/docs/README.md) guide indexes.

@@ -1,6 +1,6 @@
 # Assinaturas por pelada + painel do admin da plataforma
 
-Spec aprovado em 2026-11-07. The original monetization notes are historical; current rules are documented in [Backend](../../core/docs/BACKEND.md#subscriptions-domainsubscription). Fase atual: CPF, Pix na chave do dono, cobrança manual pelo painel; sem gateway, sem webhook.
+Spec aprovado em 2026-11-07. The original monetization notes are historical; current rules are documented in [Backend](../../core/docs/subscriptions.md). Fase atual: CPF, Pix na chave do dono, cobrança manual pelo painel; sem gateway, sem webhook.
 
 ## Escopo
 

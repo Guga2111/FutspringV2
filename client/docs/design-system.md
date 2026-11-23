@@ -1,0 +1,100 @@
+# Design system
+
+> Tokens, brand and highlight colors, typography, dark mode, CSP, overlays and the mandatory shadcn/ui rules. Part of the [frontend guide](README.md).
+
+## Rules
+
+1. **Semantic tokens only** (`bg-card`, `text-muted-foreground`, `bg-brand`…); primitives are never used in classes. A new token goes in `:root` and `.dark`, and a text token gets a pair in `src/lib/contrast.test.ts`.
+2. Brand (Electric Blue) is the main action; highlight (Cantaloupe) only marks competition and achievement; neither for errors.
+3. Barlow Condensed (`font-display`) only for scores, big numbers and titles, never below 16 px; named font sizes instead of `text-[13px]`.
+4. **Every element in the shadcn scope uses `@/components/ui`**; a missing component is added with the CLI, customized with `className` / variants, and `components/ui` changes stay backward compatible.
+5. Every screen works in light and dark and at 375 px.
+6. Nothing the CSP blocks: no inline script, `eval`, CDN or cross-origin asset; schemas import `z` from `@/lib/zod`.
+7. Before building a component, look for one: the shadcn registry, then a shadcn.io reference ([Component references](#component-references-from-shadcnio)).
+
+## Styling & design system
+
+- **Tokens** (Sport-Tech identity, spec in `docs/plans/2026-11-01-design-system-sport-tech-spec.md`): two layers in `src/index.css`, all bare HSL triplets. **Primitives** (`--p-midnight-950`, `--p-surface-800`, `--p-blue-500`, `--p-orange-400`, `--p-slate-*`, `--p-indigo-*`…) are the palette, defined once in `:root` and **not** mapped in Tailwind. **Semantic tokens** (`--background`, `--card`, `--primary`, `--brand`…) are defined in `:root` (light: Off-White page, white cards, Ink text) and `.dark` (Midnight Black page, Dark Surface cards) and mostly point at primitives (`--card: var(--p-surface-800)`); they are exposed through `tailwind.config.js` as `hsl(var(--x))`. Use only the semantic classes: `bg-background`, `bg-card`, `text-foreground`, `text-muted-foreground`, `border-border`, `bg-primary`, `text-destructive`, `bg-accent`… `--primary` is the neutral inverted color (default Button, selected chips) and `--accent` the shadcn neutral hover surface: neither is the brand. `--input` (form-control borders) is darker than `--border` (dividers) on purpose: it keeps 3:1 against the surfaces (WCAG 1.4.11). `src/lib/contrast.test.ts` reads `index.css` and checks every text/background pair of both themes (4.5:1 text, 3:1 borders/rings/icons); add a pair there when you add a token that carries text.
+- **Redesign tokens** (light + dark, same names):
+
+  | Class | Use |
+  |-------|-----|
+  | `bg-card-elevated` | table headers, cards inside cards |
+  | `bg-row-hover` | list/table row hover |
+  | `bg-night`, `text-night-foreground`, `text-night-muted`, `bg-paper` | landing page: a field that stays dark in both themes (lifted to Surface 700 in dark so it differs from the page) and the white border of a photo print |
+  | `bg-preview-{light,dark}-{page,card,line}` | the theme picker's miniatures (`AppearanceCard`): fixed light / dark colors, the same in both themes, never for text |
+  | `bg-avatar-fallback`, `bg-avatar-1…6` | initials avatars (neutral / colored by id; white initials ≥4.5:1) |
+  | `text-subtle-foreground`, `text-faint-foreground` | tertiary text and uppercase labels |
+  | `border-team-dot-border` | ring around team color dots |
+  | `success` (`DEFAULT`, `strong`, `soft`, `muted`, `border`), `warning`, `info` (`DEFAULT`, `muted`) | feedback, "Você vai", Garçom |
+  | `destructive-soft`, `destructive-muted` | destructive hover text/background |
+  | `gold`, `gold-muted`, `silver`, `bronze` | 1st/2nd/3rd, champion row |
+  | `status-scheduled*`, `status-live*` | status badges (`status-live`: in progress, orange) |
+  | `live-foreground`, `live-border` + `.bg-gradient-live` | live session card |
+
+  Composite classes in `index.css`: `.bg-gradient-leader`, photo overlays (`.bg-banner-overlay`, `.bg-photo-overlay`, `.bg-hero-overlay`, the same in both themes because they sit on images) and `.scrollbar-none`. Radii `rounded-tile` (14px) and `rounded-hero` (18px); shadows `shadow-menu`, `shadow-panel`, `shadow-dialog`, `shadow-fab` (overlays only).
+- **Status maps:** `dailyStatusLabel` and `dailyStatusStyle` (badge + dot classes) in `types/daily.ts`, rendered by `DailyStatusBadge` (`size` `sm` | `md` | `lg`, Badge `variant="status"`).
+- **Brand (Electric Blue `#0799D5`)**: `--brand` is the fill (CTA, progress, checkbox, active underline tab, unread dot), the same in both themes; text and icons **on** a brand fill use `--brand-foreground` (Midnight; white on this blue is only 3.2:1), the hover fill is `--brand-hover`, the brand **as text/icon** on a surface is `--brand-text` (a darker blue in light), and soft brand pills use `--brand-muted`. Tailwind: `bg-brand`, `text-brand-foreground`, `hover:bg-brand-hover`, `text-brand-text`, `bg-brand-muted`. The pre-redesign helpers (`.bg-gradient-primary`, `.text-gradient-primary`, `.checkbox-gradient`, `.bg-gradient-date`, `.bg-brand-translucent`, `.text-on-brand-muted`) and the Button `variant="gradient"` were removed. Never retype the hex. The landing page has no gradient either: its chapters are flat fields (`bg-brand`, `bg-highlight`, `bg-night`).
+- **Highlight (Cantaloupe `#FF7356`)**: `--highlight` (+ `-foreground` Midnight, `-text`, `-muted`) marks competition and achievement: a session in progress (the `IN_COURSE` status, the "Ao vivo" badge and `LiveSessionCard`, through the `status-live*` / `live-*` tokens that point at the orange primitives), leaders (1st row of the ranking, the live and final league tables; the award leader row with its "Líder" badge, `.bg-gradient-leader`), the champion card (`ChampionHero`) and the profile's "Campeão" result, and goals (Artilheiro, the goals KPI on Home and profile). Assists use the brand (`brand-muted` / `brand-text`), stars and medal numbers stay `gold`, success stays green, the "Admin" pill is `brand-muted`. Never for errors or destructive actions, and never the shadcn `accent`.
+- **Chart colors:** `--chart-1` (blue), `--chart-2` (orange) and `--chart-3` (slate), light and dark, exposed as `chart-1…3` in Tailwind. `--gold` (`text-gold`) is for stars, trophies, crowns and medal positions; it is held to 3:1 (graphical), so don't use it for body text. `--info` is indigo, kept apart from the blue brand (Mensalista badge). In a `ChartConfig` use `color: "hsl(var(--chart-1))"` and reference series as `var(--color-<key>)` (reference: `components/pelada/ranking/PlayerHistoryDialog.tsx`).
+- **Typography:** fonts are self-hosted with `@fontsource` (imported in `main.tsx`; only the Latin files are fetched, through `unicode-range`; the Latin Inter file is preloaded by the `preload-inter` plugin in `vite.config.ts`). **Inter** (`font-sans`, the default, with an `Inter Fallback` face of Arial resized to Inter's metrics in `index.css`) is the text of everything. **Barlow Condensed** (`font-display`, weights 700/800) is only for scores, big numbers (KPIs, date blocks, session days), page and banner titles — never below 16px, never for body text, labels, buttons or table bodies; it supports `tabular-nums`. Named sizes in `tailwind.config.js` (`text-overline` 11, `text-caption` 12, `text-body-sm` 13, `text-body` 14, `text-body-lg` 15, `text-title` 17, `text-heading` 22 / `text-heading-lg` 28, `text-display` 32 / `text-display-lg` 44, `text-score` 28 / `text-score-lg` 36, `text-hero` 56; the `-lg` steps are for `md:`; landing only: the fluid `text-chapter`, `text-poster`, `text-wordmark`): use them in new code instead of `text-[13px]`-style values.
+- **New colors** (status badges, positions, more chart series): add tokens to both `:root` and `.dark` (e.g. `--chart-1…5`, `--success`) and use them; don't scatter `bg-green-100 text-green-800` maps without dark variants.
+- **Dark mode** is class-based (`.dark` on `<html>`). An inline script in `index.html` applies it before the first paint: the saved choice in `localStorage.theme` (`"dark" | "light"`, written by `useTheme`: the user menu's shortcut and the Aparência card of `/settings`), otherwise the OS preference (`prefers-color-scheme`), followed live while nothing is saved. `useTheme` exposes `preference` (`light | dark | system`) and `setPreference`; "Sistema" removes the key and applies the OS preference, so the script's listener follows it again. The same script keeps `<meta name="theme-color">` equal to the page background. `color-scheme` is set per theme in `index.css` (native controls and scrollbars), and toasts follow the theme (`ThemedToaster`). Every new UI must work in both themes.
+- **Reduced motion:** `index.css` has a global `prefers-reduced-motion: reduce` block (animations and transitions ≈0 ms, one iteration; no hover scaling). New animations need nothing extra, but must not rely on motion to convey information.
+- The document is `<html lang="pt-BR">`.
+- **Content-Security-Policy** (enforced; `src/lib/csp.ts`, a build-time module the app never imports): the policy is a `<meta http-equiv="Content-Security-Policy">` that the `csp-meta` Vite plugin writes into `dist/index.html` right after `<meta charset>`, before the theme script (a meta policy only covers what follows it), with the `sha256` of every inline script of the built file, so editing the theme script needs no other step. A meta policy can't carry `frame-ancestors`: that one is the nginx header (`ops/nginx/futspring.conf`). Being in `index.html`, a policy change reaches installed PWAs through the update prompt (their service worker serves the precached `index.html` with the headers it was cached with). `default-src 'self'`, `script-src 'self'` + the hashes (no `unsafe-inline` / `unsafe-eval`), `style-src 'self' 'unsafe-inline'` (style attributes of Radix, recharts, sonner), `img-src 'self' data: blob:` (finance images are object URLs), `connect-src 'self'` + the origin of `VITE_API_URL` (`http://localhost:8080` without it, as `lib/config.ts`) + its `wss:` host when https (older Safari doesn't match WebSockets with `'self'`), `worker-src 'self'`, `base-uri 'self'`, `form-action 'self'`, `object-src 'none'`; `font-src` falls back to `'self'`. Only the build has it (`apply: "build"`): `bun run dev` runs without a policy, `bun run preview` and the visual tests with it. `src/lib/csp.test.ts` checks the policy, that nginx only adds `frame-ancestors`, and, when `dist/` exists (always in CI, which builds before testing), that the meta precedes every inline script with their hashes and that the built CSS loads no font from a `data:` URI. `client/index.html` is checked out with LF (`.gitattributes`). Fonts are never inlined as `data:` URIs (`build.assetsInlineLimit` in `vite.config.ts`). No `eval` / `new Function`: every schema imports `z` from `src/lib/zod.ts`, which sets zod's `jitless` (zod 4 otherwise probes `new Function` when an object schema is defined, and the policy blocks it). It has to be the module the schemas import: a `z.config` at the top of `main.tsx` ran after the schemas' shared chunk in the build. ESLint forbids importing "zod" anywhere else in `src/`. Images from another origin, inline event handlers or a CDN script would be blocked: keep assets in the build.
+- **Composition:** `cn()` from `@/lib/utils` for class names (its tailwind-merge knows the named font sizes, `FONT_SIZES`; add a new size there too, or `text-<size>` is dropped next to a `text-<color>`); `cva` variants for repeated styles (`components/ui/button-variants.ts` has `default`, `destructive`, `outline`, `secondary`, `ghost`, `link`, `brand` — the main action, Electric Blue with Midnight text, `destructive-ghost` — red text without a fill (`destructive-soft`, 4.5:1 on the card, `destructive-muted` and `success-muted`) for an action that undoes something: "Desistir" in the "Você vai" pill and "Não vou mais" on the session page, with a `destructive-soft/40` border there).
+- **Overlays:** `Sheet` (close control labelled "Fechar") for create/edit forms (reference: `pelada/CreatePeladaSheet`), `Dialog`/`AlertDialog` for confirmations and short forms, `Drawer` for mobile bottom panels (chat), `DropdownMenu` / `Command` for menus. Their backdrops use the `overlay` token (Midnight, `bg-overlay/60–80`), not `bg-black`.
+- **Responsive dialogs:** a short form opened from a list (create a session, invite a player, stars, results) uses `ResponsiveDialog` (`components/ui/responsive-dialog.tsx`: a `Dialog` from md, a bottom-sheet `Drawer` below, one API: `ResponsiveDialog`, `…Content` (`className` for the dialog, `drawerClassName` for the sheet, `bare` when the content lays out its own scroll area), `…Header`, `…Title`, `…Description`, `…Footer` (in the sheet the main action goes on top, full width)). Migrated: `CreateSessionDialog`, `InvitePlayerDialog`, `SetPlayerStarsDialog`, `ResultsDialog`; the other `Dialog`s move to it when they are touched. `AlertDialog` stays centred (the systems' alert) and the side `Sheet` forms stay as they are.
+- **Responsive:** mobile first; the redesign switches to the mobile layout below **768 px (`md:`)**, which is also the shadcn sidebar's `useIsMobile` breakpoint; use `md:` for new layouts. Older screens still use `sm:` and `lg:` for side panels (chat sidebar). Grids go `grid-cols-1 md:grid-cols-2 lg:grid-cols-3`. Check every screen at 375 px.
+- Buttons are pill-shaped (`rounded-full` in the base variant); don't override the radius per screen.
+
+### shadcn/ui usage rules (mandatory)
+
+Before UI work, load the `shadcn` skill. Run its CLI from `client/` (where `components.json` lives).
+
+**1. Scope.** Every element in these categories must use the matching component from `@/components/ui`:
+
+| Category | Components |
+|----------|-----------|
+| Actions | `Button` (icon-only: `size="icon"` + `aria-label`; links styled as buttons: `<Button asChild><Link/></Button>`) |
+| Form fields | `Input`, `Textarea`, `Select`, `Checkbox`, `Calendar`/`Popover` for dates |
+| Form structure | `Field`, `FieldLabel`, `FieldError`, `FieldGroup`, `FieldSet`/`FieldLegend` |
+| Overlays | `Dialog`, `AlertDialog`, `Sheet`, `Drawer`, `Popover`, `DropdownMenu`, `Command`, `Tooltip` |
+| Disclosure / navigation | `Tabs`, `Collapsible`, `Accordion` |
+| Feedback / status | `Skeleton`, `Badge`, `Progress`, `Alert`, toasts via `sonner` |
+| Data display | `Card`, `Table`, `Avatar`, `Separator`, `chart` |
+
+Installed today (plus our own `responsive-dialog.tsx`, see Overlays): accordion (Hugeicons chevron), alert, alert-dialog, avatar, badge, breadcrumb, button, calendar, card, carousel (Embla; Hugeicons arrows, pt-BR labels), chart (`ChartTooltipContent` takes an optional `formatValue(item)`: money shown from its exact string), checkbox, collapsible, command, dialog, drawer, dropdown-menu, field, input, label, popover, radio-group (its indicator is a dot, not the registry's lucide icon), select, separator, sheet, sidebar, skeleton, slider (`trackClassName`, `rangeClassName`, `thumbClassName`, and `thumbProps` for the thumb's `aria-labelledby` / `aria-valuetext`: it carries `role="slider"`), switch, table, tabs, textarea, toggle, toggle-group, tooltip, progress (`indicatorClassName`, e.g. `bg-brand`), tour (from the shadcn.io Ark registry, `ark/tour`: only `tour.tsx` was taken, because its registry dependencies `ark/button` and `ark/dialog` would overwrite ours; adapted to our `Button`/`DialogHeader`/`DialogFooter`, Hugeicons, Tailwind 3 and tokens: `bg-card` `rounded-hero` content, `bg-overlay/60` backdrop, `border-brand` spotlight; the machine options go to `useTour`; `useTourContext` lives in `tour-context.ts`). Redesign variants: `Tabs` `variant="pill"` (on `TabsList` and `TabsTrigger`; full-width equal tabs below md) and `variant="underline"` (on both list and triggers; transparent surface, bottom rule and active underline, 44px targets; used by finance Collections/Cash) in `tabs-variants.ts`, toggle `variant="chip" size="chip"` (filter chips), `variant="nav"` (vertical filter rows of the session gallery) and `variant="team"` (results dialog team picker) in `toggle-variants.ts`, Badge `variant="status"`, Badge `variant="mensalista"` (`info` / `info-muted`) and `variant="diarista"` (neutral outline), rendered by `MembershipBadge`. `sidebar.tsx` was adapted: 264/64 px widths, no cookie (AppLayout persists the state), `useSidebar`/context in `sidebar-context.ts`, `useIsMobile` from `src/hooks/useIsMobile.ts`; `SheetContent` takes an `overlayClassName`. `field.tsx` was adapted to Tailwind 3 (no container-query orientation). Variants live in `button-variants.ts` / `badge-variants.ts` so the component files only export components.
+
+Not in scope: layout and text elements (`div`, `section`, `main`, `header`, `h1`–`h6`, `p`, `ul`, `img`) and the native `<form>`. Keep those as semantic HTML styled with tokens.
+
+**2. Missing component → add it, don't hand-roll it.** Run `bunx shadcn@latest add <name> --dry-run` first: the registry may want to overwrite existing files (answer "no" unless you mean to update them). This project is on Tailwind 3; if a generated file uses Tailwind 4-only syntax, adapt it before committing.
+
+**3. Customize without forking.** Use `className` (merged with `cn()`) and `variant`/`size`. A style that repeats becomes a new `cva` variant in the `components/ui` file. Don't copy a component's markup into a feature.
+
+**4. `components/ui` is owned code.** Changes affect every screen: keep them backward compatible (add variants, don't change defaults) and check the other usages.
+
+**5. Escape hatch.** A custom interactive component is allowed only when shadcn has no equivalent; build it from Radix/shadcn pieces in `components/<feature>/` with a one-line comment explaining why, and tell the user.
+
+### Component references from shadcn.io
+
+Before building a component, look for a reference, then decide how it enters the project:
+
+1. **Search the registries** from `client/`: `bunx --bun shadcn@latest search <query>`; read the page of a candidate on [shadcn.io](https://www.shadcn.io) with `agent-reach read <url>` (behavior, anatomy, states, accessibility).
+2. **Free registry component that fits:** add it with the CLI (`--dry-run` first), then adapt it as rule 2 says: Hugeicons, Tailwind 3, semantic tokens, pt-BR, variants in `*-variants.ts` (reference: `ui/tour.tsx`, taken from the shadcn.io Ark registry without its dependencies that would overwrite ours).
+3. **Paid ("Pro") component, or one that doesn't fit:** use it as a reference only and write the component from scratch, authored for the need at hand: its own anatomy, built from our primitives (Radix through `components/ui`) and tokens. Never paste paid source code.
+4. **Where it goes:** a primitive in `components/ui/` (owned code, backward compatible); a feature composition in `components/<feature>/`. Name the reference in the PR.
+
+## Antipatterns
+
+Don't introduce these. Numbers are shared by the whole frontend ([index](conventions.md#antipatterns-by-topic)). "Found in" lists where one still exists: fix it when the change is small, otherwise tell the user.
+
+| # | Don't | Do instead | Found in |
+|---|-------|-----------|----------|
+| 1 | Hand-rolled modals (`fixed inset-0 bg-black/50`): no focus trap, Esc or aria | `Dialog` / `AlertDialog` / `Sheet` | — |
+| 2 | Raw `<button>`, `<input>`, `<select>`, `<textarea>`, `<label>` | `Button`, `Input`, `Select`, `Textarea`, `Label`/`FieldLabel` | — |
+| 3 | Raw palette colors, hex values, `text-white`/`bg-black` on surfaces, screens hardcoded to one theme | Semantic tokens; new tokens in `index.css` for light and dark | — |
+| 4 | Retyping the brand color, or `text-white` on a brand fill (3.2:1, fails AA) | `<Button variant="brand">`, `bg-brand text-brand-foreground`, `text-brand-text` for brand-colored text | — |
+| 24 | Mixing icon libraries | Hugeicons only (`HugeiconsIcon` + `@hugeicons/core-free-icons`) | — |
+| 27 | Chart configs that disagree with the data colors | One color source (tokens) for config and data | — |
