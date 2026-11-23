@@ -206,6 +206,12 @@ configuration with the deployment transition so future stack deployments preserv
 Final checks passed: both backup-kind success metrics are scraped, textfile scrape errors are zero,
 and all six Grafana backup/recovery rules are healthy/inactive. Native systemd unit validation passed.
 
+PR checkpoint (2026-11-22): the first calendar trigger at 03:00 Recife passed, producing a verified
+272,834-byte archive in 43.626 seconds. Read-only inspection confirmed the timer remains enabled.
+The previous budget lease expired at 08:26:24 Recife; it was not renewed or bypassed during PR
+preparation. Reconcile actual account/source usage and assign ongoing ownership before rollout.
+The restore logging fix in this PR must also be installed before the next real recovery drill.
+
 ```sh
 python3 -m unittest discover -s ops/backup/tests -v
 BACKUP_DOCKER_TESTS=1 python3 -m unittest discover -s ops/backup/tests -v
@@ -227,7 +233,8 @@ no published ports, no host/credential mounts, bounded CPU/memory/tmpfs, single-
 It compares every table's count/fingerprint, constraints, indexes, RLS flags and Flyway history against the source snapshot,
 and tests sequence nextval against column maxima plus FK/NOT NULL/CHECK/uniqueness rejection. Constraint/index
 inventories are structural: PostgreSQL may reparse equivalent casts differently when restoring the archived DDL.
-It discards the target even on failure. Monthly drills must
+The target uses Docker's `none` logging driver, so restored SQL/server errors cannot be collected
+by the host's shared Docker/Loki logging. It discards the target even on failure. Monthly drills must
 use an actual downloaded recovery point; synthetic CI success is not operational acceptance. Reserve remote
 download requests and local capacity before retrieving a copy. The script itself performs no remote downloads.
 
@@ -239,6 +246,9 @@ Predicted retention expires independently even when jobs fail: investigate fresh
 Monitoring is on the same host and cannot independently alert on complete host loss.
 
 ## Deploy transition
+
+Both deployment workflows require `VPS_SSH_KNOWN_HOSTS`, verified through an independent trusted
+channel. Missing pinned-host configuration fails before writing SSH credentials or connecting.
 
 `scripts/deploy.sh` requires the installed shared `pre-deploy` command before either frontend rsync,
 new `.env` publication or API/Flyway startup. Missing config/tooling, budget, access, upload or hash

@@ -48,6 +48,7 @@ def drill(archive, manifest_path, run=None):
                     "run",
                     "-d",
                     "--pull=never",
+                    "--log-driver=none",
                     "--name",
                     container,
                     "--network=none",
