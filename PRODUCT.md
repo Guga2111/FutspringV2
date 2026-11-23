@@ -2,7 +2,7 @@
 
 <!-- impeccable:product-schema 1 -->
 
-Product record read by design skills (impeccable, design-taste-frontend). It holds product truth only: the visual system lives in [client/docs/design-system.md](client/docs/design-system.md) and `client/src/index.css`, which act as this project's `DESIGN.md`. Written from the repository (landing copy, docs, [market analysis](docs/analise-de-mercado.md)); facts marked *(inferred)* were not confirmed by the owner.
+Product record read by design skills (impeccable, design-taste-frontend). It holds product truth only: the visual system lives in [client/docs/design-system.md](client/docs/design-system.md) and `client/src/index.css`, which act as this project's `DESIGN.md`. Written from the repository (landing copy, docs) and the owner's market analysis (kept out of git); facts marked *(inferred)* were not confirmed by the owner.
 
 ## Platform
 
