@@ -3,7 +3,7 @@
 > Historical review, retained as evidence. The findings and statuses below reflect
 > the original review and partial follow-ups, not the current release. Later work
 > added in-memory access tokens with refresh cookies, authenticated private photos
-> and email verification; see [Backend](../../core/docs/BACKEND.md) and
+> and email verification; see [Backend](../../core/docs/README.md) and
 > [privacy hardening](2026-11-13-privacy-hardening.md). Revalidate any remaining
 > finding against current code. Follow the [security review workflow](../SECURITY_REVIEW.md)
 > for new reviews; this record does not satisfy that gate for a new release.

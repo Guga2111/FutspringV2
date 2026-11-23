@@ -4,12 +4,12 @@
 > private photo authorization and client-side image fetching have since changed.
 > In particular, the original public-file caching and direct-nginx suggestions
 > must not bypass current authorization or the no-store policy. Revalidate each
-> hypothesis against the [Backend](../../core/docs/BACKEND.md) and
-> [Frontend](../../client/docs/FRONTEND.md) guides before implementation.
+> hypothesis against the [Backend](../../core/docs/README.md) and
+> [Frontend](../../client/docs/README.md) guides before implementation.
 
 Os 10 problemas de performance mais relevantes do `core/`, encontrados lendo o código (arquivos, configuração JPA, services de daily/pelada/stats, scheduler, auth). Ordem: do maior ganho ao menor. Ficou de fora o que seria exagero para a escala de hoje (ver "Fora do top 10").
 
-Contexto: as **leituras** já estão em ordem (fetch join, `@EntityGraph`, consultas agrupadas) e os N+1 dos **comandos** foram corrigidos nos PRs #68–70 (see the current batch-command rules in [Backend](../../core/docs/BACKEND.md#performance)). O que sobra é mais configuração e alguns pontos isolados.
+Contexto: as **leituras** já estão em ordem (fetch join, `@EntityGraph`, consultas agrupadas) e os N+1 dos **comandos** foram corrigidos nos PRs #68–70 (see the current batch-command rules in [Backend](../../core/docs/performance.md)). O que sobra é mais configuração e alguns pontos isolados.
 
 Impacto: **Alto** (o usuário percebe em toda tela), **Médio** (segura conexão/lock ou cresce com o tempo), **Baixo** (desperdício pequeno).
 

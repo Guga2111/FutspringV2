@@ -16,7 +16,7 @@ overriding the initial infrastructure-activation restriction. The timer is enabl
 
 Keep verified offsite recovery points for the Futspring application database. Support both incident recovery and a planned move to another compatible PostgreSQL database.
 
-Include the application schema/data, sequences, indexes, constraints and `flyway_schema_history`. Before implementation, confirm PostgreSQL version, schema selection/dependencies and complete read permissions. Expect PostgreSQL 17 and schema `public`, based on [backend documentation](../../core/docs/BACKEND.md). Operational metadata confirmed PostgreSQL 17.6 and RLS enabled on `users` without policies. Preserve that RLS; the backup reader must have complete SELECT and unfiltered reads (BYPASSRLS). Filtered RLS or policies with unreviewed recovery-role dependencies block backup; the isolated drill also compares RLS flags.
+Include the application schema/data, sequences, indexes, constraints and `flyway_schema_history`. Before implementation, confirm PostgreSQL version, schema selection/dependencies and complete read permissions. Expect PostgreSQL 17 and schema `public`, based on [backend documentation](../../core/docs/README.md). Operational metadata confirmed PostgreSQL 17.6 and RLS enabled on `users` without policies. Preserve that RLS; the backup reader must have complete SELECT and unfiltered reads (BYPASSRLS). Filtered RLS or policies with unreviewed recovery-role dependencies block backup; the isolated drill also compares RLS flags.
 
 Photos, uploaded files, finance QR files, Redis and Supabase-managed services are outside this database backup. Temporary finance receipts must remain excluded from durable file backups. Image storage remains task #44.
 

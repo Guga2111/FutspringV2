@@ -2,7 +2,7 @@ import { readdirSync } from "node:fs"
 import { join } from "node:path"
 import { describe, expect, it } from "vitest"
 
-// The folder rule of FRONTEND.md ("Where new code goes"): a feature folder holds at most 12 files directly
+// The folder rule of client/docs/structure.md ("Where new code goes"): a feature folder holds at most 12 files directly
 const MAX_FILES = 12
 const COMPONENTS = join(__dirname, "..", "components")
 

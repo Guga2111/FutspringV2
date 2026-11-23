@@ -15,7 +15,7 @@ import static com.tngtech.archunit.core.domain.JavaClass.Predicates.resideInAPac
 import static com.tngtech.archunit.library.dependencies.SlicesRuleDefinition.slices;
 import static org.assertj.core.api.Assertions.assertThat;
 
-/** The package layout rule of BACKEND.md ("Where a class goes"). */
+/** The package layout rule of core/docs/structure.md ("Where a class goes"). */
 class DomainLayoutTest {
 
     private static final int MAX_CLASSES_PER_PACKAGE = 12;
@@ -36,7 +36,7 @@ class DomainLayoutTest {
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (a, b) -> a, TreeMap::new));
 
         assertThat(oversized)
-                .as("packages over %d classes: split them as BACKEND.md says", MAX_CLASSES_PER_PACKAGE)
+                .as("packages over %d classes: split them as core/docs/structure.md says", MAX_CLASSES_PER_PACKAGE)
                 .isEmpty();
     }
 

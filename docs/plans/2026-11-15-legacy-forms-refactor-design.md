@@ -4,7 +4,7 @@ Data: 2026-11-15 · Status: aprovado
 
 ## Objetivo
 
-Migrar os três formulários que ainda usam `useState` por campo para **react-hook-form + zod + shadcn `Field`**, conforme a seção [Forms](../../client/docs/FRONTEND.md#forms-mandatory) do FRONTEND.md, e tirar a chamada a `src/api` de dentro dos componentes. Fecha os antipatterns 5 e 8 nesses arquivos:
+Migrar os três formulários que ainda usam `useState` por campo para **react-hook-form + zod + shadcn `Field`**, conforme a seção [Forms](../../client/docs/forms.md#forms-mandatory) do FRONTEND.md, e tirar a chamada a `src/api` de dentro dos componentes. Fecha os antipatterns 5 e 8 nesses arquivos:
 
 - `client/src/components/CreatePeladaModal.tsx` (Sheet, 259 linhas)
 - `client/src/components/daily/live/FinalizeModal.tsx` (Dialog, 119 linhas)
