@@ -41,8 +41,15 @@ docs/analise-de-mercado.md
 finance-receipts/
 finance-qr/
 
-# Local design inspection artifacts
+# Local tool caches and agent artifacts (screenshots, browser snapshots, worktrees)
 .taste-skill/
+.ruff_cache/
+__pycache__/
+/output/
+.playwright-cli/
+graphify-out/
+.claude/settings.local.json
+.claude/worktrees/
 
 # Machine-specific MCP connection configuration
 /.mcp.json
@@ -58,5 +65,3 @@ docs/melhorias-escritas-a-mao.md
 *.dump
 *.sql.gz
 /ops/backup/local/
-/ops/backup/__pycache__/
-/ops/backup/tests/__pycache__/
