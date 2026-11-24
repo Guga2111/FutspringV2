@@ -45,18 +45,18 @@ Cloudflare's **`security-audit`** is available for an explicitly requested broad
 
 ## Installed skills and provenance
 
-Installed user-wide for Codex on 2026-11-13, under `$CODEX_HOME/skills` (default `~/.codex/skills`). The original skill instructions and supporting files are installed unchanged; they are not vendored into this repository.
+Installed user-wide on 2026-11-13 for Codex, under `$CODEX_HOME/skills` (default `~/.codex/skills`), and on 2026-11-23 for Claude Code, under `~/.agents/skills` with symlinks in `~/.claude/skills`. Both installs are byte-identical to the pinned revisions below (checked with `diff -r` against a checkout of each revision). The original skill instructions and supporting files are installed unchanged; they are not vendored into this repository.
 
 | Skill | Official source | Installed revision |
 |---|---|---|
 | `differential-review` | [Trail of Bits](https://github.com/trailofbits/skills/tree/149d7b21f4067765b82e67029730b42d228ef4b4/plugins/differential-review/skills/differential-review) | `149d7b21f4067765b82e67029730b42d228ef4b4` |
 | `security-audit` | [Cloudflare](https://github.com/cloudflare/security-audit-skill/tree/c1c8a8c1471069fb0e188eeaff69b8e8db6564a8/skills/security-audit) | `c1c8a8c1471069fb0e188eeaff69b8e8db6564a8` |
 
-To install the same reviewed versions with the Skills CLI:
+To install the same reviewed versions with the Skills CLI (`--agent` takes one value per agent; the Claude Code install on this machine was copied from the pinned checkouts instead, so these exact commands for `claude-code` are untested):
 
 ```bash
-bunx skills add https://github.com/trailofbits/skills/tree/149d7b21f4067765b82e67029730b42d228ef4b4/plugins/differential-review/skills/differential-review --skill differential-review --agent codex --global
-bunx skills add https://github.com/cloudflare/security-audit-skill/tree/c1c8a8c1471069fb0e188eeaff69b8e8db6564a8/skills/security-audit --skill security-audit --agent codex --global
+bunx skills add https://github.com/trailofbits/skills/tree/149d7b21f4067765b82e67029730b42d228ef4b4/plugins/differential-review/skills/differential-review --skill differential-review --agent codex --agent claude-code --global
+bunx skills add https://github.com/cloudflare/security-audit-skill/tree/c1c8a8c1471069fb0e188eeaff69b8e8db6564a8/skills/security-audit --skill security-audit --agent codex --agent claude-code --global
 ```
 
-Other contributors and CI agents need their own installation; this machine's global skills are not automatically available elsewhere. Review upstream instruction/script changes before upgrading, then update this provenance table. Never download a similarly named third-party fork as a substitute for the official skill.
+A new Claude Code session is needed before the skills appear in its list. Other contributors and CI agents need their own installation; this machine's global skills are not automatically available elsewhere. Review upstream instruction/script changes before upgrading, then update this provenance table. Never download a similarly named third-party fork as a substitute for the official skill.
