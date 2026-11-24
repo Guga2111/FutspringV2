@@ -24,6 +24,9 @@ old report disagrees with them, inspect the implementation before acting.
 - [Runtime upgrade](plans/2026-10-29-java25-boot4-virtual-threads-design.md): retained
   for the load-test comparison and explicitly pending production acceptance.
   Historical setup and rollout instructions are not the current runbook.
+- [Database backup to Cloudflare R2](plans/2026-11-19-r2-database-backup-spec.md): the timer is
+  active; the deploy transition and the ongoing budget checks are still pending. The
+  operational guide is [ops/backup](../ops/backup/README.md).
 
 ## Design rationale and release evidence
 
@@ -37,6 +40,11 @@ migration V19 reference them.
 | --- | --- |
 | [Sport-Tech design](plans/2026-11-01-design-system-sport-tech-spec.md) | Token rationale still referenced by the client styles and contrast utilities |
 | [Subscriptions](plans/2026-11-07-subscriptions-platform-admin-spec.md) | Business-rule rationale referenced by migration V19 and the backend guide |
+| [Mobile redesign (Jakob's law)](plans/2026-11-16-mobile-jakob-redesign-spec.md) | Implemented; rationale for the mobile shell, referenced by the frontend [navigation guide](../client/docs/navigation.md) |
+| [Floating mobile navigation](plans/2026-11-17-floating-mobile-navigation-design.md) | Implemented; direction contract of the bottom tab capsule, referenced by the navigation guide |
+| [Legacy forms refactor](plans/2026-11-15-legacy-forms-refactor-design.md) | Implemented; why the three legacy forms moved to react-hook-form + zod + `Field` (the rules live in [forms.md](../client/docs/forms.md)) |
+| [Cross-layer consistency plan](plans/2026-11-15-cross-layer-consistency-design.md) | Approved scope and method of the review whose results are in [the review](history/2026-11-15-cross-layer-consistency-review.md) |
+| [Landing pricing section](plans/2026-11-22-landing-pricing-design.md) | Implemented; what the landing publishes about prices and why (prices come from `SubscriptionPlans.java`) |
 | [Launch hardening](history/2026-11-11-launch-hardening-spec.md) | Incremental rollout and validation evidence for session and observability changes |
 | [Privacy hardening](history/2026-11-13-privacy-hardening.md) | Verification, private photos, telemetry and email-preference link changes |
 | [Release P1](history/2026-11-13-release-p1-fixes.md) | Account identity, optimistic locking and refresh/logout regression evidence |

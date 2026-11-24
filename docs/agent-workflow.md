@@ -12,7 +12,7 @@ How a coding agent goes from a request to a merged change in this repository, an
 | 4. Design (UI only) | Pick the skill by the kind of screen (table below); keep the project's design system | **impeccable** / **design-taste-frontend** |
 | 5. Implement | Follow the topic documents; add or adapt components | **shadcn** |
 | 6. Validate | Every UI change is looked at in a real browser: 375 px and 1280 px, light and dark | **`/validar-ui`** (playwright-cli) |
-| 7. Finish | Tests, lint, build, docs updated in the same change, security review when it applies | project commands; [security review](SECURITY_REVIEW.md) |
+| 7. Finish | Tests, lint, build, docs updated in the same change, security review when it applies | project commands; **differential-review** ([workflow](SECURITY_REVIEW.md)) |
 
 Steps 2 and 4 are skipped for bug fixes, refactors without a behavior change, documentation-only changes and dependency bumps, unless the user asks for them. Step 6 is never skipped for a change that alters what a screen shows.
 
@@ -64,6 +64,14 @@ Steps 2 and 4 are skipped for bug fixes, refactors without a behavior change, do
 - **When:** after every change that alters a screen, before saying it is done; also to reproduce a UI bug.
 - **How:** `/validar-ui <routes> [task]`, the project skill in [.claude/skills/validar-ui](../.claude/skills/validar-ui/SKILL.md), runs the loop of [Validating UI in the browser](../client/docs/testing.md#validating-ui-in-the-browser): checks the app is up, reuses the saved dev-seed session, goes through 375 / 1280 × light / dark, checks scroll and console, then states, keyboard and design rules, and ends with a table. playwright-cli directly for anything else (a bug repro, one interaction).
 - **Not to be confused** with the Playwright test suite (`client/e2e/`): `playwright-cli` is the agent looking at the running app; the suite is the committed regression check, run only in Docker.
+
+### differential-review and security-audit — the security gate
+
+- **When:** **differential-review** (Trail of Bits) before a PR with security impact is opened or marked ready, and again before it merges: authentication, authorization and tenant scoping, inputs and uploads, financial writes, CSP/CORS/service worker, secrets, dependencies, Docker and CI. If the impact is uncertain, review. **security-audit** (Cloudflare) only when the user explicitly asks for a broader audit; it complements the per-PR review and never replaces it.
+- **Not when:** a change that is only documentation, formatting or presentation with no security behavior (the PR still records `Security impact: no` and why). Never waived because CI passes or an earlier review existed.
+- **How:** follow [SECURITY_REVIEW.md](SECURITY_REVIEW.md): record the target SHA, merge base and head, run the skill, validate each candidate, fix confirmed findings (also pre-existing ones in the changed code and its reachable flows) at the root cause, add a regression, rerun the affected analysis, and write the Markdown report. Full reports go in the ignored `.security-reviews/` directory, never in tracked files or the PR; the PR carries a sanitized summary and a report reference.
+- **Installed revisions:** pinned in [SECURITY_REVIEW.md](SECURITY_REVIEW.md#installed-skills-and-provenance). If a skill is missing, install that revision or report the blocker; do not replace it with a generic checklist or claim a review that did not run.
+- **Execution limits:** use synthetic data and never probe production. `security-audit` runs target code only inside the OS sandbox its own instructions require.
 
 ## Choosing the design skill
 
