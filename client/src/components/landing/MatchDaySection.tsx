@@ -1,4 +1,4 @@
-import { SessionFragment, type SessionStage } from "@/components/landing/SessionFragment"
+import { SessionFragment, type SessionStage } from "@/components/landing/fragments/SessionFragment"
 import { revealAt, useReveal } from "@/components/landing/hooks/useReveal"
 import { cn } from "@/lib/utils"
 

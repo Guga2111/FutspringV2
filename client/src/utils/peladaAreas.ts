@@ -46,6 +46,9 @@ export const PELADA_AREAS: Record<PeladaArea, PeladaAreaInfo> = {
 
 const AREA_ORDER: PeladaArea[] = ["overview", "members", "sessions", "ranking", "awards", "finance", "invitations", "settings", "subscription"]
 
+// Frequent mobile destinations; every other visible area lives in the grouped "Mais" menu.
+export const PRIMARY_PELADA_AREAS: PeladaArea[] = ["overview", "sessions", "members", "ranking"]
+
 export function areaPath(peladaId: number | string, area: PeladaArea): string {
   const { segment } = PELADA_AREAS[area]
   return segment ? `/pelada/${peladaId}/${segment}` : `/pelada/${peladaId}`

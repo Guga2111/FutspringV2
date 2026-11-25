@@ -1,12 +1,15 @@
 import { lazy, Suspense, useState } from "react"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { PlusSignIcon } from "@hugeicons/core-free-icons"
+import { BubbleChatIcon, PlusSignIcon, Settings01Icon } from "@hugeicons/core-free-icons"
 import { Button } from "@/components/ui/button"
 import { PageContainer } from "@/components/layout/PageContainer"
-import { Outlet, useLocation, useParams } from "react-router-dom"
+import { Link, Outlet, useLocation, useNavigate, useParams } from "react-router-dom"
+import { MobileHeaderActions, MobileHeaderLink } from "@/components/layout/mobile/MobileHeaderActions"
 import type { PeladaMember } from "@/types/pelada"
 import type { BulkMemberAction } from "@/utils/bulkMemberActions"
 import { useAuth } from "@/hooks/useAuth"
+import { useIsMobile } from "@/hooks/useIsMobile"
+import { useMobileHeader, useRefresh } from "@/hooks/useMobileShell"
 import { usePeladaDetail } from "@/components/pelada/hooks/usePeladaDetail"
 import { usePeladaActions } from "@/components/pelada/hooks/usePeladaActions"
 import type { PeladaWorkspace } from "@/components/pelada/hooks/usePeladaWorkspace"
@@ -19,7 +22,8 @@ import { CreateSessionDialog } from "@/components/pelada/sessions/CreateSessionD
 import { SetPlayerStarsDialog } from "@/components/pelada/members/SetPlayerStarsDialog"
 import { SUBSCRIPTION_NOTICE_ID, SubscriptionNotice } from "@/components/pelada/SubscriptionNotice"
 import { isWritable } from "@/utils/subscription"
-import { areaFromPath, PELADA_AREAS, peladaRole } from "@/utils/peladaAreas"
+import { areaFromPath, areaPath, PELADA_AREAS, peladaRole } from "@/utils/peladaAreas"
+import { createIntent, isChatPath } from "@/utils/mobileNav"
 import { cn } from "@/lib/utils"
 
 // Lazy so recharts only downloads when the dialog is first opened
@@ -29,12 +33,17 @@ const PlayerHistoryDialog = lazy(() =>
   })),
 )
 
-// Layout of /pelada/:id and its area pages: loads the pelada once, owns the header, the shared dialogs and the chat
+// Layout of /pelada/:id and its area pages: loads the pelada once, owns the header, the shared dialogs and the chat.
+// Below md the chat is its own page (/pelada/:id/chat), rendered here without the header, the notice and the areas.
 export default function PeladaDetailPage() {
   const { id } = useParams<{ id: string }>()
-  const { pathname } = useLocation()
+  const location = useLocation()
+  const navigate = useNavigate()
+  const { pathname } = location
+  const chat = isChatPath(pathname)
   const area = areaFromPath(pathname) ?? "overview"
   const { user: currentUser } = useAuth()
+  const isMobile = useIsMobile()
 
   const detail = usePeladaDetail(id)
   const { pelada, loading, accessDenied, refetchDailies, mergeDaily, mergeMembers, dropMembers } = detail
@@ -59,6 +68,30 @@ export default function PeladaDetailPage() {
   const isCreator = pelada != null && currentUser != null && pelada.creatorId === currentUser.id
   const role = peladaRole(isAdmin, isCreator)
   const writable = isWritable(pelada?.subscription)
+
+  // the mobile header: the pelada's name (and the member count in the chat); pull to refresh reads it all again
+  const memberCount = pelada?.members.length ?? 0
+  useMobileHeader({
+    title: pelada?.name,
+    subtitle: chat && pelada ? `${memberCount} ${memberCount === 1 ? "membro" : "membros"}` : undefined,
+  })
+  useRefresh(detail.refetch)
+
+  // the "+" of the mobile tabs opens a form here through the router state, once: closing it clears the state
+  const intent = pelada ? createIntent(location.state) : null
+  const intentSession = intent === "session" && area === "sessions" && isAdmin && writable
+  const intentInvite = intent === "invite" && area === "members" && isAdmin
+  const clearIntent = () => {
+    if (intent) navigate(`${pathname}${location.search}`, { replace: true, state: null })
+  }
+  const closeCreateSession = () => {
+    setShowCreateSession(false)
+    clearIntent()
+  }
+  const closeInvite = () => {
+    setShowInvitePlayer(false)
+    clearIntent()
+  }
 
   const runBulkAction = (action: BulkMemberAction, targets: PeladaMember[], stars?: number) => {
     const run: Record<BulkMemberAction, () => Promise<boolean>> = {
@@ -132,10 +165,36 @@ export default function PeladaDetailPage() {
           Nova sessão
         </Button>
       ) : null
-    // the chat button is fixed in the corner: leave room under the content so it never covers the last row
-    const showChat = area !== "invitations" && area !== "finance" && area !== "subscription"
-    content = (
-      <PageContainer className={cn(showChat && "pb-24 md:pb-24")}>
+    // the chat button is fixed in the corner (from md): leave room under the content so it never covers the last row
+    const showChat = !isMobile && area !== "invitations" && area !== "finance" && area !== "subscription"
+    const mobileActions = (
+      <MobileHeaderActions>
+        <MobileHeaderLink to={`/pelada/${pelada.id}/chat`} label="Chat da pelada" icon={BubbleChatIcon} />
+        {isAdmin && <MobileHeaderLink to={`/pelada/${pelada.id}/settings`} label="Configurações da pelada" icon={Settings01Icon} />}
+      </MobileHeaderActions>
+    )
+    content = chat ? (
+      <main className="flex h-[calc(100dvh-3.5rem-env(safe-area-inset-top))] min-h-0 flex-col md:mx-auto md:h-dvh md:w-full md:max-w-[720px] md:px-8 md:py-6">
+        {/* from md (a shared link) the page says whose chat it is; below md the mobile header does */}
+        <div className="hidden items-center justify-between gap-3 pb-3 md:flex">
+          <div className="flex min-w-0 flex-col">
+            <h1 className="truncate font-display text-heading font-bold">Chat · {pelada.name}</h1>
+            <span className="text-body-sm text-muted-foreground">{memberCount} membros</span>
+          </div>
+          <Button asChild variant="outline">
+            <Link to={areaPath(pelada.id, "overview")}>Voltar para a pelada</Link>
+          </Button>
+        </div>
+        <h1 className="sr-only md:hidden">Chat · {pelada.name}</h1>
+        <div className="flex min-h-0 flex-1 flex-col md:overflow-hidden md:rounded-tile md:border md:bg-card">
+          <Suspense fallback={<DetailSkeleton />}>
+            <Outlet context={workspace} />
+          </Suspense>
+        </div>
+      </main>
+    ) : (
+      <PageContainer className={cn(showChat && "md:pb-24")}>
+        {mobileActions}
         <PeladaPageHeader
           peladaId={pelada.id}
           peladaName={pelada.name}
@@ -186,11 +245,11 @@ export default function PeladaDetailPage() {
         </Suspense>
       )}
 
-      {showInvitePlayer && pelada && (
+      {(showInvitePlayer || intentInvite) && pelada && (
         <InvitePlayerDialog
           peladaId={pelada.id}
           existingMemberIds={new Set(pelada.members.map((m) => m.id))}
-          onClose={() => setShowInvitePlayer(false)}
+          onClose={closeInvite}
           onInvited={() => setInvitationVersion((v) => v + 1)}
         />
       )}
@@ -213,11 +272,11 @@ export default function PeladaDetailPage() {
         />
       )}
 
-      {showCreateSession && pelada && (
+      {(showCreateSession || intentSession) && pelada && (
         <CreateSessionDialog
           peladaId={pelada.id}
           defaultTime={pelada.timeOfDay}
-          onClose={() => setShowCreateSession(false)}
+          onClose={closeCreateSession}
           onCreated={refetchDailies}
         />
       )}

@@ -18,7 +18,7 @@ Formatting, documentation-only changes and presentation-only changes with no sec
 
 ## Review, fix, verify
 
-1. **Identify the source.** Read `AGENTS.md`, `client/docs/FRONTEND.md` and `core/docs/BACKEND.md`. Record the target branch, its current SHA, the merge base and the proposed head SHA, plus the skill revision. For a release, review the complete release diff against its target; prior feature reviews are supporting evidence, not a replacement.
+1. **Identify the source.** Read `AGENTS.md`, `client/docs/README.md`, `core/docs/README.md` and the topic documents they list for the changed areas (at least `core/docs/security.md` and `core/docs/authorization.md`). Record the target branch, its current SHA, the merge base and the proposed head SHA, plus the skill revision. For a release, review the complete release diff against its target; prior feature reviews are supporting evidence, not a replacement.
 2. **Run the skill.** Load the installed `differential-review/SKILL.md` and its relevant methodology, adversarial and reporting references. Understand the baseline invariants, inspect both versions, inspect history/blame of removed guards, trace callers and downstream effects, and check test gaps. Use a disposable worktree or `git show` for baseline inspection; do not disturb another worktree's changes.
 3. **Validate candidates.** Trace input and actor through existing validation and framework/configuration controls to the affected resource. Record source/line references, preconditions, concrete impact and minimal evidence. Separate newly introduced issues, regressions and pre-existing issues. An authenticated attacker can still exploit IDOR or cross-pelada access: requiring login alone is not a dismissal. Separate confirmed vulnerabilities from hardening advice and candidates needing validation; do not guess production configuration.
 4. **Fix the root cause.** Correct confirmed vulnerabilities in changed code and its reachable related flows before merge, whether newly introduced or pre-existing. Use the responsible trusted layer and the existing architecture. Fix them in this PR or in a prerequisite fix PR merged first; do not expand an unrelated feature patch indefinitely. Keep API contracts/docs in sync and include a migration for schema changes. Record unrelated findings separately with owner, priority and a remediation target; critical/high vulnerabilities block the affected release until fixed. No silent deferrals or risk acceptance by the agent.
@@ -45,18 +45,18 @@ Cloudflare's **`security-audit`** is available for an explicitly requested broad
 
 ## Installed skills and provenance
 
-Installed user-wide for Codex on 2026-11-13, under `$CODEX_HOME/skills` (default `~/.codex/skills`). The original skill instructions and supporting files are installed unchanged; they are not vendored into this repository.
+Installed user-wide on 2026-11-13 for Codex, under `$CODEX_HOME/skills` (default `~/.codex/skills`), and on 2026-11-23 for Claude Code, under `~/.agents/skills` with symlinks in `~/.claude/skills`. Both installs are byte-identical to the pinned revisions below (checked with `diff -r` against a checkout of each revision). The original skill instructions and supporting files are installed unchanged; they are not vendored into this repository.
 
 | Skill | Official source | Installed revision |
 |---|---|---|
 | `differential-review` | [Trail of Bits](https://github.com/trailofbits/skills/tree/149d7b21f4067765b82e67029730b42d228ef4b4/plugins/differential-review/skills/differential-review) | `149d7b21f4067765b82e67029730b42d228ef4b4` |
 | `security-audit` | [Cloudflare](https://github.com/cloudflare/security-audit-skill/tree/c1c8a8c1471069fb0e188eeaff69b8e8db6564a8/skills/security-audit) | `c1c8a8c1471069fb0e188eeaff69b8e8db6564a8` |
 
-To install the same reviewed versions with the Skills CLI:
+To install the same reviewed versions with the Skills CLI (`--agent` takes one value per agent; the Claude Code install on this machine was copied from the pinned checkouts instead, so these exact commands for `claude-code` are untested):
 
 ```bash
-bunx skills add https://github.com/trailofbits/skills/tree/149d7b21f4067765b82e67029730b42d228ef4b4/plugins/differential-review/skills/differential-review --skill differential-review --agent codex --global
-bunx skills add https://github.com/cloudflare/security-audit-skill/tree/c1c8a8c1471069fb0e188eeaff69b8e8db6564a8/skills/security-audit --skill security-audit --agent codex --global
+bunx skills add https://github.com/trailofbits/skills/tree/149d7b21f4067765b82e67029730b42d228ef4b4/plugins/differential-review/skills/differential-review --skill differential-review --agent codex --agent claude-code --global
+bunx skills add https://github.com/cloudflare/security-audit-skill/tree/c1c8a8c1471069fb0e188eeaff69b8e8db6564a8/skills/security-audit --skill security-audit --agent codex --agent claude-code --global
 ```
 
-Other contributors and CI agents need their own installation; this machine's global skills are not automatically available elsewhere. Review upstream instruction/script changes before upgrading, then update this provenance table. Never download a similarly named third-party fork as a substitute for the official skill.
+A new Claude Code session is needed before the skills appear in its list. Other contributors and CI agents need their own installation; this machine's global skills are not automatically available elsewhere. Review upstream instruction/script changes before upgrading, then update this provenance table. Never download a similarly named third-party fork as a substitute for the official skill.

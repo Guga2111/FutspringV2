@@ -7,6 +7,7 @@ import com.futspring.backend.domain.daily.attendance.AttendanceWindow;
 import com.futspring.backend.domain.daily.attendance.DailyAttendanceBumpRepository;
 import com.futspring.backend.domain.daily.attendance.DailyAttendanceRepository;
 import com.futspring.backend.domain.daily.dto.AttendanceBumpDTO;
+import com.futspring.backend.domain.finance.FinancePreservation;
 import com.futspring.backend.domain.pelada.dto.PeladaResponseDTO;
 import com.futspring.backend.domain.pelada.member.PeladaMensalistaRepository;
 import com.futspring.backend.domain.subscription.SubscriptionGuard;
@@ -26,7 +27,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * The pelada cards of {@code /peladas/my} and {@code /users/{id}/peladas}: member count, the caller's admin flag,
+ * The pelada cards of {@code /peladas/my} and {@code /users/{id}/peladas}: member count, the caller's admin and finance-manager flags,
  * next session with the caller's attendance, and subscription, in a fixed number of queries whatever the number of
  * peladas. Runs inside the caller's read-only transaction.
  */
@@ -42,9 +43,10 @@ public class PeladaSummaryAssembler {
     private final DailyAttendanceBumpRepository bumpRepository;
     private final PeladaMensalistaRepository mensalistaRepository;
     private final SubscriptionGuard subscriptionGuard;
+    private final FinancePreservation financePreservation;
     private final Clock clock;
 
-    // Member counts, admin flags, next sessions and subscriptions in grouped queries instead of one per pelada
+    // Member counts, admin and finance-manager flags, next sessions and subscriptions in grouped queries instead of one per pelada
     public List<PeladaResponseDTO> toSummaries(List<Pelada> peladas, User caller) {
         if (peladas.isEmpty()) {
             return List.of();
@@ -53,6 +55,7 @@ public class PeladaSummaryAssembler {
         Map<Long, Integer> memberCounts = peladaRepository.countMembersByIds(ids).stream()
                 .collect(Collectors.toMap(row -> (Long) row[0], row -> ((Number) row[1]).intValue()));
         Set<Long> administered = new HashSet<>(peladaRepository.findAdministeredIds(ids, caller.getId()));
+        Set<Long> financeManaged = financePreservation.managedPeladaIds(caller.getId());
 
         // One instant for the entire response. Group by local day (at most three dates worldwide),
         // not by pelada, so zone correctness does not introduce an N+1 query.
@@ -94,7 +97,8 @@ public class PeladaSummaryAssembler {
                             .bump(unseenBumps.get(next.getId()))
                             .build();
                     return PeladaResponseDTO.from(p, memberCounts.getOrDefault(p.getId(), 0),
-                            administered.contains(p.getId()), nextDaily, subscriptions.get(p.getId()));
+                            administered.contains(p.getId()), financeManaged.contains(p.getId()), nextDaily,
+                            subscriptions.get(p.getId()));
                 })
                 .toList();
     }

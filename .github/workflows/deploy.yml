@@ -18,9 +18,13 @@ jobs:
     name: CI Frontend
     uses: ./.github/workflows/ci-frontend.yml
 
+  backup:
+    name: CI Backup
+    uses: ./.github/workflows/ci-backup.yml
+
   deploy:
     name: Deploy to VPS
-    needs: [backend, frontend]
+    needs: [backend, frontend, backup]
     runs-on: ubuntu-latest
     environment:
       name: production
@@ -60,15 +64,15 @@ jobs:
             echo "Missing required secret: VPS_SSH_KEY"
             exit 1
           fi
+          if [[ -z "${SSH_KNOWN_HOSTS:-}" ]]; then
+            echo "Missing required secret: VPS_SSH_KNOWN_HOSTS (verify the host key out of band)"
+            exit 1
+          fi
           umask 077
           mkdir -p ~/.ssh
           printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/id_deploy
 
-          if [[ -n "${SSH_KNOWN_HOSTS}" ]]; then
-            printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
-          else
-            ssh-keyscan -H "$VPS_IP" >> ~/.ssh/known_hosts 2>/dev/null
-          fi
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
 
           cat > ~/.ssh/config << EOF
           Host $VPS_IP
@@ -86,7 +90,6 @@ jobs:
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
           REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
-          PG_DUMP_URL: ${{ secrets.PG_DUMP_URL }}
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           VAPID_PUBLIC_KEY: ${{ secrets.VAPID_PUBLIC_KEY }}
           VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
@@ -111,10 +114,6 @@ jobs:
             fi
           done
 
-          if [[ -z "${PG_DUMP_URL}" ]]; then
-            echo "::warning::PG_DUMP_URL not set: deploying without a database backup before the Flyway migrations."
-          fi
-
           if [[ -z "${RESEND_API_KEY}" ]]; then
             echo "::warning::RESEND_API_KEY not set: the API will not send e-mails (password reset)."
           fi
@@ -138,7 +137,6 @@ jobs:
             printf 'REDIS_PASSWORD=%s\n' "$REDIS_PASSWORD"
             printf 'ALLOWED_ORIGINS=%s\n' "$ALLOWED_ORIGINS"
             printf 'API_PORT=%s\n' "$API_PORT"
-            printf 'PG_DUMP_URL=%s\n' "$PG_DUMP_URL"
             printf 'APP_URL=%s\n' "$APP_URL"
             # Public API URL (same value the frontend is built with), for the List-Unsubscribe header
             printf 'API_URL=%s\n' "$VITE_API_URL"
@@ -158,21 +156,38 @@ jobs:
 
       # Through nginx and the public API prefix (nginx strips /api): 200 from /readyz only when the API is up and
       # ready AND API_URL points at it. Every other actuator endpoint stays on the internal management port.
+      # Then the anti-clickjacking header: nginx is applied by hand on the VPS (ops/nginx/futspring.conf), so this
+      # catches a live config that drifted from the versioned one. Checked on / and on an SPA route (the
+      # try_files fallback to /index.html); no retry, since the deploy never touches nginx.
       - name: Smoke test
         run: |
           set -uo pipefail
+          ready=false
           for attempt in $(seq 1 12); do
             web=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "${APP_URL}/" || true)
             api=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "${VITE_API_URL}/readyz" || true)
             if [[ "$web" == "200" && "$api" == "200" ]]; then
               echo "Frontend 200 and API 200 on /readyz (attempt ${attempt})."
-              exit 0
+              ready=true
+              break
             fi
             echo "Not ready yet: web=${web} api=${api} (attempt ${attempt}/12), retrying in 10s..."
             sleep 10
           done
-          echo "Smoke test failed after 2 minutes."
-          exit 1
+          if [[ "$ready" != "true" ]]; then
+            echo "Smoke test failed after 2 minutes."
+            exit 1
+          fi
+
+          for path in / /home; do
+            headers=$(curl -sS -D - -o /dev/null --max-time 10 "${APP_URL}${path}" | tr -d '\r' || true)
+            if ! grep -qiE "^content-security-policy:.*frame-ancestors[[:space:]]+'none'" <<< "$headers"; then
+              echo "${APP_URL}${path} has no 'Content-Security-Policy: frame-ancestors 'none'' header (clickjacking)."
+              echo "The live nginx drifted from ops/nginx/futspring.conf: apply it on the VPS (see its header comment)."
+              exit 1
+            fi
+          done
+          echo "frame-ancestors 'none' present on / and /home."
 
       - name: Clean up secrets from runner
         if: always()

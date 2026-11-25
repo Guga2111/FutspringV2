@@ -216,7 +216,8 @@ public class PeladaMemberService {
         }
 
         pelada.setCreator(target);
-        PeladaResponseDTO response = PeladaResponseDTO.forAdmin(peladaRepository.save(pelada));
+        PeladaResponseDTO response = PeladaResponseDTO.forAdmin(peladaRepository.save(pelada),
+                financePreservation.isManager(peladaId, caller.getId()));
         eventPublisher.publishEvent(new PeladaTransferredEvent(pelada, caller, target));
         return response;
     }

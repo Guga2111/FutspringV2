@@ -1,0 +1,16 @@
+{
+  "month": "YYYY-MM",
+  "observed_at": 0,
+  "valid_until": 0,
+  "complete_account_usage": false,
+  "writers_coordinated": false,
+  "source_usage_known": false,
+  "invalidated": false,
+  "source_measurement_reference": null,
+  "source_run_reservation_bytes": 0,
+  "source_inflight_margin_bytes": 0,
+  "storage_bytes": {"limit": 8000000000, "used": 0, "external_reserved": 0, "local_reserved": 0, "safety_margin": 1000000000},
+  "class_a": {"limit": 800000, "used": 0, "external_reserved": 0, "local_reserved": 0, "safety_margin": 10000},
+  "class_b": {"limit": 8000000, "used": 0, "external_reserved": 0, "local_reserved": 0, "safety_margin": 10000},
+  "source_bytes": {"limit": 5000000000, "used": 0, "external_reserved": 0, "local_reserved": 0, "safety_margin": 1000000000}
+}

@@ -50,7 +50,7 @@ export function useNotifications(onBumpsRead: (dailyId: number | null) => void):
   const location = useLocation()
 
   const fetchCount = useCallback(() => {
-    getUnreadNotificationCount()
+    return getUnreadNotificationCount()
       .then(setUnreadCount)
       .catch(() => {
         // the badge keeps its last value; the next visibility change tries again
@@ -100,9 +100,8 @@ export function useNotifications(onBumpsRead: (dailyId: number | null) => void):
     }
   }, [])
 
-  const refresh = useCallback(() => {
-    fetchCount()
-    void load(list.filter, 0)
+  const refresh = useCallback(async () => {
+    await Promise.all([fetchCount(), load(list.filter, 0)])
   }, [fetchCount, load, list.filter])
 
   const setFilter = useCallback((filter: NotificationFilter) => void load(filter, 0), [load])

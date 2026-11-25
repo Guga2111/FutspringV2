@@ -5,9 +5,11 @@ import com.futspring.backend.domain.auth.dto.ForgotPasswordRequestDTO;
 import com.futspring.backend.domain.auth.dto.LoginRequestDTO;
 import com.futspring.backend.domain.auth.dto.RegisterRequestDTO;
 import com.futspring.backend.domain.auth.dto.ResetPasswordRequestDTO;
+import com.futspring.backend.domain.auth.dto.VerifyEmailRequestDTO;
 import com.futspring.backend.domain.auth.passwordreset.PasswordResetService;
 import com.futspring.backend.domain.auth.session.RefreshSessionService;
 import com.futspring.backend.domain.auth.session.SessionCookie;
+import com.futspring.backend.domain.auth.verification.EmailVerificationService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
@@ -20,8 +22,8 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-// Every route here but logout is rate limited by AuthRateLimitFilter. Login, registration and refresh answer the access
-// token in the body and the refresh token in the futspring_refresh cookie (SessionCookie)
+// Every route here but logout is rate limited by AuthRateLimitFilter. Login and refresh answer the access token in the
+// body and the refresh token in the futspring_refresh cookie (SessionCookie); registration opens no session (204)
 @RestController
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
@@ -31,7 +33,7 @@ public class AuthController {
     private final PasswordResetService passwordResetService;
     private final RefreshSessionService refreshSessionService;
     private final SessionCookie sessionCookie;
-    private final com.futspring.backend.domain.auth.verification.EmailVerificationService verification;
+    private final EmailVerificationService verification;
 
     @PostMapping("/register")
     public ResponseEntity<Void> register(@Valid @RequestBody RegisterRequestDTO request) {
@@ -46,7 +48,7 @@ public class AuthController {
     }
 
     @PostMapping("/verify-email")
-    public ResponseEntity<Void> verifyEmail(@Valid @RequestBody com.futspring.backend.domain.auth.dto.VerifyEmailRequestDTO request) {
+    public ResponseEntity<Void> verifyEmail(@Valid @RequestBody VerifyEmailRequestDTO request) {
         verification.verify(request.token(), request.password());
         return ResponseEntity.noContent().build();
     }

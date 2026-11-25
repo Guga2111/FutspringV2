@@ -14,8 +14,8 @@ interface NotificationPanelProps {
   // the title is rendered by the Popover / Drawer around it
   title: ReactNode
   onSelect: (notification: NotificationResponse, href: string | null) => void
-  // the gear: closes the panel and goes to the e-mail preferences
-  onOpenPreferences: () => void
+  // the gear: closes the panel and goes to the e-mail preferences (the /notificacoes page has it in its header)
+  onOpenPreferences?: () => void
   className?: string
 }
 
@@ -53,15 +53,17 @@ export function NotificationPanel({ title, onSelect, onOpenPreferences, classNam
               <HugeiconsIcon icon={TickDouble02Icon} />
               Marcar todas como lidas
             </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onOpenPreferences}
-              aria-label="Preferências de notificação"
-              className="size-8 text-muted-foreground"
-            >
-              <HugeiconsIcon icon={Settings01Icon} />
-            </Button>
+            {onOpenPreferences && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onOpenPreferences}
+                aria-label="Preferências de notificação"
+                className="size-8 text-muted-foreground"
+              >
+                <HugeiconsIcon icon={Settings01Icon} />
+              </Button>
+            )}
           </div>
         </div>
         <ToggleGroup

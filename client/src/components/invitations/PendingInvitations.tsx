@@ -42,7 +42,7 @@ export function PendingInvitations() {
           </AlertDescription>
         </Alert>
       )}
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3">
         {inbox.items.map((invitation) => {
           const busy = pending !== null
           const accepting = pending?.id === invitation.id && pending.accept

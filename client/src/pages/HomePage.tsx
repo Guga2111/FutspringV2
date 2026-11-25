@@ -10,18 +10,20 @@ import { HomeBanner } from "@/components/home/HomeBanner"
 import { EnablePushCard } from "@/components/home/EnablePushCard"
 import { InstallAppCard } from "@/components/home/InstallAppCard"
 import { UpcomingSessionCard } from "@/components/home/UpcomingSessionCard"
-import { CreatePeladaCard, MyPeladaCard } from "@/components/home/MyPeladaCard"
+import { MyPeladaCard } from "@/components/home/MyPeladaCard"
 import { useUserStats } from "@/components/home/hooks/useUserStats"
 import { useUpcomingAttendance } from "@/components/home/hooks/useUpcomingAttendance"
 import { useAuth } from "@/hooks/useAuth"
 import { useMyPeladasContext } from "@/hooks/useMyPeladasContext"
 import { cn } from "@/lib/utils"
 import { statsKpis, upcomingSessions, type Kpi } from "@/utils/home"
+import { useMyInvitationsContext } from "@/hooks/useMyInvitationsContext"
+import { useRefresh } from "@/hooks/useMobileShell"
 
 const KPI_TONE: Record<NonNullable<Kpi["tone"]>, string> = { highlight: "text-highlight-text", brand: "text-brand-text" }
 
-// Mobile: horizontal snap carousel bleeding to the screen edge (~30% of the next card visible); md+: a grid
-const carousel =
+// Keep the original swipe/snap carousel for peladas on phones; desktop remains a grid.
+const peladaCarousel =
   "-mx-4 grid snap-x snap-mandatory scroll-px-4 auto-cols-[calc((100%-44px)/1.15)] grid-flow-col gap-3 overflow-x-auto px-4 pb-1 scrollbar-none md:mx-0 md:snap-none md:auto-cols-auto md:grid-flow-row md:overflow-visible md:px-0 md:pb-0"
 
 function SectionTitle({ title, extra, action }: { title: string; extra: ReactNode; action?: ReactNode }) {
@@ -39,7 +41,11 @@ function SectionTitle({ title, extra, action }: { title: string; extra: ReactNod
 export default function HomePage() {
   const { user } = useAuth()
   const { peladas, loading, error, reload, openCreatePelada } = useMyPeladasContext()
-  const { stats, loading: statsLoading, error: statsError } = useUserStats(user?.id ?? null)
+  const { stats, loading: statsLoading, error: statsError, reload: reloadStats } = useUserStats(user?.id ?? null)
+  const { reload: reloadInvitations, items: invitations, loading: invitationsLoading, error: invitationsError } = useMyInvitationsContext()
+  const showInvitations = invitationsLoading || invitationsError || invitations.length > 0
+  // pull to refresh: the peladas (and their next sessions), the invitations and "Seus números"
+  useRefresh(() => Promise.all([reload(), reloadInvitations(), reloadStats()]))
   const { pendingId, toggle, dismissBump } = useUpcomingAttendance()
 
   const upcoming = useMemo(() => upcomingSessions(peladas), [peladas])
@@ -49,9 +55,11 @@ export default function HomePage() {
   return (
     <div className="page-enter flex flex-1 flex-col">
       <PageContainer className="gap-9">
-        <HomeBanner username={user?.username ?? ""} pendingCount={pendingCount} onCreatePelada={openCreatePelada} />
-
-        <PendingInvitations />
+        <HomeBanner
+          username={user?.username ?? ""}
+          pendingCount={pendingCount}
+          onCreatePelada={openCreatePelada}
+        />
 
         {bumped.map((pelada) =>
           pelada.nextDaily.bump ? (
@@ -66,44 +74,45 @@ export default function HomePage() {
           ) : null,
         )}
 
-        <InstallAppCard />
-        <EnablePushCard />
-
         {error && (
           <Alert variant="destructive" className="flex items-center justify-between gap-4">
             <AlertDescription>Não foi possível carregar suas peladas.</AlertDescription>
-            <Button variant="outline" size="sm" onClick={reload}>
+            <Button variant="outline" size="sm" onClick={() => void reload()}>
               Tentar novamente
             </Button>
           </Alert>
         )}
 
-        <section className="flex flex-col gap-3.5">
-          <SectionTitle title="Próximas sessões" extra={loading ? "" : upcoming.length} />
-          {loading ? (
-            <div className={`${carousel} md:grid-cols-[repeat(auto-fill,minmax(300px,1fr))]`}>
-              {[0, 1, 2].map((i) => (
-                <Skeleton key={i} className="h-[230px] rounded-tile" />
-              ))}
-            </div>
-          ) : upcoming.length === 0 ? (
-            <div className="rounded-tile border border-dashed border-input p-8 text-center text-sm text-subtle-foreground">
-              Nenhuma sessão agendada nas suas peladas.
-            </div>
-          ) : (
-            <div className={`${carousel} md:grid-cols-[repeat(auto-fill,minmax(300px,1fr))]`}>
-              {upcoming.map((pelada) => (
-                <UpcomingSessionCard
-                  key={pelada.id}
-                  pelada={pelada}
-                  next={pelada.nextDaily}
-                  pending={pendingId === pelada.nextDaily.id}
-                  onToggle={() => toggle(pelada.id, pelada.nextDaily)}
-                />
-              ))}
-            </div>
-          )}
-        </section>
+        <div className={cn("grid grid-cols-1 items-start gap-6", showInvitations && "lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]")}>
+          <section className="flex min-w-0 flex-col gap-3.5" aria-label="Próximas sessões">
+            <SectionTitle title="Próximas sessões" extra={loading ? "" : upcoming.length} />
+            {loading ? (
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-[repeat(auto-fit,minmax(300px,1fr))]">
+                {[0, 1, 2].map((i) => (
+                  <Skeleton key={i} className="h-[230px] rounded-tile" />
+                ))}
+              </div>
+            ) : upcoming.length === 0 ? (
+              <div className="rounded-tile border border-dashed border-input p-8 text-center text-sm text-subtle-foreground">
+                Nenhuma sessão agendada nas suas peladas.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-[repeat(auto-fit,minmax(300px,1fr))]">
+                {upcoming.map((pelada) => (
+                  <UpcomingSessionCard
+                    key={pelada.id}
+                    pelada={pelada}
+                    next={pelada.nextDaily}
+                    pending={pendingId === pelada.nextDaily.id}
+                    onToggle={() => toggle(pelada.id, pelada.nextDaily)}
+                  />
+                ))}
+              </div>
+            )}
+          </section>
+
+          <PendingInvitations />
+        </div>
 
         <section className="flex flex-col gap-3.5">
           <SectionTitle
@@ -135,14 +144,19 @@ export default function HomePage() {
         </section>
 
         <section className="flex flex-col gap-3.5">
-          <SectionTitle title="Minhas peladas" extra={loading ? "" : peladas.length} />
-          <div className={`${carousel} md:grid-cols-[repeat(auto-fill,minmax(240px,1fr))]`}>
+          <SectionTitle
+            title="Minhas peladas"
+            extra={loading ? "" : peladas.length}
+            action={<Button variant="outline" size="sm" className="h-11" onClick={openCreatePelada}>Nova pelada</Button>}
+          />
+          <div className={cn(peladaCarousel, "md:grid-cols-[repeat(auto-fit,minmax(240px,1fr))]")}>
             {loading
               ? [0, 1, 2].map((i) => <Skeleton key={i} className="h-[214px] rounded-tile" />)
               : peladas.map((pelada) => <MyPeladaCard key={pelada.id} pelada={pelada} />)}
-            {!loading && <CreatePeladaCard onClick={openCreatePelada} />}
           </div>
         </section>
+        <InstallAppCard />
+        <EnablePushCard />
       </PageContainer>
     </div>
   )

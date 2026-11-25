@@ -23,6 +23,9 @@ const PeladaFinancePage = lazy(() => import("@/pages/PeladaFinancePage"))
 const PeladaInvitationsPage = lazy(() => import("@/pages/PeladaInvitationsPage"))
 const PeladaSubscriptionPage = lazy(() => import("@/pages/PeladaSubscriptionPage"))
 const PeladaSettingsPage = lazy(() => import("@/pages/PeladaSettingsPage"))
+const PeladaChatPage = lazy(() => import("@/pages/PeladaChatPage"))
+const PeladasPage = lazy(() => import("@/pages/PeladasPage"))
+const NotificationsPage = lazy(() => import("@/pages/NotificationsPage"))
 const DailyDetailPage = lazy(() => import("@/pages/DailyDetailPage"))
 const ProfilePage = lazy(() => import("@/pages/ProfilePage"))
 const AccountSettingsPage = lazy(() => import("@/pages/AccountSettingsPage"))
@@ -62,6 +65,9 @@ function App() {
           <Route element={<ErrorBoundary><PrivateRoute><AppLayout /></PrivateRoute></ErrorBoundary>}>
             <Route path="/invitations/:id" element={<ErrorBoundary><InvitationPage /></ErrorBoundary>} />
             <Route path="/home" element={<ErrorBoundary><HomePage /></ErrorBoundary>} />
+            {/* the "Peladas" and "Avisos" tabs of the mobile shell (they work at any width) */}
+            <Route path="/peladas" element={<ErrorBoundary><PeladasPage /></ErrorBoundary>} />
+            <Route path="/notificacoes" element={<ErrorBoundary><NotificationsPage /></ErrorBoundary>} />
             {/* Layout of a pelada: header, shared dialogs and chat; one child route per area */}
             <Route path="/pelada/:id" element={<ErrorBoundary><PeladaDetailPage /></ErrorBoundary>}>
               <Route index element={<ErrorBoundary><PeladaOverviewPage /></ErrorBoundary>} />
@@ -74,6 +80,8 @@ function App() {
               <Route path="financeiro/:listId" element={<ErrorBoundary><PeladaFinancePage /></ErrorBoundary>} />
               <Route path="convites" element={<ErrorBoundary><PeladaInvitationsPage /></ErrorBoundary>} />
               <Route path="assinatura" element={<ErrorBoundary><PeladaSubscriptionPage /></ErrorBoundary>} />
+              {/* the chat as a page (mobile); not an area: no header, no area strip */}
+              <Route path="chat" element={<ErrorBoundary><PeladaChatPage /></ErrorBoundary>} />
             </Route>
             <Route path="/pelada/:id/financeiro/:listId/paguei" element={<ErrorBoundary><FinanceQuickReportPage /></ErrorBoundary>} />
             <Route path="/pelada/:id/settings" element={<ErrorBoundary><PeladaSettingsPage /></ErrorBoundary>} />

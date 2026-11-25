@@ -2,8 +2,12 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import { Cancel01Icon, PlusSignIcon } from "@hugeicons/core-free-icons"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog"
-import { Drawer, DrawerContent, DrawerDescription, DrawerTitle } from "@/components/ui/drawer"
+import {
+  ResponsiveDialog,
+  ResponsiveDialogContent,
+  ResponsiveDialogDescription,
+  ResponsiveDialogTitle,
+} from "@/components/ui/responsive-dialog"
 import { ResultsMatchCard } from "@/components/daily/live/ResultsMatchCard"
 import { useResultsForm, type ResultsMode } from "@/components/daily/hooks/useResultsForm"
 import { useIsMobile } from "@/hooks/useIsMobile"
@@ -19,7 +23,7 @@ interface ResultsDialogProps {
 
 const DESCRIPTION = "Marque os times, o placar e, se quiser, quem fez os gols e as assistências."
 
-// Dialog on desktop, bottom drawer on mobile; mounted when opened so every open starts from the saved data
+// ResponsiveDialog: a Dialog from md, a bottom sheet below; mounted when opened so every open starts from the saved data
 export function ResultsDialog({ daily, mode, onClose, onSaved }: ResultsDialogProps) {
   const isMobile = useIsMobile()
   const { form, fieldArray, firstNumber, addMatch, submit } = useResultsForm(daily, mode, onSaved)
@@ -32,17 +36,8 @@ export function ResultsDialog({ daily, mode, onClose, onSaved }: ResultsDialogPr
     <form onSubmit={submit} noValidate className="flex min-h-0 flex-1 flex-col">
       <div className={cn("flex items-start gap-3", isMobile ? "pb-3 pl-4 pr-3 pt-4" : "px-5 pb-3.5 pt-5")}>
         <div className="flex flex-1 flex-col gap-1">
-          {isMobile ? (
-            <>
-              <DrawerTitle className="text-lg font-bold">{title}</DrawerTitle>
-              <DrawerDescription className="text-[13px] text-muted-foreground">{DESCRIPTION}</DrawerDescription>
-            </>
-          ) : (
-            <>
-              <DialogTitle className="text-lg font-bold">{title}</DialogTitle>
-              <DialogDescription className="text-[13px] text-muted-foreground">{DESCRIPTION}</DialogDescription>
-            </>
-          )}
+          <ResponsiveDialogTitle className="text-lg font-bold">{title}</ResponsiveDialogTitle>
+          <ResponsiveDialogDescription className="text-[13px] text-muted-foreground">{DESCRIPTION}</ResponsiveDialogDescription>
         </div>
         <Button
           type="button"
@@ -91,7 +86,7 @@ export function ResultsDialog({ daily, mode, onClose, onSaved }: ResultsDialogPr
         )}
       </div>
 
-      <div className={cn("flex items-center justify-end gap-2 border-t", isMobile ? "p-3" : "px-5 py-3.5")}>
+      <div className={cn("flex items-center justify-end gap-2 border-t", isMobile ? "p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]" : "px-5 py-3.5")}>
         {!isMobile && (
           <span className="mr-auto text-[13px] text-subtle-foreground">
             {count} {count === 1 ? "partida" : "partidas"}
@@ -112,19 +107,15 @@ export function ResultsDialog({ daily, mode, onClose, onSaved }: ResultsDialogPr
     </form>
   )
 
-  if (isMobile) {
-    return (
-      <Drawer open onOpenChange={(open) => !open && close()}>
-        <DrawerContent className="max-h-[calc(100%-24px)] rounded-t-[18px] bg-popover shadow-dialog">{body}</DrawerContent>
-      </Drawer>
-    )
-  }
-
   return (
-    <Dialog open onOpenChange={(open) => !open && close()}>
-      <DialogContent className="flex max-h-[calc(100vh-32px)] w-[min(720px,calc(100%-24px))] max-w-none flex-col gap-0 overflow-hidden rounded-2xl border-input bg-popover p-0 shadow-dialog sm:rounded-2xl [&>button:last-child]:hidden">
+    <ResponsiveDialog open onOpenChange={(open) => !open && close()}>
+      <ResponsiveDialogContent
+        bare
+        drawerClassName="bg-popover shadow-dialog"
+        className="flex max-h-[calc(100vh-32px)] w-[min(720px,calc(100%-24px))] max-w-none flex-col gap-0 overflow-hidden rounded-2xl border-input bg-popover p-0 shadow-dialog sm:rounded-2xl [&>button:last-child]:hidden"
+      >
         {body}
-      </DialogContent>
-    </Dialog>
+      </ResponsiveDialogContent>
+    </ResponsiveDialog>
   )
 }

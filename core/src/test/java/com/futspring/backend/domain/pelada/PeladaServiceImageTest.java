@@ -82,7 +82,7 @@ class PeladaServiceImageTest {
                 notificationRepository, mock(PeladaInvitationService.class), mock(com.futspring.backend.domain.subscription.SubscriptionService.class),
                 subscriptionGuard,
                 new PeladaSummaryAssembler(peladaRepository, dailyRepository, attendanceRepository, bumpRepository,
-                        mensalistaRepository, subscriptionGuard,
+                        mensalistaRepository, subscriptionGuard, mock(com.futspring.backend.domain.finance.FinancePreservation.class),
                         java.time.Clock.fixed(java.time.Instant.parse("2026-11-15T01:00:00Z"), java.time.ZoneOffset.UTC)));
 
         admin = User.builder().emailVerifiedAt(java.time.Instant.EPOCH).id(1L).email("admin@example.com").username("admin").password("hash").build();

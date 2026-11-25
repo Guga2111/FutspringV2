@@ -1,0 +1,11 @@
+{
+  "activation_file": "/etc/futspring-backup/activation.json",
+  "budget_file": "/var/lib/futspring-backup/budget.json",
+  "pg_credentials_dir": "/etc/futspring-backup/postgres",
+  "aws_credentials_file": "/etc/futspring-backup/r2.credentials",
+  "endpoint": "https://ACCOUNT_ID.r2.cloudflarestorage.com",
+  "bucket": "futspring-backups-prod",
+  "max_archive_bytes": 256000000,
+  "state_dir": "/var/lib/futspring-backup",
+  "metrics_dir": "/var/lib/node_exporter/textfile_collector"
+}

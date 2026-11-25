@@ -27,6 +27,16 @@ describe("upcomingSessions", () => {
   it("keeps peladas with a next session, earliest first", () => {
     expect(upcomingSessions([pelada(1, "2026-10-11"), pelada(2, null), pelada(3, "2026-10-08")]).map((p) => p.id)).toEqual([3, 1])
   })
+
+  it("puts unanswered sessions before confirmed ones without mutating the shared peladas", () => {
+    const confirmed = pelada(1, "2026-10-08")
+    confirmed.nextDaily!.isConfirmed = true
+    const later = pelada(2, "2026-10-11")
+    const earlier = pelada(3, "2026-10-10")
+    const input = [confirmed, later, earlier]
+    expect(upcomingSessions(input).map((p) => p.id)).toEqual([3, 2, 1])
+    expect(input.map((p) => p.id)).toEqual([1, 2, 3])
+  })
 })
 
 describe("pendingLine", () => {

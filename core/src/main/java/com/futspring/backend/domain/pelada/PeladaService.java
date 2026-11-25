@@ -87,7 +87,7 @@ public class PeladaService {
         Pelada saved = peladaRepository.save(pelada);
         financePreservation.appointCreator(saved);
         subscriptionService.start(saved, user);
-        return PeladaResponseDTO.forAdmin(saved);
+        return PeladaResponseDTO.forAdmin(saved, true);
     }
 
     @Transactional(readOnly = true)
@@ -149,7 +149,7 @@ public class PeladaService {
             }
         }
 
-        return PeladaResponseDTO.forAdmin(peladaRepository.save(pelada));
+        return PeladaResponseDTO.forAdmin(peladaRepository.save(pelada), financePreservation.isManager(peladaId, caller.getId()));
     }
 
     /**
@@ -196,7 +196,7 @@ public class PeladaService {
         String filename = fileUploadService.uploadImage(file);
         fileUploadService.deleteImageAfterCommit(pelada.getImage());
         pelada.setImage(filename);
-        return PeladaResponseDTO.forAdmin(peladaRepository.save(pelada));
+        return PeladaResponseDTO.forAdmin(peladaRepository.save(pelada), financePreservation.isManager(peladaId, caller.getId()));
     }
 
     /** Back to the gradient with initials; the file is deleted after the commit. Idempotent. */
@@ -208,7 +208,7 @@ public class PeladaService {
 
         fileUploadService.deleteImageAfterCommit(pelada.getImage());
         pelada.setImage(null);
-        return PeladaResponseDTO.forAdmin(peladaRepository.save(pelada));
+        return PeladaResponseDTO.forAdmin(peladaRepository.save(pelada), financePreservation.isManager(peladaId, caller.getId()));
     }
 
     // IANA region ids only (America/Sao_Paulo), not offsets like "-03:00"

@@ -4,14 +4,17 @@
 
 | Document | Purpose |
 | --- | --- |
-| [Frontend](../client/docs/FRONTEND.md) | Client setup, routes, API modules, hooks, forms, design system and checks |
-| [Backend](../core/docs/BACKEND.md) | API setup, configuration, contracts, permissions, migrations, deployment and checks |
+| [Frontend guide](../client/docs/README.md) | Index of the client documents: setup, structure, routes, data layer, hooks, design system, forms, PWA, testing, patterns and antipatterns |
+| [Backend guide](../core/docs/README.md) | Index of the API documents: setup, configuration, package layout, domain, authorization, security, migrations, API reference, operations, testing, patterns and antipatterns |
+| [Product record](../PRODUCT.md) | Users, purpose, positioning, terminology and principles, read by the design skills (product truth only; the visual system is in the frontend's design-system.md) |
+| [Agent workflow and skills](agent-workflow.md) | From request to merge: spec, research, design, browser validation, and which installed skill to use at each step |
 | [Security review workflow](SECURITY_REVIEW.md) | Required review and remediation process for security-relevant PRs |
 | [Observability](../ops/observability/README.md) | Operating the shared Prometheus, Grafana and Loki stack |
 | [Landing photos](../client/public/landing/README.md) | Asset names, formats and usage |
 | [Backlog](BACKLOG.md) | Unscheduled ideas; not release requirements |
 
-The frontend and backend guides describe current behavior. If a proposal or an
+Each guide is an index of small topic documents (one subject each, with its rules and antipatterns) plus the non-negotiable rules and the PR checklist of its side. The guides describe current behavior.
+Records written before 2026-11-22 cite `FRONTEND.md` / `BACKEND.md` and their section names: those sections now live, under the same headings, in the topic documents the indexes list. If a proposal or an
 old report disagrees with them, inspect the implementation before acting.
 
 ## Open planning and acceptance
@@ -21,6 +24,9 @@ old report disagrees with them, inspect the implementation before acting.
 - [Runtime upgrade](plans/2026-10-29-java25-boot4-virtual-threads-design.md): retained
   for the load-test comparison and explicitly pending production acceptance.
   Historical setup and rollout instructions are not the current runbook.
+- [Database backup to Cloudflare R2](plans/2026-11-19-r2-database-backup-spec.md): the timer is
+  active; the deploy transition and the ongoing budget checks are still pending. The
+  operational guide is [ops/backup](../ops/backup/README.md).
 
 ## Design rationale and release evidence
 
@@ -34,6 +40,11 @@ migration V19 reference them.
 | --- | --- |
 | [Sport-Tech design](plans/2026-11-01-design-system-sport-tech-spec.md) | Token rationale still referenced by the client styles and contrast utilities |
 | [Subscriptions](plans/2026-11-07-subscriptions-platform-admin-spec.md) | Business-rule rationale referenced by migration V19 and the backend guide |
+| [Mobile redesign (Jakob's law)](plans/2026-11-16-mobile-jakob-redesign-spec.md) | Implemented; rationale for the mobile shell, referenced by the frontend [navigation guide](../client/docs/navigation.md) |
+| [Floating mobile navigation](plans/2026-11-17-floating-mobile-navigation-design.md) | Implemented; direction contract of the bottom tab capsule, referenced by the navigation guide |
+| [Legacy forms refactor](plans/2026-11-15-legacy-forms-refactor-design.md) | Implemented; why the three legacy forms moved to react-hook-form + zod + `Field` (the rules live in [forms.md](../client/docs/forms.md)) |
+| [Cross-layer consistency plan](plans/2026-11-15-cross-layer-consistency-design.md) | Approved scope and method of the review whose results are in [the review](history/2026-11-15-cross-layer-consistency-review.md) |
+| [Landing pricing section](plans/2026-11-22-landing-pricing-design.md) | Implemented; what the landing publishes about prices and why (prices come from `SubscriptionPlans.java`) |
 | [Launch hardening](history/2026-11-11-launch-hardening-spec.md) | Incremental rollout and validation evidence for session and observability changes |
 | [Privacy hardening](history/2026-11-13-privacy-hardening.md) | Verification, private photos, telemetry and email-preference link changes |
 | [Release P1](history/2026-11-13-release-p1-fixes.md) | Account identity, optimistic locking and refresh/logout regression evidence |

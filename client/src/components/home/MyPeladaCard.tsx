@@ -1,6 +1,4 @@
 import { Link } from "react-router-dom"
-import { HugeiconsIcon } from "@hugeicons/react"
-import { PlusSignIcon } from "@hugeicons/core-free-icons"
 import { Badge } from "@/components/ui/badge"
 import { PeladaAvatar } from "@/components/PeladaAvatar"
 import { dayOfWeekLabel } from "@/lib/constants"
@@ -39,20 +37,5 @@ export function MyPeladaCard({ pelada }: { pelada: PeladaResponse }) {
         </div>
       </div>
     </Link>
-  )
-}
-
-export function CreatePeladaCard({ onClick }: { onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="flex min-h-[200px] snap-start flex-col items-center justify-center gap-2.5 rounded-tile border border-dashed border-input text-muted-foreground transition-colors hover:border-faint-foreground hover:bg-card hover:text-foreground"
-    >
-      <span className="flex size-10 items-center justify-center rounded-full border border-star-off">
-        <HugeiconsIcon icon={PlusSignIcon} className="size-[18px]" />
-      </span>
-      <span className="text-sm font-medium">Criar nova pelada</span>
-    </button>
   )
 }

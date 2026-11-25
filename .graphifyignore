@@ -1,0 +1,9 @@
+# graphify (code graph for agents): skip artifacts and binary images
+output/
+.playwright-cli/
+.taste-skill/
+.security-reviews/
+*.png
+*.jpg
+*.jpeg
+*.webp

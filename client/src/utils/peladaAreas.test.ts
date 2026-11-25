@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { areaFromPath, areaPath, isPeladaPath, peladaRole, visibleAreas } from "@/utils/peladaAreas"
+import { areaFromPath, areaPath, isPeladaPath, peladaRole, PRIMARY_PELADA_AREAS, visibleAreas } from "@/utils/peladaAreas"
 
 describe("peladaAreas", () => {
   it("builds the path of each area", () => {
@@ -37,6 +37,17 @@ describe("peladaAreas", () => {
     expect(peladaRole(true, true)).toBe("creator")
     expect(peladaRole(true, false)).toBe("admin")
     expect(peladaRole(false, false)).toBe("member")
+  })
+
+  it("keeps mobile's direct areas accessible to every role; restricted areas stay in More", () => {
+    for (const role of ["member", "admin", "creator"] as const) {
+      const areas = visibleAreas(role)
+      expect(PRIMARY_PELADA_AREAS.every((area) => areas.includes(area))).toBe(true)
+      expect(PRIMARY_PELADA_AREAS).toHaveLength(4)
+      expect(areas.filter((area) => !PRIMARY_PELADA_AREAS.includes(area))).toContain("finance")
+    }
+    expect(PRIMARY_PELADA_AREAS).not.toContain("settings")
+    expect(PRIMARY_PELADA_AREAS).not.toContain("subscription")
   })
 
   it("matches the pelada and its descendant routes only", () => {

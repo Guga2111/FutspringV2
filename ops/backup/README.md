@@ -1,0 +1,287 @@
+# Database backup and recovery
+
+**Timer activated; deploy transition and ongoing budget maintenance pending. Task #43 remains open.**
+The owner subsequently authorized R2 setup,
+its metered-billing exposure and continuation through verified backup/isolated recovery/alert acceptance.
+This supersedes the initial strict zero-cost requirement for R2 only; no paid upgrades, recovery targets
+or production restore/cutover are authorized. Deploy blocking and seven-day deletion protection remain.
+On 2026-11-20 the owner reconfirmed acceptance of possible R2 charges. This does not waive source/account
+budget checks or authorize a paid Supabase plan. On 2026-11-21 the owner explicitly authorized timer
+activation, overriding the initial infrastructure-activation prohibition; the timer is enabled/active.
+See the [approved specification](../../docs/plans/2026-11-19-r2-database-backup-spec.md).
+
+## Ownership and invariants
+
+`backup.py daily|pre-deploy` is the only backup implementation. Python 3.10+ standard library,
+Docker with a pre-staged `postgres:17-alpine`, and AWS CLI v2 are required on the Linux host.
+Credentials are host-only; the API `.env` and container receive none of them. No application changes.
+
+The source must be PostgreSQL 17, direct/session endpoint on 5432, verified TLS and complete SELECT
+on every public table/sequence. The script exports a read-only repeatable-read snapshot, then uses
+it for preflight, data fingerprints and `pg_dump -Fc --compress=gzip:6 --schema=public --no-owner --no-acl`.
+All application public objects and Flyway history are included. Roles, ownership and grants must
+be provisioned explicitly on a recovery target. Public extensions, partitioned/foreign tables and
+dependencies on other application schemas fail preflight: review scope before supporting them.
+RLS flags are preserved and compared during the drill; the backup role must read without filtering
+(`row_security_active=false`, normally through `BYPASSRLS`). Public RLS policies currently fail preflight
+until their recovery roles/dependencies are reviewed. Never add `--enable-row-security` to pg_dump or
+disable production RLS to make a backup pass. Source metadata confirmed PostgreSQL 17.6 and RLS enabled
+on `users` without policies.
+Dedicated-reader complete SELECT, absence of write privileges and the full source preflight were
+verified on 2026-11-20. Provider services and cluster-wide roles are outside this archive.
+
+The host flock serializes both callers, with a 30-second wait and 30-minute overall command deadline.
+Database connect/lock timeouts are 10 seconds; statement timeout is 20 minutes. Source clients
+live in a dedicated restricted container for at most 30 minutes; staging is private and removed
+in `finally`. An uncatchable host/process kill may leave `staging-*`: remove only after acquiring
+`run.lock` and checking for surviving `futspring-backup-*` containers. Never delete the lock file.
+
+Uploads use single-part S3 PUTs (archive ≤512 MB), Standard storage, unique date/UUID prefixes and
+at most two full attempts. No LIST, multipart, delete, overwrite of previous keys or background retries.
+AWS implicit retries are disabled. Each attempt downloads and verifies the exact archive size/SHA-256,
+then uploads and reads back the manifest byte-for-byte. Only then can verified snapshot metrics and
+state advance. The manifest includes source time/version, client version, optional commit, size/hash,
+source wire-byte measurement, all table counts/fingerprints, constraints/indexes and Flyway digest.
+Fingerprints are validation aids, not cryptographic proof of data authenticity. SHA-256 verifies transfer,
+not the trustworthiness of a dump or its author; keep recovery credentials and evidence independently.
+
+## Financial and activation gates
+
+**8 GB is a prospective local ceiling, not a zero-invoice guarantee.** R2 has no applicable US$0
+billing hard cap. Workers spending controls and budget alerts do not stop R2 usage. Do not turn
+`zero_additional_cost_enforced` on merely because the free allowance is available. Leave it false for R2.
+The financial gate alternatively accepts `owner_r2_usage_charges_accepted=true`, with a private
+`billing_control_evidence` reference to the owner's explicit R2 billing-risk acceptance. This does not
+approve another provider, paid Supabase upgrades or recovery resources, raise any local limit, establish
+known account/source budgets, or satisfy backup/restore/alert acceptance. Without enforceable zero-cost
+controls or that explicit R2 acceptance, activation stays blocked. Never infer acceptance from free headroom.
+References: [R2 pricing](https://developers.cloudflare.com/r2/pricing/),
+[Cloudflare spending controls](https://developers.cloudflare.com/billing/manage/spend-management/),
+[Supabase egress](https://supabase.com/docs/guides/platform/manage-your-usage/egress).
+
+`activation.example.json` is deliberately disabled. It also records private Standard bucket, lock/retention,
+expiration of review, and backup/restore/Telegram evidence. After financial feasibility is resolved and
+validation is separately authorized, `--validation-only` permits acceptance rehearsals with
+`owner_validation_accepted`; it cannot satisfy the deploy command's operational activation check.
+Only after real backup, recovery, notification and owner acceptance should ordinary runs be permitted.
+
+`budget.example.json` is deliberately unknown. It is a private, durable **account-wide reservation ledger**,
+not usage inferred from one bucket. An operator must reconcile it using authoritative complete account
+usage, incomplete uploads, retained objects, other buckets, pending reservations, pagination, monitoring,
+drills and other writers. No provider inventory is queried automatically (those requests also cost budget).
+The evidence must be ≤24 hours old, in the current UTC month and valid for the next full 30-minute run.
+The timer does not refresh this ledger. An operator must renew/reconcile the evidence within that
+window; otherwise the next backup/deploy blocks and alerts. An initial valid lease is not unattended
+operation for the rest of the month. Agree that ongoing responsibility before operational acceptance.
+Every uncoordinated writer must be stopped or have a proven worst-case envelope reserved under
+`external_reserved`; otherwise `writers_coordinated` must remain false. A bucket token proves neither
+account-wide usage nor coordination. Keep budget/approval/config ownership private to the host operator.
+
+Before **any** source/S3 request, persist these worst-case reservations atomically with fsync:
+
+| Resource | Per-run reservation |
+|---|---|
+| Storage | `2 × (max_archive_bytes + 1 MB manifest)`; counts uncertain successful PUTs |
+| R2 Class A | 4 requests (two archive + two manifest PUTs) |
+| R2 Class B | 4 requests (two archive + two manifest verification GETs) |
+| Supabase | Measured conservative `source_run_reservation_bytes`, including preflight/fingerprints, TLS/protocol and in-flight margin |
+
+Limits never exceed 8 decimal GB, 800k Class A, 8M Class B, or 5 decimal GB source egress/month;
+use lower account/organization allowances when appropriate. Each resource includes `used`,
+`external_reserved`, `local_reserved` and `safety_margin`; all four count. Source safety must reserve
+normal application traffic for the **whole remaining billing period**. Database dashboard size and local
+dump compression do not measure source egress. Confirm the actual plan and shared organization usage.
+Measure a permitted synthetic rehearsal and a separately authorized real rehearsal before setting envelopes;
+calculate projected 30 dailies, expected deploys, drills and growth. If that cannot fit, do not activate.
+
+A source-container watchdog samples RX+TX every 100 ms and stops clients before the reserved envelope,
+leaving the separately measured `source_inflight_margin_bytes`. Exceeding the stop level or final envelope
+invalidates the ledger and blocks future copies until reviewed. Polling and delayed provider accounting
+cannot enforce a byte-exact billing cap; this is another reason the financial gate remains mandatory.
+No source retry; S3 retries are already fully reserved. All reservations remain charged locally after
+failures, timeouts or ambiguous outcomes. Never subtract objects merely eligible for expiration, and never
+automatically reset a ledger on month rollover. To refresh/reconcile, hold the same `run.lock` with `flock`,
+account for all actual and still-outstanding usage, retain an audit copy, then atomically replace the ledger.
+Never reset counters just to unblock a deploy. Unknown/missing/exhausted state blocks backup and deploy.
+
+## Installation and external setup
+
+1. Record the financial decision first. Account/location, Supabase plan/remaining egress, operator and
+   independent recovery-credential custody need verified evidence. Use existing VPS resources; no paid target.
+2. With a separate bucket-admin credential **outside the VPS**, create/review a private Standard bucket,
+   public access/r2.dev/custom public domains disabled. Apply lifecycle expiration for `database/daily/`
+   after 30 days and `database/pre-deploy/` after 7 days. Apply R2 **bucket lock** to `database/` for
+   seven days (not S3 Object Lock, which R2 does not implement). Rules cover archive and manifest.
+   Reviewable request bodies: `r2-lifecycle.example.json` (S3 lifecycle) and `r2-lock.example.json`
+   (Cloudflare bucket-lock API). Apply only after authorization, with admin credentials off the VPS.
+   Verify with synthetic PUT/delete/overwrite/expiry tests and record exact settings. Lock-rule admins
+   can change protection. Resource creation and real transfers require explicit operational authorization.
+3. Pre-stage reviewed AWS CLI v2, Python and the PostgreSQL image; record image digest and tool versions.
+   `sudo ops/backup/install.sh` idempotently copies tooling/units and reloads systemd; it never starts
+   or enables anything and never overwrites credentials/budgets. Run outside a backup/deploy window.
+   Keep the staged `postgres:17-alpine` image available through host cleanup. The job uses `--pull=never`;
+   if the image is removed, it fails and alerts. Re-stage the recorded reviewed digest explicitly and
+   retry the service; do not add an implicit pull or waive the verification gate.
+4. Copy the JSON examples into the indicated paths, `chmod 600`, owned by the execution user (production:
+   root). In `/etc/futspring-backup/postgres`, install `pg_service.conf`, a trusted `root.crt` and a
+   `pgpass` line `host:5432:database:backup_reader:password` (libpq escaping applies). Do not use URLs,
+   shell environment passwords, transaction pooler 6543 or `sslmode=require`. Grant SELECT on all existing
+   tables/sequences and default privileges for future Flyway objects; test deny/partial-read failures.
+   Install bucket-scoped object read/write S3 credentials in `r2.credentials`; keep admin and recovery
+   credentials elsewhere. Never print these files or run with shell tracing/AWS debug.
+   Record token/database-role expiry and rotate before it; the backup job does not renew credentials.
+
+   For the current `postgres`-owned schema, a database administrator can provision the reader with:
+
+   ```sql
+   CREATE ROLE futspring_backup_reader LOGIN BYPASSRLS NOCREATEDB NOCREATEROLE NOREPLICATION CONNECTION LIMIT 6;
+   GRANT CONNECT ON DATABASE postgres TO futspring_backup_reader;
+   GRANT USAGE ON SCHEMA public TO futspring_backup_reader;
+   GRANT SELECT ON ALL TABLES IN SCHEMA public TO futspring_backup_reader;
+   GRANT SELECT ON ALL SEQUENCES IN SCHEMA public TO futspring_backup_reader;
+   ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT SELECT ON TABLES TO futspring_backup_reader;
+   ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT SELECT ON SEQUENCES TO futspring_backup_reader;
+   ALTER ROLE futspring_backup_reader SET default_transaction_read_only=on;
+   ```
+
+   Set the generated password with psql `\password futspring_backup_reader`, outside command history/logs.
+   Store it only in the private passfile; shared-pooler usernames include `.PROJECT_REF`. Verify the role
+   has complete SELECT and no table write/schema-create privileges, including privileges inherited from
+   PUBLIC. `BYPASSRLS` alone grants neither SELECT nor writes. Keep the API's credentials unchanged.
+5. Populate measured budget and financial evidence. Authorize acceptance validation, run a real
+   `backup.py daily --validation-only`, download its archive/manifest using an independently held
+   recovery credential under a **separately reserved GET/drill budget**, and run the drill below.
+   Downloaded files contain personal data: private staging, no CI artifacts or Git, delete after acceptance.
+6. Redeploy the observability configuration in an authorized window. Run both ordinary backup kinds only
+   after acceptance. Test Grafana contact point **telegram → Test**, plus synthetic failure, stale/missing
+   metrics, budget and restore-age alerts. Record actual Telegram receipt, sizes, duration and recovery time.
+7. Only after owner acceptance: `systemctl enable --now futspring-backup.timer`. Check
+   `systemd-analyze calendar '*-*-* 03:00:00 America/Recife'`, `systemctl list-timers`, a daily execution,
+   and a pre-deploy execution. `Persistent=true` catches a missed daily at host restart. Review monthly.
+
+## Operation and local tests
+
+Acceptance checkpoint (2026-11-20): tooling and monitoring are installed, the timer remains disabled,
+and Telegram's saved-integration test returned success. A source-only real dump (about 269 KB,
+2.51 MB source wire traffic) restored all 49 tables with matching data/Flyway/RLS; the exact deployed
+API image passed isolated profile, pelada, stats, finance and daily reads, rejected unauthenticated
+access, and left the restored database unchanged. These rehearsals used no public ports, outbound
+routing, migrations, mail/push credentials or production writes. They are **not verified R2 recovery**.
+The approved bucket-scoped R2 credential is installed root-only on the VPS; its temporary Mac export
+was deleted after transfer verification. A synthetic object passed authenticated PUT/GET/SHA-256;
+overwrite and deletion returned `ObjectLockedByBucketPolicy`, and a subsequent GET confirmed the
+original content. An unsigned request was rejected with HTTP 400 `InvalidArgument` (not a successful
+read). Public r2.dev/custom domains remain disabled. The lock error is documented by
+[Cloudflare](https://developers.cloudflare.com/r2/buckets/bucket-locks/).
+After the owner's explicit real-data-transfer authorization, shared daily and pre-deploy validation
+runs uploaded and verified real archives/manifests. The daily snapshot at 2026-11-20 12:58:39 UTC
+is 269,134 bytes and used 2.51 MB measured source traffic. A separately budgeted R2 download restored
+all 49 tables/data/constraints/sequences/RLS/Flyway in network-none PostgreSQL: restore 3.796 seconds,
+download plus validation 7.616 seconds. Temporary files and target were removed. A second recovery
+used the owner's Cloudflare web session on the Mac, independent of the VPS S3 credential: both files
+were downloaded directly into private staging, size/SHA-256 matched, and all restore checks passed
+in local network-none PostgreSQL (1.743 seconds). The owner account is the independently held recovery
+access; no additional recovery token was created. Keep that login and its recovery factors accessible
+after VPS loss. The initially blank bucket panel loaded in a new dedicated window. Local dump,
+manifest and disposable target were removed after recording the sanitized evidence.
+The accepted pre-deploy point at 13:01:26 UTC records commit `2c739aa0b88f640abff7beb61ca89de063e026e8`.
+An earlier rehearsal with an incorrectly supplied commit reference is excluded from acceptance;
+its protected objects remain untouched. Backup/restore metrics now reflect actual R2 recovery;
+all six backup/recovery alerts evaluated healthy and inactive after these rehearsals.
+
+Activation checkpoint (2026-11-21): explicit owner approval enabled the 03:00 Recife timer. A real
+ordinary execution through `futspring-backup.service` passed remote archive/manifest verification:
+272,709 bytes, 37.366 seconds, systemd exit status 0. Its first attempt failed because the staged
+PostgreSQL image was missing; restoring the previously reviewed digest resolved it, without changing
+the sandbox or refunding the failed reservation. No cause of image removal was confirmed.
+The next timer trigger is 2026-11-22 03:00 Recife. Authoritative account dashboards were reconciled:
+R2 one bucket, reported 839.18 KB/56 Class A/49 Class B; Supabase All projects Free 0.202/5 GB uncached
+egress. All old reservations/margins remain charged and used storage was rounded upward for delayed
+provider accounting. The refreshed evidence expires **2026-11-22 08:26:24 Recife**; the next trigger fits
+that lease. The timer does not renew it, so ongoing reconciliation is still required. No application
+deployment or release of the new deploy gate occurred in this execution. Task #43 stays open.
+The active node-exporter configuration had also lost the textfile flag/mount. Only those two settings
+were reapplied and node-exporter recreated; no API restart. Publish the committed observability
+configuration with the deployment transition so future stack deployments preserve the collector.
+Final checks passed: both backup-kind success metrics are scraped, textfile scrape errors are zero,
+and all six Grafana backup/recovery rules are healthy/inactive. Native systemd unit validation passed.
+
+PR checkpoint (2026-11-22): the first calendar trigger at 03:00 Recife passed, producing a verified
+272,834-byte archive in 43.626 seconds. Read-only inspection confirmed the timer remains enabled.
+The previous budget lease expired at 08:26:24 Recife; it was not renewed or bypassed during PR
+preparation. Reconcile actual account/source usage and assign ongoing ownership before rollout.
+The restore logging fix in this PR must also be installed before the next real recovery drill.
+
+```sh
+python3 -m unittest discover -s ops/backup/tests -v
+BACKUP_DOCKER_TESTS=1 python3 -m unittest discover -s ops/backup/tests -v
+# PromQL tests additionally need the test-only requirements and a pre-staged Prometheus image:
+python3 -m pip install -r ops/backup/tests/requirements.txt
+python3 ops/backup/tests/check-alerts.py
+# Only on a configured, accepted host:
+sudo python3 /opt/futspring-backup/backup.py daily
+sudo python3 /opt/futspring-backup/backup.py pre-deploy --commit <40-character-sha>
+sudo journalctl -u futspring-backup.service --since today
+# Local files previously downloaded and verified under a reserved recovery budget:
+python3 ops/backup/restore-drill.py /private/staging/database.dump /private/staging/manifest.json
+# On the accepted host add: --metrics-dir /var/lib/node_exporter/textfile_collector
+```
+
+Tests use synthetic TLS, all repository migrations, synthetic accounts, stats and finance, and in-memory S3
+fault injection; never contact R2/Supabase. The drill accepts **no DSN**: a new PostgreSQL container, no network,
+no published ports, no host/credential mounts, bounded CPU/memory/tmpfs, single-transaction error-stop restore.
+It compares every table's count/fingerprint, constraints, indexes, RLS flags and Flyway history against the source snapshot,
+and tests sequence nextval against column maxima plus FK/NOT NULL/CHECK/uniqueness rejection. Constraint/index
+inventories are structural: PostgreSQL may reparse equivalent casts differently when restoring the archived DDL.
+The target uses Docker's `none` logging driver, so restored SQL/server errors cannot be collected
+by the host's shared Docker/Loki logging. It discards the target even on failure. Monthly drills must
+use an actual downloaded recovery point; synthetic CI success is not operational acceptance. Reserve remote
+download requests and local capacity before retrieving a copy. The script itself performs no remote downloads.
+
+Node-exporter reads atomic `.prom` files in `/var/lib/node_exporter/textfile_collector` (public numeric metrics,
+no object IDs or credentials). Fixed `kind=daily|pre-deploy`: last attempt, result (-1 running, 0 failure,
+1 verified), budget-blocked, snapshot timestamp, size, duration, prospective storage. Grafana alerts on failure,
+budget, missing/broken metrics, daily snapshot >26 h, storage >7.2 GB and restore test >31 days/missing.
+Predicted retention expires independently even when jobs fail: investigate freshness alarms immediately.
+Monitoring is on the same host and cannot independently alert on complete host loss.
+
+## Deploy transition
+
+Both deployment workflows require `VPS_SSH_KNOWN_HOSTS`, verified through an independent trusted
+channel. Missing pinned-host configuration fails before writing SSH credentials or connecting.
+
+`scripts/deploy.sh` requires the installed shared `pre-deploy` command before either frontend rsync,
+new `.env` publication or API/Flyway startup. Missing config/tooling, budget, access, upload or hash
+failure exits without publishing. Until activation evidence exists **deploys using this version are blocked**;
+the running API is not stopped. Stage operational prerequisites before merging to the auto-deployed `main`.
+There is no fallback/bypass to the optional legacy dump. Preserve `~/projects/futspring/backups/*.sql.gz`
+and their original permissions: the implementation does not remove or rotate them. They are legacy plain SQL:
+`gzip -dc legacy.sql.gz | psql -X -v ON_ERROR_STOP=1` into a separately prepared isolated target, not `pg_restore`.
+They have no new verification manifest; test/review separately. Disable with `systemctl disable --now
+futspring-backup.timer`; that deletes no backups and restores nothing. Disabling does not unblock deployments.
+
+## Manual incident recovery and planned migration
+
+1. Stop **all** writers (API, schedulers, integrations, other deployments), declare maintenance, preserve the
+   original database and independently held evidence. Choose a known healthy snapshot and matching app commit;
+   reserve transfer/recovery capacity, download both files with recovery credentials, verify SHA-256 and size.
+2. Rehearse with the drill. For real recovery, provision a **separate** compatible target/roles/grants manually;
+   use libpq service/passfile with verify-full, `pg_restore --exit-on-error --single-transaction --no-owner --no-acl`.
+   Never run `--clean` against production. Compare data, finance balances/receipts, stats, constraints, sequences,
+   Flyway history and application behavior in isolation. Initially disable Flyway (`SPRING_FLYWAY_ENABLED=false`),
+   dev seed, email, push and all outbound access; do not let normal schedulers mutate the rehearsal.
+3. Reconcile post-snapshot deletions, permission revocations and financial changes from available independent
+   evidence before reopening. Record unrecoverable loss. Invalidate access-token versions and refresh sessions
+   as appropriate; clearing Redis alone does not invalidate all access tokens. A 03:00 copy after a 16:00
+   incident may lose 13 hours. Measure recovery duration; do not promise an unmeasured RTO.
+4. Validate target ownership/grants and TLS; update the API connection **and its deployment secrets** and the
+   future backup source. Restart, check readiness and representative user/finance flows, then reopen. Keep the
+   old database write-protected until recovery acceptance. No automatic production rollback.
+5. For a **planned migration**, rehearse first, then stop every writer and make/verify a **fresh final backup**
+   after the freeze using the same tool with reserved budget. Restore that copy, validate and switch connections
+   as above. Yesterday's daily loses intervening writes. Once the new target accepts writes, switching back
+   requires reconciliation; it is not a lossless rollback. Production cutover needs separate authorization.
+
+This restores database metadata/data only: photos, uploaded files, finance QR files, Redis and Supabase services
+are separate. Never include temporary finance receipts in durable file backups. Missing photos/files and
+provider-specific authentication/services must be handled by their own recovery procedures.

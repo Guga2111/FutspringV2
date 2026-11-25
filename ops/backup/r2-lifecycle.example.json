@@ -1,0 +1,7 @@
+{
+  "Rules": [
+    {"ID": "daily-30-days", "Status": "Enabled", "Filter": {"Prefix": "database/daily/"}, "Expiration": {"Days": 30}},
+    {"ID": "pre-deploy-7-days", "Status": "Enabled", "Filter": {"Prefix": "database/pre-deploy/"}, "Expiration": {"Days": 7}},
+    {"ID": "abort-incomplete", "Status": "Enabled", "Filter": {"Prefix": "database/"}, "AbortIncompleteMultipartUpload": {"DaysAfterInitiation": 7}}
+  ]
+}

@@ -34,15 +34,19 @@ uploads/
 # Local security-review reports and reproduction artifacts; share through restricted channels.
 .security-reviews/
 
-# Private docs
-docs/analise-de-mercado.md
-
 # Private financial files (temporary receipts are excluded from durable backups).
 finance-receipts/
 finance-qr/
 
-# Local design inspection artifacts
+# Local tool caches and agent artifacts (screenshots, browser snapshots, worktrees)
 .taste-skill/
+.ruff_cache/
+__pycache__/
+/output/
+.playwright-cli/
+graphify-out/
+.claude/settings.local.json
+.claude/worktrees/
 
 # Machine-specific MCP connection configuration
 /.mcp.json
@@ -52,3 +56,8 @@ finance-qr/
 
 # Retired exported redesign prototype (source history retains the original).
 /client/docs/design/design_handoff_futspring_redesign/
+
+# Database backup/recovery data and host-only configuration (never CI artifacts).
+*.dump
+*.sql.gz
+/ops/backup/local/
