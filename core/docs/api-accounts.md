@@ -61,7 +61,7 @@ When an endpoint or DTO changes, update the matching `api-*.md` table, the front
 | Target | Action |
 |---|---|
 | `users` | Row kept: `email = "deleted-{id}@invalid"` (the e-mail can register again), `password` = BCrypt of a random value, `username = "Ex-jogador"` (`AccountDeletionService.DELETED_USERNAME`), `image`, `backgroundImage`, `position` = null, `tokenVersion++`, `deletedAt = now` |
-| Peladas (`PeladaService.removeAccountFromPeladas`) | Leaves every pelada as member and admin, with their stars and mensalista rows, and the attendance and teams of `SCHEDULED`/`CONFIRMED` sessions (`DailyService.removeAccountFromUpcomingSessions`; the teams stay); no `REMOVED_FROM_PELADA` notification, no `PeladaLinkBlock` |
+| Peladas (`PeladaMemberService.removeAccountFromPeladas`) | Leaves every pelada as member and admin, with their stars and mensalista rows, and the attendance and teams of `SCHEDULED`/`CONFIRMED` sessions (`DailyService.removeAccountFromUpcomingSessions`; the teams stay); no `REMOVED_FROM_PELADA` notification, no `PeladaLinkBlock` |
 | Finance (`FinancePreservation.forgetAccount`) | Stops being a responsável (a `MANAGERS_REVOKED` audit entry and a revision per pelada); `FinancePerson.name = "Ex-jogador"`. Charges, receipts, notices, cash and audit stay |
 | Invitations (`PeladaInvitationService.forgetAccount`) | Pending received → `CANCELED` (`EXPIRED` when past due); links they created → revoked; their link blocks deleted |
 | Deleted | Notifications received, `notification_preferences`, `password_reset_tokens`, `user_tours`, `push_subscriptions`, `daily_attendance_bumps` where they were bumped |

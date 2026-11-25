@@ -1,7 +1,7 @@
 # F-13: dividir services grandes do backend
 
 Aprovado em 2026-11-15. `DailyResultsService` (651 linhas) e `PeladaService` (513) passam da regra de ~300 linhas
-do BACKEND.md e concentram várias responsabilidades, o que aumenta o risco de regressão de qualquer mudança.
+de `core/docs/structure.md` e concentram várias responsabilidades, o que aumenta o risco de regressão de qualquer mudança.
 Escopo: só esses dois. `FinanceCollectionService` (355), `DailyService` (338) e `DailyTeamManagementService` (302)
 ficam para quando forem tocados.
 
@@ -45,11 +45,11 @@ Callers: `PeladaController` (rotas de membro), `AccountDeletionService`, `StompS
 
 ## Entrega
 
-Branch de integração `refactor/f13-large-services` (a partir de `dev`) com dois sub-PRs:
-`refactor/f13-daily-results` e `refactor/f13-pelada-service`. BACKEND.md atualizado no mesmo change
-(layout de pacotes, permissão e referências aos services).
+Um único PR de `refactor/f13-on-dev` para `dev`, integrando a branch original
+`refactor/f13-large-services` ao `dev` atual. Os guias por tópico em `core/docs/` são atualizados
+na mesma mudança (layout de pacotes, permissões e referências aos services).
 
 ## Validação
 
-`./mvnw test` completo em `core/` em cada sub-PR, incluindo `DomainLayoutTest` (≤ 12 classes, sem ciclos),
+`./mvnw test` completo em `core/` no PR único, incluindo `DomainLayoutTest` (≤ 12 classes, sem ciclos),
 `DailyResultsQueryCountTest` e os testes de concorrência quando houver Docker.

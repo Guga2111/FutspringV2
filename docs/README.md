@@ -42,6 +42,7 @@ migration V19 reference them.
 | [Subscriptions](plans/2026-11-07-subscriptions-platform-admin-spec.md) | Business-rule rationale referenced by migration V19 and the backend guide |
 | [Mobile redesign (Jakob's law)](plans/2026-11-16-mobile-jakob-redesign-spec.md) | Implemented; rationale for the mobile shell, referenced by the frontend [navigation guide](../client/docs/navigation.md) |
 | [Floating mobile navigation](plans/2026-11-17-floating-mobile-navigation-design.md) | Implemented; direction contract of the bottom tab capsule, referenced by the navigation guide |
+| [F-13 large services split](plans/2026-11-15-f13-large-services-design.md) | Approved responsibility split of the daily-results and pelada services; integrated in one PR to `dev` |
 | [Legacy forms refactor](plans/2026-11-15-legacy-forms-refactor-design.md) | Implemented; why the three legacy forms moved to react-hook-form + zod + `Field` (the rules live in [forms.md](../client/docs/forms.md)) |
 | [Cross-layer consistency plan](plans/2026-11-15-cross-layer-consistency-design.md) | Approved scope and method of the review whose results are in [the review](history/2026-11-15-cross-layer-consistency-review.md) |
 | [Landing pricing section](plans/2026-11-22-landing-pricing-design.md) | Implemented; what the landing publishes about prices and why (prices come from `SubscriptionPlans.java`) |

@@ -121,8 +121,8 @@ Inspect the installed Spring channel/executor behavior before choosing intercept
 
 ### 5. Update documentation and run required checks
 
-- Update `core/docs/BACKEND.md`: WebSocket lifetime, authorization points, reconnect behavior, and regression coverage.
-- Update `client/docs/FRONTEND.md`: expected expiration closure and renewal/reconnection of chat and notifications.
+- Update `core/docs/README.md`: WebSocket lifetime, authorization points, reconnect behavior, and regression coverage.
+- Update `client/docs/README.md`: expected expiration closure and renewal/reconnection of chat and notifications.
 - Run focused authentication/STOMP tests, then `./mvnw test` in `core/`.
 - If frontend code changes, run `bun run lint && bun run build && bun run test` in `client/`, plus the focused reconnect check.
 - Record actual results, including unavailable environments and skipped tests. Do not describe unexecuted tests as passing. Use only synthetic identities and local services; do not probe production. Follow any invoked review skill's execution restrictions.

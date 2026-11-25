@@ -20,7 +20,7 @@ Severidade: **Alta** (exploração simples, impacto em dados ou contas), **Médi
 | 4 | Membro removido continua recebendo o chat | Média | Corrigido (PR A6: após o commit, o removido perde a inscrição em `/topic/pelada/{id}` sem fechar a conexão; reset de senha, troca de senha e exclusão de conta fecham as conexões do usuário) |
 | 5 | JWT de 7 dias em `localStorage`, sem revogação por sessão | Média | Confirmado |
 | 6 | Upload público confia no Content-Type e não remove EXIF | Média | Corrigido (PR A5: decodificado pelo conteúdo, tipo declarado ≠ real → 400, regravado sem EXIF/GPS/ICC com a orientação aplicada); arquivos enviados antes mantêm os metadados |
-| 7 | `/files/**` público e permanente | Média / Baixa | Risco aceito e documentado (PR A5, BACKEND.md → Uploads); fotos da pelada e de campeão apagadas na exclusão |
+| 7 | `/files/**` público e permanente | Média / Baixa | Risco aceito e documentado (PR A5, core/docs/README.md → Uploads); fotos da pelada e de campeão apagadas na exclusão |
 | 8 | Enumeração de contas no cadastro e no login | Baixa / Média | Login corrigido (PR A3: hash BCrypt dummy); 409 do cadastro aceito (spec de lançamento) |
 | 9 | Actuator aberto com `threaddump` na rede `observability` | Baixa | Corrigido (PR A4: só `health` e `prometheus`, health sem detalhes); sem autenticação básica |
 | 10 | Senha sem tamanho máximo e e-mail sensível a maiúsculas | Baixa | Corrigido (PR A3: ≤ 72 bytes, e-mail normalizado, V22); sem limite por conta |
@@ -99,7 +99,7 @@ Versionar o trecho relevante do nginx (ex.: `ops/nginx/futspring.conf`) para que
 2. Fazer o mesmo no incremento de `tokenVersion` (reset de senha): fechar todas as sessões do usuário.
 3. Teste: removido não recebe a mensagem seguinte publicada no tópico.
 
-Remove o item correspondente de "Known gaps" no `BACKEND.md`.
+Remove o item correspondente de "Known gaps" no `core/docs/README.md`.
 
 ---
 
@@ -203,7 +203,7 @@ O fluxo de "esqueci a senha" foi feito para não revelar contas; essas duas rota
 
 ## Fora do top 10
 
-- `core/docker-compose.dev.yml` tem senhas/segredo fixos e expõe o Postgres na 5432. São valores de desenvolvimento, já listados como conhecidos (antipattern #5 do `BACKEND.md`); vale só ligar a porta em `127.0.0.1:5432`.
+- `core/docker-compose.dev.yml` tem senhas/segredo fixos e expõe o Postgres na 5432. São valores de desenvolvimento, já listados como conhecidos (antipattern #5 do `core/docs/README.md`); vale só ligar a porta em `127.0.0.1:5432`.
 
 ## O que já está bem
 

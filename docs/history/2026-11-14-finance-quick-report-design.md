@@ -57,7 +57,7 @@ Meaningful behavior coverage must prove:
 5. Duplicate clicks, failed/uncertain requests, conflict refresh and amount changes retain existing command protections.
 6. Optional receipts retain existing validation and the no-receipt path remains one explicit action.
 
-Update `client/docs/FRONTEND.md` for the route, share text, user flow and relevant hooks. Change `core/docs/BACKEND.md` only if backend behavior/contracts change. Check existing financial authorization regression coverage and run `bun run lint`, `bun run build` and `bun run test` for implementation. Run `./mvnw test` if backend code changes.
+Update `client/docs/README.md` for the route, share text, user flow and relevant hooks. Change `core/docs/README.md` only if backend behavior/contracts change. Check existing financial authorization regression coverage and run `bun run lint`, `bun run build` and `bun run test` for implementation. Run `./mvnw test` if backend code changes.
 
 The implementation touches an authenticated financial workflow and must follow `docs/SECURITY_REVIEW.md`: Trail of Bits differential review of the final diff before opening/marking ready a security-relevant PR and again before merge. Record actual validation and review evidence; this design is not a completed security review.
 

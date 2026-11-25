@@ -65,7 +65,7 @@ O limite de 5 MB do servidor continua igual.
 
 **Onde:** `core/src/main/resources/application.properties` (a propriedade não está definida, então vale o padrão `true`; o Spring só avisa no log ao subir).
 
-**Problema:** com OSIV, a sessão do Hibernate fica aberta da primeira consulta até a resposta ser escrita. Com a configuração do Spring (`prepareConnection`), a conexão JDBC fica presa nesse intervalo, inclusive durante a serialização do JSON e a escrita na rede. O pool tem **10 conexões** e timeout de **5 s** (`hikari.connection-timeout`), e as requisições rodam em virtual threads: sob carga, a fila de conexões é o gargalo (veja a nota do teste de carga PR3 no `BACKEND.md`). Também esconde lazy loads fora do service, contra a regra "monte os DTOs dentro da transação".
+**Problema:** com OSIV, a sessão do Hibernate fica aberta da primeira consulta até a resposta ser escrita. Com a configuração do Spring (`prepareConnection`), a conexão JDBC fica presa nesse intervalo, inclusive durante a serialização do JSON e a escrita na rede. O pool tem **10 conexões** e timeout de **5 s** (`hikari.connection-timeout`), e as requisições rodam em virtual threads: sob carga, a fila de conexões é o gargalo (veja a nota do teste de carga PR3 no `core/docs/README.md`). Também esconde lazy loads fora do service, contra a regra "monte os DTOs dentro da transação".
 
 **Solução:**
 1. `spring.jpa.open-in-view=false` no `application.properties` principal e no de teste.
@@ -94,7 +94,7 @@ O limite de 5 MB do servidor continua igual.
 
 **Onde:** `core/.../domain/daily/DailyService.java:91` (`getDailiesForPelada`), `GET /api/v1/peladas/{id}/dailies`.
 
-**Problema:** devolve todas as sessões da pelada desde o início (~52 por ano numa pelada semanal), com contagens e resultado do caller. As consultas são agrupadas (número constante), mas o payload e o trabalho crescem sem limite. É a única lista que cresce com o tempo sem limite, contra a regra de paginação do `BACKEND.md`. A visão geral, por exemplo, só usa as 3 últimas.
+**Problema:** devolve todas as sessões da pelada desde o início (~52 por ano numa pelada semanal), com contagens e resultado do caller. As consultas são agrupadas (número constante), mas o payload e o trabalho crescem sem limite. É a única lista que cresce com o tempo sem limite, contra a regra de paginação do `core/docs/README.md`. A visão geral, por exemplo, só usa as 3 últimas.
 
 **Solução:** não é urgente. Quando a resposta pesar, aceitar `?from=` (data) ou `?limit=` opcional e usar na visão geral e no card da próxima sessão. A galeria e a lista por mês continuam pedindo o período inteiro, ou passam a pedir pelo filtro de datas que já existe (`DateRangeFilter`). É mudança de contrato nos dois lados, no mesmo PR.
 
@@ -164,7 +164,7 @@ O limite de 5 MB do servidor continua igual.
 
 - **`GenerationType.IDENTITY` impede insert em lote** (`batch_size=50` não vale). Trocar por `SEQUENCE` exige migração em várias tabelas; os maiores lotes hoje (notificações de `SESSION_CREATED`, participantes do financeiro) têm dezenas de linhas. Exagero agora.
 - **Cache de leitura** (Caffeine/Redis) para ranking, perfil e `/peladas/my`: as consultas já são constantes e baratas; a invalidação custaria mais que o ganho.
-- **Índice em `notifications.created_at`** para o job de retenção das 04:00: varredura diária de uma tabela pequena, já aceita no `BACKEND.md`.
+- **Índice em `notifications.created_at`** para o job de retenção das 04:00: varredura diária de uma tabela pequena, já aceita no `core/docs/README.md`.
 - **Várias instâncias da API** (ShedLock, broker externo, rate limit distribuído): uma instância atende com folga (teste de carga PR3).
 
 ## O que já está bem
