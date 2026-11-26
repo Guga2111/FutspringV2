@@ -12,7 +12,7 @@ Convenções: **[Fato]** = observado no repositório (com o arquivo citado), **[
 
 ## 1. Resumo executivo
 
-O client do Futspring já tem uma boa base de design system: shadcn/ui sobre Radix, Tailwind 3 com **tokens semânticos em HSL** em `src/index.css` (`:root` + `.dark`), variantes `cva` em `components/ui/*-variants.ts`, dark mode por classe e regras documentadas contra cores cruas (antipattern #3 do client/docs/README.md). Como a maioria das telas consome tokens, **boa parte da nova identidade chega reapontando tokens**, sem editar componentes.
+O client do Futspring já tem uma boa base de design system: shadcn/ui sobre Radix, Tailwind 3 com **tokens semânticos em HSL** em `src/index.css` (`:root` + `.dark`), variantes `cva` em `components/ui/*-variants.ts`, dark mode por classe e regras documentadas contra cores cruas (antipattern #3 do FRONTEND.md). Como a maioria das telas consome tokens, **boa parte da nova identidade chega reapontando tokens**, sem editar componentes.
 
 O que impede uma troca limpa para a nova identidade:
 
@@ -39,7 +39,7 @@ O que impede uma troca limpa para a nova identidade:
 | Primitivos | Radix (`@radix-ui/react-*`), `vaul` (Drawer), `cmdk` (Command), `sonner` (toasts), `react-day-picker` | `package.json` |
 | Variantes | `class-variance-authority`, `tailwind-merge` via `cn()` | `src/lib/utils.ts`, `components/ui/*-variants.ts` |
 | Gráficos / tabelas | recharts 3 via `ui/chart.tsx` do shadcn; TanStack Table 8 | `package.json` |
-| Ícones | só lucide-react | client/docs/README.md |
+| Ícones | só lucide-react | FRONTEND.md |
 | Testes | Vitest 2 (`environment: 'node'`, include padrão), 28 arquivos `*.test.ts` de lógica pura (utils, schemas, api); nenhum teste de componente ou visual | `vitest.config.ts`, `find src -name '*.test.*'` |
 | CI | `.github/workflows/ci-frontend.yml`: um job `build` com `bun install --frozen-lockfile`, lint, build e test | arquivo do workflow |
 | Lint | ESLint 9 flat config em `**/*.{ts,tsx}`, ignora só `dist` | `eslint.config.js` |
@@ -157,7 +157,7 @@ components/ui/*  (shadcn, variantes cva em *-variants.ts)  ──►  componente
 | Dimensão | Estado | Veredito |
 |---|---|---|
 | Tokens de cor | Conjunto semântico completo + extensões do redesign; claro = slate padrão do shadcn, escuro = cinzas neutros (`0 0% x%`, sem matiz) | Estrutura boa, valores a trocar |
-| Marca | Um único `--brand` verde; classes chamadas `gradient`, mas sólidas desde o redesign (client/docs/README.md) | Dívida de nome; texto fixo `text-white` |
+| Marca | Um único `--brand` verde; classes chamadas `gradient`, mas sólidas desde o redesign (FRONTEND.md) | Dívida de nome; texto fixo `text-white` |
 | Accent | `--accent` = superfície neutra de hover (semântica shadcn) | Não pode ser reaproveitado |
 | Status / feedback | `success`, `warning`, `info`, `destructive*`, `status-*`, `live-*`, `gold/silver/bronze` | Bom; o `info` (azul `200 98% 39%`) vai se confundir com a nova marca |
 | Tipografia | Sem famílias, tamanhos arbitrários em px, sem tokens de escala | Maior lacuna |
@@ -165,7 +165,7 @@ components/ui/*  (shadcn, variantes cva em *-variants.ts)  ──►  componente
 | Sombras | Pretas, ajustadas para o dark, usadas também no claro | Aceitável; ajuste por tema opcional |
 | Movimento | `tailwindcss-animate`, `.page-enter`, keyframes da landing; sem reduced-motion | Lacuna |
 | Componentes | 33 primitivos shadcn instalados; variantes via cva | Bom |
-| Documentação | Seção "Styling & design system" do client/docs/README.md + tabela de antipatterns | Boa; precisa ser atualizada junto |
+| Documentação | Seção "Styling & design system" do FRONTEND.md + tabela de antipatterns | Boa; precisa ser atualizada junto |
 
 Contraste dos tokens **atuais** (seleção):
 
@@ -197,7 +197,7 @@ Contraste dos tokens **atuais** (seleção):
 | P10 | `lang="en"` | `index.html:2` | Leitores de tela com fonética em inglês (WCAG 3.1.1) |
 | P11 | Sem reduced-motion | `index.css` | WCAG 2.2.2 / 2.3.3 |
 | P12 | Tamanhos tipográficos arbitrários | §2.5 | Não há escala para mapear os papéis de Barlow/Inter |
-| P13 | Nomes de classe enganosos (`gradient` que é sólido) | client/docs/README.md, `index.css` | Renomear junto com a marca |
+| P13 | Nomes de classe enganosos (`gradient` que é sólido) | FRONTEND.md, `index.css` | Renomear junto com a marca |
 | P14 | `--info` ≈ matiz da nova marca | `index.css` `--info: 200 98% 39.4%` | Badge de Mensalista e marca indistinguíveis |
 | P15 | Nenhuma verificação visual automatizada | §2.1 | Mudança global de tokens sem rede de segurança |
 
@@ -210,7 +210,7 @@ Contraste dos tokens **atuais** (seleção):
 1. Aplicar a identidade Sport-Tech Minimalism (paleta, Barlow Condensed + Inter) no app inteiro, nos temas claro e escuro.
 2. Manter a arquitetura de tokens, as classes consumidas pelas features, os componentes shadcn e o mecanismo `.dark`.
 3. Todo par texto/fundo usado pelos tokens atende ao WCAG 2.2 AA; bordas de componentes de UI e indicadores de foco atingem 3:1.
-4. Remover as ilhas de cor fixa da §5 (P2–P6), fechando as entradas dos antipatterns #3 e #27 do client/docs/README.md (exceto a Landing).
+4. Remover as ilhas de cor fixa da §5 (P2–P6), fechando as entradas dos antipatterns #3 e #27 do FRONTEND.md (exceto a Landing).
 5. Nenhum flash de tema no carregamento; sem escolha salva, seguir o sistema operacional; a escolha explícita continua em `localStorage.theme`; o Toaster segue o tema.
 6. Fontes self-hosted via `@fontsource`, subset latino, `font-display: swap` e fallbacks com métricas compatíveis; nenhuma regressão de layout em 375 px.
 7. Regressão visual automatizada com Playwright cobrindo as telas principais nos dois temas e em 375/1280 px.
@@ -594,7 +594,7 @@ Meta: **WCAG 2.2 AA**.
 
 ## 13. Plano de implementação (Phase 2 — não executado)
 
-Cada passo é um PR separado, entregável sozinho, com `bun run lint && bun run build && bun run test` verde e o client/docs/README.md atualizado no mesmo PR. Ordem de dependência: `1 → 2 → 3 → {4, 5, 6} → 7 → 8`.
+Cada passo é um PR separado, entregável sozinho, com `bun run lint && bun run build && bun run test` verde e o FRONTEND.md atualizado no mesmo PR. Ordem de dependência: `1 → 2 → 3 → {4, 5, 6} → 7 → 8`.
 
 ### Passo 1 — Base: shell do documento e bootstrap do tema
 - **Escopo:** `lang="pt-BR"`, script inline de tema (padrão do sistema + listener enquanto não houver escolha), `color-scheme`, `theme-color`, storage protegido, Toaster com tema, regra base de reduced-motion.
@@ -649,7 +649,7 @@ Cada passo é um PR separado, entregável sozinho, com `bun run lint && bun run 
 - **Dependências:** Passo 3.
 - **Riscos:** usuários estranharem a nova cor da pelada.
 - **Validação:** grep de classes cruas (só permitidos Landing, overlays de foto, logo do Google e cores de time); diff do Playwright nos dois temas.
-- **Aceite:** as entradas "Found in" dos antipatterns #3 e #27 no client/docs/README.md removidas para esses arquivos.
+- **Aceite:** as entradas "Found in" dos antipatterns #3 e #27 no FRONTEND.md removidas para esses arquivos.
 
 ### Passo 7 — Highlight (Cantaloupe) (Q5)
 - **Escopo:** aplicar `highlight-*` nos pontos definidos na Q5.
@@ -660,7 +660,7 @@ Cada passo é um PR separado, entregável sozinho, com `bun run lint && bun run 
 ### Passo 8 — Limpeza
 - **Escopo:** remover os aliases (variante `gradient` depois do codemod nos 33 arquivos, nomes antigos de classe), `bg-overlay` opcional nos overlays do shadcn, tokens de escala no lugar dos tamanhos arbitrários restantes, Playwright passa a bloquear o deploy, documentação.
 - **Dependências:** todos os anteriores.
-- **Aceite:** o grep pela variante/classes `gradient` não retorna nada fora das `.landing-*`; a seção "Styling & design system" do client/docs/README.md descreve o novo sistema por completo.
+- **Aceite:** o grep pela variante/classes `gradient` não retorna nada fora das `.landing-*`; a seção "Styling & design system" do FRONTEND.md descreve o novo sistema por completo.
 
 ---
 
@@ -710,7 +710,7 @@ A Phase 2 está concluída quando tudo abaixo puder ser verificado:
 7. Com `prefers-reduced-motion: reduce`, nenhuma animação infinita roda e nenhum hover faz `scale`.
 8. As rotas da suíte do Playwright passam em 375 e 1280 px nos dois temas, sem scroll horizontal; o job `visual` está no CI e bloqueia o deploy.
 9. Lint, build e testes verdes; CLS < 0,1 em `/home`.
-10. client/docs/README.md atualizado: "Styling & design system", tabela de tokens, comandos (`test:visual`), as entradas "Found in" dos antipatterns e a descrição das pastas (`e2e/`); a nota do handoff sobre a stack de fonte do sistema marcada como substituída.
+10. FRONTEND.md atualizado: "Styling & design system", tabela de tokens, comandos (`test:visual`), as entradas "Found in" dos antipatterns e a descrição das pastas (`e2e/`); a nota do handoff sobre a stack de fonte do sistema marcada como substituída.
 
 ---
 
@@ -739,11 +739,11 @@ Nenhuma decisão pendente.
 
 ### Apêndice A — Arquivos inspecionados
 
-`client/package.json`, `tailwind.config.js`, `components.json`, `index.html`, `vitest.config.ts`, `eslint.config.js`, `.github/workflows/ci-frontend.yml`, `src/index.css`, `src/main.tsx`, `src/hooks/useTheme.ts`, `src/components/ui/{button,badge,tabs,toggle}-variants.ts`, `ui/{card,checkbox,calendar,dialog,alert-dialog,sheet,drawer,sidebar,chart}.tsx`, `src/lib/utils.ts`, os componentes citados nas §2.6, §2.7 e §2.9 (inspeção por grep), the retired redesign handoff (available in Git history) e `client/docs/README.md`.
+`client/package.json`, `tailwind.config.js`, `components.json`, `index.html`, `vitest.config.ts`, `eslint.config.js`, `.github/workflows/ci-frontend.yml`, `src/index.css`, `src/main.tsx`, `src/hooks/useTheme.ts`, `src/components/ui/{button,badge,tabs,toggle}-variants.ts`, `ui/{card,checkbox,calendar,dialog,alert-dialog,sheet,drawer,sidebar,chart}.tsx`, `src/lib/utils.ts`, os componentes citados nas §2.6, §2.7 e §2.9 (inspeção por grep), the retired redesign handoff (available in Git history) e `client/docs/FRONTEND.md`.
 
 ### Apêndice B — Working tree no momento do discovery
 
-Havia alterações não commitadas (não feitas por esta tarefa) em `client/docs/README.md`, `components/finance/*`, `components/pelada/MemberCard.tsx` e `components/ui/tabs-variants.ts`. A Phase 2 deve começar depois que elas forem commitadas.
+Havia alterações não commitadas (não feitas por esta tarefa) em `client/docs/FRONTEND.md`, `components/finance/*`, `components/pelada/MemberCard.tsx` e `components/ui/tabs-variants.ts`. A Phase 2 deve começar depois que elas forem commitadas.
 
 ---
 

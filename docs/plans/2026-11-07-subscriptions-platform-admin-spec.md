@@ -70,7 +70,7 @@ Travado:
 
 Liberado: leituras, chat, configurações e foto da pelada, membros (admin, estrelas, mensalista, remover), convites, transferir, excluir, `bumps/seen`, notificações, conta.
 
-Regra nova em "Rules for new code" do core/docs/README.md: todo comando que escreve dado esportivo ou financeiro de uma pelada chama `requireWritable`, e ganha um teste de 402.
+Regra nova em "Rules for new code" do BACKEND.md: todo comando que escreve dado esportivo ou financeiro de uma pelada chama `requireWritable`, e ganha um teste de 402.
 
 ### Admin da plataforma
 
@@ -181,7 +181,7 @@ Rotas privadas filhas do layout. O item "Admin" fica no `UserMenu` só com `user
 
 ## Plano de PRs
 
-Nove PRs pequenos. Cada um é revisável sozinho, entra com os seus testes e atualiza a parte do core/docs/README.md / client/docs/README.md que mudou, como pede o CLAUDE.md.
+Nove PRs pequenos. Cada um é revisável sozinho, entra com os seus testes e atualiza a parte do BACKEND.md / FRONTEND.md que mudou, como pede o CLAUDE.md.
 
 - **Branches:** integração `feat/subscriptions`, saindo de `dev`. Cada PR sai de `feat/subscriptions` (`feat/subscriptions-<nome>`) e volta contra ela.
 - **Ordem de merge:** 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9. O 3 e o 5 só dependem do 1 e podem andar em paralelo.
@@ -203,7 +203,7 @@ Para planejar um PR, rode o prompt dele numa sessão limpa (`/clear` antes). Ao 
   - Criação: primeiro trial, segunda pelada `PENDING`, transferência não reinicia.
   - `MigrationDataTest` (V19).
   - `FlywayMigrationTest` verde.
-- **Docs:** core/docs/README.md (Domain model, tabela de migrations, package layout).
+- **Docs:** BACKEND.md (Domain model, tabela de migrations, package layout).
 
 ```
 /plan-task docs/plans/2026-11-07-subscriptions-platform-admin-spec.md "PR 1 — Modelo e estado"
@@ -232,7 +232,7 @@ Para planejar um PR, rode o prompt dele numa sessão limpa (`/clear` antes). Ao 
   - Um teste de "liberado" para chat, configurações, convites e exclusão.
   - Jobs pulando pelada travada.
   - Uma pelada `EXEMPT` não trava nada.
-- **Docs:** core/docs/README.md (permission matrix, Rules for new code, Error handling).
+- **Docs:** BACKEND.md (permission matrix, Rules for new code, Error handling).
 
 ```
 /plan-task docs/plans/2026-11-07-subscriptions-platform-admin-spec.md "PR 2 — Trava no backend"
@@ -257,7 +257,7 @@ Para planejar um PR, rode o prompt dele numa sessão limpa (`/clear` antes). Ao 
   - O 31º membro por convite e por link dá 409.
   - Em `ACTIVE` passa.
   - Concorrência: dois aceites no 30º lugar (`InvitationConcurrencyTest`).
-- **Docs:** core/docs/README.md (Membership invitations).
+- **Docs:** BACKEND.md (Membership invitations).
 
 ```
 /plan-task docs/plans/2026-11-07-subscriptions-platform-admin-spec.md "PR 3 — Teto do trial"
@@ -281,7 +281,7 @@ Para planejar um PR, rode o prompt dele numa sessão limpa (`/clear` antes). Ao 
   - Contagem de queries constante no `/peladas/my`.
   - Vitest do `utils/subscription.ts`.
   - Testes visuais dos banners (somente leitura, em atraso).
-- **Docs:** core/docs/README.md (API reference), client/docs/README.md (types, hooks, Routing).
+- **Docs:** BACKEND.md (API reference), FRONTEND.md (types, hooks, Routing).
 
 ```
 /plan-task docs/plans/2026-11-07-subscriptions-platform-admin-spec.md "PR 4 — Estado nos DTOs + front de leitura"
@@ -311,7 +311,7 @@ Para planejar um PR, rode o prompt dele numa sessão limpa (`/clear` antes). Ao 
   - Filtro por estado efetivo.
   - `QueryCounter` constante em `/overview` e `/peladas` (2 vs 20).
   - Snapshots de contrato.
-- **Docs:** core/docs/README.md (API reference, permission matrix, package layout).
+- **Docs:** BACKEND.md (API reference, permission matrix, package layout).
 
 ```
 /plan-task docs/plans/2026-11-07-subscriptions-platform-admin-spec.md "PR 5 — API do admin da plataforma"
@@ -338,7 +338,7 @@ Para planejar um PR, rode o prompt dele numa sessão limpa (`/clear` antes). Ao 
 - **Testes:**
   - Vitest dos schemas e helpers.
   - Testes visuais das cinco telas (fixtures novas), 375 px e claro/escuro.
-- **Docs:** client/docs/README.md (Routing, API modules, hooks, folder structure).
+- **Docs:** FRONTEND.md (Routing, API modules, hooks, folder structure).
 
 ```
 /plan-task docs/plans/2026-11-07-subscriptions-platform-admin-spec.md "PR 6 — Painel do admin, front"
@@ -371,7 +371,7 @@ Para planejar um PR, rode o prompt dele numa sessão limpa (`/clear` antes). Ao 
   - 403 para quem não é criador.
   - Claim idempotente.
   - Teste visual da área.
-- **Docs:** core/docs/README.md (Configuration, CI/CD, API reference), client/docs/README.md (Routing, Pelada navigation).
+- **Docs:** BACKEND.md (Configuration, CI/CD, API reference), FRONTEND.md (Routing, Pelada navigation).
 
 ```
 /plan-task docs/plans/2026-11-07-subscriptions-platform-admin-spec.md "PR 7 — Pix e área Assinatura do criador"
@@ -406,7 +406,7 @@ Para planejar um PR, rode o prompt dele numa sessão limpa (`/clear` antes). Ao 
   - Destinatários (criador / admins da plataforma).
   - Matriz e-mail e push.
   - `MigrationDataTest` (V21).
-- **Docs:** core/docs/README.md (Notifications, migrations), client/docs/README.md (notification types, preferências).
+- **Docs:** BACKEND.md (Notifications, migrations), FRONTEND.md (notification types, preferências).
 
 ```
 /plan-task docs/plans/2026-11-07-subscriptions-platform-admin-spec.md "PR 8 — Avisos de assinatura"
@@ -427,7 +427,7 @@ Para planejar um PR, rode o prompt dele numa sessão limpa (`/clear` antes). Ao 
   - Linha em `components/legal/content.ts` sobre o operador ver nome, e-mail e dados de assinatura no painel, e sobre os pagamentos guardados.
   - `LEGAL_VERSION` e `LegalTerms.CURRENT_VERSION` sobem juntos.
 - **Testes:** `bun run test` e `./mvnw test` verdes (o cadastro exige a versão nova).
-- **Docs:** client/docs/README.md (`/termos`, `/privacidade`).
+- **Docs:** FRONTEND.md (`/termos`, `/privacidade`).
 
 ```
 /plan-task docs/plans/2026-11-07-subscriptions-platform-admin-spec.md "PR 9 — Política de privacidade"

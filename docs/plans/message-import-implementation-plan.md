@@ -14,7 +14,7 @@ Documentation and identifiers follow the project's English convention. Product c
 - `client/src/api/dailies.ts` sends `POST /api/v1/dailies/{id}/populate` and receives `DailyDetail`.
 - `core/src/main/java/com/futspring/backend/domain/daily/DailyResultsService.java`, `populateFromMessage`, validates the import, removes existing matches/teams/attendance, creates replacements, distributes goals and assists, saves player-match statistics, and changes the status to `IN_COURSE`.
 - A statistic row is created for every player of the two teams in each match, including zero-valued statistics. For example, 20 matches with 10 participants each produce 200 statistic rows.
-- `PlayerMatchStat` uses `GenerationType.IDENTITY`. As documented in `core/docs/README.md`, Hibernate cannot batch these entity inserts despite `hibernate.jdbc.batch_size=50`; `saveAll` does not solve this.
+- `PlayerMatchStat` uses `GenerationType.IDENTITY`. As documented in `core/docs/BACKEND.md`, Hibernate cannot batch these entity inserts despite `hibernate.jdbc.batch_size=50`; `saveAll` does not solve this.
 - `DailyController.populateFromMessage` completes the write transaction and then calls `DailyService.getDailyDetail` to build the response. The browser waits for both operations, with no second detail request after success.
 
 The insert volume is a performance hypothesis supported by the implementation, not a measured production diagnosis. Establish the baseline before claiming a speedup.
@@ -139,8 +139,8 @@ Run PostgreSQL/Testcontainers checks with Docker available; explicitly report an
 
 ### 6. Update documentation and deliver
 
-- Update `core/docs/README.md` with the import write strategy, transaction boundary, and relevant performance/test guidance. Clarify that entity-based IDENTITY inserts remain unbatched while this native bulk path is an explicit exception.
-- Update `client/docs/README.md` with the import hook, schema, waiting/error behavior, and tests. Remove `ImportFromMessageModal` from the applicable form/direct-API antipattern entries only once those deviations are actually resolved.
+- Update `core/docs/BACKEND.md` with the import write strategy, transaction boundary, and relevant performance/test guidance. Clarify that entity-based IDENTITY inserts remain unbatched while this native bulk path is an explicit exception.
+- Update `client/docs/FRONTEND.md` with the import hook, schema, waiting/error behavior, and tests. Remove `ImportFromMessageModal` from the applicable form/direct-API antipattern entries only once those deviations are actually resolved.
 - Keep endpoint, DTO, frontend types, and schema aligned. No API shape change is planned.
 - Include before/after measurements, correctness evidence, and any remaining bottleneck in the implementation report.
 

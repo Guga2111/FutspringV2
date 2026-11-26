@@ -5,7 +5,7 @@
 > Current behavior and remaining gaps belong in the [Backend](../../core/docs/README.md)
 > and [Frontend](../../client/docs/README.md) guides.
 
-Problemas críticos encontrados durante a escrita de `core/docs/README.md` e `client/docs/README.md` (2026-10-03). Todos foram corrigidos; os detalhes ficam abaixo como histórico.
+Problemas críticos encontrados durante a escrita de `core/docs/BACKEND.md` e `client/docs/FRONTEND.md` (2026-10-03). Todos foram corrigidos; os detalhes ficam abaixo como histórico.
 
 | # | Problema | Severidade | Status |
 |---|----------|-----------|--------|
@@ -14,9 +14,9 @@ Problemas críticos encontrados durante a escrita de `core/docs/README.md` e `cl
 | 3 | IDOR no envio de resultados (`matchId`) | Alta | Corrigido em `cf31a82` (`findByIdAndDaily`, 404) |
 | 4 | Chat via WebSocket sem autorização de inscrição | Alta | Corrigido em `cf31a82` (`JwtChannelInterceptor`) |
 
-Ao corrigir um item, mude o status para "Corrigido" com o commit/PR e remova a entrada correspondente das tabelas de antipatterns / "Known gaps" do `core/docs/README.md`.
+Ao corrigir um item, mude o status para "Corrigido" com o commit/PR e remova a entrada correspondente das tabelas de antipatterns / "Known gaps" do `BACKEND.md`.
 
-Os caminhos em "Onde" apontam para a organização atual do backend (pacotes por domínio em `domain/`, ver "Package layout" no `core/docs/README.md`); os números de linha são do código atual, não do commit em que o problema foi encontrado.
+Os caminhos em "Onde" apontam para a organização atual do backend (pacotes por domínio em `domain/`, ver "Package layout" no `BACKEND.md`); os números de linha são do código atual, não do commit em que o problema foi encontrado.
 
 ---
 

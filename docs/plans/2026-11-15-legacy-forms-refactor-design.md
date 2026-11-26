@@ -4,7 +4,7 @@ Data: 2026-11-15 · Status: aprovado
 
 ## Objetivo
 
-Migrar os três formulários que ainda usam `useState` por campo para **react-hook-form + zod + shadcn `Field`**, conforme a seção [Forms](../../client/docs/forms.md#forms-mandatory) do client/docs/README.md, e tirar a chamada a `src/api` de dentro dos componentes. Fecha os antipatterns 5 e 8 nesses arquivos:
+Migrar os três formulários que ainda usam `useState` por campo para **react-hook-form + zod + shadcn `Field`**, conforme a seção [Forms](../../client/docs/forms.md#forms-mandatory) do FRONTEND.md, e tirar a chamada a `src/api` de dentro dos componentes. Fecha os antipatterns 5 e 8 nesses arquivos:
 
 - `client/src/components/CreatePeladaModal.tsx` (Sheet, 259 linhas)
 - `client/src/components/daily/live/FinalizeModal.tsx` (Dialog, 119 linhas)
@@ -26,14 +26,14 @@ Nenhum contrato de API muda: os schemas espelham os DTOs que já existem (`Creat
 - Erros do servidor via `applyServerErrors(form, error, fallback)`: os erros de campo vão para os campos e o resto para o `root`, num `Alert variant="destructive"` (no lugar do `toast.error`). O `toast.success` continua.
 - Schemas em `client/src/schemas/<domínio>.ts`, com um comentário dizendo qual DTO espelham. Mensagens em pt-BR. Testes Vitest ao lado (`*.test.ts`) para schemas e conversões puras.
 - Cada PR acrescenta um teste visual do diálogo aberto em `e2e/visual.spec.ts`, nos quatro projetos, com as PNGs geradas no Docker.
-- Cada PR atualiza o `client/docs/README.md`: a lista "Still on useState" da seção Forms, a coluna "Found in" dos antipatterns 5 e 8, a árvore de pastas e a lista de hooks.
+- Cada PR atualiza o `client/docs/FRONTEND.md`: a lista "Still on useState" da seção Forms, a coluna "Found in" dos antipatterns 5 e 8, a árvore de pastas e a lista de hooks.
 
 ## PR 1 — FinalizeModal
 
 - `finalizeDailySchema` em `schemas/daily.ts`, espelhando `FinalizeDailyRequestDTO`: `{ puskasWinnerIds: number[], wiltballWinnerIds: number[] }` (ids inteiros positivos; listas vazias permitidas, porque o backend aceita sessão sem premiados). Só aparecem como opção os jogadores dos times da sessão. O backend continua validando isso.
 - `useFinalizeForm(daily, onSuccess)` em `components/daily/hooks/`: `useForm` + submit (`finalizeDaily`).
 - `PlayerCheckboxList` passa a receber `value`/`onChange` de um `Controller` sobre o array.
-- `usePlayerSelection` não tem outro uso e é apagado. O client/docs/README.md dizia que o modal de resultados também o usava, o que não é verdade: a frase é corrigida.
+- `usePlayerSelection` não tem outro uso e é apagado. O FRONTEND.md dizia que o modal de resultados também o usava, o que não é verdade: a frase é corrigida.
 
 ## PR 2 — CreatePeladaModal → `components/pelada/CreatePeladaSheet.tsx`
 

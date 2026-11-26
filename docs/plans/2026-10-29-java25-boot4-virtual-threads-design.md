@@ -49,7 +49,7 @@ The management port 9091 lives inside the API container's network namespace and 
 2. The contract snapshot test passes without changes in PRs 2 and 3. PR4 may remove only the approved duplicate boolean aliases `admin`, `finished`, `confirmed`, and `mensalista` where the corresponding `is…` property remains, in a separate snapshot commit; all other fields and request round trips stay unchanged.
 3. The deploy waits for the container's `healthy` state; the `deploy.yml` smoke test gets 200 from `<API_URL>/readyz`.
 4. No Flyway migration is added. Rollback = revert the merge on `main` and redeploy; with no schema change it is always safe.
-5. `core/docs/README.md` (and the root `CLAUDE.md` stack line) describe the new state in the same PR.
+5. `core/docs/BACKEND.md` (and the root `CLAUDE.md` stack line) describe the new state in the same PR.
 
 ## PR 1 — Platform: Java 25, Boot 3.5, image, Postgres 17, observability
 
@@ -97,7 +97,7 @@ FROM eclipse-temurin:25-jre-noble
 ### Postgres 17 in dev
 
 - `docker-compose.dev.yml`: `postgres:17-alpine`; drop the obsolete `version: '3.8'`.
-- A Postgres 15 data directory can't be opened by 17. The dev database is the `DataInitializer` seed, so the step is `docker compose -f docker-compose.dev.yml down -v` and up again; written in `core/docs/README.md` Commands.
+- A Postgres 15 data directory can't be opened by 17. The dev database is the `DataInitializer` seed, so the step is `docker compose -f docker-compose.dev.yml down -v` and up again; written in `BACKEND.md` Commands.
 - Production (Supabase) is already on 17. The Flyway 9 "PostgreSQL 17 is newer" warning goes away in PR 2 (Flyway 11).
 
 ### Actuator and Micrometer
@@ -385,7 +385,7 @@ Each PR description lists what changed in the deploy (new secrets/variables, man
 
 ## Docs to update
 
-| PR | `core/docs/README.md` | Other |
+| PR | `core/docs/BACKEND.md` | Other |
 |----|------------------------|-------|
 | 1 | Stack (Java 25, Boot 3.5, Actuator, Micrometer), Commands (dev volume reset, `ops/loadtest`), CI/CD (health wait, `/readyz` smoke test, observability workflow, `GRAFANA_*`), Configuration (management port), Security (public probes), Testing (contract and actuator tests), the Flyway/PG17 note | root `CLAUDE.md` stack line; `ops/observability/README.md` |
 | 2 | Stack (Boot 4, Hibernate 7, Jackson 3, Flyway 11, Testcontainers 2, JJWT, springdoc), Configuration (`API_DOCS_ENABLED`), Security (springdoc paths), the Flyway 10 upgrade note removed | root `CLAUDE.md` |

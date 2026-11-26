@@ -12,7 +12,7 @@ Endurecer o Futspring antes de abrir para usuários reais: fechar os itens de `d
 
 **Fora do escopo (risco aceito, registrado aqui):**
 - **Backup e restore.** O único dump é o `pg_dump` do `deploy.sh` (quando `PG_DUMP_URL` existe); nenhum restore foi testado e os uploads não têm cópia. Voltar a isso antes de crescer.
-- **#7, `/files` público e permanente.** O nome UUID funciona como link secreto; o EXIF/GPS é resolvido no A5. Documentado no core/docs/README.md, sem mudança de rota.
+- **#7, `/files` público e permanente.** O nome UUID funciona como link secreto; o EXIF/GPS é resolvido no A5. Documentado no BACKEND.md, sem mudança de rota.
 - **#8, enumeração no cadastro.** O 409 "Este e-mail já está cadastrado" fica; o rate limit corrigido (A2) limita a varredura. Confirmação de e-mail fica para depois.
 - **Detecção de reuso de refresh token** (ver B2).
 
@@ -40,7 +40,7 @@ Endurecer o Futspring antes de abrir para usuários reais: fechar os itens de `d
 ### A2. Rate limit e IP real (#2, #3)
 - `AuthRateLimitFilter`: casar as rotas com `PathPatternRequestMatcher` (caminho decodificado, o mesmo mecanismo do Spring Security), nunca `getRequestURI()` cru. A chave do bucket é `"<rota lógica>:<ip>"` (`login`, `register`, `forgot-password`…), nunca a URI recebida.
 - `server.forward-headers-strategy=native`, `server.tomcat.remoteip.internal-proxies=127\.0\.0\.1`, `remote-ip-header=X-Forwarded-For`; o mesmo no `application.properties` de teste.
-- `ops/nginx/futspring.conf` versionado: `location /api/` com `proxy_set_header X-Forwarded-For $remote_addr` e `X-Real-IP`, `/ws` com upgrade, os blocos de cache do PWA (substitui `NGINX-PWA.md`, apagado) e `gzip` para JSON/JS/CSS (item #4 da revisão de performance). O deploy do nginx continua manual; o passo fica no core/docs/README.md (CI/CD).
+- `ops/nginx/futspring.conf` versionado: `location /api/` com `proxy_set_header X-Forwarded-For $remote_addr` e `X-Real-IP`, `/ws` com upgrade, os blocos de cache do PWA (substitui `NGINX-PWA.md`, apagado) e `gzip` para JSON/JS/CSS (item #4 da revisão de performance). O deploy do nginx continua manual; o passo fica no BACKEND.md (CI/CD).
 
 ### A3. Entradas de autenticação (#8 login, #10)
 - Senhas `@Size(min = 8, max = 72)` em `RegisterRequestDTO`, `ResetPasswordRequestDTO`, `ChangePasswordRequestDTO` (nova senha); schemas zod iguais no front.
@@ -56,13 +56,13 @@ Endurecer o Futspring antes de abrir para usuários reais: fechar os itens de `d
 - `FileUploadService` decodifica o arquivo e decide o tipo pelo conteúdo; tipo declarado ≠ real → 400. Limite de pixels compartilhado com `FinanceFiles` (extraído para um helper em `domain/file`).
 - A imagem é regravada a partir dos pixels (sem EXIF/GPS/ICC): JPEG quando opaca, PNG quando tem alfa. WebP é lido pelo TwelveMonkeys `imageio-webp`. A extensão salva segue o formato regravado.
 - Excluir pelada apaga a imagem da pelada e as fotos de campeão das sessões; excluir sessão apaga a foto de campeão (`deleteImageAfterCommit`).
-- #7 documentado no core/docs/README.md (Uploads): links UUID são públicos e permanentes enquanto o arquivo existir.
+- #7 documentado no BACKEND.md (Uploads): links UUID são públicos e permanentes enquanto o arquivo existir.
 
 ### A6. Revogação do chat (#4)
 - Registro `sessionId → WebSocketSession` num `WebSocketHandlerDecorator` (em `domain/chat` ou `domain/auth`, conforme a regra de pacotes).
 - Listener after-commit de `MembersRemovedEvent`: fecha as sessões STOMP dos removidos (o cliente reconecta e não consegue mais assinar `/topic/pelada/{id}`).
 - Mudança de `tokenVersion` (reset, troca de senha, exclusão de conta): um evento after-commit fecha todas as sessões do usuário.
-- Remove a parte do chat de "Known gaps" no core/docs/README.md.
+- Remove a parte do chat de "Known gaps" no BACKEND.md.
 
 ## Frente C — Observabilidade
 
@@ -102,7 +102,7 @@ Endurecer o Futspring antes de abrir para usuários reais: fechar os itens de `d
 
 ### B1. Redis
 - `core/docker-compose.prod.yml` e `docker-compose.dev.yml`: `redis:7-alpine` (versão fixa), `--appendonly yes`, `--requirepass ${REDIS_PASSWORD}`, volume persistente, `mem_limit`, sem porta publicada, só na rede da API.
-- `spring-boot-starter-data-redis`; `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD` (secret no GitHub, no `.env.example` e na tabela do core/docs/README.md); `deploy.sh` espera o Redis ficar `healthy`.
+- `spring-boot-starter-data-redis`; `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD` (secret no GitHub, no `.env.example` e na tabela do BACKEND.md); `deploy.sh` espera o Redis ficar `healthy`.
 - O Redis **não** entra no readiness: fora do ar, o refresh falha mas o access atual continua valendo.
 - Testes com Testcontainers Redis (pulados sem Docker, como os de Postgres).
 - Nenhuma mudança de comportamento ainda.
@@ -164,7 +164,7 @@ Endurecer o Futspring antes de abrir para usuários reais: fechar os itens de `d
 
 ## Plano de PRs
 
-Treze PRs pequenos, cada um revisável sozinho, com seus testes e a parte do core/docs/README.md / client/docs/README.md que mudou (como pede o CLAUDE.md). Itens corrigidos saem de "Known gaps" e da coluna "Found in"; o `docs/history/security-review-2026-11-06.md` ganha o status de cada item.
+Treze PRs pequenos, cada um revisável sozinho, com seus testes e a parte do BACKEND.md / FRONTEND.md que mudou (como pede o CLAUDE.md). Itens corrigidos saem de "Known gaps" e da coluna "Found in"; o `docs/history/security-review-2026-11-06.md` ganha o status de cada item.
 
 - **Branches:** integração `feat/launch-hardening`, saindo de `dev`. Cada PR sai dela e volta contra ela (`--base feat/launch-hardening`), nunca contra `main`.
 - **Ordem:** A1 → A6, depois C1 → C3, depois B1 → B4. Dentro da frente A os PRs são independentes e podem andar em paralelo; C3 depende de C1 (regra do Loki); B2 depende de B1; B3 de B2; B4 é independente mas fecha a frente.
@@ -174,7 +174,7 @@ Para planejar um PR, rode o prompt dele numa sessão limpa (`/clear` antes). Ao 
 
 ### [x] PR A1 — Busca de usuários (`fix/user-search`)
 - **Entrega:** e-mail por igualdade, escape de curingas no username, texto do `InvitePlayerDialog`.
-- **Docs:** core/docs/README.md (`GET /users/search`), client/docs/README.md se o texto do diálogo for descrito.
+- **Docs:** BACKEND.md (`GET /users/search`), FRONTEND.md se o texto do diálogo for descrito.
 - **Decisões:**
   - `searchUsers` saiu do `PeladaService` e foi para o `UserService` (o spec já o colocava lá; a busca é do domínio de usuário). Testes unitários movidos para `UserServiceTest`.
   - A query compara `LOWER(u.email) = :email` (o `LOWER` fica na coluna até a V22 do A3 normalizar os e-mails gravados); o serviço manda `q` com `trim` e `toLowerCase(Locale.ROOT)`. Username com `LIKE :pattern ESCAPE '\'`, padrão montado no serviço.
@@ -187,7 +187,7 @@ Para planejar um PR, rode o prompt dele numa sessão limpa (`/clear` antes). Ao 
 
 ### [x] PR A2 — Rate limit e IP real (`fix/rate-limit-ip`)
 - **Entrega:** matcher decodificado com chave lógica, `RemoteIpValve`, `ops/nginx/futspring.conf` (proxy, PWA, gzip), remoção do `NGINX-PWA.md`.
-- **Docs:** core/docs/README.md (Rate limiting, Configuration, CI/CD → nginx).
+- **Docs:** BACKEND.md (Rate limiting, Configuration, CI/CD → nginx).
 - **Decisões:**
   - **`internal-proxies` fica no padrão do Boot** (loopback + 10/8, 172.16/12, 192.168/16), não `127\.0\.0\.1` como dizia a seção A2/Decisões. O nginx chega ao container pela porta publicada do Docker, então a API vê o gateway da rede do compose (`172.25.0.1` na VPS hoje), não 127.0.0.1; com o regex do spec todo mundo cairia num bucket só. Risco aceito: um container nosso nas mesmas redes poderia forjar o IP.
   - #3 confirmado na VPS: o `location /api/` usava `$proxy_add_x_forwarded_for` (acrescenta ao valor do cliente). O `ops/nginx/futspring.conf` é cópia do arquivo da VPS (2026-11-11) com `X-Forwarded-For $remote_addr`, `X-Forwarded-Proto`, `proxy_pass http://127.0.0.1:8081` (o Docker só publica em IPv4; `localhost` pode tentar `::1`) e `gzip_types` (o `gzip on` do `nginx.conf` só cobria `text/html`). Linhas do Certbot intactas. **Aplicar à mão na VPS** (passos no cabeçalho do arquivo); o valve já protege mesmo com o nginx antigo, porque lê da direita para a esquerda.
@@ -201,7 +201,7 @@ Para planejar um PR, rode o prompt dele numa sessão limpa (`/clear` antes). Ao 
 
 ### [x] PR A3 — Entradas de autenticação (`fix/auth-inputs`)
 - **Entrega:** senha 8–72 nos dois lados, e-mail normalizado, BCrypt dummy, V22 (com o resultado da consulta de duplicatas na descrição).
-- **Docs:** core/docs/README.md (Domain model `User`, migrations, Auth), client/docs/README.md (schemas).
+- **Docs:** BACKEND.md (Domain model `User`, migrations, Auth), FRONTEND.md (schemas).
 - **Decisões:**
   - **Consulta em produção (2026-11-11, 56 contas):** 0 duplicatas por `LOWER(TRIM(email))` e 0 e-mails fora do padrão. A V22 só cria o índice em prod e nenhum JWT antigo quebra (o `sub` já estava normalizado).
   - **O máximo é em bytes, não em caracteres:** o BCrypt do Spring Security 7.1 lança exceção acima de 72 bytes UTF-8 tanto no `encode` quanto no `matches`. Por isso o `@Size(max = 72)` do spec virou a constraint `@BcryptLength` (`domain/auth`, validador aninhado), sem o `max` no `@Size` (as duas juntas dariam mensagens diferentes a cada vez para 73 caracteres). Uma mensagem só: "A senha é longa demais (até 72 caracteres; letras com acento contam em dobro)". O `@Size(min = 8)` continua.
@@ -216,10 +216,10 @@ Para planejar um PR, rode o prompt dele numa sessão limpa (`/clear` antes). Ao 
 
 ### [x] PR A4 — Actuator (`fix/actuator`)
 - **Entrega:** exposição mínima, health sem detalhes.
-- **Docs:** core/docs/README.md (Configuration, Observability).
+- **Docs:** BACKEND.md (Configuration, Observability).
 - **Decisões:**
   - Conferido: o Prometheus lê só `/actuator/prometheus`, o `HEALTHCHECK` só o status HTTP de `/actuator/health/readiness`, o smoke test do deploy `/readyz` e os dashboards do Grafana consultam o Prometheus. Nada dependia de `metrics`, `info` ou `threaddump` em produção.
-  - **O load test dependia** (`threaddump` na sonda STOMP, `metrics/jvm.threads.live` e `hikaricp.connections.pending` na amostragem): o `ops/loadtest/run.sh` reabre `metrics,threaddump` no próprio container com `MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE`. A imagem não muda; a mesma variável serve para reabrir em produção temporariamente (documentado no core/docs/README.md).
+  - **O load test dependia** (`threaddump` na sonda STOMP, `metrics/jvm.threads.live` e `hikaricp.connections.pending` na amostragem): o `ops/loadtest/run.sh` reabre `metrics,threaddump` no próprio container com `MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE`. A imagem não muda; a mesma variável serve para reabrir em produção temporariamente (documentado no BACKEND.md).
   - Um endpoint não exposto na porta 9091 deixa de ser endpoint do Actuator e cai na cadeia da API, que responde 401 sem token (não 404). O teste afirma "não 2xx", como já fazia para a porta principal.
   - Autenticação básica no `actuatorFilterChain` (opcional na revisão) ficou fora.
 
@@ -229,7 +229,7 @@ Para planejar um PR, rode o prompt dele numa sessão limpa (`/clear` antes). Ao 
 
 ### [x] PR A5 — Uploads públicos (`fix/upload-sanitize`)
 - **Entrega:** decodificação e regravação sem metadados, TwelveMonkeys para WebP, helper de validação compartilhado com o financeiro, limpeza de arquivos na exclusão, #7 documentado.
-- **Docs:** core/docs/README.md (Uploads, Stack).
+- **Docs:** BACKEND.md (Uploads, Stack).
 - **Decisões:**
   - **Orientação EXIF aplicada no servidor** (decisão do dono): sem ela, a foto vertical do celular sairia de lado ao perder o EXIF. Além do `imageio-webp`, entraram `imageio-jpeg` (lê também JPEG CMYK) e `contrib` (`EXIFUtilities.findImageOrientation` + `TIFFUtilities.applyOrientation`), TwelveMonkeys 3.15.3.
   - O helper é `domain/file/ImageDecoder` (classe estática, sem bean): formato pelo conteúdo, teto de 20 Mpx lido do cabeçalho antes de decodificar, formatos permitidos por quem chama, tipo declarado ≠ real → 400, orientação aplicada. `FinanceFiles.verify` usa o mesmo helper com JPEG/PNG e **continua gravando os bytes originais** (arquivos privados, com hash); só os uploads públicos são regravados.
@@ -244,7 +244,7 @@ Para planejar um PR, rode o prompt dele numa sessão limpa (`/clear` antes). Ao 
 
 ### [x] PR A6 — Revogação do chat (`fix/stomp-revocation`)
 - **Entrega:** registro de sessões, fechamento na remoção de membro e na mudança de `tokenVersion`.
-- **Docs:** core/docs/README.md (WebSocket, Known gaps).
+- **Docs:** BACKEND.md (WebSocket, Known gaps).
 - **Decisões:**
   - **Na remoção de membro a conexão não é fechada** (decisão do dono, diferente da seção A6): o servidor manda um `UNSUBSCRIBE` ao broker para as inscrições do removido em `/topic/pelada/{id}`. O Spring responde a um SUBSCRIBE recusado com ERROR e fecha a conexão, e o `RealtimeProvider` zera as tentativas a cada CONNECT. Fechando, um removido ainda na página da pelada reconectaria em loop a cada 1–4 s e ficaria sem o sino. Assim o sino continua, o `REMOVED_FROM_PELADA` chega ao vivo e o envio ao chat já dá 403 no `ChatService`. Sem mudança no front.
   - **Mudança de `tokenVersion`** fecha todas as conexões do usuário (`POLICY_VIOLATION`), como no spec. O evento é `TokensRevokedEvent(email)` em `domain/user` (ao lado de `User`, dono do `tokenVersion`; dois dos três publicadores estão lá). É publicado no reset, na troca de senha e na exclusão; a exclusão publica **antes** de trocar o e-mail, porque as sessões foram abertas com o original. A troca de senha fecha também a conexão de quem trocou, que reconecta com o token novo.
@@ -258,7 +258,7 @@ Para planejar um PR, rode o prompt dele numa sessão limpa (`/clear` antes). Ao 
 
 ### [x] PR C1 — Logs estruturados e Loki (`feat/logs-loki`)
 - **Entrega:** logs ECS em JSON, auditoria de PII nos logs, Loki + Alloy + datasource.
-- **Docs:** core/docs/README.md (Observability), `ops/observability/README.md`.
+- **Docs:** BACKEND.md (Observability), `ops/observability/README.md`.
 - **Decisões:**
   - **ECS no `application.properties`** (`logging.structured.format.console=ecs`, `logging.structured.ecs.service.name=futspring-api`: o "service" do spec é o `service.name` do ECS). Dev em texto (decisão do dono): `docker-compose.dev.yml` passa `LOGGING_STRUCTURED_FORMAT_CONSOLE: ""`; valor vazio volta ao padrão do Boot (coberto pelo teste). Os testes continuam em texto (o `application.properties` de teste não define o formato). O ECS do Boot 4.1 é aninhado (`log.level`, `service.name`, `error.stack_trace` na mesma linha).
   - `StructuredLoggingTest` sobe uma `SpringApplication` mínima não-web com as linhas `logging.*` do arquivo principal e lê a saída com `OutputCaptureExtension`. Depois de cada caso, o logging volta a texto e é marcado como não inicializado (`cleanUp`), senão o próximo contexto da JVM não se reconfigura.
@@ -266,7 +266,7 @@ Para planejar um PR, rode o prompt dele numa sessão limpa (`/clear` antes). Ao 
   - Versões: `grafana/loki:3.7.9`, `grafana/alloy:v1.21.3`. `mem_limit` Loki 384m, Alloy 192m, proxy 64m (medidos parados: ~80, ~100 e ~25 MiB).
   - Alloy coleta **todos** os containers do host (o stack é compartilhado), labels `service` (serviço do compose), `project`, `container` e `level` (de `log.level` quando a linha é JSON). O resto do JSON é lido com `| json` no LogQL.
   - O deploy reinicia `loki` e `alloy` junto com o `prometheus` (leem a config só no start) e o smoke test exige o `/ready` do Loki (lido de dentro do container do Prometheus).
-  - **Auditoria dos 37 `log.*`:** só o `NoopEmailSender` logava PII (destinatário; o assunto também leva nomes) → agora uma mensagem fixa. A mensagem do PgJDBC numa violação de unicidade traz `Detail: Key (lower(email))=(…)`, logada pelo Hibernate e pelo `GlobalExceptionHandler`: resolvido na origem com `spring.datasource.hikari.data-source-properties.logServerErrorDetail=false` (o nome da constraint continua). Os demais logam ids, nomes UUID e contadores. `RestClientException` do Resend (corpo de erro do provedor) fica, sem o destinatário. A regra "sem e-mail, token, senha, chave Pix ou corpo em log" entrou nas Conventions do core/docs/README.md.
+  - **Auditoria dos 37 `log.*`:** só o `NoopEmailSender` logava PII (destinatário; o assunto também leva nomes) → agora uma mensagem fixa. A mensagem do PgJDBC numa violação de unicidade traz `Detail: Key (lower(email))=(…)`, logada pelo Hibernate e pelo `GlobalExceptionHandler`: resolvido na origem com `spring.datasource.hikari.data-source-properties.logServerErrorDetail=false` (o nome da constraint continua). Os demais logam ids, nomes UUID e contadores. `RestClientException` do Resend (corpo de erro do provedor) fica, sem o destinatário. A regra "sem e-mail, token, senha, chave Pix ou corpo em log" entrou nas Conventions do BACKEND.md.
 
 ```
 /plan-task docs/history/2026-11-11-launch-hardening-spec.md "PR C1 — Logs estruturados e Loki"
@@ -274,7 +274,7 @@ Para planejar um PR, rode o prompt dele numa sessão limpa (`/clear` antes). Ao 
 
 ### [x] PR C2 — Erros do frontend (`feat/client-errors`)
 - **Entrega:** `POST /client-errors`, `errorReporting` no front, `__APP_VERSION__`.
-- **Docs:** core/docs/README.md (API reference, Security, Rate limiting, Package layout), client/docs/README.md (api, lib, ErrorBoundary). Política de privacidade só se o texto atual não cobrir registros técnicos de erro.
+- **Docs:** BACKEND.md (API reference, Security, Rate limiting, Package layout), FRONTEND.md (api, lib, ErrorBoundary). Política de privacidade só se o texto atual não cobrir registros técnicos de erro.
 - **Decisões:**
   - **Política de privacidade sem mudança** (decisão do dono): "registros do servidor" em Dados técnicos já cobre os registros de erro; sem bump de `LEGAL_VERSION` / `CURRENT_VERSION`.
   - **Campo `source` a mais no DTO** (`WINDOW | PROMISE | BOUNDARY`, enum `ClientErrorSource`, opcional): o `reportError(error, source)` do spec já recebia a origem e ela ajuda a ler o log. `message` e `path` obrigatórios, o resto opcional.
@@ -292,7 +292,7 @@ Para planejar um PR, rode o prompt dele numa sessão limpa (`/clear` antes). Ao 
 
 ### [x] PR C3 — Alertas no Telegram (`feat/grafana-alerts`)
 - **Entrega:** contact point e regras provisionadas, secrets no workflow.
-- **Docs:** `ops/observability/README.md`, core/docs/README.md (Observability, tabela de secrets).
+- **Docs:** `ops/observability/README.md`, BACKEND.md (Observability, tabela de secrets).
 - **Decisões:**
   - Três arquivos em `grafana/provisioning/alerting/`: `contact-points.yml`, `policies.yml` (tudo → Telegram, agrupado por regra, repete a cada 4 h) e `rules.yml` (grupo `futspring`, pasta Futspring, avaliação a cada 1 min). Cada regra: query A instantânea + threshold C (`__expr__`), uid fixo, `summary` estático em pt-BR. Sem template de mensagem próprio: o padrão do Telegram já traz valor, labels e `summary`. Nada de `$` nas anotações (o provisioning expande `$VARS`).
   - **O job é `futspring-api`**, não `futspring` como na tabela acima: `up{job="futspring-api"}`. As métricas da API filtram por `application="futspring"`, as do cAdvisor por `name="futspring_api"` (como o dashboard).
@@ -309,7 +309,7 @@ Para planejar um PR, rode o prompt dele numa sessão limpa (`/clear` antes). Ao 
 
 ### [x] PR B1 — Redis (`feat/session-redis`)
 - **Entrega:** Redis em dev/prod com AOF e senha, starter, configuração, healthcheck no deploy, Testcontainers.
-- **Docs:** core/docs/README.md (Stack, Configuration, CI/CD, secrets).
+- **Docs:** BACKEND.md (Stack, Configuration, CI/CD, secrets).
 - **Decisões:**
   - Imagem `redis:7.4.12-alpine` (último patch da 7.4 no Docker Hub em 2026-11-12). Flags: `--appendonly yes`, `--requirepass "$REDIS_PASSWORD"` lido do ambiente do container (`sh -c`, `$$` escapa a interpolação do compose), `--maxmemory 64mb` com `noeviction` (cheio recusa escrita em vez de derrubar sessões) sob `mem_limit: 128m` (folga para o fork da reescrita do AOF). Volume nomeado `redis_data`. Healthcheck `redis-cli ping` com `REDISCLI_AUTH` (a senha não vai na linha de comando do `redis-cli`). Conferido localmente: sem senha → `NOAUTH`, AOF gravando em `/data/appendonlydir`, `healthy`.
   - **Sem `depends_on` da API no Redis:** o Redis não é necessário para subir nem para o readiness; um Redis quebrado não impede a API de subir. O `deploy.sh` espera os dois `healthy` (Redis primeiro) com uma função `wait_healthy` e falha se algum não ficar.
@@ -325,7 +325,7 @@ Para planejar um PR, rode o prompt dele numa sessão limpa (`/clear` antes). Ao 
 ### [x] PR B2 — API de refresh (`feat/session-refresh-api`)
 - **Entrega:** sessões no Redis, cookie, `/auth/refresh`, `/auth/logout`, cookie no login/cadastro/troca de senha, métrica e alerta.
 - **Fora:** o TTL do access não muda.
-- **Docs:** core/docs/README.md (Tokens, Security, CORS, Rate limiting, API reference, Known gaps), client/docs/README.md (tabela de API).
+- **Docs:** BACKEND.md (Tokens, Security, CORS, Rate limiting, API reference, Known gaps), FRONTEND.md (tabela de API).
 - **Decisões:**
   - Novo subpacote `domain/auth/session`: `RefreshSessionService` (Redis via `StringRedisTemplate`, valores JSON com o `JsonMapper`), `SessionCookie` (monta o `Set-Cookie`, `Path` derivado do caminho de `API_URL`) e `IssuedSession` (access + refresh). `AuthService.login/register` e `UserService.changePassword` passam a devolver `IssuedSession`; o controller só chama `sessionCookie.respond(...)`. O `ResetTokens` do reset de senha virou `auth/SecretTokens` (público) e gera/hasheia também o refresh token.
   - **Redis fora no login/cadastro/troca de senha: responde o access sem cookie** (não falha). No B2 o front ainda vive do access de 7 dias, então derrubar o login por causa do Redis seria regressão; no B3 isso significa só "relogar depois que o access vencer". Conta em `futspring.session.open{result=error}` (métrica a mais que o spec: no B2 ninguém chama refresh, então só a métrica de refresh nunca dispararia o alerta).
@@ -344,7 +344,7 @@ Para planejar um PR, rode o prompt dele numa sessão limpa (`/clear` antes). Ao 
 ### [x] PR B3 — Sessão no cliente (`feat/session-refresh-client`)
 - **Entrega:** token em memória, refresh no boot e no 401, STOMP com token atual, logout no servidor, e2e.
 - **Depois do merge no `main`:** `JWT_EXPIRATION_MS=900000`.
-- **Docs:** client/docs/README.md (API client and auth, Environment, Visual regression), core/docs/README.md (Tokens).
+- **Docs:** FRONTEND.md (API client and auth, Environment, Visual regression), BACKEND.md (Tokens).
 - **Decisões:**
   - Novo `client/src/lib/session.ts` (sem React): o access token em memória, o refresh *single-flight* por aba, `freshAccessToken` (STOMP) e `installSessionInterceptors`, chamado quando o `AuthContext` carrega (como o interceptor de request de antes). O `AuthContext` só guarda o estado (usuário, `restoring`) e assina `onSessionRefreshed` / `onSessionExpired`; o `token` **saiu do contexto** (ninguém mais lia depois do STOMP). Assim o single-flight e a repetição são testados com uma instância real do axios (`session.test.ts`), sem React.
   - **Boot com falha que não é 401 (PWA sem rede, 503 com o Redis fora) mantém o usuário em cache** (escolha do dono): o shell abre sem token, as telas mostram o erro / "Sem conexão" e o próximo 401 tenta o refresh de novo. Só um 401 do refresh desloga. Sem usuário em cache o boot não chama o refresh (visitante da landing não gera 401).
@@ -361,7 +361,7 @@ Para planejar um PR, rode o prompt dele numa sessão limpa (`/clear` antes). Ao 
 
 ### [x] PR B4 — Content-Security-Policy (`feat/csp`)
 - **Entrega:** política no nginx (Report-Only, depois valendo), teste do hash do script inline.
-- **Docs:** core/docs/README.md (CI/CD → nginx), client/docs/README.md (Styling / index.html).
+- **Docs:** BACKEND.md (CI/CD → nginx), FRONTEND.md (Styling / index.html).
 - **Decisões:**
   - O cabeçalho fica em `location = /index.html`, não no `server`: todo documento da SPA cai ali (o fallback de `location /` e o `index` de `/`), e um `add_header` dentro de uma `location` descarta os do `server`. As respostas da API (JSON) e os arquivos estáticos ficam sem CSP.
   - Sobe como `Content-Security-Policy-Report-Only`. **Depois de alguns dias sem violação em produção**, um PR de uma linha renomeia o cabeçalho para `Content-Security-Policy` (e aplica o nginx à mão). Sem `report-to`: o endpoint do C2 espera outro formato (`ClientErrorRequestDTO`) e o console basta para a checagem manual.

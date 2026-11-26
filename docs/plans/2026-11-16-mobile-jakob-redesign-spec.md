@@ -113,7 +113,7 @@ Abaixo de `md`, o `PeladaAreaSelect` dá lugar a uma faixa de abas sublinhadas (
 | Perfil | `useProfile` |
 | Financeiro | `useFinance` refresh |
 
-- Pré-requisito: os recarregadores passam a **devolver a promise** da leitura (hoje `useMyPeladas.reload` e outros devolvem `void`; antipadrão #10 do client/docs/README.md).
+- Pré-requisito: os recarregadores passam a **devolver a promise** da leitura (hoje `useMyPeladas.reload` e outros devolvem `void`; antipadrão #10 do FRONTEND.md).
 
 ### Acessibilidade e movimento
 
@@ -138,7 +138,7 @@ Abaixo de `md`, o `PeladaAreaSelect` dá lugar a uma faixa de abas sublinhadas (
 
 - Novo `components/ui/responsive-dialog.tsx`: `Dialog` a partir de `md`, `Drawer` abaixo, mesma API (`ResponsiveDialog`, `…Content`, `…Header`, `…Title`, `…Description`, `…Footer`).
 - Migram agora: `CreateSessionDialog`, `InvitePlayerDialog`, `SetPlayerStarsDialog` e `ResultsDialog` (que hoje troca à mão).
-- Os demais migram quando forem tocados (regra no client/docs/README.md). `AlertDialog` continua centralizado (alerta do iOS/Android). `Sheet`s laterais de formulário ficam como estão.
+- Os demais migram quando forem tocados (regra no FRONTEND.md). `AlertDialog` continua centralizado (alerta do iOS/Android). `Sheet`s laterais de formulário ficam como estão.
 
 ### Páginas novas
 
@@ -159,7 +159,7 @@ Abaixo de `md`, o `PeladaAreaSelect` dá lugar a uma faixa de abas sublinhadas (
 - `PeladaResponseDTO` ganha `@JsonProperty("isFinanceManager") boolean isFinanceManager`: o chamador é responsável financeiro da pelada.
 - Preenchido em `/peladas/my` e `/users/{id}/peladas` com `FinanceManagerRepository.findPeladaIdsByUserId` (uma query por resposta, constante no número de peladas). Nas respostas de create / update / image / transfer, mesma regra do `isAdmin` (create: `true`, o criador nasce responsável).
 - Frontend: `PeladaResponse` em `types/pelada.ts`, fixtures do e2e.
-- Docs: tabela de Peladas no core/docs/README.md, Types/API no client/docs/README.md.
+- Docs: tabela de Peladas no BACKEND.md, Types/API no FRONTEND.md.
 - Aditivo, sem migration.
 
 ## 5. Testes
@@ -178,7 +178,7 @@ Branch de integração `feat/mobile-shell` (sub-PRs → ela → `dev`):
 3. **Gestos:** voltar arrastando, puxar para atualizar e os registros nas páginas.
 4. **Telas-chave:** chat em rota, `ResponsiveDialog` + migrações, offsets das barras de seleção.
 
-Cada PR atualiza client/docs/README.md (e core/docs/README.md no 1) e roda `bun run lint && bun run build && bun run test` (+ `./mvnw test` no 1).
+Cada PR atualiza FRONTEND.md (e BACKEND.md no 1) e roda `bun run lint && bun run build && bun run test` (+ `./mvnw test` no 1).
 
 ## Fora de escopo
 

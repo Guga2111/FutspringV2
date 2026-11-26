@@ -56,7 +56,7 @@ A variável do preço é o tamanho da pelada, então a seção deixa o visitante
   - `TRIAL_MEMBER_CAP = 30`
 - `landingPricing(members)` é uma função pura que faz tudo em centavos inteiros, sem número decimal: preço da faixa, anual ÷ 12 arredondado e a economia (12× o mensal − o anual). A formatação usa `formatFinanceMoney`.
 - Testes no Vitest para as bordas 30/31 e 40/41.
-- Contrapartida aceita: mudar um preço exige mudar `SubscriptionPlans` e o espelho. O core/docs/README.md registra isso junto a `SubscriptionPlans`. Não há endpoint público de preços.
+- Contrapartida aceita: mudar um preço exige mudar `SubscriptionPlans` e o espelho. O BACKEND.md registra isso junto a `SubscriptionPlans`. Não há endpoint público de preços.
 
 ### Movimento, tema e acessibilidade
 
@@ -72,5 +72,5 @@ A variável do preço é o tamanho da pelada, então a seção deixa o visitante
 
 ## Documentação
 
-- client/docs/README.md: a rota `/` passa a citar a seção de preços, a pasta `landing/fragments/`, o `slider` na lista de componentes instalados e as novas constantes de `utils/subscription.ts`.
-- core/docs/README.md: em Subscriptions, uma nota dizendo que os preços são espelhados em `client/src/utils/subscription.ts`.
+- FRONTEND.md: a rota `/` passa a citar a seção de preços, a pasta `landing/fragments/`, o `slider` na lista de componentes instalados e as novas constantes de `utils/subscription.ts`.
+- BACKEND.md: em Subscriptions, uma nota dizendo que os preços são espelhados em `client/src/utils/subscription.ts`.
