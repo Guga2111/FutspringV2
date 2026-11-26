@@ -8,7 +8,7 @@ import com.futspring.backend.domain.daily.DailyRepository;
 import com.futspring.backend.domain.daily.team.TeamRepository;
 import com.futspring.backend.domain.pelada.Pelada;
 import com.futspring.backend.domain.pelada.PeladaRepository;
-import com.futspring.backend.domain.pelada.PeladaService;
+import com.futspring.backend.domain.pelada.member.PeladaMemberService;
 import com.futspring.backend.shared.exception.AppException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -50,7 +50,7 @@ class AccountDeletionConcurrencyTest {
     }
     static final String PASSWORD = "senha-atual-123";
     @Autowired AccountDeletionService deletion;
-    @Autowired PeladaService peladaService;
+    @Autowired PeladaMemberService peladaMemberService;
     @Autowired PeladaRepository peladas;
     @Autowired UserRepository users;
     @Autowired DailyRepository dailies;
@@ -90,7 +90,7 @@ class AccountDeletionConcurrencyTest {
                 .creator(owner).members(new HashSet<>(Set.of(owner, leaving))).admins(new HashSet<>(Set.of(owner, leaving))).build());
 
         List<HttpStatus> result = race(() -> deletion.deleteAccount(PASSWORD, leaving.getEmail()),
-                () -> peladaService.transferCreator(pelada.getId(), leaving.getId(), owner.getEmail()));
+                () -> peladaMemberService.transferCreator(pelada.getId(), leaving.getId(), owner.getEmail()));
 
         assertThat(result).isIn(List.of(HttpStatus.OK, HttpStatus.NOT_FOUND), List.of(HttpStatus.CONFLICT, HttpStatus.OK));
         Long creatorId = jdbc.queryForObject("select creator_id from peladas where id = ?", Long.class, pelada.getId());

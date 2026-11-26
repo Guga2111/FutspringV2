@@ -1,5 +1,6 @@
-package com.futspring.backend.domain.pelada;
+package com.futspring.backend.domain.pelada.member;
 
+import com.futspring.backend.domain.pelada.Pelada;
 import com.futspring.backend.domain.user.User;
 
 /** The creator ({@code actor}) handed the pelada to {@code newCreator}. */

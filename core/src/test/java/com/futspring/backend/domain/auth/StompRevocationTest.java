@@ -6,6 +6,7 @@ import com.futspring.backend.domain.auth.passwordreset.PasswordResetTokenReposit
 import com.futspring.backend.domain.pelada.Pelada;
 import com.futspring.backend.domain.pelada.PeladaRepository;
 import com.futspring.backend.domain.pelada.PeladaService;
+import com.futspring.backend.domain.pelada.member.PeladaMemberService;
 import com.futspring.backend.domain.user.AccountDeletionService;
 import com.futspring.backend.domain.user.User;
 import com.futspring.backend.domain.user.UserRepository;
@@ -76,6 +77,7 @@ class StompRevocationTest {
     @Autowired private UserRepository userRepository;
     @Autowired private PeladaRepository peladaRepository;
     @Autowired private PeladaService peladaService;
+    @Autowired private PeladaMemberService peladaMemberService;
     @Autowired private UserService userService;
     @Autowired private AccountDeletionService accountDeletionService;
     @Autowired private PasswordResetService passwordResetService;
@@ -166,7 +168,7 @@ class StompRevocationTest {
         awaitSubscribed(memberNotifications,
                 () -> messagingTemplate.convertAndSendToUser(member.getEmail(), "/queue/notifications", "antes"));
 
-        peladaService.removePlayers(pelada.getId(), List.of(member.getId()), admin.getEmail());
+        peladaMemberService.removePlayers(pelada.getId(), List.of(member.getId()), admin.getEmail());
 
         messagingTemplate.convertAndSend(topic, "depois");
         awaitMessage(adminTopic, "depois"::equals);
@@ -182,7 +184,7 @@ class StompRevocationTest {
         awaitSubscribed(memberTopic);
 
         // the creator in the batch: 403 and the transaction rolls back
-        assertThatThrownBy(() -> peladaService.removePlayers(pelada.getId(),
+        assertThatThrownBy(() -> peladaMemberService.removePlayers(pelada.getId(),
                 List.of(member.getId(), admin.getId()), admin.getEmail())).isInstanceOf(AppException.class);
 
         messagingTemplate.convertAndSend(topic, "depois");

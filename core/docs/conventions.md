@@ -60,7 +60,7 @@ Reference: `TeamRepository.findByDailyWithPlayers`, `PlayerMatchStatRepository.f
 
 ### 7. One service per sub-domain
 
-Reference: the daily services (`DailyService`, `DailyAttendanceService`, `DailyTeamManagementService`, `DailyResultsService`, `DailySchedulerService`).
+Reference: the daily services (`DailyService`, `DailyAttendanceService`, `DailyTeamManagementService`, `DailyResultsService`, `DailyFinalizeService`, `DailyImportService`, `DailySchedulerService`).
 
 ### 8. Shared helpers instead of copy-paste
 

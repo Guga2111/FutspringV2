@@ -1,6 +1,6 @@
 package com.futspring.backend.domain.auth;
 
-import com.futspring.backend.domain.pelada.MembersRemovedEvent;
+import com.futspring.backend.domain.pelada.member.MembersRemovedEvent;
 import com.futspring.backend.domain.user.TokensRevokedEvent;
 import com.futspring.backend.domain.user.User;
 import jakarta.annotation.PreDestroy;

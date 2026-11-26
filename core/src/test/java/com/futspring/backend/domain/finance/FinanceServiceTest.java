@@ -1,5 +1,6 @@
 package com.futspring.backend.domain.finance;
 
+import com.futspring.backend.domain.pelada.member.PeladaMemberService;
 import com.futspring.backend.domain.finance.dto.*;
 import com.futspring.backend.domain.pelada.*;
 import com.futspring.backend.domain.pelada.dto.CreatePeladaRequestDTO;
@@ -64,6 +65,7 @@ class FinanceServiceTest extends BaseIntegrationTest {
     @Autowired FinanceManagerRepository managerRows;
     @Autowired PeladaRepository peladas;
     @Autowired PeladaService peladaService;
+    @Autowired PeladaMemberService peladaMemberService;
     @Autowired UserRepository users;
     @Autowired DailyRepository dailies;
     @Autowired DailyService dailyService;
@@ -379,7 +381,7 @@ class FinanceServiceTest extends BaseIntegrationTest {
         assertThat(reads.overview(id(), other.getEmail(), 0, 50).permissions().appointManagers()).isFalse();
         fails(() -> collections.managers(id(), managers(admin, other), other.getEmail()), HttpStatus.FORBIDDEN);
         Long identity = view(l).personId();
-        peladaService.removePlayer(id(), member.getId(), admin.getEmail());
+        peladaMemberService.removePlayer(id(), member.getId(), admin.getEmail());
         fails(() -> reads.overview(id(), member.getEmail(), 0, 50), HttpStatus.FORBIDDEN);
         assertThat(view(l).personId()).isEqualTo(identity);
         pelada.getMembers().add(member); peladas.saveAndFlush(pelada);
@@ -388,18 +390,18 @@ class FinanceServiceTest extends BaseIntegrationTest {
     }
     @Test void removingEveryResponsavelIsRefusedAndChangesNothing() {
         collections.managers(id(), managers(member), admin.getEmail());
-        assertThatThrownBy(() -> peladaService.removePlayer(id(), member.getId(), admin.getEmail()))
+        assertThatThrownBy(() -> peladaMemberService.removePlayer(id(), member.getId(), admin.getEmail()))
                 .isInstanceOfSatisfying(AppException.class, e -> {
                     assertThat(e.getStatus()).isEqualTo(HttpStatus.CONFLICT);
                     assertThat(e.getMessage()).isEqualTo(member.getUsername() + " é o único responsável financeiro. Designe outro antes de removê-lo.");
                 });
         collections.managers(id(), managers(member, other), admin.getEmail());
-        assertThatThrownBy(() -> peladaService.removePlayers(id(), List.of(member.getId(), other.getId()), admin.getEmail()))
+        assertThatThrownBy(() -> peladaMemberService.removePlayers(id(), List.of(member.getId(), other.getId()), admin.getEmail()))
                 .isInstanceOfSatisfying(AppException.class, e -> assertThat(e.getStatus()).isEqualTo(HttpStatus.CONFLICT));
         assertThat(peladas.findById(id()).orElseThrow().getMembers()).contains(member, other);
         assertThat(managerRows.findByPeladaId(id())).extracting(FinanceManager::getUserId).containsExactlyInAnyOrder(member.getId(), other.getId());
         // one of them may leave while the other stays
-        peladaService.removePlayer(id(), member.getId(), admin.getEmail());
+        peladaMemberService.removePlayer(id(), member.getId(), admin.getEmail());
         assertThat(managerRows.findByPeladaId(id())).extracting(FinanceManager::getUserId).containsExactly(other.getId());
     }
     @Test void theCreatorOfANewPeladaIsItsResponsavel() {

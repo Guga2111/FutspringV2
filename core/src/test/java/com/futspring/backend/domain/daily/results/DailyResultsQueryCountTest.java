@@ -31,6 +31,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class DailyResultsQueryCountTest extends BaseIntegrationTest {
 
     @Autowired DailyResultsService resultsService;
+    @Autowired DailyFinalizeService finalizeService;
     @Autowired DailyRepository dailyRepository;
     @Autowired TeamRepository teamRepository;
     @Autowired PeladaRepository peladaRepository;
@@ -84,7 +85,7 @@ class DailyResultsQueryCountTest extends BaseIntegrationTest {
         Session s = session();
         if (finished) {
             List<Long> ids = submit(s, results(s, count, null, 1));
-            resultsService.finalizeDaily(s.daily().getId(), null, null, admin.getEmail());
+            finalizeService.finalizeDaily(s.daily().getId(), null, null, admin.getEmail());
             long edit = queryCounter.reads(() -> submit(s, results(s, count, ids, 2)));
             return List.of(edit);
         }

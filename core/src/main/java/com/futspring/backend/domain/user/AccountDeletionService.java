@@ -8,7 +8,7 @@ import com.futspring.backend.domain.notification.NotificationRepository;
 import com.futspring.backend.domain.notification.webpush.PushSubscriptionRepository;
 import com.futspring.backend.domain.pelada.PeladaRef;
 import com.futspring.backend.domain.pelada.PeladaRepository;
-import com.futspring.backend.domain.pelada.PeladaService;
+import com.futspring.backend.domain.pelada.member.PeladaMemberService;
 import com.futspring.backend.domain.tour.UserTourRepository;
 import com.futspring.backend.domain.user.dto.DeletionBlockerDTO;
 import com.futspring.backend.shared.exception.AppException;
@@ -43,7 +43,7 @@ public class AccountDeletionService {
     private final PasswordEncoder passwordEncoder;
     private final UserRepository userRepository;
     private final PeladaRepository peladaRepository;
-    private final PeladaService peladaService;
+    private final PeladaMemberService peladaMemberService;
     private final FinancePreservation financePreservation;
     private final NotificationRepository notificationRepository;
     private final NotificationPreferenceRepository notificationPreferenceRepository;
@@ -72,7 +72,7 @@ public class AccountDeletionService {
             throw new AppException(HttpStatus.CONFLICT, message(blockers.getFirst()));
         }
 
-        peladaService.removeAccountFromPeladas(user, DELETED_USERNAME);
+        peladaMemberService.removeAccountFromPeladas(user, DELETED_USERNAME);
         notificationRepository.deleteByRecipient(user);
         notificationPreferenceRepository.deleteByUserId(user.getId());
         passwordResetTokenRepository.deleteByUser(user);
